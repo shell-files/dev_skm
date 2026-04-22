@@ -1,4 +1,6 @@
 # dev_skm
+<img width="485" height="400" alt="팀로고-min" src="https://github.com/user-attachments/assets/691c27ab-811f-41c8-9ae3-d07aa51d470a" />
+
 ## ESG 지속가능성보고서 반자동화 시스템 개발
 
 ### 1차 타겟팅: 

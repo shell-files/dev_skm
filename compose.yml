@@ -1,0 +1,47 @@
+services:
+  backend:
+    container_name: backend
+    image: uv:1
+    restart: always
+    ports:
+      - 8000:8000
+    networks:
+      - main-network
+    # depends_on:
+    #   - mariadb
+    volumes:
+      - ./backend/main.py:/workspace/main.py
+      - ./backend/settings.py:/workspace/settings.py
+      - ./backend/pyproject.toml:/workspace/pyproject.toml
+      - ./backend/uv.lock:/workspace/uv.lock
+      - ./backend/.python-version:/workspace/.python-version
+    environment:
+      - HOST_IP=http://aiedu.tplinkdns.com
+    command: ["uv", "run", "fastapi", "run"]
+
+  # mariadb:
+  #   container_name: mariadb
+  #   image: mariadb:12.1.2
+  #   restart: always
+  #   ports:
+  #     - 3306:3306
+  #   networks:
+  #     - main-network
+  #   volumes:
+  #     - ./.mariadb/conf.d:/etc/mysql/conf.d:ro
+  #     - ./.mariadb/initdb.d:/docker-entrypoint-initdb.d:ro
+  #     - data-mariadb:/var/lib/mysql:rw
+  #   environment:
+  #     - MARIADB_HOST=localhost
+  #     - MARIADB_PORT=3306
+  #     - MARIADB_ROOT_PASSWORD=1234
+  #     - MARIADB_DATABASE=edu
+  #     - TZ=Asia/Seoul
+  #     - LC_ALL:en_US.UTF-8
+
+networks:
+  main-network: 
+    driver: bridge
+
+# volumes:
+#   data-mariadb:

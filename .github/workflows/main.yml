@@ -13,3 +13,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: .
+      
+      - name: Docker Down
+        working-directory: .
+        run: docker compose down
+        continue-on-error: true
+
+      - name: Docker Up
+        working-directory: .
+        run: docker compose up -d

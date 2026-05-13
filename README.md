@@ -3,6 +3,7 @@
   <div align="left">
     <h1>[SKM] 지속가능경영보고서 자동화</h1>
     <p>공공 데이터와 기업 내부 데이터를 활용하여 지속가능경영보고서 작성을 자동화하는 시스템입니다.</p>
+    <img width="739" height="366" alt="image" src="https://github.com/user-attachments/assets/6531176b-3b65-410e-bbc2-05058a146001" />
   </div>
 </div>
 
@@ -54,18 +55,17 @@
 
 ## 4. 시스템 아키텍처
 
-![System Architecture]()
-
+[System Architecture]
+- 추가 예정
 ## 5. 팀원 소개
 
 | 이름 | 역할 | 담당 업무 및 기술 기여 |
 | --- | --- | --- |
-| 최수아 | 팀장 | PM, GitHub/브랜치 전략 수립, 응답 구조 설계, DB 설계 및 구축 |
-| 이채훈 | 팀원 | AI 모델 학습 로직 구축, 데이터 벡터화(Embedding), 설문 결과 수집 로직 |
-| 이정빈 | 팀원 | AI 모델 학습 로직 구축, 데이터 정의서 및 ERD 작성, 페르소나 정의, 발표 자료(PPT) 구성 |
-| 김하영 | 팀원 | 기능 정의서 및 화면 레이아웃 설계 |
-
-팀원 github 링크
+| [최수아](https://github.com/sooah-0208) | 팀장 | PM, GitHub/브랜치 전략 수립, 응답 구조 설계, DB 설계 및 구축 |
+| [이채훈](https://github.com/chaehun0i) | 팀원 | AI 모델 학습 데이터 수집 / 로직 구축, 데이터 벡터화(Embedding),  |
+| [이정빈](https://github.com/leeej9801-max) | 팀원 | AI 모델 학습 로직 구축, 데이터 정의서 및 ERD 작성, 페르소나 정의, 발표 자료(PPT) 구성 |
+| [김하영](https://github.com/luniana217) | 팀원 | 기능 정의서 및 화면 레이아웃 설계 |
+- 이름 클릭시 github 링크 이동
 
 ---
 

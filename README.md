@@ -1,7 +1,7 @@
 <div align="center">
   <img src="https://github.com/user-attachments/assets/691c27ab-811f-41c8-9ae3-d07aa51d470a" width="180" align="right" />
   <div align="left">
-    <h1>[SKM] 지속가능경영보고서 자동화</h1>
+    <h1>[SKM] 지속가능경영보고서 자동화 시스템 구축</h1>
     <p>공공 데이터와 기업 내부 데이터를 활용하여 지속가능경영보고서 작성을 자동화하는 시스템입니다.</p>
     <img width="739" height="366" alt="image" src="https://github.com/user-attachments/assets/6531176b-3b65-410e-bbc2-05058a146001" />
   </div>
@@ -10,7 +10,7 @@
 
 ## 1. 프로젝트 개요
 *   **팀명:** SKM
-*   **프로젝트명:** 지속가능경영보고서 자동화
+*   **프로젝트명:** 지속가능경영보고서 자동화 시스템 구축
 *   **핵심 가치:** 이중 중대성 평가 기반의 데이터 수집부터 LLM 기반 보고서 초안 생성까지의 전 과정 자동화
 
 

@@ -1,0 +1,33 @@
+from fastapi import APIRouter
+
+from src.models.model import responseModel, inviteSignUpUserInfo
+from src.utils.rediscl import getInviteRedis
+from src.utils.tokenset import decryptFromJwe
+from src.models.invite import inviteProcess, inviteSignUp
+
+router = APIRouter()
+
+@router.get("/{inviteId}",
+            summary="초대 링크 접속",
+            description="초대 링크 접속 시 회원가입 폼을 렌더링하는 API입니다.")
+def invite(inviteId: str):
+  return inviteProcess(inviteId)
+  
+
+@router.post("/{inviteId}", 
+             summary="초대 링크 data 처리",
+             description="초대 링크 접속 시 토큰에서 이메일과 회사명 추출하여 반환하는 API입니다.")
+def invite(inviteId: str):
+  inviteData = getInviteRedis(inviteId)
+  payload = decryptFromJwe(inviteData["token"])
+  email = payload.get("email")
+  companyName = payload.get("sub")
+
+  data = { "companyName": companyName, "email": email, "name": "", "password": "" }
+  return responseModel(True, "초대 링크 데이터가 성공적으로 처리되었습니다.", data)
+
+@router.put("/{inviteId}",
+             summary="초대 링크로 회원가입",
+             description="초대 링크로 회원가입을 처리하는 API입니다.")
+def invite(inviteId: str, inviteSignUpUserInfo: inviteSignUpUserInfo):
+  return inviteSignUp(inviteId, inviteSignUpUserInfo)

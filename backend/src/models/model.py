@@ -1,0 +1,89 @@
+from pydantic import BaseModel, EmailStr, Field
+from typing import Optional, Union, List
+from datetime import date
+from fastapi import File
+
+# 공통 응답 모델 및 요청 모델 정의
+def ResponseModel(status: bool, message: str="", data: dict={}):
+    """ 응답 모델 """
+    return {
+        "status": status,
+        "message": message,
+        "data": data
+    }
+
+# 쿠키 정보 모델?
+class UserModel(BaseModel):
+    """ auth.py 로그인 API 모델 """
+    uuid: str = Field(..., description="사용자 식별에 사용되는 uuid")
+    id: int = Field(..., description="사용자 ID")
+    name: str = Field(..., description="사용자 이름")
+    email: EmailStr = Field(..., description="사용자 이메일")
+    role: str = Field(..., description="사용자 역할 리스트")
+    role_name: str = Field(..., description="사용자 역할 이름 리스트")
+
+#이메일 모델
+class EmailModel(BaseModel):
+   email: EmailStr = Field(..., description="비밀번호 찾기에 사용되는 이메일 모델")
+
+# 로그인 모델
+class LoginModel(BaseModel):
+  """ auth.py post 로그인 모델 """
+  email: EmailStr = Field(..., description="로그인에서 사용되는 이메일 모델")
+  password: str = Field(..., description="로그인에서 사용하는 pwd 모델")
+
+# 회원가입 모델
+class SignUpModel(BaseModel):
+  """user.py 회원가입 통합 요청 모델"""
+
+  # ── USER 테이블 필드
+  email: EmailStr                          = Field(...,  description="USER.email")
+  password: str                            = Field(...,  description="USER.password")
+  userName: str                            = Field(...,  description="USER.name")
+  agreed: bool                             = Field(...,  description="개인정보 수집 및 이용 동의 여부")
+
+  # ── COMPANY 테이블 필드
+  licensefileId: int                       = Field(...,  description="COMPANY.license_file_id")
+  businessNumber: int                      = Field(...,  description="COMPANY.business_number")
+  companyName: str                         = Field(...,  description="COMPANY.company_name")
+  ceoName: str                             = Field(...,  description="COMPANY.ceo_name")
+  openingDate: Optional[Union[str, date]]  = Field(..., description="COMPANY.company_establishment 'YYYY-MM-DD'")
+  corporateNumber: Optional[int]           = Field(None,  description="COMPANY.corporate_number")
+  headOffice: str                          = Field(...,  description="COMPANY.company_address")
+  taxName: str                             = Field(...,  description="COMPANY.tax_name")
+  issueDate: Optional[Union[str, date]]    = Field(..., description="COMPANY.issue_date 'YYYY-MM-DD'")
+  companySize: Optional[str]               = Field(..., description="COMPANY.company_size")
+
+  # ── INDUSTRY_DETAIL 테이블 필드
+  # [FK] industry_id → INDUSTRY_CODE.id (배열 수신 → saveMany 일괄 INSERT)
+  # [FK] company_id  → COMPANY.id       (signUpProcess 내부 주입)
+  industryList: List[str]                 = Field(...,  description="INDUSTRY_DETAIL.industry_id 배열")
+
+  # ── USER_ROLE 테이블 필드
+  # [FK] role_id → ROLE.id
+  roleId: int                              = Field(2,    description="USER_ROLE.role_id (기본값: 2)")
+
+# 회원가입시 중복체크 모델
+class DuplicateCheckModel(BaseModel):
+    """ user.py get email,사업자 등록 번호 중복 체크 인증 모델 """
+    # 이메일: 형식 검증은 EmailStr이 담당, 설명 추가
+    email: Optional[EmailStr] =  Field(None, description="회원가입에서 사용되는 이메일 모델")
+    # 사업자 번호: 10자리 숫자 패턴 검증 및 길이 제한, 설명 추가
+    businessNumber: Optional[str] = Field(
+        None,
+        min_length=10,
+        max_length=10,
+        pattern=r"^\d{10}$",  # 숫자 10자리 정규표현식
+        description="회원가입에서 사용되는 사업자 등록 번호 모델"
+    )
+
+# 회사 선택 모델
+class CompanyModel(BaseModel):
+   """ company.py 회사 선택 저장 """
+   companyId: str = Field(..., description="회사 ID")
+
+# SR 파일 업로드 모델
+class SrFileModel(BaseModel):
+    """ file.py sr 파일 업로드 """
+    files: List[File] = Field(..., max_items=3, description="업로드할 파일 리스트 (최대 3개)")
+    type: str = Field(..., description="Leader, Peer, Own 구분")

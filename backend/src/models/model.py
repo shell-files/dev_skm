@@ -81,3 +81,10 @@ class DuplicateCheckModel(BaseModel):
 class CompanyModel(BaseModel):
    """ company.py 회사 선택 저장 """
    companyId: str = Field(..., description="회사 ID")
+
+# SR 파일 업로드 모델
+class SrFileModel(BaseModel):
+    """ file.py 파일 업로드 모델 """
+    file : UploadFile = Field(..., description="업로드할 SR PDF 파일")
+    fileType: str = Field(..., description="SR 파일의 유형 (Leader, Peer, Own)")
+    companyName: str = Field(..., description="업로드 파일 회사 이름")

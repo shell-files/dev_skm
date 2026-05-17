@@ -2,12 +2,12 @@ import uuid
 import shutil
 from pathlib import Path
 from src.utils.db import save, findOne
-from src.models.model import ResponseModel, SrFileModel
+from src.models.model import ResponseModel
 from src.utils.settings import settings
 
 # DB 파일 저장
 
-def uploadSr(files, type=str):
+def uploadSr(files:list, type):
     if len(files) > 3:
         return ResponseModel(False, "파일은 최대 3개까지만 업로드 가능합니다.")
     for file in files:

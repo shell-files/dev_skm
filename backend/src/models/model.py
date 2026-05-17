@@ -1,7 +1,7 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional, Union, List
 from datetime import date
-from fastapi import File
+from fastapi import UploadFile
 
 # 공통 응답 모델 및 요청 모델 정의
 def ResponseModel(status: bool, message: str="", data: dict={}):
@@ -81,9 +81,3 @@ class DuplicateCheckModel(BaseModel):
 class CompanyModel(BaseModel):
    """ company.py 회사 선택 저장 """
    companyId: str = Field(..., description="회사 ID")
-
-# SR 파일 업로드 모델
-class SrFileModel(BaseModel):
-    """ file.py sr 파일 업로드 """
-    files: List[File] = Field(..., max_items=3, description="업로드할 파일 리스트 (최대 3개)")
-    type: str = Field(..., description="Leader, Peer, Own 구분")

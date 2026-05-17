@@ -1,6 +1,5 @@
 from fastapi import APIRouter, UploadFile, File
 from src.utils.file import uploadSr
-from src.models.model import SrFileModel
 
 router = APIRouter()
 
@@ -8,5 +7,5 @@ router = APIRouter()
 @router.post("",
         summary="SR PDF 파일 분석",
         description="분석 및 파일 정보 DB저장")
-async def fileRead(SrFileModel:SrFileModel):
-   return uploadSr(SrFileModel)
+async def fileRead(type:str, files:UploadFile = File(...)):
+   return uploadSr([files], type)

@@ -39,6 +39,8 @@ def uploadSr(FileModel:FileModel):
     files = FileModel.file
     type = FileModel.fileType
     companyName = FileModel.companyName
+    if len(files) == 0:
+        return ResponseModel(False, "업로드된 파일이 없습니다.")
     if len(files) > 3:
         return ResponseModel(False, "파일은 최대 3개까지만 업로드 가능합니다.")
     for file in files:

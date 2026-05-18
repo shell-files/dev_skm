@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional, Union, List
 from datetime import date
-from fastapi import UploadFile
+from fastapi import UploadFile, File
 
 # 공통 응답 모델 및 요청 모델 정의
 def ResponseModel(status: bool, message: str="", data: dict={}):
@@ -82,9 +82,10 @@ class CompanyModel(BaseModel):
    """ company.py 회사 선택 저장 """
    companyId: str = Field(..., description="회사 ID")
 
-# SR 파일 업로드 모델
-class SrFileModel(BaseModel):
+# 파일 업로드 모델
+class FileModel(BaseModel):
     """ file.py 파일 업로드 모델 """
-    file : UploadFile = Field(..., description="업로드할 SR PDF 파일")
-    fileType: str = Field(..., description="SR 파일의 유형 (Leader, Peer, Own)")
-    companyName: str = Field(..., description="업로드 파일 회사 이름")
+    file : List[UploadFile] = Field(..., description="업로드할 SR PDF 파일")
+    fileType: str = Field(None, description="SR 파일의 유형 (Leader, Peer, Own)")
+    companyName: str = Field(None, description="업로드 파일 회사 이름")
+    page: str = Field(..., description="벤치마킹(SR) or 온보딩 구분(ONBOARD)")

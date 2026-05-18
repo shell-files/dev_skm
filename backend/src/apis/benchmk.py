@@ -1,16 +1,21 @@
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter,  Form
 from src.utils.file import uploadSr
-from typing import List
+from typing import List, Annotated
+from src.models.model import FileModel
 
 router = APIRouter()
 
 # SR PDF 파일 업로드 및 저장, 불러오기 API
 @router.post("",
+        summary="SR PDF 파일 저장",
+        description="파일 정보 DB저장")
+async def fileRead(fileModel: Annotated[FileModel, Form()]):
+  return uploadSr(fileModel)
+
+# AI 분석 API
+@router.put("",
         summary="SR PDF 파일 분석",
         description="분석 및 파일 정보 DB저장")
-async def fileRead(files:List[UploadFile] = File(), file_types:str = Form()):
-  arr = []
-  for file,file_type in zip(files, file_types):
-    arr.append(uploadSr(file, file_type))
-  return {"status": True, "result": arr}
+async def fileAnalyze():
+  pass
 

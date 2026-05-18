@@ -1,4 +1,4 @@
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter,  Form
 from src.utils.file import uploadSr
 from typing import List, Annotated
 from src.models.model import FileModel
@@ -18,3 +18,4 @@ async def fileRead(fileModel: Annotated[FileModel, Form()]):
         description="분석 및 파일 정보 DB저장")
 async def fileAnalyze():
   pass
+

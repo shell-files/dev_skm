@@ -47,6 +47,7 @@ dependencies = [
     { name = "mariadb" },
     { name = "prometheus-fastapi-instrumentator" },
     { name = "pydantic-settings" },
+    { name = "python-multipart" },
 ]
 
 [package.metadata]
@@ -55,6 +56,7 @@ requires-dist = [
     { name = "mariadb", specifier = ">=1.1.14" },
     { name = "prometheus-fastapi-instrumentator", specifier = ">=7.1.0" },
     { name = "pydantic-settings", specifier = ">=2.14.0" },
+    { name = "python-multipart", specifier = ">=0.0.26" },
 ]
 
 [[package]]

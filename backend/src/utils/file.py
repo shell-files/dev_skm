@@ -35,10 +35,8 @@ from src.utils.settings import settings
 #             return ResponseModel(False, "파일 업로드에 실패하였습니다. 다시 시도해주세요.")
 
 # 파일 업로드 및 저장
-def uploadSr(FileModel:FileModel):
-    files = FileModel.file
-    type = FileModel.fileType
-    companyName = FileModel.companyName
+def uploadSr(fileModel:FileModel):
+    files = fileModel.file
     if len(files) == 0:
         return ResponseModel(False, "업로드된 파일이 없습니다.")
     if len(files) > 3:
@@ -54,10 +52,10 @@ def uploadSr(FileModel:FileModel):
         id = uuid.uuid4().hex
         fileName = f"{id}.{ext}"
         sql = f"""
-            insert into `TE_{FileModel.page}_FILE` (`origin`, `file_name`, `type`,`company_name`)
+            insert into `TE_{fileModel.page}_FILE` (`origin`, `file_name`, `type`,`company_name`)
             values (?,?,?,?)
             """
-        params = (origin, fileName, type, companyName)
+        params = (origin, fileName, fileModel.fileType, fileModel.companyName)
         saveResult = save(sql, params)
     # 동시에 로컬 폴더에도 파일 저장
     if saveResult:
@@ -65,7 +63,7 @@ def uploadSr(FileModel:FileModel):
         with path.open("wb") as f:
             shutil.copyfileobj(file.file, f)
         if saveResult:        
-            return ResponseModel(True, "파일이 성공적으로 업로드되었습니다.", {"fileName": fileName, "origin": origin, "page":FileModel.page})
+            return ResponseModel(True, "파일이 성공적으로 업로드되었습니다.", {"fileName": fileName, "origin": origin, "page":fileModel.page})
         else:
             return ResponseModel(False, "파일 업로드에 실패하였습니다. 다시 시도해주세요.")
     

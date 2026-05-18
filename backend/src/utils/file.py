@@ -2,10 +2,9 @@ import uuid
 import shutil
 from pathlib import Path
 from src.utils.db import save, findOne
-from src.models.model import ResponseModel, SrFileModel
+from src.models.model import ResponseModel, FileModel
 from src.utils.settings import settings
 
-# DB 파일 저장
 
 # def uploadSr(SrFileModel:SrFileModel):
 #     file = SrFileModel.file
@@ -35,10 +34,11 @@ from src.utils.settings import settings
 #         else:
 #             return ResponseModel(False, "파일 업로드에 실패하였습니다. 다시 시도해주세요.")
 
-def uploadSr(SrFileModel:SrFileModel):
-    files = SrFileModel.files
-    type = SrFileModel.fileType
-    companyName = SrFileModel.companyName
+# 파일 업로드 및 저장
+def uploadSr(FileModel:FileModel):
+    files = FileModel.file
+    type = FileModel.fileType
+    companyName = FileModel.companyName
     if len(files) > 3:
         return ResponseModel(False, "파일은 최대 3개까지만 업로드 가능합니다.")
     for file in files:
@@ -52,7 +52,7 @@ def uploadSr(SrFileModel:SrFileModel):
         id = uuid.uuid4().hex
         fileName = f"{id}.{ext}"
         sql = f"""
-            insert into `TE_SR_FILE` (`origin`, `file_name`, `type`,`company_name`)
+            insert into `TE_{FileModel.page}_FILE` (`origin`, `file_name`, `type`,`company_name`)
             values (?,?,?,?)
             """
         params = (origin, fileName, type, companyName)
@@ -63,16 +63,16 @@ def uploadSr(SrFileModel:SrFileModel):
         with path.open("wb") as f:
             shutil.copyfileobj(file.file, f)
         if saveResult:        
-            return ResponseModel(True, "파일이 성공적으로 업로드되었습니다.", {"fileName": fileName, "origin": origin})
+            return ResponseModel(True, "파일이 성공적으로 업로드되었습니다.", {"fileName": fileName, "origin": origin, "page":FileModel.page})
         else:
             return ResponseModel(False, "파일 업로드에 실패하였습니다. 다시 시도해주세요.")
     
-#  SR 파일 찾기
-def findSr(fileName):
+#  파일 찾기
+def findSr(fileName, page):
     UPLOAD_DIR = Path(settings.file_dir)
     fileIdSql = f"""
             SELECT id, file_name, origin, type, company_name
-            FROM `TE_SR_FILE`
+            FROM `TE_{page}_FILE`
             WHERE file_name = ? AND delete_yn = 0;"""
     fileIdParams = (fileName,)
     result = findOne(fileIdSql, fileIdParams)

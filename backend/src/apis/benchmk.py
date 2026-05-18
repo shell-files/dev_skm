@@ -8,10 +8,7 @@ router = APIRouter()
 @router.post("",
         summary="SR PDF 파일 저장",
         description="파일 정보 DB저장")
-async def fileRead(files:List[UploadFile] = File(), file_types:str = Form()):
-  # arr = []
-  # for file,file_type in zip(files, file_types):
-  #   arr.append(uploadSr(file, file_type))
+async def fileRead(files:List[UploadFile] = File(...), file_types:str = Form()):
   return uploadSr(files, file_types)
 
 # AI 분석 API

@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional, Union, List
 from datetime import date
-from fastapi import UploadFile
+from fastapi import UploadFile, File
 
 # 공통 응답 모델 및 요청 모델 정의
 def ResponseModel(status: bool, message: str="", data: dict={}):

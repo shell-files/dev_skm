@@ -1,7 +1,9 @@
-from fastapi import APIRouter,  Form
+from fastapi import APIRouter,  Form, Depends
 from src.utils.file import uploadSr
 from typing import List, Annotated
 from src.models.model import FileModel
+from src.utils.auth import get_token
+
 
 router = APIRouter()
 
@@ -9,8 +11,8 @@ router = APIRouter()
 @router.post("",
         summary="SR PDF 파일 저장",
         description="파일 정보 DB저장")
-async def fileRead(fileModel: Annotated[FileModel, Form()]):
-  return uploadSr(fileModel)
+async def fileRead(fileModel: Annotated[FileModel, Form()], userModel = Depends(get_token)):
+  return uploadSr(fileModel, userModel)
 
 # AI 분석 API
 @router.put("",
@@ -18,4 +20,3 @@ async def fileRead(fileModel: Annotated[FileModel, Form()]):
         description="분석 및 파일 정보 DB저장")
 async def fileAnalyze():
   pass
-

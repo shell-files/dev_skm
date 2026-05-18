@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional, Union, List
 from datetime import date
-from fastapi import UploadFile, File
+from fastapi import UploadFile
 
 # 공통 응답 모델 및 요청 모델 정의
 def ResponseModel(status: bool, message: str="", data: dict={}):
@@ -12,7 +12,7 @@ def ResponseModel(status: bool, message: str="", data: dict={}):
         "data": data
     }
 
-# 쿠키 정보 모델?
+# 유저 정보 모델
 class UserModel(BaseModel):
     """ auth.py 로그인 API 모델 """
     uuid: str = Field(..., description="사용자 식별에 사용되는 uuid")
@@ -26,14 +26,8 @@ class UserModel(BaseModel):
 class EmailModel(BaseModel):
    email: EmailStr = Field(..., description="비밀번호 찾기에 사용되는 이메일 모델")
 
-# 로그인 모델
-class LoginModel(BaseModel):
-  """ auth.py post 로그인 모델 """
-  email: EmailStr = Field(..., description="로그인에서 사용되는 이메일 모델")
-  password: str = Field(..., description="로그인에서 사용하는 pwd 모델")
-
-# 회원가입 모델
-class SignUpModel(BaseModel):
+# Company 정보 모델
+class CompanyModel(BaseModel):
   """user.py 회원가입 통합 요청 모델"""
 
   # ── USER 테이블 필드

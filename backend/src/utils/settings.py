@@ -11,15 +11,26 @@ class Settings(BaseSettings):
   access_token_expire_minutes: int
   refresh_token_expire_days: int
   invite_token_expire_days: int
-
+  # --------------------------
+  # db.py
+  # --------------------------
   maria_db_user: str
   maria_db_password: str
   maria_db_host: str
   maria_db_database: str
   maria_db_port: int
   maria_db_key: str
+  # --------------------------
+  # auth.py
+  # --------------------------
   cookie_key: str
+  # --------------------------
+  # file.py
+  # --------------------------
   file_dir: str
+  # --------------------------
+  # rediscl.py
+  # --------------------------
   redis_host: str
   redis_port: int
   redis_db1: int

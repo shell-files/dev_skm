@@ -1,12 +1,10 @@
-from fastapi import Response, Depends, HTTPException, status, Cookie
+from fastapi import Response, Depends, HTTPException, status
 from fastapi.security import APIKeyCookie
 from src.utils.settings import settings
 from src.utils.validatetok import validateToken
 from src.utils.tokenset import decryptFromJwe
-from src.utils.rediscl import getTokenRedis, delTokenRedis, getCompanyRedis, delCompanyRedis, setCompanyRedis
-from src.utils.db import save
-from src.models.model import UserModel, CompanyModel
-from typing import Union
+from src.utils.rediscl import getTokenRedis
+from src.models.model import UserModel
 
 cookie_scheme = APIKeyCookie(name=settings.cookie_key)
 
@@ -69,51 +67,3 @@ def get_token(response: Response, token: str = Depends(cookie_scheme)) -> UserMo
             detail="접근 권한이 없거나 오류가 발생했습니다.",
         )
     
-def check_cookie(response: Response, token: Union[str, None] = Cookie(default=None, alias=settings.cookie_key)) -> bool:
-    try:
-        if token:
-            authResponse = validateToken(token)
-            if authResponse.get("status"):
-                # 현재 쿠키값과 전달받은 activeUuid가 다를 때만 set_cookie를 호출하는 것이 효율적입니다.
-                activeUuid = authResponse["data"]["uuid"]
-                if token != activeUuid:
-                    max_age = (60 * 60 * 24 * settings.refresh_token_expire_days)
-                    response.set_cookie(
-                        key=settings.cookie_key,
-                        value=activeUuid,
-                        domain=settings.domain,
-                        httponly=True,
-                        samesite="lax",
-                        # secure=True, # 프로덕션 환경 권장
-                        max_age=max_age
-                    )
-                return True
-    except Exception as e:
-        print(f"Token Error: {e}")
-    return False
-
-def delete_cookie(response: Response, uuid: str):
-    try:
-        # 1. db에서 refresh token delete_yn 1으로 변경
-        logoutSql="""
-            UPDATE `with`.`TOKEN`
-                SET `delete_yn` = 1
-                WHERE uuid = ?;
-        """
-        logoutParams = (uuid,)
-        save(logoutSql, logoutParams)
-
-        # 2. redis에서 uuid 삭제
-        delTokenRedis(uuid)
-
-        # 3. cookie 삭제
-        response.delete_cookie(
-            key=settings.cookie_key,
-            domain=settings.domain,
-            # secure=True,
-            httponly=True, samesite="lax"
-        )
-        return True
-    except Exception as e:
-        print(f"delete_cookie Error: {e}")
-    return False

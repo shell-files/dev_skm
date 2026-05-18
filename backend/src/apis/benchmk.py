@@ -1,6 +1,6 @@
 from fastapi import APIRouter, UploadFile, File, Form
 from src.utils.file import uploadSr
-from typing import List
+from typing import List, Annotated
 
 router = APIRouter()
 
@@ -8,7 +8,7 @@ router = APIRouter()
 @router.post("",
         summary="SR PDF 파일 저장",
         description="파일 정보 DB저장")
-async def fileRead(files:List[UploadFile] = File(...), file_types:str = Form()):
+async def fileRead(files:Annotated[List[UploadFile], File(...)], file_types:str = Form()):
   return uploadSr(files, file_types)
 
 # AI 분석 API

@@ -7,52 +7,24 @@ from src.utils.settings import settings
 
 # DB 파일 저장
 
-def uploadSr(SrFileModel:SrFileModel):
-    file = SrFileModel.file
-    fileType = SrFileModel.fileType
-    companyName = SrFileModel.companyName
-    origin = file.filename
-    ext = origin.split(".")[-1].lower()
-    if ext != "pdf":
-        return ResponseModel(False, "PDF 파일만 업로드 가능합니다.")
-    UPLOAD_DIR = Path(settings.file_dir)
-    UPLOAD_DIR.mkdir(exist_ok=True)
-    id = uuid.uuid4().hex
-    fileName = f"{id}.{ext}"
-    sql = f"""
-        insert into `TE_SR_FILE` (`origin`, `file_name`, `type`, `company_name`)
-        values (?,?,?,?)
-        """
-    params = (origin, fileName, fileType, companyName)
-    saveResult = save(sql, params)
-    # 동시에 로컬 폴더에도 파일 저장
-    if saveResult:
-        path = UPLOAD_DIR / fileName
-        with path.open("wb") as f:
-            shutil.copyfileobj(file.file, f)
-        if saveResult:        
-            return ResponseModel(True, "파일이 성공적으로 업로드되었습니다.", {"fileName": fileName, "origin": origin})
-        else:
-            return ResponseModel(False, "파일 업로드에 실패하였습니다. 다시 시도해주세요.")
-# def uploadSr(files:list, type):
-#     if len(files) > 3:
-#         return ResponseModel(False, "파일은 최대 3개까지만 업로드 가능합니다.")
-#     for file in files:
-#         origin = file.filename
-#         ext = origin.split(".")[-1].lower()
-#         if ext != "pdf":
-#             return ResponseModel(False, "PDF 파일만 업로드 가능합니다.")
+# def uploadSr(SrFileModel:SrFileModel):
+#     file = SrFileModel.file
+#     fileType = SrFileModel.fileType
+#     companyName = SrFileModel.companyName
+#     origin = file.filename
+#     ext = origin.split(".")[-1].lower()
+#     if ext != "pdf":
+#         return ResponseModel(False, "PDF 파일만 업로드 가능합니다.")
 #     UPLOAD_DIR = Path(settings.file_dir)
 #     UPLOAD_DIR.mkdir(exist_ok=True)
-#     for file in files:
-#         id = uuid.uuid4().hex
-#         fileName = f"{id}.{ext}"
-#         sql = f"""
-#             insert into `TE_SR_FILE` (`origin`, `file_name`, `type`)
-#             values (?,?,?)
-#             """
-#         params = (origin, fileName, type)
-#         saveResult = save(sql, params)
+#     id = uuid.uuid4().hex
+#     fileName = f"{id}.{ext}"
+#     sql = f"""
+#         insert into `TE_SR_FILE` (`origin`, `file_name`, `type`, `company_name`)
+#         values (?,?,?,?)
+#         """
+#     params = (origin, fileName, fileType, companyName)
+#     saveResult = save(sql, params)
 #     # 동시에 로컬 폴더에도 파일 저장
 #     if saveResult:
 #         path = UPLOAD_DIR / fileName
@@ -62,6 +34,38 @@ def uploadSr(SrFileModel:SrFileModel):
 #             return ResponseModel(True, "파일이 성공적으로 업로드되었습니다.", {"fileName": fileName, "origin": origin})
 #         else:
 #             return ResponseModel(False, "파일 업로드에 실패하였습니다. 다시 시도해주세요.")
+
+def uploadSr(SrFileModel:SrFileModel):
+    files = SrFileModel.files
+    type = SrFileModel.fileType
+    companyName = SrFileModel.companyName
+    if len(files) > 3:
+        return ResponseModel(False, "파일은 최대 3개까지만 업로드 가능합니다.")
+    for file in files:
+        origin = file.filename
+        ext = origin.split(".")[-1].lower()
+        if ext != "pdf":
+            return ResponseModel(False, "PDF 파일만 업로드 가능합니다.")
+    UPLOAD_DIR = Path(settings.file_dir)
+    UPLOAD_DIR.mkdir(exist_ok=True)
+    for file in files:
+        id = uuid.uuid4().hex
+        fileName = f"{id}.{ext}"
+        sql = f"""
+            insert into `TE_SR_FILE` (`origin`, `file_name`, `type`,`company_name`)
+            values (?,?,?,?)
+            """
+        params = (origin, fileName, type, companyName)
+        saveResult = save(sql, params)
+    # 동시에 로컬 폴더에도 파일 저장
+    if saveResult:
+        path = UPLOAD_DIR / fileName
+        with path.open("wb") as f:
+            shutil.copyfileobj(file.file, f)
+        if saveResult:        
+            return ResponseModel(True, "파일이 성공적으로 업로드되었습니다.", {"fileName": fileName, "origin": origin})
+        else:
+            return ResponseModel(False, "파일 업로드에 실패하였습니다. 다시 시도해주세요.")
     
 #  SR 파일 찾기
 def findSr(fileName):
@@ -76,7 +80,7 @@ def findSr(fileName):
         db_file_name = result["file_name"]
         local_file_path = UPLOAD_DIR / db_file_name
         if not local_file_path.exists():
-            return ResponseModel(False, "로컬 서버에서 파일을 찾을 수 없습니다.")
+            return ResponseModel(False, "서버에서 파일을 찾을 수 없습니다.")
         result = str(local_file_path.resolve())
         return ResponseModel(True, "", result)
     else:

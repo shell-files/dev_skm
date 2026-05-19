@@ -16,6 +16,7 @@ services:
       - ./backend/pyproject.toml:/workspace/pyproject.toml
       - ./backend/uv.lock:/workspace/uv.lock
       - ./backend/.python-version:/workspace/.python-version
+      - ./backend/src:/workspace/src
     environment:
       - HOST_IP=http://aiedu.tplinkdns.com
     command: ["uv", "run", "fastapi", "run"]

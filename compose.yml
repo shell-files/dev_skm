@@ -19,6 +19,7 @@ services:
       - ./backend/src:/workspace/src
     environment:
       - HOST_IP=${HOST_IP}
+      - DOMAIN= ${DOMAIN}
       - KAFKA_SERVER=${KAFKA_SERVER}
       - KAFKA_TOPIC=${KAFKA_TOPIC}
       - MAIL_USERNAME=${MAIL_USERNAME}

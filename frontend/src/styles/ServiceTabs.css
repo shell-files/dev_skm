@@ -1,0 +1,61 @@
+/* ServiceTabs.css */
+.service-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 140px;
+}
+
+.service-select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  padding: 8px 36px 8px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.service-select:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.service-select:focus {
+  outline: none;
+  border-color: #03A94D;
+  box-shadow: 0 0 0 3px rgba(3, 169, 77, 0.1);
+}
+
+.select-arrow {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+/* Manager Page Specific Layout */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.page-header .page-title {
+  margin-bottom: 0;
+}
+
+/* Onboarding Page Specific Layout */
+.ob-service-filter {
+  margin-left: 12px;
+}

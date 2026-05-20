@@ -1,0 +1,119 @@
+/**
+ * AuthContext.jsx - 전역 인증 상태 관리 컨텍스트
+ */
+
+import { createContext, useState, useContext, useEffect } from "react";
+import { GET, POST, PUT, PATCH, DELETE } from "@utils/Network";
+import { useNavigate } from "react-router";
+const AuthContext = createContext(null);
+
+/**
+ * [유틸] safeJsonParse: localStorage 파싱 실패 시 fallback 반환
+ */
+const safeJsonParse = (value, fallback) => {
+  try {
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+export const AuthProvider = ({ children }) => {
+	// [변수] user: 현재 로그인한 사용자 정보
+	const [user, setUser] = useState(null);
+  const navigate = useNavigate()
+	// [변수] companies: 해당 사용자의 전체 소속 회사 목록
+	const [companies, setCompanies] = useState([]);
+
+	// [변수] selectedCompany: 현재 선택된 회사 (role, company_id 등 포함)
+	const [selectedCompany, setSelectedCompany] = useState(null);
+
+	// [변수] isAuthReady: localStorage 복원 완료 여부 (라우터 가드에서 활용)
+	const [isAuthReady, setIsAuthReady] = useState(false);
+
+	/**
+   * [이펙트] 앱 진입 시 localStorage에서 이전 세션 복원
+   */
+  useEffect(() => {
+
+	}, []);
+
+	/**
+   * [함수] selectCompany: CompanySelect 페이지에서 회사 선택 시 호출
+   */
+  const selectCompany = (companyId) => {
+    const company = companies.find(c => Number(c.company_id) === Number(companyId));
+    if (!company) return null;
+
+    setSelectedCompany(company);
+    localStorage.setItem("selectedCompany", JSON.stringify(company));
+    return company;
+  };
+
+	/**
+   * [함수] login: 로그인 API 응답 데이터를 받아 전역 상태 및 localStorage에 저장
+   */
+  const login = (data) => {
+		try {
+      console.log(data);
+    } catch (error) {
+      console.error("Login API failed:", error);
+    } finally {
+      
+    }
+	};
+
+	/**
+   * [함수] logout: API 호출 후 전역 인증 상태 초기화 및 localStorage 전체 삭제
+   */
+  const logout = async () => {
+    try {
+      
+    } catch (error) {
+      console.error("Logout API failed:", error);
+    } finally {
+      
+    }
+  };
+   // nav관련 navigate
+   const handleLogout = async () => {
+        await logout();
+        navigate('/');
+    };
+    const toggleSidebarMobile = () => {
+        const sidebar = document.getElementById('globalSidebar');
+        if (sidebar) sidebar.classList.toggle('mobile-open');
+    }
+    const goHome = () => {
+        navigate('/');
+    };
+    const goMyPage = () => {
+        navigate('/mypage');
+    };
+    
+    const openAlarmCenter = () => {
+        return;
+    }
+
+	/**
+	 * [함수] hasRole: 현재 사용자가 특정 권한(role)을 가지고 있는지 확인
+	 */
+	const hasRole = (...roles) => {
+		const role = selectedCompany?.role || user?.role;
+		return roles.includes(role);
+	};
+
+	// 전역 인증 상태 관리 컨텍스트에 필요한 값들을 객체로 묶어서 제공
+	const authContextValue = {login, goMyPage};
+ 
+	return (
+		<AuthContext.Provider value={authContextValue}>
+			{children}
+		</AuthContext.Provider>
+	);
+  
+  
+
+};
+	
+export const useAuth = () => useContext(AuthContext);

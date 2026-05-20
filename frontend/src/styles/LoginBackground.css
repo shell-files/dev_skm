@@ -1,0 +1,204 @@
+#login .login-background {
+  position: relative;
+  width: 580px;
+  min-width: 580px;
+  height: 100%;
+  overflow: hidden;
+  background: 
+    radial-gradient(circle at 10% 10%, rgba(255, 255, 255, 0.1), transparent 40%),
+    linear-gradient(145deg, #03a94d 0%, #008f45 50%, #005f36 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 초기 렌더링 시 트랜지션 및 애니메이션 중단 */
+#login .is-initializing .login-background,
+#login .is-initializing .login-background * {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* 배경 장식 패턴 (그리드) */
+#login .login-background::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
+  z-index: 0;
+}
+
+#login .login-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 70% 30%, rgba(3, 169, 77, 0.15) 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.08) 0%, transparent 40%);
+  z-index: 1;
+}
+
+/* 좌측 비주얼 컨텐츠 레이아웃 */
+#login .login-visual-content {
+  position: relative;
+  z-index: 2;
+  padding: 80px 60px;
+  color: #ffffff;
+}
+
+#login .login-visual-kicker {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 24px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+#login .login-visual-title {
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+  margin-bottom: 32px;
+}
+
+#login .login-visual-description {
+  font-size: 16px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 40px;
+  max-width: 380px;
+  word-break: keep-all;
+}
+
+/* 칩 리스트 스타일 */
+#login .login-visual-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 60px;
+}
+
+#login .login-visual-chip {
+  padding: 8px 18px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffffff;
+  backdrop-filter: blur(20px);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+#login .login-visual-chip:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.45);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* 데이터 흐름 시각화 요소 */
+#login .login-visual-assets {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+#login .data-flow-node {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+}
+
+#login .node-1 { top: 30%; right: 20%; opacity: 0.6; }
+#login .node-2 { bottom: 40%; left: 30%; opacity: 0.4; }
+#login .node-3 { bottom: 20%; right: 15%; opacity: 0.3; filter: blur(1px); }
+#login .node-4 { top: 15%; left: 45%; opacity: 0.25; filter: blur(1.5px); }
+
+#login .data-flow-line {
+  position: absolute;
+  top: 40%;
+  left: 10%;
+  width: 80%;
+  height: 120px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 100% 100% 0 0;
+  border-bottom: none;
+  transform: rotate(-10deg);
+}
+
+/* 3D Objects 고정 규격 */
+#login .login-visual-object {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+  object-fit: contain;
+}
+
+#login .login-visual-object-main {
+  right: -40px;
+  bottom: -40px;
+  width: 360px;
+  height: 360px;
+  aspect-ratio: 1 / 1;
+  opacity: 1;
+  filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.25));
+}
+
+#login .login-visual-object-sub-1 {
+  top: 60px;
+  right: 60px;
+  width: 120px;
+  height: 120px;
+  aspect-ratio: 1 / 1;
+  opacity: 0.7;
+  filter: blur(0.5px);
+}
+
+#login .login-visual-object-sub-2 {
+  left: 60px;
+  bottom: 80px;
+  width: 100px;
+  height: 100px;
+  aspect-ratio: 1 / 1;
+  opacity: 0.6;
+  filter: blur(1px);
+}
+
+/* Ready 상태에서만 애니메이션 실행 */
+#login .is-ready .login-visual-object-main { animation: loginFloat 8s ease-in-out infinite; }
+#login .is-ready .login-visual-object-sub-1 { animation: loginFloat 10s ease-in-out infinite reverse; }
+#login .is-ready .login-visual-object-sub-2 { animation: loginFloat 12s ease-in-out infinite; }
+
+@keyframes loginFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-10px, -20px, 0) rotate(5deg);
+  }
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  #login .login-visual-title {
+    font-size: 38px;
+  }
+  #login .login-background {
+    width: 100%;
+    min-width: 0;
+  }
+}

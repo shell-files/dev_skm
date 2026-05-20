@@ -1,0 +1,13 @@
+        #select_company { background-color: #f4f7f6; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: 'Pretendard', sans-serif;}
+        #select_company .select-container { text-align: center; background: #fff; padding: 50px 40px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; width: 100%; max-width: 400px; }
+        #select_company .select-code { font-size: 28px; font-weight: bold; color: #03a94d; margin-bottom: 20px; }
+        
+        /* 입력 창 스타일 */
+        #select_company .input-group { margin-bottom: 15px; text-align: left; }
+        #select_company .input-group label { display: block; font-size: 14px; color: #666; margin-bottom: 5px; margin-left: 5px; }
+        #select_company .search-input, .company-select { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; box-sizing: border-box; font-size: 16px; outline: none; }
+        #select_company .search-input:focus, .company-select:focus { border-color: #03a94d; }
+
+        #select_company .btn-submit { display: block; background-color: #03a94d; color: white; padding: 15px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 25px; transition: opacity 0.2s; border: none; width: 100%; cursor: pointer; font-size: 16px; }
+        #select_company .btn-submit:hover { opacity: 0.8; }
+        #select_company .info-text { font-size: 13px; color: #888; margin-top: 15px; }

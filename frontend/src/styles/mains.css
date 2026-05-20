@@ -1,0 +1,720 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #fff;
+    color: #1e293b;
+    margin: 0;
+    padding: 0;
+}
+#main_page .logo {
+    width: auto;
+    max-height: 50px;
+    object-fit: contain;
+}
+
+
+/* 메인 레이아웃 전용 스타일 확장 */
+#main_page {
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* #main_page .content_box {
+    height: calc(100vh - 70px);
+    display: flex;
+} */
+
+
+
+#main_page .main-layout {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+#main_page .content_box {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    min-height: 0;
+}
+
+/* 좌측 사이드바 */
+#main_page .sidebar {
+    width: 260px;
+    background-color: #EFF6F1;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    height: auto;
+    flex-shrink: 0;
+    position: relative;
+    /* 대시 인디케이터 배치를 위한 설정 */
+    min-height: 0;
+    /* 내부 스크롤을 활성화하기 위한 필수 설정 */
+    overflow: hidden;
+}
+
+#main_page .header .logo-placeholder {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    border-radius: 8px;
+    flex-shrink: 0;
+    width: 200px;
+}
+
+/* 메뉴 스크롤 영역 래퍼 (인디케이터 세로 중앙 정렬용) */
+#main_page .nav-scroll-wrapper {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 메뉴 스크롤 영역 (브라우저 기본 스크롤바 완전 숨김 - 커스텀 인디케이터 사용) */
+#main_page .nav-scroll-area {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    /* 스크롤 활성화를 위한 필수 설정 */
+    margin-right: -10px;
+    padding-right: 10px;
+    scrollbar-width: none;
+    /* Firefox 숨김 */
+}
+
+#main_page .nav-scroll-area::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari 숨김 */
+}
+
+#main_page .nav-group {
+    margin-bottom: 25px;
+}
+
+#main_page .nav-title {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 10px;
+    font-weight: bold;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+#main_page .nav-item {
+    padding: 12px 15px;
+    cursor: pointer;
+    border-radius: 8px;
+    margin-bottom: 4px;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+    color: #40ad77;
+    white-space: nowrap;
+    font-weight:bold;
+}
+
+#main_page .nav-item:hover {
+    background-color: #f0fdf4;
+    color: #03a94d;
+}
+
+#main_page .nav-item.active {
+    background-color: #f0fdf4;
+    color: #03a94d;
+    font-weight: 600;
+}
+
+/* 사이드바 아코디언 UX */
+#main_page .nav-accordion-header {
+    display: flex;
+    justify-content: space-between;
+    width : 100%;
+    align-items: center;
+}
+
+#main_page .nav-arrow {
+    transition: transform 0.3s ease-in-out;
+    width: 16px;
+    height: 16px;
+    color: #94a3b8;
+}
+
+#main_page .nav-arrow.expanded {
+    transform: rotate(90deg);
+}
+
+#main_page .nav-accordion-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), margin-bottom 0.35s ease;
+}
+
+#main_page .nav-accordion-content>.inner-wrapper {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 0;
+}
+
+#main_page .nav-accordion-content.expanded {
+    grid-template-rows: 1fr;
+    margin-bottom: 8px;
+}
+
+#main_page .sub-item {
+    padding-left: 30px;
+    font-size: 13px;
+    color: #666;
+}
+
+#main_page .nav-item.sub-item {
+    padding: 10px 15px 10px 35px;
+    margin-bottom: 0;
+    font-size: 13px;
+    position: relative;
+}
+
+#main_page .nav-item.sub-item:hover,
+#main_page .nav-item.sub-item.active {
+    color: #03a94d;
+    background-color: transparent;
+    font-weight: 600;
+}
+
+#main_page .nav-item.sub-item.active::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background-color: #03a94d;
+}
+
+#main_page .nav-item.sub-sub-item {
+    padding: 8px 15px 8px 50px;
+    font-size: 12px;
+    color: #7f8c8d;
+    border-radius: 0;
+    margin-bottom: 0;
+}
+
+#main_page .nav-item.sub-sub-item:hover {
+    color: #03a94d;
+    background-color: transparent;
+}
+
+#main_page .nav-item.sub-sub-item.active {
+    color: #03a94d;
+    font-weight: 600;
+}
+
+/* 사이드바 하단: 회사 선택 및 검색 */
+#main_page .sidebar-footer {
+    margin-top: auto;
+    padding: 20px;
+    border-top: 1px solid #eee;
+    white-space: nowrap;
+    display: grid;
+    flex-shrink: 0;
+}
+
+#main_page .company-select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background-color: #EFF6F1;
+    font-size: 13px;
+    outline: none;
+    appearance: none;
+}
+
+#main_page .company-search {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background-color: #EFF6F1;
+    font-size: 13px;
+    margin-bottom: 10px;
+    outline: none;
+}
+
+/* 우측 메인 영역 */
+#main_page .main_right_box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+
+
+#main_page .user-link {
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+}
+
+#main_page .user-link span {
+    color: #03a94d;
+    font-size: 12px;
+    font-weight: normal;
+    margin-left: 6px;
+}
+
+#main_page .header-action {
+    cursor: pointer;
+    font-size: 14px;
+    color: #555;
+    position: relative;
+}
+
+#main_page .header-action:hover {
+    color: #03a94d;
+}
+
+/* 알림 미읽음 표시 점 (Red Dot) */
+#main_page .header-action .noti-dot {
+    position: absolute;
+    top: -2px;
+    right: -8px;
+    width: 8px;
+    height: 8px;
+    background-color: #ef4444; /* 빨간색 (Red) */
+    border-radius: 50%;
+    border: 1.5px solid #ffffff; /* 테두리를 주어 배경과 구분 */
+}
+
+/* 중앙 컨텐츠 영역 */
+#main_page .content-body {
+    padding: 40px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+/* 프리미엄 대시보드 미니멀 스크롤 인디케이터 */
+#main_page .nav-dash-indicator {
+    position: absolute;
+    right: -14px;
+    /* 사이드바의 우측 패딩 공간(20px) 안으로 밀어내어 메뉴 화살표와 겹치지 않게 분리 */
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    /* 8개 기준 간격 */
+    z-index: 20;
+    pointer-events: auto;
+    /* 드래그 및 클릭 허용 */
+    cursor: grab;
+    /* 마우스 오버 시 잡기 아이콘 */
+    width: 24px;
+    /* 클릭하기 쉽도록 투명한 클릭 영역 넓힘 */
+    align-items: flex-end;
+    /* 우측 정렬 유지 */
+}
+
+#main_page .nav-dash-indicator:active {
+    cursor: grabbing;
+    /* 드래그 중 아이콘 */
+}
+
+#main_page .nav-dash-indicator .dash-item {
+    width: 10px;
+    /* 배경 대시 길이 */
+    height: 2px;
+    /* 대시 두께 */
+    background-color: #94a3b8;
+    /* slate-400 */
+    border-radius: 2px;
+    opacity: 0.5;
+    transition: all 0.3s ease;
+    /* 활성 상태 전환 시 부드러운 트랜지션 */
+}
+
+/* 활성 상태 대시 (진하고 길게) */
+#main_page .nav-dash-indicator .dash-item.active {
+    width: 16px;
+    /* 활성 상태 시 더 길게 */
+    background-color: #334155;
+    /* slate-700: 진하게 강조 */
+    opacity: 1;
+    transform: translateX(-6px);
+    /* 우측 기준 정렬이므로 좌측으로 돌출되게 이동 */
+}
+
+/* 우측 엣지 플로팅 알림 토글 버튼 */
+#main_page .alarm-floating-toggle {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 60px;
+    background-color: #ffffff;
+    border: 1px solid #cbd5e1; /* 기존보다 조금 더 진하고 또렷한 테두리 */
+    border-right: none;
+    border-radius: 30px 0 0 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.08);
+    z-index: 90;
+    color: #475569; /* 기존 연한 회색에서 더 진하고 무게감 있는 색으로 변경 */
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#main_page .alarm-floating-toggle:hover {
+    background-color: #f8fafc; /* 너무 튀는 초록색 대신 은은한 배경 */
+    color: #0f172a; /* 호버 시 가장 진한 차콜/블랙 톤으로 변경하여 상단 버튼들과 통일 */
+    width: 32px;
+    border-color: #94a3b8; /* 테두리도 자연스럽게 진해짐 */
+}
+
+#main_page .alarm-floating-toggle.hidden {
+    transform: translateY(-50%) translateX(100%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+
+
+/* ==========================================================================
+   데스크탑 & 모바일 상시 사이드바 토글 및 반응형 스타일
+   ========================================================================== */
+
+/* 1. 사이드바가 접힐 때 부드러운 전환 효과 추가 */
+#main_page .sidebar {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                opacity 0.2s ease,
+                transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 2. 헤더 내부 구조 개선: 토글 버튼과 기존 요소 정렬용 */
+#main_page .header {
+    justify-content: space-between; /* 기존 flex-end에서 변경하여 토글 버튼을 왼쪽에 배치 */
+    padding: 0 20px 0 20px;
+}
+
+#main_page .header-right-group {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+    margin-left: auto; /* 우측으로 밀착 정렬 */
+}
+
+/* 3. 데스크탑 토글 버튼 스타일 */
+#main_page .sidebar-toggle-btn {
+    background: none;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    cursor: pointer;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    border-radius: 6px;
+    padding: 10px;
+}
+
+#main_page .sidebar-toggle-btn:hover {
+    background-color: #f1f5f9;
+    color: #03a94d;
+    border-color: #94a3b8;
+}
+
+/* 4. 모바일 화면(800px 이하) 햄버거 및 닫기 버튼 */
+.mobile-hamburger {
+    display: none;
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    width: 40px;
+    height: 40px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 20px;
+    cursor: pointer;
+    color: #334155;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.sidebar-close-btn {
+    display: none; /* 기본적으로 숨김 (모바일에서만 노출) */
+}
+
+
+/* ==========================================================================
+   화면 크기별 스타일 제어
+   ========================================================================== */
+
+/* [데스크탑 환경] 801px 이상일 때 */
+@media (min-width: 801px) {
+    /* 닫힘 상태 */
+    #main_page .sidebar.closed {
+        width: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        opacity: 0;
+        visibility: hidden;
+        border-right: none;
+        pointer-events: none;
+    }
+
+    /* 사이드바가 닫혔을 때 내부 콘텐츠가 삐져나오는 것 방지 */
+    /* display: none !important 제거하여 트랜지션 도중 내용이 유지되게 함 */
+    #main_page .sidebar.closed .nav-scroll-wrapper,
+    #main_page .sidebar.closed .sidebar-footer {
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+}
+
+/* [모바일 환경] 800px 이하일 때 */
+@media (max-width: 800px) {
+    /* 상단 화살표 토글 버튼을 숨기고 햄버거 메뉴를 노출 */
+    #main_page .sidebar-toggle-btn {
+        display: none;
+    }
+
+    .mobile-hamburger {
+        display: flex;
+    }
+
+    #main_page .header {
+        padding-left: 75px; /* 햄버거 버튼 공간 확보 */
+    }
+
+    /* 사이드바 모바일 기본 스타일 (기본적으로 화면 왼쪽 밖으로 숨김) */
+    #main_page .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        height: 100vh;
+        z-index: 1000;
+        width: 280px !important;
+        transform: translateX(-100%); /* 화면 밖으로 완전히 밀어내기 */
+        opacity: 0;
+        visibility: hidden;
+        box-shadow: none;
+        border-right: 1px solid #eee;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                    opacity 0.2s ease,
+                    visibility 0.3s;
+    }
+
+    /* [중요] 모바일에서 'open' 클래스가 붙었을 때만 화면에 나타남 */
+    #main_page .sidebar.open {
+        transform: translateX(0);
+        opacity: 1 !important;
+        visibility: visible !important;
+        box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+    }
+
+    /* 모바일에서 'closed'일 때의 스타일을 명확히 정의 (확실히 숨김) */
+    #main_page .sidebar.closed {
+        transform: translateX(-100%) !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+    }
+
+    /* 모바일 사이드바 내부 닫기(X) 버튼 스타일 */
+    #main_page .sidebar-close-btn {
+        display: flex;
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: none;
+        border: none;
+        font-size: 18px;
+        color: #94a3b8;
+        cursor: pointer;
+        z-index: 11;
+        width: 30px;
+        height: 30px;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    /* 3. 모바일 화면용 오버레이 (배경 어둡게 처리) */
+    #main_page .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(2px);
+        z-index: 999;
+    }
+}
+
+
+/* ==========================================================================
+   좌측 사이드바 엣지 토글 버튼 (사이드바 우측 경계선에 밀착)
+   ========================================================================== */
+#main_page .sidebar-edge-toggle {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 50px;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.06);
+    z-index: 100;
+    color: #64748b;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+                width 0.2s ease, 
+                background-color 0.2s ease, 
+                color 0.2s ease;
+}
+
+/* 사이드바가 열려 있을 때: 사이드바 너비(270px) 바로 오른쪽에 위치 */
+#main_page .sidebar-edge-toggle.open {
+    left: 260px;
+    border-left: none;
+    border-radius: 0 25px 25px 0; /* 오른쪽만 둥글게 */
+}
+
+/* 사이드바가 닫혀 있을 때: 화면 왼쪽 끝에 위치 */
+#main_page .sidebar-edge-toggle.closed {
+    left: 0;
+    border-left: none;
+    border-radius: 0 25px 25px 0; /* 오른쪽만 둥글게 */
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+}
+
+/* 호버 시 효과 */
+#main_page .sidebar-edge-toggle:hover {
+    background-color: #f0fdf4;
+    color: #03a94d;
+    width: 30px; /* 살짝 튀어나오는 효과 */
+    border-color: rgba(3, 169, 77, 0.3);
+}
+
+#main_page .sidebar-edge-toggle svg {
+    transition: transform 0.2s ease;
+}
+
+/* 모바일 환경(800px 이하)에서는 햄버거 메뉴를 사용하므로 숨김 */
+@media (max-width: 800px) {
+    #main_page .sidebar-edge-toggle {
+        display: none !important;
+    }
+
+    #main_page .header .logo-placeholder {
+    width: 100px;
+    }
+}
+
+
+/* ==========================================================================
+   헤더 레이아웃 스타일 (데스크탑 기본)
+   ========================================================================== */
+#main_page .header {
+    height: 70px;
+    background: #EFF6F1;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 40px;
+    gap: 25px;
+    flex-shrink: 0;
+    margin-bottom: 0;
+}
+
+#main_page .header-left-group {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* 로고와 햄버거 메뉴 사이 간격 */
+}
+
+/* 데스크탑에서는 모바일 햄버거 버튼 숨김 */
+#main_page .mobile-hamburger {
+    display: none;
+}
+
+
+/* ==========================================================================
+   [모바일 환경] 800px 이하일 때
+   ========================================================================== */
+@media (max-width: 800px) {
+    #main_page .header {
+        padding: 0 20px; /* 좌우 여백을 모바일에 맞게 축소 */
+    }
+
+    #main_page .header-left-group {
+        display: flex;
+        align-items: center;
+        gap: 12px; /* 로고 오른쪽에 햄버거가 딱 붙도록 설정 */
+    }
+
+    /* 햄버거 메뉴 활성화 및 디자인 수정 */
+    #main_page .mobile-hamburger {
+        display: flex;
+        position: static; /* fixed 해제하여 로고 오른쪽에 자연스럽게 배치 */
+        width: 36px;
+        height: 36px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 16px;
+        cursor: pointer;
+        color: #334155;
+        align-items: center;
+        justify-content: center;
+        box-shadow: none;
+        transition: all 0.2s ease;
+    }
+
+    #main_page .mobile-hamburger:hover {
+        background-color: #f0fdf4;
+        color: #03a94d;
+        border-color: rgba(3, 169, 77, 0.3);
+    }
+    
+    /* 모바일에서 우측 사용자 영역 간격 조정 */
+    #main_page .header-right-group {
+        gap: 14px;
+    }
+}

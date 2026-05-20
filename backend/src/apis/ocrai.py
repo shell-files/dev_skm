@@ -10,6 +10,41 @@ from src.utils.settings import settings
 from src.utils.file import findSr
 from src.models.model import UserModel
 
+# 모델 테스트용 
+# psutil 설치함. uv remove psutil 필요
+import time
+import os
+import csv
+import psutil
+
+def log_performance_to_csv(func_name: str, start_time: float, start_mem: float, file_name: str = "perf_log.csv"):
+    """
+    소요 시간과 메모리 변화량을 계산하여 콘솔에 출력하고 CSV 파일에 저장합니다.
+    """
+    # 현재 시점의 측정값 계산
+    end_time = time.time()
+    process = psutil.Process(os.getpid())
+    end_mem = process.memory_info().rss / (1024 * 1024)  # MB 단위 변환
+
+    elapsed_time = end_time - start_time
+    mem_used = end_mem - start_mem
+
+    # 1. 콘솔 출력
+    print(f"\n[Performance Log - {func_name}]")
+    print(f"- 소요 시간: {elapsed_time:.2f}초")
+    print(f"- 메모리 변화량: {mem_used:.2f} MB (최종: {end_mem:.2f} MB)")
+
+    # 2. CSV 파일 저장 (파일이 없으면 헤더를 추가)
+    file_exists = os.path.exists(file_name)
+    
+    with open(file_name, mode="a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["Timestamp", "Function", "Elapsed_Time_Sec", "Memory_Used_MB", "Final_Memory_MB"])
+        
+        current_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        writer.writerow([current_timestamp, func_name, f"{elapsed_time:.2f}", f"{mem_used:.2f}", f"{end_mem:.2f}"])
+
 router = APIRouter()
 
 # Ollama Client 설정
@@ -17,24 +52,8 @@ router = APIRouter()
 client = genai.Client(api_key=settings.gemini_api_key)
 modelName = "gemini-3.5-flash" 
 
-#  청크용 함수
-def chunk_text(text: str, chunk_size: int = 3000, overlap: int = 300) -> list:
-    """
-    텍스트를 지정된 크기(chunk_size)로 자르고, 문맥 유지를 위해 일정 부분(overlap)을 겹치게 분할합니다.
-    """
-    chunks = []
-    start = 0
-    text_len = len(text)
-    
-    while start < text_len:
-        end = start + chunk_size
-        chunks.append(text[start:end])
-        start += chunk_size - overlap
-        
-    return chunks
-
 # JSON 응답 정제용 함수
-def clean_and_parse_json(response_text: str) -> list:
+def clean(response_text: str) -> list:
     cleaned = response_text.strip()
     if cleaned.startswith("```json"):
         cleaned = cleaned[7:]
@@ -56,31 +75,34 @@ def clean_and_parse_json(response_text: str) -> list:
         # 정형 JSON 파싱 실패 시 빈 배열 반환하여 500 에러를 방지
         return []
 
-@router.post("/llm_cal")
+@router.post("")
 # Ollama LLM 호출용 함수
-async def llm_cal(file: UploadFile = File(..., description="분석할 현대모비스 PDF 파일"),
+async def gemini(file: UploadFile = File(..., description="분석할 현대모비스 PDF 파일"),
 model: str = Form(modelName, description="사용할 Gemini 모델명")) -> str:
-# def llm_cal(fileName: str, page: str = "SR",  model: str = modelName) -> str:
+    
+# 테스트용 시간 및 메모리 기록
+    start_time = time.time()
+    process = psutil.Process(os.getpid())
+    start_mem = process.memory_info().rss / (1024 * 1024) # MB 단위    
+    
+    # PDF 파일 저장
     temp_file_path = f"temp_{uuid.uuid4()}.pdf"
-    with open(temp_file_path, "wb") as f:
-        f.write(await file.read())
+    
     # file_response = findSr(fileName, page)
     
     try:
-        # 2. PDF 파일을 바이너리(bytes) 형태로 읽기
-        # reader = PdfReader(file_path)
-        # pdf_text = ""
-        # for page in reader.pages:
-        #     text = page.extract_text()
-        #     if text:
-        #         pdf_text += text + "\n"
-        # if not pdf_text.strip():
-        #     raise ValueError("PDF 내부에서 텍스트를 추출할 수 없습니다.")
-            
-        # text_chunks = chunk_text(pdf_text, chunk_size=3500, overlap=350)
-        # merged_issues = []
-
+        with open(temp_file_path, "wb") as f:
+            f.write(await file.read())
         uploaded_file = client.files.upload(file=temp_file_path)
+        max_attempts = 120  # 2초 * 120 = 최대 240초 대기
+        attempts = 0
+        while uploaded_file.state == types.FileState.PROCESSING:
+            if attempts >= max_attempts:
+                raise Exception("구글 서버의 파일 가공 대기 시간이 초과되었습니다. (Timeout)")
+                
+            time.sleep(2)  # 2초마다 상태 재확인
+            uploaded_file = client.files.get(name=uploaded_file.name)
+            attempts += 1
         
         prompt=f"""
         Perform the role of a Double Materiality Assessment consultant.
@@ -110,22 +132,30 @@ model: str = Form(modelName, description="사용할 Gemini 모델명")) -> str:
         # for index, chunk in enumerate(text_chunks): 
         refined_prompt = prompt.replace("__OUTPUT_FORMAT__", str(outputFormat)).replace("__OUTPUT_EXAMPLE__", str(outputExample))
     
-        # 3. LLM API에 파일 데이터를 직접 전달 (Ollama 멀티모달 표준 스펙)
+        # LLM API에 파일 데이터를 직접 전달 (Ollama 멀티모달 표준 스펙)
         generation_config = types.GenerateContentConfig(temperature=0.1)
 
-# 2. generate_content 호출
+        # generate_content 호출
         response = client.models.generate_content(
             model=model,
             contents=[uploaded_file, refined_prompt],
-            config=generation_config,
-            stream=False
+            config=generation_config
         )
-        result = client.files.delete(name=uploaded_file.name)
+
+        # 업로드한 파일 삭제 (임시 파일 서버에 안 남게)
+        client.files.delete(name=uploaded_file.name)
+        output = clean_llm_json(raw_input)
+        print(json.dumps(output, ensure_ascii=False, indent=2))
         
-        print("LLM Response:", result)  # 디버깅용 응답 출력
         return response.text
-        
+        # 테스트용 시간 및 메모리 기록 성공 시 호출
     except Exception as e:
+    # [측정 종료 및 CSV 기록] 실패 시에도 기록을 남김
+        log_performance_to_csv(func_name="llm_cal_failed", start_time=start_time, start_mem=start_mem)
         raise HTTPException(status_code=500, detail=f"LLM 파일 분석 중 오류 발생: {str(e)}")
+        
+    finally:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
 
 

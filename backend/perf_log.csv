@@ -1,0 +1,4 @@
+Timestamp,Function,Elapsed_Time_Sec,Memory_Used_MB,Final_Memory_MB
+2026-05-20 17:08:26,llm_cal_failed,6.03,17.73,125.48
+2026-05-20 17:09:42,llm_cal_failed,5.67,17.81,123.98
+2026-05-20 17:11:24,llm_cal_failed,5.45,17.73,125.52

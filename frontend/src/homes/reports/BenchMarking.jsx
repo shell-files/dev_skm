@@ -7,6 +7,8 @@ import {
   showConfirmAlert,
 } from "@components/UI/ServiceAlert";
 
+import axios from 'axios';
+
 const Benchmarking = () => {
   const [fileStorage, setFileStorage] = useState({
     leader: [],
@@ -183,7 +185,7 @@ const Benchmarking = () => {
     }));
   };
 
-  const runAnalysis = () => {
+  const runAnalysis = async() => {
     if (isAnalyzing) return;
 
     if (!companyNames.leader.trim()) {

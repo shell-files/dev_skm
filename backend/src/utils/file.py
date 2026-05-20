@@ -43,14 +43,21 @@ def uploadSr(fileModel:FileModel, userModel: UserModel):
             return ResponseModel(False, "파일 업로드에 실패하였습니다. 다시 시도해주세요.")
     
 #  파일 찾기
-def findSr(fileName, page, userModel: UserModel):
+def findSr(fileName, page):
+# def findSr(fileName, page, userModel: UserModel):
     UPLOAD_DIR = Path(settings.file_dir)
     fileIdSql = f"""
-            SELECT id, aes_d(file_name, '{settings.maria_db_key}') as file_name, aes_d(origin, '{settings.maria_db_key}') as origin, aes_d(type, '{settings.maria_db_key}') as type, aes_d(company_name, '{settings.maria_db_key}') as company_name
+            SELECT id, file_name, origin, type
             FROM skm.`TE_{page}_FILE`
-            WHERE file_name = aes_e(?, '{settings.maria_db_key}') AND create_user_id = aes_e(?, '{settings.maria_db_key}') AND delete_yn = 0;"""
-    fileIdParams = (fileName, userModel.id)
+            WHERE file_name = ?"""
+    # fileIdSql = f"""
+    #         SELECT id, aes_d(file_name, '{settings.maria_db_key}') as file_name, aes_d(origin, '{settings.maria_db_key}') as origin, aes_d(type, '{settings.maria_db_key}') as type, aes_d(company_name, '{settings.maria_db_key}') as company_name
+    #         FROM skm.`TE_{page}_FILE`
+    #         WHERE file_name = aes_e(?, '{settings.maria_db_key}') AND create_user_id = aes_e(?, '{settings.maria_db_key}') AND delete_yn = 0;"""
+    # fileIdParams = (fileName, userModel.id)
+    fileIdParams = (fileName,)
     result = findOne(fileIdSql, fileIdParams)
+    print(result)
     if result:
         db_file_name = result["file_name"]
         local_file_path = UPLOAD_DIR / db_file_name

@@ -3,6 +3,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
   host_ip: str
   domain: str
+  file_dir: str
+  gemini_api_key: str
   # --------------------------
   # kafka config
   # --------------------------
@@ -55,6 +57,10 @@ class Settings(BaseSettings):
   maria_db_port: int
   maria_db_key: str
   cookie_key: str
+  # --------------------------
+  # ocrai.py
+  # --------------------------
+  ollama_host: str
 
   model_config = SettingsConfigDict(
     env_file=".env",

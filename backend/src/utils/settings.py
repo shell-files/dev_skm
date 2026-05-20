@@ -5,6 +5,7 @@ class Settings(BaseSettings):
   domain: str
   file_dir: str
   gemini_api_key: str
+  gemini_model: str
   # --------------------------
   # kafka config
   # --------------------------

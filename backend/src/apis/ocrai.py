@@ -17,10 +17,8 @@ import os
 import csv
 import psutil
 
-def log_performance_to_csv(func_name: str, start_time: float, start_mem: float, file_name: str = "perf_log.csv"):
-    """
-    소요 시간과 메모리 변화량을 계산하여 콘솔에 출력하고 CSV 파일에 저장합니다.
-    """
+# 테스트용
+def log_performance_to_csv(model_name: str, start_time: float, start_mem: float, target_file_name: str, result_data: str):
     # 현재 시점의 측정값 계산
     end_time = time.time()
     process = psutil.Process(os.getpid())
@@ -30,54 +28,51 @@ def log_performance_to_csv(func_name: str, start_time: float, start_mem: float, 
     mem_used = end_mem - start_mem
 
     # 1. 콘솔 출력
-    print(f"\n[Performance Log - {func_name}]")
+    print(f"\n[Performance Log - {target_file_name}]")
     print(f"- 소요 시간: {elapsed_time:.2f}초")
     print(f"- 메모리 변화량: {mem_used:.2f} MB (최종: {end_mem:.2f} MB)")
 
-    # 2. CSV 파일 저장 (파일이 없으면 헤더를 추가)
-    file_exists = os.path.exists(file_name)
+    # ★ 수정 포인트: 로그를 기록할 CSV 파일명을 고정합니다.
+    log_csv_path = "perf_log.csv"
+    file_exists = os.path.exists(log_csv_path)
     
-    with open(file_name, mode="a", newline="", encoding="utf-8") as f:
+    with open(log_csv_path, mode="a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         if not file_exists:
-            writer.writerow(["Timestamp", "Function", "Elapsed_Time_Sec", "Memory_Used_MB", "Final_Memory_MB"])
+            writer.writerow(["Model_Name", "Timestamp", "File_Name", "Elapsed_Time_Sec", "Memory_Used_MB", "Final_Memory_MB", "Result_Data"])
         
         current_timestamp = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        writer.writerow([current_timestamp, func_name, f"{elapsed_time:.2f}", f"{mem_used:.2f}", f"{end_mem:.2f}"])
+        writer.writerow([
+            f"모델명:{model_name}", 
+            f"시점:{current_timestamp}", 
+            f"파일명:{target_file_name}", 
+            f"걸린시간:{elapsed_time:.2f}", 
+            f"사용 메모리:{mem_used:.2f}", 
+            f"최종 메모리:{end_mem:.2f}",
+            f"결과:{result_data}"
+        ])
 
 router = APIRouter()
 
 # Ollama Client 설정
 
 client = genai.Client(api_key=settings.gemini_api_key)
-modelName = "gemini-3.5-flash" 
+modelName = settings.gemini_model
 
 # JSON 응답 정제용 함수
 def clean(response_text: str) -> list:
-    cleaned = response_text.strip()
-    if cleaned.startswith("```json"):
-        cleaned = cleaned[7:]
-    elif cleaned.startswith("```"):
-        cleaned = cleaned[3:]
-    if cleaned.endswith("```"):
-        cleaned = cleaned[:-3]
-        
-    cleaned = cleaned.strip()
-
     try:
-        data = json.loads(cleaned)
-        if isinstance(data, list):
-            return data
-        elif isinstance(data, dict):
-            return [data]
-        return []
-    except Exception:
-        # 정형 JSON 파싱 실패 시 빈 배열 반환하여 500 에러를 방지
-        return []
+        # 1. 문자열 내의 이스케이프나 불필요한 공백을 파이썬 객체(List[Dict])로 변환
+        data = json.loads(response_text.strip())
+    except json.JSONDecodeError:
+        # 혹시 문자열 처리가 더 필요할 경우를 대비한 가공
+        cleaned_str = response_text.replace('\\n', '').replace('\\"', '"')
+        data = json.loads(cleaned_str)
+    return data
 
 @router.post("")
 # Ollama LLM 호출용 함수
-async def gemini(file: UploadFile = File(..., description="분석할 현대모비스 PDF 파일"),
+async def gemini(file: UploadFile = File(..., description="분석할 PDF 파일"),
 model: str = Form(modelName, description="사용할 Gemini 모델명")) -> str:
     
 # 테스트용 시간 및 메모리 기록
@@ -144,14 +139,22 @@ model: str = Form(modelName, description="사용할 Gemini 모델명")) -> str:
 
         # 업로드한 파일 삭제 (임시 파일 서버에 안 남게)
         client.files.delete(name=uploaded_file.name)
-        output = clean_llm_json(raw_input)
-        print(json.dumps(output, ensure_ascii=False, indent=2))
+        output = clean(response.text)
+        result = json.dumps(output, ensure_ascii=False, indent=2)
         
-        return response.text
         # 테스트용 시간 및 메모리 기록 성공 시 호출
+        log_performance_to_csv(
+            model_name=model, 
+            start_time=start_time, 
+            start_mem=start_mem, 
+            target_file_name=file.filename, 
+            result_data=result
+        )
+        return result
+        
     except Exception as e:
     # [측정 종료 및 CSV 기록] 실패 시에도 기록을 남김
-        log_performance_to_csv(func_name="llm_cal_failed", start_time=start_time, start_mem=start_mem)
+        log_performance_to_csv(model_name=settings.gemini_model, start_time=start_time, start_mem=start_mem, target_file_name=file.filename, result_data=f"오류 발생: {str(e)}")
         raise HTTPException(status_code=500, detail=f"LLM 파일 분석 중 오류 발생: {str(e)}")
         
     finally:

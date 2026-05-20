@@ -1,0 +1,335 @@
+/* mypage.css - 부드러운 모달 애니메이션 적용 */
+
+#mypage_page {
+    height: 100%;
+    width: 100%;
+    background-color: #f8fafc;
+    font-family: 'Pretendard', sans-serif;
+    color: #1e293b;
+    overflow: visible;
+    overflow-y: auto;
+}
+
+#mypage_page .mypage-compact-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 20px 60px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+/* ── 공통 섹션 타이틀 ── */
+#mypage_page .section-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    padding-left: 4px;
+}
+
+#mypage_page .section-title i {
+    width: 4px;
+    height: 18px;
+    background: #03a94d;
+    border-radius: 2px;
+}
+
+/* ── 1. 통합 프로필 히어로 카드 ── */
+#mypage_page .compact-hero-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 24px;
+    padding: 32px 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.04);
+}
+
+#mypage_page .hero-left {
+    flex: 0.8;
+    display: flex;
+    align-items: center;
+}
+
+#mypage_page .hero-profile-main {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+#mypage_page .hero-avatar {
+    width: 72px;
+    height: 72px;
+    background: #03a94d;
+    color: white;
+    font-size: 28px;
+    font-weight: 800;
+    border-radius: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#mypage_page .hero-welcome h1 {
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 6px;
+}
+
+#mypage_page .hero-subtitle {
+    font-size: 14px;
+    color: #94a3b8;
+}
+
+/* 히어로 우측 영역 */
+#mypage_page .hero-right {
+    flex: 1.2;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    justify-content: center;
+}
+
+#mypage_page .hero-top-actions {
+    height: 32px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+#mypage_page .btn-save-primary,
+#mypage_page .btn-cancel-secondary {
+    padding: 6px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border: none;
+    height: 32px;
+}
+
+#mypage_page .btn-save-primary { background: #03a94d; color: white; }
+#mypage_page .btn-cancel-secondary { background: #f1f5f9; color: #64748b; margin-left: 8px; }
+
+/* 네이버 스타일 정보 박스 */
+#mypage_page .hero-bottom-info {
+    width: 100%;
+    max-width: 360px;
+    margin-left: auto;
+}
+
+#mypage_page .naver-style-info-box {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#mypage_page .info-item-row {
+    background: #f8fafc;
+    border: 1px solid #f1f5f9;
+    border-radius: 12px;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    transition: all 0.2s;
+}
+
+#mypage_page .info-item-row.editing {
+    background: white;
+    border: 2px solid #03a94d;
+}
+
+#mypage_page .info-item-row label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    width: 80px;
+    flex-shrink: 0;
+}
+
+#mypage_page .row-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+#mypage_page .value-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: #334155;
+}
+
+#mypage_page .inline-input-field {
+    width: 100%;
+    border: none !important;
+    background: transparent !important;
+    padding: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #03a94d;
+    outline: none;
+    height: 100%;
+}
+
+#mypage_page .btn-inline-edit {
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#mypage_page .row-placeholder { width: 52px; }
+
+/* ── 2. 보안 센터 섹션 ── */
+#mypage_page .compact-security-section {
+    display: flex;
+    flex-direction: column;
+}
+
+#mypage_page .security-card-flat {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+#mypage_page .security-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 32px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+#mypage_page .security-row:last-child { border-bottom: none; }
+
+#mypage_page .row-text label {
+    display: block;
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 4px;
+}
+
+#mypage_page .row-text p { font-size: 14px; color: #64748b; }
+
+#mypage_page .btn-row-action {
+    background: #03a94d;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#mypage_page .btn-row-danger {
+    background: white;
+    border: 1.5px solid #fecaca;
+    color: #ef4444;
+    padding: 10px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* ── 모달 (부드러운 애니메이션 적용) ── */
+#mypage_page .modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.6); display: flex; justify-content: center; align-items: center;
+    z-index: 2000; padding: 20px; backdrop-filter: blur(6px);
+    
+    /* 오버레이 페이드 인 애니메이션 */
+    animation: mypageFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes mypageFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+#mypage_page .bento-modal {
+    background: white; padding: 40px; border-radius: 32px; width: 100%; max-width: 440px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    
+    /* 알럿창처럼 부드럽게 팝업되는 애니메이션 */
+    animation: mypageModalPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes mypageModalPop {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px) scale(0.92); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1); 
+    }
+}
+
+#mypage_page .modal-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    margin-bottom: 24px !important;
+    text-align: left !important;
+    width: 100% !important;
+}
+
+#mypage_page .modal-header h3 { 
+    font-size: 22px !important; 
+    font-weight: 800 !important; 
+    color: #0f172a !important; 
+    margin: 0 !important;
+    display: block !important;
+}
+
+#mypage_page .modal-header p { 
+    font-size: 14px !important; 
+    color: #64748b !important; 
+    line-height: 1.5 !important;
+    margin: 0 !important;
+    display: block !important;
+}
+
+#mypage_page .modal-body { display: flex; flex-direction: column; gap: 20px; }
+
+#mypage_page .modal-input-group { display: flex; flex-direction: column; gap: 8px; }
+#mypage_page .modal-input-group label { font-size: 13px; font-weight: 700; color: #64748b; text-align: left; }
+
+#mypage_page .modal-input { 
+    width: 100%; padding: 16px; border: 2px solid #f1f5f9; border-radius: 16px; 
+    font-size: 15px; background: #f8fafc; outline: none; box-sizing: border-box;
+}
+#mypage_page .modal-input:focus { border-color: #03a94d; background: white; }
+
+#mypage_page .modal-btns { display: flex; gap: 12px; margin-top: 10px; }
+#mypage_page .modal-btns button { 
+    flex: 1; height: 56px; border-radius: 16px; font-weight: 700; border: none; cursor: pointer; font-size: 15px;
+    display: flex; justify-content: center; align-items: center;
+}
+
+#mypage_page .btn-confirm { background: #03a94d; color: white; }
+#mypage_page .btn-close { background: #f1f5f9; color: #64748b; }
+
+/* 반응형 */
+@media (max-width: 900px) {
+    #mypage_page .compact-hero-card { flex-direction: column; gap: 32px; padding: 30px 20px; align-items: flex-start; }
+    #mypage_page .hero-left, #mypage_page .hero-right { width: 100%; align-items: flex-start; }
+    #mypage_page .hero-bottom-info { max-width: 100%; }
+}

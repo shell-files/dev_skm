@@ -1,0 +1,343 @@
+#signup_page .signup-wrapper {
+    background-color: #fff;
+    font-family: 'Pretendard', -apple-system, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+
+    padding: 40px 10px;
+    min-height: 100vh;
+}
+#signup_page * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+#signup_page .signup-container {
+    background-color: white;
+    width: 100%;
+    max-width: 700px;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    height: auto; /* 내용에 따라 늘어남 */
+}
+
+a {text-decoration: none; color: #333; display: inline-block;}
+
+
+
+#signup_page h1 {
+    color: #00B050;
+    text-align: center;
+    margin-bottom: 40px;
+    font-size: 30px;
+    
+}
+
+#signup_page .section-title {
+    font-size: 18px;
+    margin-bottom: 20px;
+    font-weight: bold;
+}
+
+#signup_page .helper-text {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+/* 입력 그룹 레이아웃 */
+#signup_page .input-group {
+    display: flex;
+    flex-wrap: wrap; /* 내용이 넘치면 다음 줄로 */
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+#signup_page .input-group label {
+    width: 140px; /* 데스크톱 라벨 너비 */
+    font-size: 14px;
+    color: #333;
+}
+
+#signup_page .input-group input[type="text"],
+#signup_page .input-group input[type="email"],
+#signup_page .input-group input[type="password"] {
+    flex: 1;
+    /* min-width: 200px; 모바일에서 너무 작아지지 않게 */
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+/* 파일 업로드 영역 반응형 */
+#signup_page .upload-controls {
+    flex: 1;
+    display: flex;
+    gap: 8px;
+    /* min-width: 250px; */
+}
+
+#signup_page .upload-controls input { flex: 1; }
+#signup_page .upload-controls input:nth-child(2) { flex: 1; min-width: 200px}
+
+
+#signup_page .btn-green {
+    background-color: #00B050;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    white-space: nowrap; /* 버튼 텍스트 줄바꿈 방지 */
+}
+
+#signup_page .divider {
+    border: 0;
+    border-top: 1px solid #eee;
+    margin: 30px 0;
+}
+
+/* 약관 영역 */
+#signup_page .terms-box {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    height: 120px;
+    padding: 15px;
+    overflow-y: auto;
+    font-size: 12px;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+#signup_page .radio-group {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-top: 15px;
+}
+
+#signup_page .action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+#signup_page .btn-large {
+    flex: 1; /* 버튼이 동일한 비율로 커짐 */
+    max-width: 150px;
+    padding: 15px;
+    font-weight: bold;
+}
+#signup_page .input-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+#signup_page .error {
+  color: red;
+  font-size: 12px;
+  margin-top: 4px;
+}
+#signup_page .success {
+  color: green;
+  font-size: 12px;
+}
+
+#signup_page .signup-action-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#signup_page .button-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.45);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: signup-spin 0.8s linear infinite;
+}
+
+/* 업종 선택 섹션 스타일 */
+#signup_page .industry-selection-wrapper {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    border: 1px solid #eee;
+}
+
+#signup_page .sub-title {
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+/* 셀렉트 박스 그룹 정렬 */
+#signup_page .select-step-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#signup_page .select-step-group select {
+    width: 100%;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    background-color: #fff;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+#signup_page .select-step-group select:focus {
+    border-color: #00B050;
+}
+
+#signup_page .select-step-group select:disabled {
+    background-color: #f2f2f2;
+    color: #ccc;
+}/* 기업 규모 select 스타일 (input과 동일하게 맞춤) */
+#signup_page .input-group select {
+    flex: 1;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 14px;
+    background-color: #fff;
+}
+
+/* focus 상태 */
+#signup_page .input-group select:focus {
+    border-color: #00B050;
+    outline: none;
+}
+
+/* 업종 추가 버튼 */
+#signup_page .btn-add {
+    background-color: #333;
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    margin-top: 5px;
+    transition: background-color 0.2s;
+}
+
+#signup_page .btn-add:hover {
+    background-color: #000;
+}
+
+/* 선택된 업종 태그 리스트 */
+#signup_page .selected-codes-container {
+    display: flex;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+#signup_page .code-tag {
+    display: flex;
+    align-items: center;
+    background-color: #e6f7ed; /* 연한 초록 배경 */
+    color: #00B050;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    border: 1px solid #00B050;
+}
+
+#signup_page .code-tag button {
+    background: none;
+    border: none;
+    color: #00B050;
+    margin-left: 8px;
+    font-weight: bold;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#signup_page .code-tag button:hover {
+    color: #ff4d4d;
+}
+
+
+/* 📱 모바일 대응 가로 배치 (화면이 넓을 때) */
+@media (min-width: 601px) {
+    #signup_page .select-step-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* 2열 배치 */
+        gap: 12px;
+    }
+    
+    #signup_page .btn-add {
+        grid-column: span 2; /* 버튼은 가로 전체 차지 */
+    }
+}
+
+@keyframes signup-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ============================================================
+   📱 모바일 대응 (화면 너비 600px 이하)
+   ============================================================ */
+@media (max-width: 600px) {
+    #signup_page .signup-container {
+        padding: 30px 20px;
+    }
+
+    #signup_page .input-group {
+        flex-direction: column; /* 라벨과 입력을 세로로 배치 */
+        align-items: flex-start;
+    }
+
+    #signup_page .input-group label {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+
+    #signup_page .input-group input[type="text"],
+    #signup_page .input-group input[type="email"],
+    #signup_page .input-group input[type="password"],
+    #signup_page .upload-controls {
+        width: 100%;
+    }
+
+    #signup_page .upload-controls {
+        flex-wrap: wrap; /* 파일 경로창과 버튼들 정렬 */
+    }
+
+    #signup_page .upload-controls input {
+        width: 100%;
+        flex: none;
+    }
+
+    #signup_page .upload-controls .btn-green {
+        flex: 1; /* 모바일에서 버튼들이 가로를 채우도록 함 */
+    }
+
+    #signup_page .radio-group {
+        gap: 20px;
+    }
+}
+
+
+@media (max-width: 300px) {
+    #signup_page .upload-controls input:nth-child(2) { min-width: 100px}
+}

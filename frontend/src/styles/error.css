@@ -1,0 +1,7 @@
+#not_found_wrap { background-color: #f4f7f6; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0;}
+#not_found_wrap .error-container { text-align: center; background: #fff; padding: 60px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; }
+#not_found_wrap .error-code { font-size: 80px; font-weight: bold; color: #03a94d; margin-bottom: 10px; }
+#not_found_wrap .error-msg { font-size: 20px; color: #333; margin-bottom: 30px; }
+#not_found_wrap .btn-home { background-color: #03a94d; color: white; padding: 12px 30px; border-radius: 8px; text-decoration: none; font-weight: bold; transition: opacity 0.2s; }
+#not_found_wrap .btn-home:hover { opacity: 0.8; }
+

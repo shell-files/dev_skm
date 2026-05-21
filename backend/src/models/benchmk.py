@@ -80,3 +80,4 @@ async def findSr(fileFindModel:FileFindModel, userModel: UserModel):
         filePaths.append(str(filePath))
     finalResult = await gemini(results, filePaths)
     return ResponseModel(True, "", finalResult)
+

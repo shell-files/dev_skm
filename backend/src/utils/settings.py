@@ -4,6 +4,13 @@ class Settings(BaseSettings):
   host_ip: str
   domain: str
   # --------------------------
+  # ocrai.py
+  # --------------------------
+  ollama_host: str
+  file_dir: str
+  gemini_api_key: str
+  gemini_model: str
+  # --------------------------
   # kafka config
   # --------------------------
   kafka_server: str
@@ -55,6 +62,7 @@ class Settings(BaseSettings):
   maria_db_port: int
   maria_db_key: str
   cookie_key: str
+  
 
   model_config = SettingsConfigDict(
     env_file=".env",

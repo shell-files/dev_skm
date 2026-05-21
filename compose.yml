@@ -17,6 +17,7 @@ services:
       - ./backend/uv.lock:/workspace/uv.lock
       - ./backend/.python-version:/workspace/.python-version
       - ./backend/src:/workspace/src
+      - ./backend/srfiles:/workspace/srfiles
     environment:
       - HOST_IP=${HOST_IP}
       - DOMAIN= ${DOMAIN}
@@ -41,6 +42,9 @@ services:
       - REDIS_DB3=${REDIS_DB3}
       - SERVICE_KEY=${SERVICE_KEY}
       - COOKIE_KEY=${COOKIE_KEY}
+      - FILE_DIR=${FILE_DIR}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL}
     command: ["uv", "run", "fastapi", "run"]
 
   # mariadb:

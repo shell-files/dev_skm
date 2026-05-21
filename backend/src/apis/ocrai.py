@@ -55,11 +55,12 @@ def log_performance_to_csv(model_name: str, start_time: float, start_mem: float,
 router = APIRouter()
 
 # Ollama Client 설정
+# client = ollama.Client(host=settings.ollama_host)
+# modelName = "gemma3:4b"
 
-client = ollama.Client(host=settings.ollama_host)
-modelName = "gemma3:4b"
-# client = genai.Client(api_key=settings.gemini_api_key)
-# modelName = settings.gemini_model
+# Gemini Client 설정
+client = genai.Client(api_key=settings.gemini_api_key)
+modelName = settings.gemini_model
 
 # JSON 응답 정제용 함수
 def clean(response_text: str) -> list:
@@ -127,27 +128,27 @@ model: str = Form(modelName, description="사용할 Gemini 모델명")) -> str:
         outputExample = [{"issue": "기후변화 대응", "sub_issue": "제조 공정, 공급망, 제품 포트폴리오 및 제품 사용 등 가치사슬 전반에 걸쳐 관여하며, 비즈니스 모델 및 재무 성과 영향과 관련됨"}]
         
         # for index, chunk in enumerate(text_chunks): 
-        refined_prompt = prompt.replace("__OUTPUT_FORMAT__", str(outputFormat)).replace("__OUTPUT_EXAMPLE__", str(outputExample))
+        refinedPrompt = prompt.replace("__OUTPUT_FORMAT__", str(outputFormat)).replace("__OUTPUT_EXAMPLE__", str(outputExample))
     
 
         # gemini 모델 호출
         # LLM API에 파일 데이터를 직접 전달
         generation_config = types.GenerateContentConfig(temperature=0.1)
+        response = client.models.generate_content(
+            model=model,
+            contents=[uploaded_file, refinedPrompt],
+            config=generation_config
+        )
+        # ollama 모델 호출
         # response = client.models.generate_content(
         #     model=model,
         #     contents=[uploaded_file, refined_prompt],
-        #     config=generation_config
-        # )
-        # ollama 모델 호출
-        response = client.models.generate_content(
-            model=model,
-            contents=[uploaded_file, refined_prompt],
-            config={
-            "temperature": 0.1,  
-            "num_ctx": 16384     # 대용량 PDF 문서가 잘리지 않도록 컨텍스트 창 확장
-        },
-        stream=False
-        ) 
+        #     config={
+        #     "temperature": 0.1,  
+        #     "num_ctx": 16384     # 대용량 PDF 문서가 잘리지 않도록 컨텍스트 창 확장
+        # },
+        # stream=False
+        # ) 
 
         # 업로드한 파일 삭제 (임시 파일 서버에 안 남게)
         client.files.delete(name=uploaded_file.name)

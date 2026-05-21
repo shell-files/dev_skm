@@ -1,48 +1,50 @@
 services:
-  backend:
-    container_name: backend
-    image: uv:1
+#   backend:
+#     container_name: backend
+#     image: uv:1
+#     restart: always
+#     ports:
+#       - 8000:8000
+#     networks:
+#       - main-network
+#     depends_on:
+#       - postgres                              # postgres 먼저 실행 후 backend 실행
+#     working_dir: /workspace
+#     volumes:
+#       - ./backend/main.py:/workspace/main.py
+#       - ./backend/settings.py:/workspace/settings.py
+#       - ./backend/pyproject.toml:/workspace/pyproject.toml
+#       - ./backend/uv.lock:/workspace/uv.lock
+#       - ./backend/.python-version:/workspace/.python-version
+#     environment:
+#       - HOST_IP=http://aiedu.tplinkdns.com
+#       - DB_HOST=postgres                      # 컨테이너끼리는 서비스 이름으로 연결
+#       - DB_PORT=5432
+#       - DB_USER=user
+#       - DB_PASSWORD=password
+#       - DB_NAME=vectordb
+#     command: ["uv", "run", "fastapi", "run"]
+
+  postgres:
+    container_name: postgres-vector
+    image: pgvector/pgvector:pg16             # pgvector 내장 이미지
     restart: always
     ports:
-      - 8000:8000
+      - 5432:5432
     networks:
       - main-network
-    # depends_on:
-    #   - mariadb
-    working_dir: /workspace
     volumes:
-      - ./backend/main.py:/workspace/main.py
-      - ./backend/settings.py:/workspace/settings.py
-      - ./backend/pyproject.toml:/workspace/pyproject.toml
-      - ./backend/uv.lock:/workspace/uv.lock
-      - ./backend/.python-version:/workspace/.python-version
+      - data-postgres:/var/lib/postgresql/data
+      - ./.postgres/initdb.d:/docker-entrypoint-initdb.d:ro  # 초기 SQL 자동 실행
     environment:
-      - HOST_IP=http://aiedu.tplinkdns.com
-    command: ["uv", "run", "fastapi", "run"]
-
-  # mariadb:
-  #   container_name: mariadb
-  #   image: mariadb:12.1.2
-  #   restart: always
-  #   ports:
-  #     - 3306:3306
-  #   networks:
-  #     - main-network
-  #   volumes:
-  #     - ./.mariadb/conf.d:/etc/mysql/conf.d:ro
-  #     - ./.mariadb/initdb.d:/docker-entrypoint-initdb.d:ro
-  #     - data-mariadb:/var/lib/mysql:rw
-  #   environment:
-  #     - MARIADB_HOST=localhost
-  #     - MARIADB_PORT=3306
-  #     - MARIADB_ROOT_PASSWORD=1234
-  #     - MARIADB_DATABASE=edu
-  #     - TZ=Asia/Seoul
-  #     - LC_ALL:en_US.UTF-8
+      - POSTGRES_USER=skm
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=vectordb
+      - TZ=Asia/Seoul
 
 networks:
-  main-network: 
+  main-network:
     driver: bridge
 
-# volumes:
-#   data-mariadb:
+volumes:
+  data-postgres:

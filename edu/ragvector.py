@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 # 💡 [핵심] settings 없이 로컬 Ollama 환경 직접 변수 선언
 # ==========================================================================
 OLLAMA_BASE_URL = "http://localhost:11434"  # 로컬 Ollama 기본 포트 주소
-OLLAMA_MODEL_NAME = "gemma4:latest"        
+OLLAMA_MODEL_NAME = "gemma4:e4b"        
 
 # 2. ChatOllama 직접 초기화 (settings 의존성 제거)
 llm = ChatOllama(

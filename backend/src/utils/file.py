@@ -51,7 +51,6 @@ def findSr(fileName, page, userModel: UserModel):
             FROM skm.`TE_{page}_FILE`
             WHERE file_name = aes_e(?, '{settings.maria_db_key}') AND create_user_id = aes_e(?, '{settings.maria_db_key}') AND delete_yn = 0;"""
     fileIdParams = (fileName, userModel.id)
-    # fileIdParams = (fileName,)
     result = findOne(fileIdSql, fileIdParams)
     print(result)
     if result:

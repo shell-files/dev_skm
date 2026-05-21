@@ -1,0 +1,649 @@
+모델명:gemini-3.5-flash,시점:2026-05-20 17:45:56,파일명:현대모.pdf,걸린시간:23.63,사용 메모리:2.30,최종 메모리:110.56,"결과:[
+  {
+    ""issue"": ""기후변화 대응"",
+    ""sub_issue"": ""제조공정, 공급망, 제품 포트폴리오 및 제품 사용 등 가치사슬 전반에 걸친 온실가스 감축 및 친환경 차량 부품 전환을 통한 글로벌 규제 대응""
+  },
+  {
+    ""issue"": ""공급망 지속가능성 관리"",
+    ""sub_issue"": ""원자재 채굴 및 가공 과정의 환경·노동권 리스크 관리, 협력사 ESG 진단 및 공급망 안정성 확보""
+  },
+  {
+    ""issue"": ""제품 품질 및 안전 확보"",
+    ""sub_issue"": ""제품 품질 향상 및 안전성 확보를 통한 고객 신뢰 구축 및 재무적 리스크 최소화""
+  },
+  {
+    ""issue"": ""자원 사용 및 순환 경제"",
+    ""sub_issue"": ""자원 재활용, 부품 소재 경량화 및 친환경 제품 생산을 통한 환경 오염 저감과 순환 체계 구축""
+  },
+  {
+    ""issue"": ""인적자원 관리"",
+    ""sub_issue"": ""모빌리티 기술 변화에 대응하는 전문 인력 육성, 우수 인재 확보 및 공정한 채용을 통한 사회적 가치 창출""
+  },
+  {
+    ""issue"": ""신뢰받는 노사관계"",
+    ""sub_issue"": ""노사 간 신뢰 구축 및 협력적 관계 유지를 통한 안정적인 경영 환경 조성""
+  },
+  {
+    ""issue"": ""산업 안전보건 강화"",
+    ""sub_issue"": ""사업장 내 안전보건 관리 체계 강화 및 재해 예방을 통한 임직원 안전 확보""
+  },
+  {
+    ""issue"": ""정보보안 강화"",
+    ""sub_issue"": ""사이버 보안 위협 대응 및 고객·기업 정보 보호 체계 고도화""
+  },
+  {
+    ""issue"": ""기업지배구조"",
+    ""sub_issue"": ""투명하고 건전한 지배구조 확립 및 이사회 중심의 책임 경영 실천""
+  },
+  {
+    ""issue"": ""컴플라이언스 경영"",
+    ""sub_issue"": ""법규 준수 및 윤리경영 강화를 통한 준법 리스크 예방 및 투명성 제고""
+  },
+  {
+    ""issue"": ""다양성 및 포용성"",
+    ""sub_issue"": ""다양성을 존중하는 조직 문화 조성 및 차별 없는 공정한 기회 제공""
+  }
+]"
+모델명:gemini-3.5-flash,시점:2026-05-20 17:46:36,파일명:현대모.pdf,걸린시간:24.80,사용 메모리:0.72,최종 메모리:111.60,"결과:[
+  {
+    ""issue"": ""기후변화 대응"",
+    ""sub_issue"": ""제조공정과 공급망, 제품 포트폴리오, 제품의 사용 등 가치사슬 전반에 연관되어 사업 모델과 재무성과에 미치는 영향 대응""
+  },
+  {
+    ""issue"": ""인적자원 관리"",
+    ""sub_issue"": ""전동화·자율주행·디지털화 등 모빌리티 기술 변화에 따른 전문 인력 육성 및 우수 인재 확보 실패 시 재무적 손실 방지""
+  },
+  {
+    ""issue"": ""공급망 지속가능성 관리"",
+    ""sub_issue"": ""원자재 채굴 및 가공 과정의 환경 파괴, 노동권 침해 예방 및 협력사 ESG 리스크 점검""
+  },
+  {
+    ""issue"": ""제품 품질 및 안전 확보"",
+    ""sub_issue"": ""제품 품질 및 안전성 확보를 통한 고객 신뢰 제고 및 시장 경쟁력 유지""
+  },
+  {
+    ""issue"": ""산업 안전보건 강화"",
+    ""sub_issue"": ""사업장 내 안전보건 관리 체계 강화 및 임직원의 안전한 근무 환경 조성""
+  },
+  {
+    ""issue"": ""자원 사용 및 순환 경제"",
+    ""sub_issue"": ""자원 재활용 등의 공정 전환, 부품 소재 경량화 및 친환경 제품 생산을 통한 환경 오염 저감""
+  },
+  {
+    ""issue"": ""신뢰받는 노사관계"",
+    ""sub_issue"": ""임직원과의 신뢰를 바탕으로 한 노사관계 구축 및 소통 강화""
+  },
+  {
+    ""issue"": ""정보보안 강화"",
+    ""sub_issue"": ""기업 및 고객 정보 보호를 위한 보안 시스템 강화 및 정보 유출 리스크 관리""
+  },
+  {
+    ""issue"": ""기업지배구조"",
+    ""sub_issue"": ""투명하고 책임 있는 지배구조 확립 및 이사회 중심의 의사결정 체계 운영""
+  },
+  {
+    ""issue"": ""컴플라이언스 경영"",
+    ""sub_issue"": ""글로벌 규제 및 법적 기준 준수를 통한 준법 경영 체계 강화""
+  },
+  {
+    ""issue"": ""다양성 및 포용성"",
+    ""sub_issue"": ""다양성을 존중하는 조직 문화 조성 및 차별 없는 기회 제공""
+  }
+]"
+모델명:gemini-3.5-flash,시점:2026-05-20 17:47:42,파일명:현대모.pdf,걸린시간:3.53,사용 메모리:-0.68,최종 메모리:110.92,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 17.377902303s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '17s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-20 17:48:32,파일명:202506241133228380.pdf,걸린시간:3.61,사용 메모리:16.22,최종 메모리:126.36,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 27.772583779s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.5-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '27s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-20 17:50:16,파일명:202506241133228380.pdf,걸린시간:2.78,사용 메모리:16.19,최종 메모리:125.68,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 43.866869743s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '43s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-20 17:51:08,파일명:202506241133228380.pdf,걸린시간:3.40,사용 메모리:17.71,최종 메모리:125.90,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 52.307049805s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '52s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-20 17:52:06,파일명:202506241133228380.pdf,걸린시간:3.35,사용 메모리:17.75,최종 메모리:126.34,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 53.87719551s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '53s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-20 17:54:32,파일명:202506241133228380.pdf,걸린시간:3.93,사용 메모리:17.71,최종 메모리:125.38,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 28.214048916s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.5-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '28s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-20 17:55:01,파일명:202506241133228380.pdf,걸린시간:22.51,사용 메모리:8.13,최종 메모리:125.62,"결과:오류 발생: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
+모델명:gemini-3.5-flash,시점:2026-05-20 17:55:38,파일명:현대모.pdf,걸린시간:1.30,사용 메모리:1.33,최종 메모리:118.81,"결과:오류 발생: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key expired. Please renew the API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key expired. Please renew the API key.'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-20 18:02:59,파일명:현대모.pdf,걸린시간:0.00,사용 메모리:0.71,최종 메모리:106.49,결과:오류 발생: 'Client' object has no attribute 'files'
+모델명:gemini-3.5-flash,시점:2026-05-21 11:03:44,파일명:202506241133228380.pdf,걸린시간:38.09,사용 메모리:9.49,최종 메모리:115.29,"결과:[
+  {
+    ""issue"": ""기후변화 대응"",
+    ""sub_issue"": ""온실가스 배출 및 이로 인한 기후변화 발생, 친환경 차량 요구 증가에 따른 친환경 제품 매출 증가, 탄소 규제 강화로 인한 투자 및 운영비 증가""
+  },
+  {
+    ""issue"": ""제품 품질 및 안전 확보"",
+    ""sub_issue"": ""고품질 자동차 및 부품 서비스 제공을 통한 소비자 이동 안전성 강화, 협력사 품질 역량 강화, 리콜 및 보증 이행에 따른 부채 및 비용 증가""
+  },
+  {
+    ""issue"": ""자원 사용 및 순환 경제"",
+    ""sub_issue"": ""원자재 대체/절감에 따른 부품 경량화 및 온실가스 감축, 폐기물 처리 과정에서의 토양 및 대기오염 유발, 친환경 원재료 수요 증가로 인한 지출 비용 상승""
+  },
+  {
+    ""issue"": ""신뢰받는 노사관계"",
+    ""sub_issue"": ""신뢰 기반의 협력 관계 강화를 통한 노사 분쟁 감소, 노사 분쟁 발생 시 사회적 비용 발생, 근로조건 개선에 따른 급여 및 복리후생비 증가""
+  },
+  {
+    ""issue"": ""인적자원 관리"",
+    ""sub_issue"": ""모빌리티 인력 확보를 위한 인재 육성 전략 및 프로그램 운영, 우수 인재 지속 영입으로 인한 신규채용 비용 증가""
+  },
+  {
+    ""issue"": ""다양성 및 포용성"",
+    ""sub_issue"": ""평등하고 포용적인 제도 운영 및 여성 관리자 양성을 통한 근로 만족도 향상, 조직 내 문화 충돌 및 갈등/차별 등 인권 문제 발생 가능성, 다양성 관리를 위한 프로그램 기획 및 운영비 발생""
+  },
+  {
+    ""issue"": ""공급망 지속가능성 관리"",
+    ""sub_issue"": ""공급망 내 산업 경쟁력 강화 및 근로조건 개선, 책임광물 사용 및 원자재 채굴/가공 과정에서의 환경 파괴와 노동권 침해 우려, 사업장 진단실사 강화로 인한 비용 발생""
+  },
+  {
+    ""issue"": ""정보보안 강화"",
+    ""sub_issue"": ""정보보안 관리 체계 운영 및 보안 점검 수행, 사이버 보안 위협 및 개인정보 유출 리스크 대응""
+  },
+  {
+    ""issue"": ""기업지배구조"",
+    ""sub_issue"": ""이사회 독립성·다양성·전문성 확보, 주주권익 보호 및 투명한 지배구조 구축""
+  },
+  {
+    ""issue"": ""컴플라이언스 경영"",
+    ""sub_issue"": ""윤리경영 추진체계를 통한 기업 투명성 및 사회적 신뢰 제고, 불공정 거래 등 법규 위반 시 사회적 비용 및 제재/조치 비용 발생""
+  },
+  {
+    ""issue"": ""산업 안전보건 강화"",
+    ""sub_issue"": ""안전한 사업장 조성을 통한 근로자 재해 감소 및 인적 자원 보호, 안전장비 추가 구비 및 시설물 투자 증가, 법규 위반 시 과태료/벌금 등 지급 리스크""
+  }
+]"
+모델명:gemini-3.5-flash,시점:2026-05-21 11:04:03,파일명:현대모비스_SR 2025_K_1027.pdf,걸린시간:4.52,사용 메모리:21.58,최종 메모리:128.78,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 56.761731073s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '56s'}]}}"
+모델명:annotation=NoneType required=False default='gemini-3.5-flash' description='사용할 Gemini 모델명' json_schema_extra={},시점:2026-05-21 14:58:15,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:5.52,사용 메모리:17.51,최종 메모리:129.17,"결과:오류 발생: 1 validation error for _GenerateContentParameters
+model
+  Input should be a valid string [type=string_type, input_value=Form(gemini-3.5-flash), input_type=Form]
+    For further information visit https://errors.pydantic.dev/2.13/v/string_type"
+모델명:annotation=NoneType required=False default='gemini-3.5-flash' description='사용할 Gemini 모델명' json_schema_extra={},시점:2026-05-21 15:01:56,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:83.33,사용 메모리:17.36,최종 메모리:123.85,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:annotation=NoneType required=False default='gemini-3.5-flash' description='사용할 Gemini 모델명' json_schema_extra={},시점:2026-05-21 15:05:07,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.44,"결과:오류 발생: isinstance() arg 2 must be a type, a tuple of types, or a union"
+모델명:annotation=NoneType required=False default='gemini-3.5-flash' description='사용할 Gemini 모델명' json_schema_extra={},시점:2026-05-21 15:07:48,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.94,"결과:오류 발생: isinstance() arg 2 must be a type, a tuple of types, or a union"
+모델명:annotation=NoneType required=False default='gemini-3.5-flash' description='사용할 Gemini 모델명' json_schema_extra={},시점:2026-05-21 15:08:53,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.39,"결과:오류 발생: isinstance() arg 2 must be a type, a tuple of types, or a union"
+모델명:annotation=NoneType required=False default='gemini-3.5-flash' description='사용할 Gemini 모델명' json_schema_extra={},시점:2026-05-21 15:12:07,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:89.43,사용 메모리:17.41,최종 메모리:124.23,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 15:35:00,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:52.99,사용 메모리:1.43,최종 메모리:107.80,"결과:[
+  {
+    ""issue"": ""기후변화 대응"",
+    ""sub_issue"": ""가치사슬 전반의 온실가스 배출 관리, 친환경 차량 요구 증가에 따른 전동화 부품 매출 증가, 글로벌 탄소 규제 대응 및 친환경 제품 생산 전환 투자""
+  },
+  {
+    ""issue"": ""자원 사용 및 순환 경제"",
+    ""sub_issue"": ""원자재 대체 및 부품 경량화를 통한 온실가스 감축, 폐기물 처리 과정의 환경 오염 방지, 친환경 원재료 구매 비용 관리""
+  },
+  {
+    ""issue"": ""인적자원 관리"",
+    ""sub_issue"": ""모빌리티 기술 변화에 따른 전문 인력 육성, 우수 인재 확보를 통한 제품 혁신 및 시장 점유율 유지, 인재 육성 프로그램 운영을 통한 업무 몰입도 향상""
+  },
+  {
+    ""issue"": ""신뢰받는 노사관계"",
+    ""sub_issue"": ""신뢰 기반의 협력 관계 구축을 통한 노사 분쟁 감소, 근로조건 개선 요구 대응 및 복리후생비 관리""
+  },
+  {
+    ""issue"": ""다양성 및 포용성"",
+    ""sub_issue"": ""평등하고 포용적인 조직문화 조성을 통한 근로 만족도 향상, 글로벌 사업장 내 갈등 및 차별 예방, 다양성 관리 체계 구축""
+  },
+  {
+    ""issue"": ""산업 안전보건 강화"",
+    ""sub_issue"": ""안전한 작업장 조성을 통한 근로자 재해 감소, 안전 관련 법규 강화에 따른 설비 투자 및 규제 준수""
+  },
+  {
+    ""issue"": ""공급망 지속가능성 관리"",
+    ""sub_issue"": ""공급망 내 근로조건 개선 및 환경 관리 고도화, 책임광물 사용 및 원자재 채굴 과정의 윤리적 문제 예방, 협력사 ESG 진단 및 실사 대응""
+  },
+  {
+    ""issue"": ""제품 품질 및 안전 확보"",
+    ""sub_issue"": ""고품질 자동차 부품 제공을 통한 소비자 안전 강화, 협력사 품질 역량 강화, 품질 대응체계 운영 및 리콜/보증 비용 관리""
+  },
+  {
+    ""issue"": ""정보보안 강화"",
+    ""sub_issue"": ""사이버 보안 위협 대응 및 차량 데이터 유출 방지, 정보보호 관리 체계 운영을 통한 브랜드 신뢰도 유지""
+  },
+  {
+    ""issue"": ""기업지배구조"",
+    ""sub_issue"": ""건전하고 투명한 지배구조 구축, 이사회의 독립성·다양성·전문성 확보 및 주주 권익 보호""
+  },
+  {
+    ""issue"": ""컴플라이언스 경영"",
+    ""sub_issue"": ""윤리경영 추진체계 운영을 통한 기업 투명성 제고, 불공정 거래 방지 및 법규 위반 리스크 관리""
+  }
+]"
+모델명:gemini-3.5-flash,시점:2026-05-21 16:37:51,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:88.65,사용 메모리:9.29,최종 메모리:116.52,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 16:59:08,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:89.00,사용 메모리:9.29,최종 메모리:116.73,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:00:36,파일명:hyundaiMobis2024.pdf,걸린시간:88.78,사용 메모리:2.23,최종 메모리:118.98,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:02:05,파일명:hyundaiMobis2023.pdf,걸린시간:89.03,사용 메모리:12.23,최종 메모리:131.20,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:03:34,파일명:SK2022.pdf,걸린시간:88.57,사용 메모리:-4.68,최종 메모리:126.52,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:05:03,파일명:SK2024.pdf,걸린시간:89.52,사용 메모리:13.74,최종 메모리:140.27,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:06:33,파일명:sk2023.pdf,걸린시간:89.35,사용 메모리:19.82,최종 메모리:160.09,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:07:41,파일명:Samsung2025.pdf,걸린시간:67.84,사용 메모리:-26.60,최종 메모리:133.50,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:09:09,파일명:Samsung2024.pdf,걸린시간:88.61,사용 메모리:3.59,최종 메모리:137.09,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:10:38,파일명:Samsung2023.pdf,걸린시간:88.30,사용 메모리:8.06,최종 메모리:145.14,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.94,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:hyundaiMobis2024.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.97,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:hyundaiMobis2023.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.98,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:SK2022.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.98,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:SK2024.pdf,걸린시간:0.00,사용 메모리:0.01,최종 메모리:106.99,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:sk2023.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.99,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:Samsung2025.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.99,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:Samsung2024.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.99,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:Samsung2023.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.00,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.99,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:hyundaiMobis2024.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.02,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:hyundaiMobis2023.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.02,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:SK2022.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.02,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:SK2024.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.02,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:sk2023.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.02,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:Samsung2025.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.02,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:Samsung2024.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.03,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:Samsung2023.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.03,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:20:50,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:1.92,사용 메모리:1.14,최종 메모리:107.58,"결과:오류 발생: 503 Service Unavailable. {'message': '', 'status': 'Service Unavailable'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:25:43,파일명:hyundaiMobis2024.pdf,걸린시간:292.91,사용 메모리:0.18,최종 메모리:107.79,"결과:오류 발생: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'Failed to delete file.', 'status': 'UNAVAILABLE'}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:27:12,파일명:hyundaiMobis2023.pdf,걸린시간:89.17,사용 메모리:12.19,최종 메모리:119.98,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:28:41,파일명:SK2022.pdf,걸린시간:88.84,사용 메모리:-4.69,최종 메모리:115.30,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:30:10,파일명:SK2024.pdf,걸린시간:89.06,사용 메모리:13.75,최종 메모리:129.05,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:31:39,파일명:sk2023.pdf,걸린시간:89.13,사용 메모리:19.88,최종 메모리:148.92,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:33:08,파일명:Samsung2025.pdf,걸린시간:89.34,사용 메모리:-18.63,최종 메모리:130.29,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:34:37,파일명:Samsung2024.pdf,걸린시간:88.54,사용 메모리:3.59,최종 메모리:133.89,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:36:06,파일명:Samsung2023.pdf,걸린시간:88.86,사용 메모리:8.09,최종 메모리:141.97,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:46:27,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:32.07,사용 메모리:9.43,최종 메모리:116.42,"결과:{
+  ""companyName"": ""현대모비스"",
+  ""type"": ""leader"",
+  ""result"": [
+    {
+      ""issue"": ""기후변화 대응"",
+      ""sub_issue"": ""업스트림 조달 및 가공 과정에서의 온실가스 배출, 최종 사용 단계에서 내연기관차의 온실가스 배출 영향, 친환경 차량 요구 증가에 따른 전동화 부품 매출 증가, 탄소 규제 강화에 따른 투자 및 운영 비용 증가""
+    },
+    {
+      ""issue"": ""제품 품질 및 안전 확보"",
+      ""sub_issue"": ""품질경영을 통한 고품질 자동차 및 부품 서비스 제공으로 소비자 안전 강화, 협력사 품질 역량 강화 및 동반성장, 품질 대응체계 운영 및 제품 하자에 따른 리콜 및 보증 비용 증가""
+    },
+    {
+      ""issue"": ""자원 사용 및 순환 경제"",
+      ""sub_issue"": ""원자재 대체 및 절감을 통한 부품 경량화로 사용단계 온실가스 감축, 폐기물 처리 과정에서의 토양 및 대기오염 유발, 친환경 원재료 수요 증가에 따른 구매 지출 비용 상승""
+    },
+    {
+      ""issue"": ""신뢰받는 노사관계"",
+      ""sub_issue"": ""노사 정책 수립을 통한 신뢰 기반 협력 관계 강화 및 분쟁 감소, 노사 분쟁 발생 시 사회적 비용 발생, 근무 환경 개선 요구에 따른 급여 및 복리후생비 증가""
+    },
+    {
+      ""issue"": ""인적자원 관리"",
+      ""sub_issue"": ""모빌리티 인재 육성 전략 및 프로그램 운영을 통한 임직원 업무 몰입도 향상, 빠르게 변화하는 산업 환경 요구에 따른 우수 인재 영입 비용 증가""
+    },
+    {
+      ""issue"": ""다양성 및 포용성"",
+      ""sub_issue"": ""다양성 및 포용성 관련 조직문화 조성을 통한 근로 만족도 향상, 글로벌 사업장 내 갈등 및 차별 등 인권 문제 발생 가능성, 다양성 관리를 위한 프로그램 기획 및 운영비 발생""
+    },
+    {
+      ""issue"": ""공급망 지속가능성 관리"",
+      ""sub_issue"": ""공급망 내 산업 경쟁력 강화 및 근로조건 개선을 통한 부정적 영향 저감, 책임광물 사용 및 원자재 채굴 과정에서의 인권·환경 문제 우려, 고객사 요구 충족을 위한 진단실사 비용 발생""
+    },
+    {
+      ""issue"": ""컴플라이언스 경영"",
+      ""sub_issue"": ""컴플라이언스 및 윤리경영 추진체계를 통한 기업 투명성 및 시장 건전성 제고, 불공정 거래 등 법규 위반 시 사회적 비용 발생, 규제 위반에 따른 시정명령 및 과징금 등 조치 비용 발생""
+    },
+    {
+      ""issue"": ""산업 안전보건 강화"",
+      ""sub_issue"": ""안전한 사업장 조성을 통한 협력업체 및 자사 근로자의 재해 감소, 법규 강화에 따른 안전장비 및 시설 투자 증가, 법규 위반 시 과태료, 벌금, 배상액 발생 리스크""
+    },
+    {
+      ""issue"": ""정보보안 강화"",
+      ""sub_issue"": ""기술 및 경영 정보, 개인정보 보호를 위한 보안 활동 체계 구축, 사이버 보안 위협 및 정보 유출 방지, 글로벌 정보보안 규제 준수 및 보안 투자""
+    },
+    {
+      ""issue"": ""기업지배구조"",
+      ""sub_issue"": ""이사회의 독립성, 다양성, 전문성 확보를 통한 건전한 지배구조 구축, 주주 권익 보호 및 투명한 의사결정 체계 확립""
+    }
+  ]
+}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:46:50,파일명:hyundaiMobis2024.pdf,걸린시간:22.36,사용 메모리:2.09,최종 메모리:118.55,"결과:{
+  ""companyName"": ""현대모비스"",
+  ""type"": ""leader"",
+  ""result"": [
+    {
+      ""issue"": ""기후변화 대응"",
+      ""sub_issue"": ""원재료 가공, 부품 제조, 제품 사용 및 폐기 등 가치사슬 전반의 온실가스 배출 관리 및 EU CBAM 등 기후변화 규제 대응, 2045년 탄소중립 달성""
+    },
+    {
+      ""issue"": ""에너지 사용 관리"",
+      ""sub_issue"": ""자체 사업장 내 화석연료 및 전력 사용 최적화, 재생에너지 직접 발전 설비 투자 및 2040년 RE100 달성""
+    },
+    {
+      ""issue"": ""제품 순환성 (LCA, 전동화 제품, 재제조/재활용)"",
+      ""sub_issue"": ""친환경 제품 생산을 통한 환경영향 저감, 전과정평가(LCA) 데이터 확보 및 시스템화, 전동화 사업 투자 및 매출 성장""
+    },
+    {
+      ""issue"": ""기업 문화"",
+      ""sub_issue"": ""유연하고 효율적인 조직문화 조성을 통한 구성원 업무 몰입도 및 만족도 제고, 매년 전사적 조직문화진단 시행""
+    },
+    {
+      ""issue"": ""인재 채용 및 유지"",
+      ""sub_issue"": ""공정하고 올바른 채용 기회 제공, 적절한 인재 확보 및 유지, 채용 채널 다변화 및 내부 직무전환 기회 제공""
+    },
+    {
+      ""issue"": ""공급망 지속가능성 관리"",
+      ""sub_issue"": ""공급망 상생협력 및 가치사슬 근로자 고용 안정성 제고, 협력사 지속가능성 리스크 점검 및 현장진단 확대""
+    },
+    {
+      ""issue"": ""제품 안전 및 품질 확보"",
+      ""sub_issue"": ""소비자 이동안정성 및 제품 품질안전 확보, 리콜 및 보증 프로세스 체계적 관리, 품질경영시스템 인증률 100% 달성""
+    },
+    {
+      ""issue"": ""연구개발 강화/기술 혁신"",
+      ""sub_issue"": ""자율주행, 친환경차, UAM 등 미래 기술 개발 및 연구개발 투자 확대, 핵심부품 수주 목표 달성 및 SW 중심 회사 전환""
+    }
+  ]
+}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:47:23,파일명:hyundaiMobis2023.pdf,걸린시간:33.65,사용 메모리:12.25,최종 메모리:130.80,"결과:{
+  ""companyName"": ""현대모비스"",
+  ""type"": ""leader"",
+  ""result"": [
+    {
+      ""issue"": ""기후변화 대응"",
+      ""sub_issue"": ""탄소중립 달성 및 재생에너지 전환, 기후변화 규제 대응 및 온실가스 감축""
+    },
+    {
+      ""issue"": ""연구개발 강화·기술 혁신"",
+      ""sub_issue"": ""자율주행 및 친환경차 기술 개발, UAM 등 신교통수단 패러다임 대응, 소프트웨어 중심 전환""
+    },
+    {
+      ""issue"": ""성장 지원 및 균등기회 보장"",
+      ""sub_issue"": ""인재 육성 및 교육 기회 제공, 균등한 기회 제공 및 공정한 평가, 구성원 동기 부여""
+    },
+    {
+      ""issue"": ""일과 삶의 균형"",
+      ""sub_issue"": ""유연한 근무 환경 조성, 근로시간 관리 및 PC-Off 프로그램 운영, 구성원 몰입도 제고""
+    },
+    {
+      ""issue"": ""제품 안전 및 품질 확보"",
+      ""sub_issue"": ""탑승자 및 보행자 안전을 위한 품질 관리, 품질 보증을 통한 신뢰 확보, 벨류체인 전반의 품질 관리 강화""
+    },
+    {
+      ""issue"": ""공급망 상생협력 강화"",
+      ""sub_issue"": ""공급망 불안정성 대응 및 안정적 공급망 구축, 협력사 ESG 역량 지원 및 상생협력""
+    },
+    {
+      ""issue"": ""인재 채용 및 유지"",
+      ""sub_issue"": ""공정하고 투명한 채용 프로세스 구축, 우수 인재 확보 및 유지, 노동환경 개선""
+    },
+    {
+      ""issue"": ""글로벌 경쟁력 강화"",
+      ""sub_issue"": ""자국 보호 정책 대응 및 비즈니스 현지화, 신규 글로벌 생산 거점 개발 및 운영, 지역 일자리 창출""
+    }
+  ]
+}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:48:01,파일명:SK2022.pdf,걸린시간:37.34,사용 메모리:-11.09,최종 메모리:119.71,"결과:{
+  ""companyName"": ""sk"",
+  ""type"": ""peer"",
+  ""result"": [
+    {
+      ""issue"": ""기후변화 대응"",
+      ""sub_issue"": ""온실가스 Scope 1, 2, 3 배출량 감축, 재생에너지 전력 도입 및 공정 효율 개선, 저탄소 연료 전환 및 내부 탄소 가격 설정""
+    },
+    {
+      ""issue"": ""저탄소 경제구조 전환에 따른 사업 및 투자 확대"",
+      ""sub_issue"": ""배터리 및 소재 사업 추진, 플라스틱 재활용 및 친환경 소재 개발, 저탄소 에너지 플랫폼 구축 및 액침냉각기술 투자""
+    },
+    {
+      ""issue"": ""폐기물 감축 및 순환경제 실현"",
+      ""sub_issue"": ""폐기물 매립 제로(ZWTL) 인증 취득 확대, 폐수처리 오니 시멘트 제품화 및 항공유 생산 시 발생 폐기물 재활용""
+    },
+    {
+      ""issue"": ""윤리경영/공정거래"",
+      ""sub_issue"": ""반부패 준법경영 시스템 고도화, 윤리규범 실천 및 제보 채널 운영, 공정거래 자율준수 프로그램(CP) 및 사전감시체계 강화""
+    },
+    {
+      ""issue"": ""공정한 채용 및 성과보상"",
+      ""sub_issue"": ""투명하고 공정한 블라인드 채용 프로세스 운영, 성과관리 시스템 기반의 공정한 평가 및 차등보상 제도 실행""
+    },
+    {
+      ""issue"": ""산업안전보건 관리"",
+      ""sub_issue"": ""CSO 중심의 안전보건 관리체계 구축, 작업 위험성평가 및 안전보건 교육 운영, 비상대응 관리체계 및 훈련 강화""
+    },
+    {
+      ""issue"": ""협력사 동반성장"",
+      ""sub_issue"": ""협력사 ESG 리스크 평가 및 실사, 맞춤형 교육 및 컨설팅 지원, 동반성장 펀드 및 금융 지원 등 상생협력 프로그램 운영""
+    },
+    {
+      ""issue"": ""임직원 복리후생 강화"",
+      ""sub_issue"": ""유연한 근무환경 조성을 위한 선택적 근무제 및 스마트워크 도입, 정신건강 지원 및 모성 보호 제도 운영""
+    },
+    {
+      ""issue"": ""투명하고 건전한 지배구조 확립"",
+      ""sub_issue"": ""독립성·전문성·다양성 원칙 기반의 이사회 구성, 이사회 산하 전문위원회 운영 및 이사회 활동 평가""
+    },
+    {
+      ""issue"": ""제품안전 강화"",
+      ""sub_issue"": ""고품질 석유제품 생산 및 정기 품질 점검, 가짜 석유제품 예방 활동 등 철저한 품질 관리""
+    }
+  ]
+}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:49:05,파일명:SK2024.pdf,걸린시간:64.13,사용 메모리:13.74,최종 메모리:133.45,"결과:{
+  ""companyName"": ""sk"",
+  ""type"": ""peer"",
+  ""result"": [
+    {
+      ""issue"": ""그린 포트폴리오 사업 투자 확대"",
+      ""sub_issue"": ""온실가스 배출량 감축, 재생에너지 사용 증대 등 저탄소 경제구조 전환 요구에 따른 그린테크 기술 투자 및 포트폴리오 전환, 내부 탄소 가격 산정 및 투자 심의 반영""
+    },
+    {
+      ""issue"": ""온실가스 저감"",
+      ""sub_issue"": ""사업 분야별 넷제로 이행 목표 수립 및 직간접 탄소배출 감축 추진, 설비 운영 효율 개선 및 내부 탄소 가격 반영을 통한 투자 경제성 검토""
+    },
+    {
+      ""issue"": ""글로벌 산업 경쟁력 강화"",
+      ""sub_issue"": ""합병을 통한 에너지 밸류체인 완성 및 글로벌 산업 경쟁력 강화, 포트폴리오 재정비 및 사업운영 효율화 증진""
+    },
+    {
+      ""issue"": ""주주권리 보호"",
+      ""sub_issue"": ""기업가치 제고 계획 및 주주환원 정책을 통한 주주 가치 증진, 중장기적 관점의 안정적인 배당 정책 마련""
+    },
+    {
+      ""issue"": ""사업장 산업안전보건 관리"",
+      ""sub_issue"": ""중대재해 예방 체계 구축 및 안전보건 최고책임자(CSO) 임명, 선제적·예방적 안전보건체계 구축 및 AI/DT 기반 데이터 분석을 통한 안전관리 향상""
+    },
+    {
+      ""issue"": ""공급망 ESG 리스크 관리"",
+      ""sub_issue"": ""공급망 ESG 리스크 요인 식별 및 협력사 행동규범 준수 서약, 정기 공급망 평가 및 리스크 수준 검토에 따른 지원 제공""
+    },
+    {
+      ""issue"": ""구성원 성장 지원 및 행복 증진"",
+      ""sub_issue"": ""구성원들의 자발적인 경력 개발 및 직무 전환 지원, 임직원 교육 프로그램 강화 및 구성원 행복도·정신건강 지원""
+    },
+    {
+      ""issue"": ""이사회 투명성 및 건전성 강화"",
+      ""sub_issue"": ""사업보고서, 통합보고서 등을 통한 이사회 정보 투명 공개, 이사회 정관 및 위원회 운영 정책 공개""
+    },
+    {
+      ""issue"": ""반부패/공정거래"",
+      ""sub_issue"": ""준법시스템 운영 및 고도화를 통한 자율준수 문화 정착, 직무 수행 기준과 절차 공개 및 반부패 공정거래 성과 소통""
+    },
+    {
+      ""issue"": ""화학물질 및 유해물질 관리"",
+      ""sub_issue"": ""화학물질 관리 시스템 구축을 통한 자체 유해성 정보 관리, 도입-사용-폐기 전 과정 관리 및 실시간 누출 감지 체계 마련""
+    }
+  ]
+}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:49:40,파일명:sk2023.pdf,걸린시간:35.02,사용 메모리:-24.99,최종 메모리:108.47,"결과:{
+  ""companyName"": ""sk"",
+  ""type"": ""peer"",
+  ""result"": [
+    {
+      ""issue"": ""기후변화 대응"",
+      ""sub_issue"": ""온실가스 배출량 감축, 환경규제 강화 및 신재생에너지 전환 압력 강화, 모든 밸류체인 내 에너지 저감 및 온실가스 배출 저감을 위한 설비 고도화 요구""
+    },
+    {
+      ""issue"": ""산업안전보건 관리"",
+      ""sub_issue"": ""작업 중 재해 발생으로 인한 생산성 저하 및 경영활동의 잠재적 영향, 사업 현장 내 잠재된 안전사고 리스크 수준을 감소시키기 위한 사전 예방 조치 및 상시 비상 상황 대응 체계 마련 필요""
+    },
+    {
+      ""issue"": ""윤리경영·공정거래"",
+      ""sub_issue"": ""표준화된 입찰 프로세스 마련을 통해 협약 및 계약 체결 시 투명성과 공정성 확보, 원칙 기반의 자율준수 및 준법경영시스템 도입을 통한 전사 차원의 반부패 문화 내재화 수준 향상""
+    },
+    {
+      ""issue"": ""이사회 중심의 ESG 관리 체계 구축"",
+      ""sub_issue"": ""경영진과 지배주주로부터 독립적인 이사회는 ESG 경영 신뢰성 증진, ESG 위원회는 장기적인 관점에서 ESG 경영 방향 제시, ESG 위원회는 ESG 리스크를 점검할 수 있도록 독립성 보장""
+    },
+    {
+      ""issue"": ""공급망 ESG 리스크 관리"",
+      ""sub_issue"": ""원재료 조달의 불확실성 증가, 환경 무역장벽 등장으로 공급망 ESG 관리 중요성 증가, 공급망 탄소배출량 관리 필요성 증가, 공급망의 생산활동이 윤리·인권·환경·안전을 침해하지 않도록 관리""
+    },
+    {
+      ""issue"": ""다양성 및 포용성 강화"",
+      ""sub_issue"": ""구성원의 다양성 확보를 통한 다양한 관점의 기업 문제 해결책 제시, 구성원이 성별, 가치관, 정체성으로 인해 차별 받는 일이 없도록 포용 정책 추진""
+    },
+    {
+      ""issue"": ""저탄소 경제구조 전환에 따른 사업 및 투자 확대"",
+      ""sub_issue"": ""재생에너지 확충을 위한 세계적 흐름, 기업에 대한 탈탄소 에너지로의 전환 요구 강화, 저탄소 경제구조 전환을 위한 적극적인 R&D 투자 필요성 증가""
+    },
+    {
+      ""issue"": ""생물다양성 보호 및 해양 자원 관리"",
+      ""sub_issue"": ""에너지·화학 사업 과정 중 대기, 토양 및 수질오염, 토양 침식 등으로 인한 생물다양성에 부정적 영향이 있을 수 있음, 생물다양성의 파괴는 생태계 균형의 파괴를 의미하며 이는 자연자원을 기반으로 하는 인류 생활양식의 위협으로도 이어짐, 기후변화에 따른 해수 온도 상승은 해양생물의 서식환경 악화""
+    },
+    {
+      ""issue"": ""협력사 동반성장 및 상생"",
+      ""sub_issue"": ""협력사를 기업 경영의 핵심 파트너로 인식, 협력사의 업무효율향상은 SK이노베이션 계열 제품의 생산 공정에도 긍정적인 영향을 미침, 경영 악화 등 협력사의 부정적 이슈는 SK이노베이션 계열의 경영까지 위협 가능""
+    },
+    {
+      ""issue"": ""폐기물 감축 및 순환경제 실현"",
+      ""sub_issue"": ""재활용, 재사용이 불가한 폐기물의 소각, 매립 처리 과정에서 탄소 배출, 사업장 폐기물의 감축은 탄소 배출 저감과 직결, 폐기물의 재활용, 재사용 방법 연구를 통해 탄소배출 저감에 기여 가능""
+    },
+    {
+      ""issue"": ""인재확보 및 구성원 성장 지원"",
+      ""sub_issue"": ""저탄소 산업 전환에 기여할 수 있는 유능한 인재 확보 필요성 증가, 사업 부문별로 발생하는 다양한 이슈에 대응하기 위한 신규 인재 영입 중요, 인재 육성 프로그램을 통한 기존 구성원들의 역량 강화 도모""
+    },
+    {
+      ""issue"": ""수자원 사용 절감 및 폐수 관리"",
+      ""sub_issue"": ""배터리·소재 생산 과정에서 사용될 안정적인 용수 확보, 에너지·화학 사업에서의 광구 탐사, 개발 등 시추 활동 중 해양 오염 가능성, 정유 과정에서의 대량의 수자원 사용 및 폐수 발생, 이상기후로 인한 폭우, 가뭄 등 수자원 관리 중요성 증가""
+    },
+    {
+      ""issue"": ""환경경영 전략 및 체계"",
+      ""sub_issue"": ""환경경영 전략 및 체계 구축으로 환경 영향 저감 체계 구축, 에너지·화학 사업의 부산물로 석유 제품의 처리에서 파생된 다양한 형태의 폐기물 생성, 정제 시설 및 주유소에서 사용하는 UST(지하저장탱크)는 토지 재개발에 영향, 오염물질로 인해 발생하는 지역사회와 환경의 피해 최소화 노력 요구""
+    }
+  ]
+}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:50:08,파일명:Samsung2025.pdf,걸린시간:28.05,사용 메모리:5.39,최종 메모리:113.86,"결과:{
+  ""companyName"": ""삼전"",
+  ""type"": ""own"",
+  ""result"": [
+    {
+      ""issue"": ""기후변화"",
+      ""sub_issue"": ""직접 배출 감축 및 재생에너지 확대, 외부 온실가스 감축사업 실시, 기후 시나리오에 따른 재무영향 산정 및 대응 조치 수립, Scope 1 및 2 탄소중립 달성""
+    },
+    {
+      ""issue"": ""수자원"",
+      ""sub_issue"": ""글로벌 수자원 소비량 100% 환원, 제조사업장 취수량 증가 제로화, 수자원 리스크 평가 및 지역별 대응전략 수립, AWS(Alliance for Water Stewardship) 인증 취득 범위 확대""
+    },
+    {
+      ""issue"": ""자원순환"",
+      ""sub_issue"": ""제품 플라스틱 부품에 재활용 플라스틱 적용, 제조사업장 폐기물 재활용률 극대화, 폐제품 수거 체계 운영 및 사업장 폐기물 매립 제로(Zero Waste to Landfill) 검증 획득""
+    },
+    {
+      ""issue"": ""임직원 - 근로조건"",
+      ""sub_issue"": ""인권 존중 및 안전한 근로환경 조성, 결사의 자유와 단체교섭 보장, 생활임금 격차 분석 및 개선, 사업장 안전관리와 임직원 건강증진 프로그램 운영, 일생활 균형을 위한 근무제도 및 복리후생 제공""
+    },
+    {
+      ""issue"": ""공급망"",
+      ""sub_issue"": ""협력회사의 노동인권, 안전보건, 인재양성 지원을 통한 지속가능한 공급망 확보, 협력회사 행동규범 수립 및 통합 실사 프로세스 운영, 강제노동 및 아동노동 특별점검 실시, 상생협력 아카데미 운영""
+    },
+    {
+      ""issue"": ""개인정보보호와 보안"",
+      ""sub_issue"": ""개인정보보호 3대 원칙 및 사이버 보안 4대 방향성 이행, 글로벌 개인정보보호 정책 수립, 개인정보 법무관리시스템 운영, 삼성 녹스(Knox) 등 강력한 보안 환경 제공 및 반도체 기술 보안""
+    },
+    {
+      ""issue"": ""제품 품질과 안전"",
+      ""sub_issue"": ""최고의 고객경험을 위한 완벽 품질·서비스 추구, 품질경영 행동강령 선포 및 품질 책임주의 실천, 품질보증체계와 사고대응 프로세스 운영, 제품 안전성 확보 및 고객 서비스 향상 활동""
+    },
+    {
+      ""issue"": ""준법과 윤리경영"",
+      ""sub_issue"": ""법과 윤리 준수를 최우선 경영원칙으로 설정, 합법적이고 윤리적인 사업 수행을 통한 깨끗한 조직 문화 조성, CPMS 기반 리스크 관리, 교육 및 제보 프로그램 운영, 부패 리스크 검토""
+    }
+  ]
+}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:50:35,파일명:Samsung2024.pdf,걸린시간:27.30,사용 메모리:3.62,최종 메모리:117.48,"결과:{
+  ""companyName"": ""삼전"",
+  ""type"": ""own"",
+  ""result"": [
+    {
+      ""issue"": ""기후변화 및 에너지"",
+      ""sub_issue"": ""직접 배출 감축, 재생에너지 확대, 외부 온실가스 감축사업 실시 및 DX/DS 부문별 탄소중립 달성 추진""
+    },
+    {
+      ""issue"": ""수자원"",
+      ""sub_issue"": ""용수 사용량 환원, 국내 사업장 취수량 증가 제로화, 수자원 리스크 평가 및 지역별 대응전략 수립""
+    },
+    {
+      ""issue"": ""자원순환 및 폐기물"",
+      ""sub_issue"": ""플라스틱 부품 재생레진 적용, 사업장 폐기물 재활용률 극대화, 폐제품 수거 체계 운영 및 매립 제로 인증 획득""
+    },
+    {
+      ""issue"": ""임직원 - 근로조건"",
+      ""sub_issue"": ""인권 존중 및 안전한 근로환경 조성, 결사의 자유와 단체교섭 보장, 생활임금 개선, 고충처리 채널 운영""
+    },
+    {
+      ""issue"": ""공급망"",
+      ""sub_issue"": ""협력회사 노동인권·안전보건·인재양성 지원, 협력회사 행동규범 수립 및 강제노동·아동노동 특별점검""
+    },
+    {
+      ""issue"": ""정보보호 및 보안"",
+      ""sub_issue"": ""개인정보보호 원칙 준수, 사이버 보안 강화, 글로벌 개인정보보호 정책 수립 및 반도체 기술 보안""
+    },
+    {
+      ""issue"": ""제품 품질 및 안전"",
+      ""sub_issue"": ""고객 중심의 완벽한 품질 및 서비스 추구, 품질보증체계 및 사고대응 프로세스 운영, 제품 안전성 확보""
+    },
+    {
+      ""issue"": ""윤리경영"",
+      ""sub_issue"": ""법과 윤리 준수를 통한 공정하고 투명한 경영, CPMS 기반 리스크 관리, 부패 리스크 검토 및 제보 프로그램 운영""
+    }
+  ]
+}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:51:04,파일명:Samsung2023.pdf,걸린시간:28.67,사용 메모리:8.07,최종 메모리:125.55,"결과:{
+  ""companyName"": ""삼전"",
+  ""type"": ""own"",
+  ""result"": [
+    {
+      ""issue"": ""인권경영"",
+      ""sub_issue"": ""임직원 및 지원자 차별 금지, 장애인 채용 확대 및 자문단 운영, 자회사형 장애인 표준사업장 희망별숲 설립, ERG 활동""
+    },
+    {
+      ""issue"": ""지속가능한 공급망"",
+      ""sub_issue"": ""협력회사 노동인권·환경·안전보건 역량 향상 지원, 협력회사 ESG 진단 및 컨설팅, 근로환경 및 기후변화 대응 관리, 고충처리 시스템 구축 및 운영, 상생협력 활동""
+    },
+    {
+      ""issue"": ""인재개발 및 임직원 삶의 질"",
+      ""sub_issue"": ""임직원 건강과 안전 보장, 개인 성장 지원 및 일하기 좋은 기업문화 조성, 임직원 건강검진 지원, 다양한 양성 제도 및 직무 전환 기회 제공, The UniverSE 출범, SCI 진단""
+    },
+    {
+      ""issue"": ""기후변화 대응과 에너지 관리"",
+      ""sub_issue"": ""기후변화 리스크 및 기회 요인 분석, 온실가스 감축 설비 투자 및 운영 최적화, 제조공정 에너지 절감, 공정가스 저감, 재생에너지 사용 확대, 탄소포집·미세먼지 저감""
+    },
+    {
+      ""issue"": ""순환경제"",
+      ""sub_issue"": ""자원 재사용·재활용 극대화, 재생원료 사용 확대, 제품 내구성 향상, 포장재 축소, 제품 내 자원순환형 소재 적용, 순환경제 기술 연구, 폐제품 수거 체계 확대, 책임있는 광물 채굴""
+    },
+    {
+      ""issue"": ""수자원 관리"",
+      ""sub_issue"": ""용수 절감·재사용·재활용을 통한 효율적 수자원 사용, 엄격한 사내 폐수 배출 기준 적용, 수생태계 모니터링 및 개선 활동, AWS 플래티넘 인증 획득""
+    }
+  ]
+}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:22:36,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:6.22,사용 메모리:9.42,최종 메모리:115.87,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 25.776887352s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.5-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '25s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:22:41,파일명:hyundaiMobis2024.pdf,걸린시간:4.87,사용 메모리:2.17,최종 메모리:118.06,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 20.836823996s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '20s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:22:46,파일명:hyundaiMobis2023.pdf,걸린시간:5.48,사용 메모리:-10.16,최종 메모리:107.90,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 14.813944276s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '14s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:22:51,파일명:SK2022.pdf,걸린시간:5.00,사용 메모리:11.32,최종 메모리:119.23,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 10.009857265s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.5-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '10s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:22:56,파일명:SK2024.pdf,걸린시간:5.20,사용 메모리:-11.20,최종 메모리:108.02,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 5.264568382s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.5-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '5s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:23:02,파일명:sk2023.pdf,걸린시간:5.42,사용 메모리:19.80,최종 메모리:127.82,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 59.176817783s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '59s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:23:06,파일명:Samsung2025.pdf,걸린시간:4.39,사용 메모리:-19.73,최종 메모리:108.09,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 54.962246367s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.5-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '54s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:23:12,파일명:Samsung2024.pdf,걸린시간:5.50,사용 메모리:3.59,최종 메모리:111.68,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 50.007898136s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '50s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:23:17,파일명:Samsung2023.pdf,걸린시간:5.31,사용 메모리:8.11,최종 메모리:119.80,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 44.687835522s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.5-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '44s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:24:30,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:6.17,사용 메모리:9.34,최종 메모리:116.14,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 31.153514253s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '31s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:24:36,파일명:hyundaiMobis2024.pdf,걸린시간:5.57,사용 메모리:2.22,최종 메모리:118.39,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 25.436573283s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '25s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:24:41,파일명:hyundaiMobis2023.pdf,걸린시간:5.42,사용 메모리:-10.14,최종 메모리:108.25,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 20.362158024s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.5-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '20s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:24:47,파일명:SK2022.pdf,걸린시간:5.44,사용 메모리:11.31,최종 메모리:119.56,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 14.807576407s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '14s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:24:52,파일명:SK2024.pdf,걸린시간:4.94,사용 메모리:-11.25,최종 메모리:108.32,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 9.276516877s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '9s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:24:57,파일명:sk2023.pdf,걸린시간:5.07,사용 메모리:19.79,최종 메모리:128.10,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 4.143410042s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '4s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:25:03,파일명:Samsung2025.pdf,걸린시간:6.23,사용 메모리:-19.73,최종 메모리:108.38,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 58.55152585s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '58s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:25:09,파일명:Samsung2024.pdf,걸린시간:5.89,사용 메모리:3.54,최종 메모리:111.92,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 52.664041474s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '52s'}]}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 18:25:15,파일명:Samsung2023.pdf,걸린시간:5.95,사용 메모리:8.10,최종 메모리:120.02,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 46.572974093s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '46s'}]}}"

@@ -17,10 +17,8 @@ def validateToken(currentUuid: str):
             return ResponseModel(False, "세션이 존재하지 않습니다. 다시 로그인 해주세요.")
 
         accessJwe = redisRes["accessToken"]
-        
         # 2. 액세스 토큰 유효성 검사 (복호화)
         payload = decryptFromJwe(accessJwe)
-
         # --- [CASE: 액세스 토큰 만료 시 재발급 로직] ---
         if payload is None:
             # DB에서 UUID를 통해 리프레시 토큰 조회
@@ -33,13 +31,11 @@ def validateToken(currentUuid: str):
                 ORDER BY t.id DESC
             """
             userRecord = findOne(userSql, (currentUuid,))
-            
             if userRecord is None :
                 return ResponseModel(False, "로그인 정보가 만료되었습니다.")
 
             # 새로운 액세스 토큰 및 UUID 생성
             newAccessToken, newUuid, user_id = refreshAccessToken(userRecord['refresh_token'])
-
             # DB 업데이트: TOKEN 테이블의 uuid 수정
             updateSql = "UPDATE `with`.`TOKEN` SET uuid = ?, updated_at = now() WHERE user_id = ? and uuid = ? ORDER BY created_at DESC LIMIT 1"
             save(updateSql, (newUuid, user_id, currentUuid))

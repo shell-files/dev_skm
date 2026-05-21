@@ -6,10 +6,16 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi[standard]>=0.136.1",
+    "google>=3.0.0",
+    "google-genai>=2.4.0",
     "jwcrypto>=1.5.7",
     "mariadb>=1.1.14",
+    "ollama>=0.6.2",
     "prometheus-fastapi-instrumentator>=7.1.0",
+    "psutil>=7.2.2",
     "pydantic-settings>=2.14.0",
+    "pypdf>=6.11.0",
     "python-multipart>=0.0.26",
     "redis>=7.4.0",
+    "tiktoken>=0.7.0",
 ]

@@ -16,8 +16,31 @@ services:
       - ./backend/pyproject.toml:/workspace/pyproject.toml
       - ./backend/uv.lock:/workspace/uv.lock
       - ./backend/.python-version:/workspace/.python-version
+      - ./backend/src:/workspace/src
     environment:
-      - HOST_IP=http://aiedu.tplinkdns.com
+      - HOST_IP=${HOST_IP}
+      - DOMAIN= ${DOMAIN}
+      - KAFKA_SERVER=${KAFKA_SERVER}
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - MAIL_USERNAME=${MAIL_USERNAME}
+      - MAIL_PASSWORD=${MAIL_PASSWORD}
+      - MAIL_FROM=${MAIL_FROM}
+      - MARIA_DB_DATABASE=${MARIA_DB_DATABASE}
+      - MARIA_DB_USER=${MARIA_DB_USER}
+      - MARIA_DB_PASSWORD=${MARIA_DB_PASSWORD}
+      - MARIA_DB_HOST=${MARIA_DB_HOST}
+      - MARIA_DB_PORT=${MARIA_DB_PORT}
+      - MARIA_DB_KEY=${MARIA_DB_KEY}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS}
+      - INVITE_TOKEN_EXPIRE_DAYS=${INVITE_TOKEN_EXPIRE_DAYS}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_DB1=${REDIS_DB1}
+      - REDIS_DB2=${REDIS_DB2}
+      - REDIS_DB3=${REDIS_DB3}
+      - SERVICE_KEY=${SERVICE_KEY}
+      - COOKIE_KEY=${COOKIE_KEY}
     command: ["uv", "run", "fastapi", "run"]
 
   # mariadb:

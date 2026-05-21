@@ -210,3 +210,40 @@ model
 모델명:gemini-3.5-flash,시점:2026-05-21 17:06:33,파일명:sk2023.pdf,걸린시간:89.35,사용 메모리:19.82,최종 메모리:160.09,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
 모델명:gemini-3.5-flash,시점:2026-05-21 17:07:41,파일명:Samsung2025.pdf,걸린시간:67.84,사용 메모리:-26.60,최종 메모리:133.50,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
 모델명:gemini-3.5-flash,시점:2026-05-21 17:09:09,파일명:Samsung2024.pdf,걸린시간:88.61,사용 메모리:3.59,최종 메모리:137.09,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:10:38,파일명:Samsung2023.pdf,걸린시간:88.30,사용 메모리:8.06,최종 메모리:145.14,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.94,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:hyundaiMobis2024.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.97,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:hyundaiMobis2023.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.98,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:SK2022.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.98,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:SK2024.pdf,걸린시간:0.00,사용 메모리:0.01,최종 메모리:106.99,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:sk2023.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.99,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:Samsung2025.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.99,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:Samsung2024.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.99,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:17:38,파일명:Samsung2023.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.00,"결과:오류 발생: Unknown mime type: Could not determine the mimetype for your file
+ please set the `mime_type` argument"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.99,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:hyundaiMobis2024.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.02,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:hyundaiMobis2023.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.02,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:SK2022.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.02,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:SK2024.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.02,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:sk2023.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.02,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:Samsung2025.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.02,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:Samsung2024.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.03,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:18:54,파일명:Samsung2023.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:107.03,결과:오류 발생: Files.upload() got an unexpected keyword argument 'mime_type'
+모델명:gemini-3.5-flash,시점:2026-05-21 17:20:50,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:1.92,사용 메모리:1.14,최종 메모리:107.58,"결과:오류 발생: 503 Service Unavailable. {'message': '', 'status': 'Service Unavailable'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:25:43,파일명:hyundaiMobis2024.pdf,걸린시간:292.91,사용 메모리:0.18,최종 메모리:107.79,"결과:오류 발생: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'Failed to delete file.', 'status': 'UNAVAILABLE'}}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:27:12,파일명:hyundaiMobis2023.pdf,걸린시간:89.17,사용 메모리:12.19,최종 메모리:119.98,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:28:41,파일명:SK2022.pdf,걸린시간:88.84,사용 메모리:-4.69,최종 메모리:115.30,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:30:10,파일명:SK2024.pdf,걸린시간:89.06,사용 메모리:13.75,최종 메모리:129.05,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:31:39,파일명:sk2023.pdf,걸린시간:89.13,사용 메모리:19.88,최종 메모리:148.92,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:33:08,파일명:Samsung2025.pdf,걸린시간:89.34,사용 메모리:-18.63,최종 메모리:130.29,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:34:37,파일명:Samsung2024.pdf,걸린시간:88.54,사용 메모리:3.59,최종 메모리:133.89,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:36:06,파일명:Samsung2023.pdf,걸린시간:88.86,사용 메모리:8.09,최종 메모리:141.97,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"

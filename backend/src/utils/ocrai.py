@@ -131,6 +131,6 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> List[Di
             })
         else:
             finalResults.append(res)
-    return ResponseModel(True, "분석이 진짜 완료되었습니다.", finalResults)
+    return ResponseModel(True, "분석이 완료되었습니다.", finalResults)
 
 

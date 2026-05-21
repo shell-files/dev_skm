@@ -6,7 +6,6 @@ from fastapi import APIRouter, HTTPException, Form, UploadFile, File
 from pathlib import Path
 from pypdf import PdfReader
 from src.utils.settings import settings
-from src.utils.file import findSr
 from src.models.model import UserModel
 
 # 모델 테스트용 

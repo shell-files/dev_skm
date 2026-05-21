@@ -99,3 +99,50 @@
 모델명:gemini-3.5-flash,시점:2026-05-20 17:55:01,파일명:202506241133228380.pdf,걸린시간:22.51,사용 메모리:8.13,최종 메모리:125.62,"결과:오류 발생: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}"
 모델명:gemini-3.5-flash,시점:2026-05-20 17:55:38,파일명:현대모.pdf,걸린시간:1.30,사용 메모리:1.33,최종 메모리:118.81,"결과:오류 발생: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key expired. Please renew the API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key expired. Please renew the API key.'}]}}"
 모델명:gemini-3.5-flash,시점:2026-05-20 18:02:59,파일명:현대모.pdf,걸린시간:0.00,사용 메모리:0.71,최종 메모리:106.49,결과:오류 발생: 'Client' object has no attribute 'files'
+모델명:gemini-3.5-flash,시점:2026-05-21 11:03:44,파일명:202506241133228380.pdf,걸린시간:38.09,사용 메모리:9.49,최종 메모리:115.29,"결과:[
+  {
+    ""issue"": ""기후변화 대응"",
+    ""sub_issue"": ""온실가스 배출 및 이로 인한 기후변화 발생, 친환경 차량 요구 증가에 따른 친환경 제품 매출 증가, 탄소 규제 강화로 인한 투자 및 운영비 증가""
+  },
+  {
+    ""issue"": ""제품 품질 및 안전 확보"",
+    ""sub_issue"": ""고품질 자동차 및 부품 서비스 제공을 통한 소비자 이동 안전성 강화, 협력사 품질 역량 강화, 리콜 및 보증 이행에 따른 부채 및 비용 증가""
+  },
+  {
+    ""issue"": ""자원 사용 및 순환 경제"",
+    ""sub_issue"": ""원자재 대체/절감에 따른 부품 경량화 및 온실가스 감축, 폐기물 처리 과정에서의 토양 및 대기오염 유발, 친환경 원재료 수요 증가로 인한 지출 비용 상승""
+  },
+  {
+    ""issue"": ""신뢰받는 노사관계"",
+    ""sub_issue"": ""신뢰 기반의 협력 관계 강화를 통한 노사 분쟁 감소, 노사 분쟁 발생 시 사회적 비용 발생, 근로조건 개선에 따른 급여 및 복리후생비 증가""
+  },
+  {
+    ""issue"": ""인적자원 관리"",
+    ""sub_issue"": ""모빌리티 인력 확보를 위한 인재 육성 전략 및 프로그램 운영, 우수 인재 지속 영입으로 인한 신규채용 비용 증가""
+  },
+  {
+    ""issue"": ""다양성 및 포용성"",
+    ""sub_issue"": ""평등하고 포용적인 제도 운영 및 여성 관리자 양성을 통한 근로 만족도 향상, 조직 내 문화 충돌 및 갈등/차별 등 인권 문제 발생 가능성, 다양성 관리를 위한 프로그램 기획 및 운영비 발생""
+  },
+  {
+    ""issue"": ""공급망 지속가능성 관리"",
+    ""sub_issue"": ""공급망 내 산업 경쟁력 강화 및 근로조건 개선, 책임광물 사용 및 원자재 채굴/가공 과정에서의 환경 파괴와 노동권 침해 우려, 사업장 진단실사 강화로 인한 비용 발생""
+  },
+  {
+    ""issue"": ""정보보안 강화"",
+    ""sub_issue"": ""정보보안 관리 체계 운영 및 보안 점검 수행, 사이버 보안 위협 및 개인정보 유출 리스크 대응""
+  },
+  {
+    ""issue"": ""기업지배구조"",
+    ""sub_issue"": ""이사회 독립성·다양성·전문성 확보, 주주권익 보호 및 투명한 지배구조 구축""
+  },
+  {
+    ""issue"": ""컴플라이언스 경영"",
+    ""sub_issue"": ""윤리경영 추진체계를 통한 기업 투명성 및 사회적 신뢰 제고, 불공정 거래 등 법규 위반 시 사회적 비용 및 제재/조치 비용 발생""
+  },
+  {
+    ""issue"": ""산업 안전보건 강화"",
+    ""sub_issue"": ""안전한 사업장 조성을 통한 근로자 재해 감소 및 인적 자원 보호, 안전장비 추가 구비 및 시설물 투자 증가, 법규 위반 시 과태료/벌금 등 지급 리스크""
+  }
+]"
+모델명:gemini-3.5-flash,시점:2026-05-21 11:04:03,파일명:현대모비스_SR 2025_K_1027.pdf,걸린시간:4.52,사용 메모리:21.58,최종 메모리:128.78,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 56.761731073s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '56s'}]}}"

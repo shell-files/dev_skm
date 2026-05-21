@@ -44,5 +44,8 @@ jobs:
           MARIA_DB_PORT: ${{ secrets.MARIA_DB_PORT }}
           MARIA_DB_KEY: ${{ secrets.MARIA_DB_KEY }}
           COOKIE_KEY: ${{ secrets.COOKIE_KEY }}
+          FILE_DIR: ${{ secrets.FILE_DIR }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
         working-directory: .
         run: docker compose up -d

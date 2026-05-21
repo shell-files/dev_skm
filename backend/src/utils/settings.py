@@ -6,7 +6,6 @@ class Settings(BaseSettings):
   # --------------------------
   # ocrai.py
   # --------------------------
-  ollama_host: str
   file_dir: str
   gemini_api_key: str
   gemini_model: str

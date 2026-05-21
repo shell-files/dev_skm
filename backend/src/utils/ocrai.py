@@ -107,7 +107,7 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> List[Di
                 data = {"companyName": result["company_name"], "type": result["type"], "result": clean(response.text)}
                 
                 
-                return ResponseModel(True, "분석이 완료되었습니다.", data)
+                return data
                 
             except Exception as e:
                 if uploadedFile:
@@ -131,6 +131,6 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> List[Di
             })
         else:
             finalResults.append(res)
-    return finalResults
+    return ResponseModel(True, "분석이 진짜 완료되었습니다.", finalResults)
 
 

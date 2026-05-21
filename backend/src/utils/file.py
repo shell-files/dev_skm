@@ -1,9 +1,10 @@
 import uuid
 import shutil
 from pathlib import Path
+from src.utils.settings import settings
 from src.utils.db import save, findOne
 from src.models.model import ResponseModel, FileModel, UserModel
-from src.utils.settings import settings
+from src.utils.ocrai import gemini
 
 # 파일 업로드 및 저장
 def uploadSr(fileModel:FileModel, userModel: UserModel):
@@ -43,29 +44,24 @@ def uploadSr(fileModel:FileModel, userModel: UserModel):
             return ResponseModel(False, "파일 업로드에 실패하였습니다. 다시 시도해주세요.")
     
 #  파일 찾기
-def findSr(fileName, page):
-# def findSr(fileName, page, userModel: UserModel):
+def findSr(fileName, page, userModel: UserModel):
     UPLOAD_DIR = Path(settings.file_dir)
     fileIdSql = f"""
-            SELECT id, file_name, origin, type
+            SELECT id, aes_d(file_name, '{settings.maria_db_key}') as file_name, aes_d(origin, '{settings.maria_db_key}') as origin, aes_d(type, '{settings.maria_db_key}') as type, aes_d(company_name, '{settings.maria_db_key}') as company_name
             FROM skm.`TE_{page}_FILE`
-            WHERE file_name = ?"""
-    # fileIdSql = f"""
-    #         SELECT id, aes_d(file_name, '{settings.maria_db_key}') as file_name, aes_d(origin, '{settings.maria_db_key}') as origin, aes_d(type, '{settings.maria_db_key}') as type, aes_d(company_name, '{settings.maria_db_key}') as company_name
-    #         FROM skm.`TE_{page}_FILE`
-    #         WHERE file_name = aes_e(?, '{settings.maria_db_key}') AND create_user_id = aes_e(?, '{settings.maria_db_key}') AND delete_yn = 0;"""
-    # fileIdParams = (fileName, userModel.id)
-    fileIdParams = (fileName,)
+            WHERE file_name = aes_e(?, '{settings.maria_db_key}') AND create_user_id = aes_e(?, '{settings.maria_db_key}') AND delete_yn = 0;"""
+    fileIdParams = (fileName, userModel.id)
+    # fileIdParams = (fileName,)
     result = findOne(fileIdSql, fileIdParams)
     print(result)
     if result:
         db_file_name = result["file_name"]
-        local_file_path = UPLOAD_DIR / db_file_name
-        if not local_file_path.exists():
+        filePath = UPLOAD_DIR / db_file_name
+        if not filePath.exists():
             return ResponseModel(False, "서버에서 파일을 찾을 수 없습니다.")
-        result = str(local_file_path.resolve())
-        return ResponseModel(True, "", result)
+        file = open(filePath, 'rb')
+        finalResult = gemini(file)
+        return ResponseModel(True, "", finalResult)
     else:
         return ResponseModel(False, "존재하지 않는 파일입니다.")
     
-# return에 파일 읽어온 값 주고 AI API에서 이 함수들 부르면 됨

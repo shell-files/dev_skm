@@ -1,4 +1,3 @@
-import ollama
 from google import genai
 from google.genai import types
 import uuid
@@ -73,7 +72,7 @@ def clean(response_text: str) -> list:
         data = json.loads(cleaned_str)
     return data
 
-@router.post("")
+@router.post("") # 테스트용. api는 날릴거임
 # Ollama LLM 호출용 함수
 async def gemini(file: UploadFile = File(..., description="분석할 PDF 파일"),
 model: str = Form(modelName, description="사용할 Gemini 모델명")) -> str:

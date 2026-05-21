@@ -146,3 +146,67 @@
   }
 ]"
 모델명:gemini-3.5-flash,시점:2026-05-21 11:04:03,파일명:현대모비스_SR 2025_K_1027.pdf,걸린시간:4.52,사용 메모리:21.58,최종 메모리:128.78,"결과:오류 발생: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.5-flash\nPlease retry in 56.761731073s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.5-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '56s'}]}}"
+모델명:annotation=NoneType required=False default='gemini-3.5-flash' description='사용할 Gemini 모델명' json_schema_extra={},시점:2026-05-21 14:58:15,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:5.52,사용 메모리:17.51,최종 메모리:129.17,"결과:오류 발생: 1 validation error for _GenerateContentParameters
+model
+  Input should be a valid string [type=string_type, input_value=Form(gemini-3.5-flash), input_type=Form]
+    For further information visit https://errors.pydantic.dev/2.13/v/string_type"
+모델명:annotation=NoneType required=False default='gemini-3.5-flash' description='사용할 Gemini 모델명' json_schema_extra={},시점:2026-05-21 15:01:56,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:83.33,사용 메모리:17.36,최종 메모리:123.85,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:annotation=NoneType required=False default='gemini-3.5-flash' description='사용할 Gemini 모델명' json_schema_extra={},시점:2026-05-21 15:05:07,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.44,"결과:오류 발생: isinstance() arg 2 must be a type, a tuple of types, or a union"
+모델명:annotation=NoneType required=False default='gemini-3.5-flash' description='사용할 Gemini 모델명' json_schema_extra={},시점:2026-05-21 15:07:48,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.94,"결과:오류 발생: isinstance() arg 2 must be a type, a tuple of types, or a union"
+모델명:annotation=NoneType required=False default='gemini-3.5-flash' description='사용할 Gemini 모델명' json_schema_extra={},시점:2026-05-21 15:08:53,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:0.00,사용 메모리:0.00,최종 메모리:106.39,"결과:오류 발생: isinstance() arg 2 must be a type, a tuple of types, or a union"
+모델명:annotation=NoneType required=False default='gemini-3.5-flash' description='사용할 Gemini 모델명' json_schema_extra={},시점:2026-05-21 15:12:07,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:89.43,사용 메모리:17.41,최종 메모리:124.23,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 15:35:00,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:52.99,사용 메모리:1.43,최종 메모리:107.80,"결과:[
+  {
+    ""issue"": ""기후변화 대응"",
+    ""sub_issue"": ""가치사슬 전반의 온실가스 배출 관리, 친환경 차량 요구 증가에 따른 전동화 부품 매출 증가, 글로벌 탄소 규제 대응 및 친환경 제품 생산 전환 투자""
+  },
+  {
+    ""issue"": ""자원 사용 및 순환 경제"",
+    ""sub_issue"": ""원자재 대체 및 부품 경량화를 통한 온실가스 감축, 폐기물 처리 과정의 환경 오염 방지, 친환경 원재료 구매 비용 관리""
+  },
+  {
+    ""issue"": ""인적자원 관리"",
+    ""sub_issue"": ""모빌리티 기술 변화에 따른 전문 인력 육성, 우수 인재 확보를 통한 제품 혁신 및 시장 점유율 유지, 인재 육성 프로그램 운영을 통한 업무 몰입도 향상""
+  },
+  {
+    ""issue"": ""신뢰받는 노사관계"",
+    ""sub_issue"": ""신뢰 기반의 협력 관계 구축을 통한 노사 분쟁 감소, 근로조건 개선 요구 대응 및 복리후생비 관리""
+  },
+  {
+    ""issue"": ""다양성 및 포용성"",
+    ""sub_issue"": ""평등하고 포용적인 조직문화 조성을 통한 근로 만족도 향상, 글로벌 사업장 내 갈등 및 차별 예방, 다양성 관리 체계 구축""
+  },
+  {
+    ""issue"": ""산업 안전보건 강화"",
+    ""sub_issue"": ""안전한 작업장 조성을 통한 근로자 재해 감소, 안전 관련 법규 강화에 따른 설비 투자 및 규제 준수""
+  },
+  {
+    ""issue"": ""공급망 지속가능성 관리"",
+    ""sub_issue"": ""공급망 내 근로조건 개선 및 환경 관리 고도화, 책임광물 사용 및 원자재 채굴 과정의 윤리적 문제 예방, 협력사 ESG 진단 및 실사 대응""
+  },
+  {
+    ""issue"": ""제품 품질 및 안전 확보"",
+    ""sub_issue"": ""고품질 자동차 부품 제공을 통한 소비자 안전 강화, 협력사 품질 역량 강화, 품질 대응체계 운영 및 리콜/보증 비용 관리""
+  },
+  {
+    ""issue"": ""정보보안 강화"",
+    ""sub_issue"": ""사이버 보안 위협 대응 및 차량 데이터 유출 방지, 정보보호 관리 체계 운영을 통한 브랜드 신뢰도 유지""
+  },
+  {
+    ""issue"": ""기업지배구조"",
+    ""sub_issue"": ""건전하고 투명한 지배구조 구축, 이사회의 독립성·다양성·전문성 확보 및 주주 권익 보호""
+  },
+  {
+    ""issue"": ""컴플라이언스 경영"",
+    ""sub_issue"": ""윤리경영 추진체계 운영을 통한 기업 투명성 제고, 불공정 거래 방지 및 법규 위반 리스크 관리""
+  }
+]"
+모델명:gemini-3.5-flash,시점:2026-05-21 16:37:51,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:88.65,사용 메모리:9.29,최종 메모리:116.52,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 16:59:08,파일명:e1bcf8e83da04e00b76cbdcc463e21b0.pdf,걸린시간:89.00,사용 메모리:9.29,최종 메모리:116.73,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:00:36,파일명:hyundaiMobis2024.pdf,걸린시간:88.78,사용 메모리:2.23,최종 메모리:118.98,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:02:05,파일명:hyundaiMobis2023.pdf,걸린시간:89.03,사용 메모리:12.23,최종 메모리:131.20,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:03:34,파일명:SK2022.pdf,걸린시간:88.57,사용 메모리:-4.68,최종 메모리:126.52,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:05:03,파일명:SK2024.pdf,걸린시간:89.52,사용 메모리:13.74,최종 메모리:140.27,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:06:33,파일명:sk2023.pdf,걸린시간:89.35,사용 메모리:19.82,최종 메모리:160.09,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:07:41,파일명:Samsung2025.pdf,걸린시간:67.84,사용 메모리:-26.60,최종 메모리:133.50,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"
+모델명:gemini-3.5-flash,시점:2026-05-21 17:09:09,파일명:Samsung2024.pdf,걸린시간:88.61,사용 메모리:3.59,최종 메모리:137.09,"결과:오류 발생: 400 Bad Request. {'message': 'Upload has already been terminated.', 'status': 'Bad Request'}"

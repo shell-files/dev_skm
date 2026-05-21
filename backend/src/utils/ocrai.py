@@ -2,11 +2,11 @@ from google import genai
 from google.genai import types
 import uuid
 import json
-from fastapi import APIRouter, HTTPException, Form, UploadFile, File
-from pathlib import Path
-from pypdf import PdfReader
+import asyncio
+from typing import List, Dict, Any
+from fastapi import APIRouter, HTTPException, Form, Path, UploadFile, File
 from src.utils.settings import settings
-from src.models.model import UserModel
+from src.models.model import ResponseModel
 
 # 모델 테스트용 
 # psutil 설치함. uv remove psutil 필요
@@ -61,115 +61,131 @@ client = genai.Client(api_key=settings.gemini_api_key)
 modelName = settings.gemini_model
 
 # JSON 응답 정제용 함수
-def clean(response_text: str) -> list:
+def clean(responseText: str) -> list:
+    if not responseText:
+        return []
     try:
         # 1. 문자열 내의 이스케이프나 불필요한 공백을 파이썬 객체(List[Dict])로 변환
-        data = json.loads(response_text.strip())
+        data = json.loads(responseText.strip())
     except json.JSONDecodeError:
         # 혹시 문자열 처리가 더 필요할 경우를 대비한 가공
-        cleaned_str = response_text.replace('\\n', '').replace('\\"', '"')
-        data = json.loads(cleaned_str)
+        cleanedStr = responseText.replace('\\n', '').replace('\\"', '"')
+        data = json.loads(cleanedStr)
     return data
 
-@router.post("") # 테스트용. api는 날릴거임
 # Ollama LLM 호출용 함수
-async def gemini(file: UploadFile = File(..., description="분석할 PDF 파일"),
-model: str = Form(modelName, description="사용할 Gemini 모델명")) -> str:
+async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> List[Dict[str, Any]]:
     
-# 테스트용 시간 및 메모리 기록
-    start_time = time.time()
-    process = psutil.Process(os.getpid())
-    start_mem = process.memory_info().rss / (1024 * 1024) # MB 단위    
+    # 개별 파일 분석 함수
+    async def oneGemini(result: Dict[str, Any], filePath: str) -> Dict[str, Any]:
+        # 테스트용 시간 및 메모리 기록
+        start_time = time.time()
+        process = psutil.Process(os.getpid())
+        start_mem = process.memory_info().rss / (1024 * 1024) # MB 단위  
+
+        displayFilename = os.path.basename(filePath)
+        uploadedFile = None  
+
+        try:
+            uploadedFile = client.files.upload(file=filePath)
+            maxAttempts = 120  # 2초 * 120 = 최대 240초 대기
+            attempts = 0
+            while uploadedFile.state == types.FileState.PROCESSING:
+                if attempts >= maxAttempts:
+                    raise Exception("구글 서버의 파일 가공 대기 시간이 초과되었습니다. (Timeout)")
+                # 파일 읽다 죽지 않도록 2초 간격으로 상태 체크    
+                await asyncio.sleep(2)
+                uploadedFile = client.files.get(name=uploadedFile.name)
+                attempts += 1
+        
+            prompt=f"""
+            Perform the role of a Double Materiality Assessment consultant.
+            Analyze the Double Materiality section of the provided file and extract the following information:  
+            
+            1. **Key Issues**:
+            - Identify between 5 and 15 key issues.
+            - List them in order of importance.
+            - Extract the corresponding sub-issues.
+
+            2. **Restrictions**:
+            - Responses must be limited to the `output format` provided below. Conversation content or additional text is not allowed.
+            - **You must return the final response strictly as a raw JSON list.** Do not include any markdown code block wrappers or extra text outside the JSON array.
+
+            **RETURN KOREAN**
+
+            ** **Output Format**:
+            __OUTPUT_FORMAT__
+
+            **OUTPUT EXAMPLE**=__OUTPUT_EXAMPLE__
+            """
+
+            # 문장 replace용
+            outputFormat = [{"issue": [str], "sub_issue": [str]}, {"issue": [str], "sub_issue": [str]}]
+            outputExample = [{"issue": "기후변화 대응", "sub_issue": "제조 공정, 공급망, 제품 포트폴리오 및 제품 사용 등 가치사슬 전반에 걸쳐 관여하며, 비즈니스 모델 및 재무 성과 영향과 관련됨"}]
+            
+            # for index, chunk in enumerate(text_chunks): 
+            refinedPrompt = prompt.replace("__OUTPUT_FORMAT__", str(outputFormat)).replace("__OUTPUT_EXAMPLE__", str(outputExample))
+        
+
+            # gemini 모델 호출
+            # LLM API에 파일 데이터를 직접 전달
+            generationConfig = types.GenerateContentConfig(temperature=0.1)
+            response = client.models.generate_content(
+                model=settings.gemini_model,
+                contents=[uploadedFile, refinedPrompt],
+                config=generationConfig
+            )
+
+            # 업로드한 파일 삭제 (임시 파일 서버에 안 남게)
+            if uploadedFile:
+                client.files.delete(name=uploadedFile.name)
+                uploadedFile = None
+
+            data = {"companyName": result["company_name"], "type": result["type"], "result": clean(response.text)}
+            
+            # 테스트용 시간 및 메모리 기록 성공 시 호출
+            result = json.dumps(data, ensure_ascii=False, indent=2)
+            log_performance_to_csv(
+                model_name=settings.gemini_model, 
+                start_time=start_time, 
+                start_mem=start_mem, 
+                target_file_name=displayFilename, 
+                result_data=result
+            )
+            return ResponseModel(True, "분석이 완료되었습니다.", data)
+            
+        except Exception as e:
+            if uploadedFile:
+                try:
+                    client.files.delete(name=uploadedFile.name)
+                except Exception:
+                    pass
+        # [측정 종료 및 CSV 기록] 실패 시에도 기록을 남김
+            errorMsg = f"오류 발생: {str(e)}"
+            log_performance_to_csv(
+                model_name=settings.gemini_model, 
+                start_time=start_time, 
+                start_mem=start_mem, 
+                target_file_name=displayFilename, 
+                result_data=errorMsg
+            )
+            raise HTTPException(status_code=500, detail=f"LLM 파일 분석 중 오류 발생: {str(e)}")
+        
+    tasks = [oneGemini(results[i], filePaths[i]) for i in range(len(filePaths))]
     
-    # PDF 파일 저장
-    temp_file_path = f"temp_{uuid.uuid4()}.pdf"
-    
-    # file_response = findSr(fileName, page)
-    
-    try:
-        with open(temp_file_path, "wb") as f:
-            f.write(await file.read())
-        uploaded_file = client.files.upload(file=temp_file_path)
-        max_attempts = 120  # 2초 * 120 = 최대 240초 대기
-        attempts = 0
-        while uploaded_file.state == types.FileState.PROCESSING:
-            if attempts >= max_attempts:
-                raise Exception("구글 서버의 파일 가공 대기 시간이 초과되었습니다. (Timeout)")
-                
-            time.sleep(2)  # 2초마다 상태 재확인
-            uploaded_file = client.files.get(name=uploaded_file.name)
-            attempts += 1
-        
-        prompt=f"""
-        Perform the role of a Double Materiality Assessment consultant.
-        Analyze the Double Materiality section of the provided file and extract the following information:  
-        
-        1. **Key Issues**:
-        - Identify between 5 and 15 key issues.
-        - List them in order of importance.
-        - Extract the corresponding sub-issues.
-
-        2. **Restrictions**:
-        - Responses must be limited to the `output format` provided below. Conversation content or additional text is not allowed.
-        - **You must return the final response strictly as a raw JSON list.** Do not include any markdown code block wrappers or extra text outside the JSON array.
-
-        **RETURN KOREAN**
-
-        ** **Output Format**:
-        __OUTPUT_FORMAT__
-
-        **OUTPUT EXAMPLE**=__OUTPUT_EXAMPLE__
-        """
-
-        # 문장 replace용
-        outputFormat = [{"issue": [str], "sub_issue": [str]}, {"issue": [str], "sub_issue": [str]}]
-        outputExample = [{"issue": "기후변화 대응", "sub_issue": "제조 공정, 공급망, 제품 포트폴리오 및 제품 사용 등 가치사슬 전반에 걸쳐 관여하며, 비즈니스 모델 및 재무 성과 영향과 관련됨"}]
-        
-        # for index, chunk in enumerate(text_chunks): 
-        refinedPrompt = prompt.replace("__OUTPUT_FORMAT__", str(outputFormat)).replace("__OUTPUT_EXAMPLE__", str(outputExample))
-    
-
-        # gemini 모델 호출
-        # LLM API에 파일 데이터를 직접 전달
-        generation_config = types.GenerateContentConfig(temperature=0.1)
-        response = client.models.generate_content(
-            model=model,
-            contents=[uploaded_file, refinedPrompt],
-            config=generation_config
-        )
-        # ollama 모델 호출
-        # response = client.models.generate_content(
-        #     model=model,
-        #     contents=[uploaded_file, refined_prompt],
-        #     config={
-        #     "temperature": 0.1,  
-        #     "num_ctx": 16384     # 대용량 PDF 문서가 잘리지 않도록 컨텍스트 창 확장
-        # },
-        # stream=False
-        # ) 
-
-        # 업로드한 파일 삭제 (임시 파일 서버에 안 남게)
-        client.files.delete(name=uploaded_file.name)
-        output = clean(response.text)
-        result = json.dumps(output, ensure_ascii=False, indent=2)
-        
-        # 테스트용 시간 및 메모리 기록 성공 시 호출
-        log_performance_to_csv(
-            model_name=model, 
-            start_time=start_time, 
-            start_mem=start_mem, 
-            target_file_name=file.filename, 
-            result_data=result
-        )
-        return result
-        
-    except Exception as e:
-    # [측정 종료 및 CSV 기록] 실패 시에도 기록을 남김
-        log_performance_to_csv(model_name=settings.gemini_model, start_time=start_time, start_mem=start_mem, target_file_name=file.filename, result_data=f"오류 발생: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"LLM 파일 분석 중 오류 발생: {str(e)}")
-        
-    finally:
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
+    totalOutputs = await asyncio.gather(*tasks, return_exceptions=True)
+    print("총 분석 결과:", totalOutputs)  # 전체 결과 출력 (성공 및 실패 포함)
+    finalResults = []
+    for res in totalOutputs:
+        if isinstance(res, Exception):
+            finalResults.append({
+                "companyName": "SYSTEM",
+                "type": "ERROR",
+                "result": [],
+                "status": f"CRITICAL_SYSTEM_ERROR: {str(res)}"
+            })
+        else:
+            finalResults.append(res)
+    return ResponseModel(True, "분석이 완료되었습니다.", finalResults)
 
 

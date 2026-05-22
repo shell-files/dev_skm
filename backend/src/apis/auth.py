@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from src.models.model import ResponseModel, CompanyModel
+from src.models.model import ResponseModel
 from src.models.auth import checkUser
 from src.utils.auth import get_token
 

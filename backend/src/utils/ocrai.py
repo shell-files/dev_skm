@@ -104,7 +104,7 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> List[Di
                     client.files.delete(name=uploadedFile.name)
                     uploadedFile = None
 
-                data = {"companyName": result["company_name"], "type": result["type"], "result": clean(response.text)}
+                data = {"fileName": uploadedFile.name, "companyName": result["company_name"], "type": result["type"], "result": clean(response.text)}
                 
                 
                 return data
@@ -124,6 +124,7 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> List[Di
     for res in totalOutputs:
         if isinstance(res, Exception):
             finalResults.append({
+                "fileName": "None", 
                 "companyName": "SYSTEM",
                 "type": "ERROR",
                 "result": [],

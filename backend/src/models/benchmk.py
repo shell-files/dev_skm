@@ -79,5 +79,19 @@ async def findSr(fileFindModel:FileFindModel, userModel: UserModel):
         results.append(result)
         filePaths.append(str(filePath))
     finalResult = await gemini(results, filePaths)
-    return ResponseModel(True, "", finalResult)
+    # 결과(BENCHMK TABLE)DB 저장
+    # 판단 ai 붙여서 도메인 넣기
+    # 도메인 뽑 domainResult
+    domainResult = None
+    saveSql = f"""
+                INSERT INTO skm.`TE_BENCHMK` (`sr_id`,`domain`,`selected_issue`, `selected_sub_issue`)
+                        VALUES ( (SELECT id FROM skm.`TE_SR_FILE` )
+                        ,aes_e( ? , 'AAAAC3NzaC1lZDI1NTE5AAAAIM7HNEqJCbfN1q/UMTfxgm3C1lrykH+CnEfXp3a+qlst' )
+                        ,aes_e( ? , 'AAAAC3NzaC1lZDI1NTE5AAAAIM7HNEqJCbfN1q/UMTfxgm3C1lrykH+CnEfXp3a+qlst' )
+                        ,aes_e( ?, 'AAAAC3NzaC1lZDI1NTE5AAAAIM7HNEqJCbfN1q/UMTfxgm3C1lrykH+CnEfXp3a+qlst' )
+                        );
+                """
+    saveParams = (finalResult.result[""])
+##sr_id 넣는 방법 생각좀,
 
+    

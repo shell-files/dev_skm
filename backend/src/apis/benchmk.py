@@ -20,4 +20,3 @@ async def fileRead(fileModel: Annotated[FileModel, Form()], userModel = Depends(
         description="분석 및 파일 정보 조회 후 분석 결과 추출")
 async def fileAnalyze(fileFindModel: FileFindModel, userModel = Depends(get_token)):
   return await findSr(fileFindModel, userModel)
-  

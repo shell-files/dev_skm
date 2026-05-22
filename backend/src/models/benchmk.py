@@ -78,6 +78,9 @@ async def findSr(fileFindModel:FileFindModel, companyModel: CompanyModel, userMo
         results.append(result)
         filePaths.append(str(filePath))
     finalResult = await gemini(results, filePaths)
+
+    if not finalResult:
+        return ResponseModel(False, "파일 분석에 실패하였습니다. 다시 시도해주세요.")
     
 
     # 결과(BENCHMK TABLE)DB 저장
@@ -88,8 +91,12 @@ async def findSr(fileFindModel:FileFindModel, companyModel: CompanyModel, userMo
             if item == None:
                 continue
             dbFileName = item.get("fileName")
-            # 이건 나중에 AI 연결하면 변경
-            domainResult = "test"
+            domainResult = "test" # 이건 나중에 AI 연결하면 변경
+            resultList = item.get("result",[])
+
+            # 파일 저장 실패시 알림
+            if not resultList or item.get("type") == "ERROR":
+                raise Exception(f"{dbFileName} 파일 분석 중 AI 엔진 내부 오류가 발생했습니다.")
             
             for res in item["result"]:
                 issue= res.get("issue", "")
@@ -105,8 +112,12 @@ async def findSr(fileFindModel:FileFindModel, companyModel: CompanyModel, userMo
                                     );
                             """
                 saveParams = (dbFileName, domainResult, issue, sub_issue)
-                save(saveSql, saveParams)
-            
+                try:
+                    save(saveSql, saveParams)
+                except Exception as e:
+                    raise Exception(f"{dbFileName} 파일 분석 중 DB 저장 중 오류가 발생했습니다.")
+        return ResponseModel(True, "파일 분석에 성공하였습니다.", finalResult)
+           
     return finalResult
 
     

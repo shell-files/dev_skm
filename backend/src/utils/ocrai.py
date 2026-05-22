@@ -112,7 +112,7 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> List[Di
                 return data
                 
             except Exception as e:
-                # 어느 파일에서 에러나는지 확인
+                # 어느 파일에서 에러나는지 확인용
                 print(f'{fileName}:', {str(e)})
                 if uploadedFile:
                     try:

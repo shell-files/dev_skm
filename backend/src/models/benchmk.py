@@ -97,7 +97,8 @@ async def findSr(fileFindModel:FileFindModel, companyModel: CompanyModel, userMo
 
                 saveSql = f"""
                             INSERT INTO skm.`TE_BENCHMK` (`sr_id`,`domain`,`selected_issue`, `selected_sub_issue`)
-                                    VALUES ( (SELECT id FROM skm.`TE_SR_FILE WHERE file_name = aes_e( ? , '{settings.maria_db_key}' ),
+                                    VALUES ( 
+                                    (SELECT `id` FROM skm.`TE_SR_FILE` WHERE `file_name` = aes_e( ? , '{settings.maria_db_key}' ))
                                     ,aes_e( ? , '{settings.maria_db_key}' )
                                     ,aes_e( ? , '{settings.maria_db_key}' )
                                     ,aes_e( ?, '{settings.maria_db_key}' )
@@ -105,6 +106,7 @@ async def findSr(fileFindModel:FileFindModel, companyModel: CompanyModel, userMo
                             """
                 saveParams = (dbFileName, domainResult, issue, sub_issue)
                 save(saveSql, saveParams)
+            
     return finalResult
 
     

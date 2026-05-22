@@ -27,7 +27,7 @@ def clean(responseText: str) -> list:
     return data
 
 # 오류 방지를 위하여 Max 파일 수 제한 및 재시도 로직
-MAX_TASKS = 3
+MAX_TASKS = 1
 MAX_RETRIES = 3
 RETRY_DELAY = 5  # seconds
 

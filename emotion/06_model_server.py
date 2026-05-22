@@ -54,7 +54,10 @@ async def startup():
         print("⏳ KR-FinBert-SC 로딩 중...")
         _pipe = pipeline(
             "text-classification",
-            model="snunlp/KR-FinBert-SC",
+            # model="snunlp/KR-FinBert-SC",
+            # model="nlp04/korean_sentiment_analysis_kcelectra",
+            # model ="klue/roberta-base",
+            model = DataWizardd/finbert-sentiment-ko,
             top_k=None, device=-1,
             truncation=True, max_length=512,
         )
@@ -88,6 +91,46 @@ def _predict(text: str):
     if _pipe: return _model_predict(text)
     return _rule_predict(text)
 
+def _predict_no_neutral(text: str):
+    """
+    neutral 이 나오면 모델 전체 점수 중
+    negative vs positive 중 높은 쪽으로 강제 배정.
+    confidence 는 두 번째로 높은 점수로 낮춰서 반환.
+    """
+    if not text or not isinstance(text, str):
+        return "negative", 0.50
+
+    # 모델 사용 시
+    if _pipe:
+        output = _pipe(text[:512])
+        first  = output[0]
+        raw    = first if isinstance(first, list) else output
+        if not isinstance(raw[0], dict):
+            return "negative", 0.50
+
+        scores = {LBL.get(r["label"], r["label"]): r["score"] for r in raw}
+        pol    = LBL.get(max(raw, key=lambda x: x["score"])["label"], "neutral")
+
+        if pol != "neutral":
+            return pol, round(scores.get(pol, 0.68), 4)
+
+        # neutral 일 때 → negative/positive 중 높은 쪽
+        neg_sc = scores.get("negative", 0)
+        pos_sc = scores.get("positive", 0)
+        if neg_sc >= pos_sc:
+            return "negative", round(neg_sc, 4)
+        return "positive", round(pos_sc, 4)
+
+    # 규칙 기반
+    pol, conf = _rule_predict(text)
+    if pol != "neutral":
+        return pol, conf
+
+    # neutral 일 때 → 부정 키워드 vs 긍정 키워드 원점수로 판단
+    neg = sum(w for t, w in NEG_W.items() if t in text)
+    pos = sum(w for t, w in POS_W.items() if t in text)
+    return ("negative" if neg >= pos else "positive"), 0.55
+
 # 영향 평가 기준
 SCALE_HIGH={"억원","만명","만대","대규모","전면","전체","전사"}
 SCALE_MID={"수백","수천","수십","상당"}
@@ -106,8 +149,7 @@ def _impact(text, pol: str, conf: float) -> dict:
     scope = 3 if any(t in text for t in SCOPE_HIGH) else 2 if any(t in text for t in SCOPE_MID) else 1
     prob  = 3 if any(t in text for t in PROB_HIGH)  else 2 if any(t in text for t in PROB_MID)  else 1
     irrev = 3 if any(t in text for t in IRREV_HIGH) else 2 if any(t in text for t in IRREV_MID) else 1 if any(t in text for t in IRREV_LOW) else 1
-    pw    = 1.0 if pol != "neutral" else 0.4
-    score = round((prob*0.30 + scale*0.30 + scope*0.20 + irrev*0.20) / 3.0 * pw * conf, 4)
+    score = round((prob*0.30 + scale*0.30 + scope*0.20 + irrev*0.20) / 3.0 * conf, 4)
     return {"scale":scale,"scope":scope,"probability":prob,"irreversibility":irrev,"impact_score":score}
 
 # ── 재무 평가 기준 ─────────────────────────────────────────────────
@@ -193,14 +235,48 @@ def _financial(text, pol: str, conf: float) -> dict:
         # 키워드 없으면 금액 크기로 보조 판단
         fin_prob = 2 if amount >= 50 else 1
 
-    pw    = 1.0 if pol != "neutral" else 0.4
-    score = round((fin_scale*0.60 + fin_prob*0.40) / 3.0 * pw * conf, 4)
+    score = round((fin_scale*0.60 + fin_prob*0.40) / 3.0 * conf, 4)
     return {
-        "fin_scale":      fin_scale,
-        "fin_prob":       fin_prob,
+        "fin_scale":       fin_scale,
+        "fin_prob":        fin_prob,
         "financial_score": score,
-        "detected_amount": amount,   # 디버깅용 (CSV 미포함)
+        "detected_amount": amount,
+        "_text":           text,     # _time_horizon 에서 참조용
     }
+
+# ── 시간 지평 키워드 ─────────────────────────────────────────────
+# 단기: 즉각적·긴급·단기 실현 가능한 키워드
+SHORT_KW = {
+    "즉시","즉각","긴급","당일","올해","이번분기","이번 분기","단기",
+    "빠른","신속","조기","곧","최근","현재","올해안","올해 안",
+    "1년","2년","수개월","패치","수습","긴급대응","단기간",
+}
+# 장기: 중장기·미래 지향·계획 키워드
+LONG_KW = {
+    "2030","2035","2040","2045","2050","넷제로","net zero","탄소중립",
+    "로드맵","중장기","장기","전략","10년","20년","중기","장기계획",
+    "비전","목표연도","단계적","단계별","장기적","미래","중기계획",
+}
+
+def _time_horizon(text: str, fin_prob: int) -> str:
+    """
+    단기 / 장기 판정
+    키워드 우선, 없으면 재무 발생가능성으로 보조 판단
+      fin_prob=3(확정) → 단기
+      fin_prob=1(계획) → 장기
+    """
+    if not text or not isinstance(text, str):
+        return "단기" if fin_prob >= 2 else "장기"
+
+    short_hit = sum(1 for t in SHORT_KW if t in text)
+    long_hit  = sum(1 for t in LONG_KW  if t in text)
+
+    if short_hit > long_hit:   return "단기"
+    if long_hit  > short_hit:  return "장기"
+
+    # 동점이거나 둘 다 0 → fin_prob 로 판단
+    return "단기" if fin_prob >= 2 else "장기"
+
 
 def _iro(pol, conf, sim, impact, financial):
     base  = round(conf * min(float(sim or 0.5), 1.0), 4)
@@ -208,7 +284,11 @@ def _iro(pol, conf, sim, impact, financial):
     final = round(base * 0.35
                   + impact["impact_score"]      * 0.35
                   + financial["financial_score"] * 0.30, 4)
-    label = "opportunity" if pol=="positive" else "risk" if pol=="negative" else "context"
+
+    direction = "기회" if pol == "positive" else "리스크"
+    horizon   = _time_horizon(
+        financial.get("_text", ""), financial["fin_prob"])
+    label = f"{direction}_{horizon}"   # 기회_단기 / 기회_장기 / 리스크_단기 / 리스크_장기
     return label, final, base
 
 
@@ -233,15 +313,16 @@ class AnalyzeReq(BaseModel):
     offset:  Optional[int]  = Field(default=None,  example=0,     description="시작 위치 (0부터, id 순 정렬 기준)")
     id_from: Optional[int]  = Field(default=None,  example=1,     description="시작 id (이 id 이상)")
     id_to:   Optional[int]  = Field(default=None,  example=1000,  description="끝 id (이 id 이하)")
-    order:   str            = Field(default="asc",                description="정렬 방향: asc(id 오름차순) / desc(최신순)"/ "random(랜덤)")
+    order:   str            = Field(default="asc",                description="정렬 방향: asc(id 오름차순) / desc(최신순) / random(랜덤)")
     domain:  Optional[str]  = Field(default=None,  example="E",   description="E / S / G 필터")
     export:  Optional[bool] = Field(default=True,                 description="CSV 파일 저장 여부")
-
 
 class IROItem(BaseModel):
     idx:             int
     db_id:           Optional[int]   # DB 원본 id (숫자형)
-    iro:             str
+    iro:             str              # 기회_단기 / 기회_장기 / 리스크_단기 / 리스크_장기
+    time_horizon:    str              # 단기 / 장기
+    direction:       str              # 기회 / 리스크
     final_score:     float
     base_score:      float
     impact_score:    float
@@ -256,19 +337,23 @@ class IROItem(BaseModel):
     domain:          str
     sub_issue_name:  str
     text:            str
-  
+    fin_scale:       int
+    fin_prob:         int
+    financial_score:  float
+
 
 class AnalyzeRes(BaseModel):
-    total:           int
-    opportunity_cnt: int
-    risk_cnt:        int
-    context_cnt:     int
-    opportunity_score: float
-    risk_score:      float
-    backend:         str
-    elapsed_sec:     float
-    csv_file:        Optional[str]
-    items:           list[IROItem]
+    total:               int
+    기회_단기_cnt:         int
+    기회_장기_cnt:         int
+    리스크_단기_cnt:        int
+    리스크_장기_cnt:        int
+    기회_score:           float
+    리스크_score:          float
+    backend:           str
+    elapsed_sec:       float
+    csv_file:          Optional[str]
+    items:             list[IROItem]
 
 
 # ── 엔드포인트 ────────────────────────────────────────────────────
@@ -326,8 +411,13 @@ def analyze(req: AnalyzeReq):
     w_sql = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
 
     # 정렬 방향
-    order_dir = "ASC" if req.order.lower() == "asc" else "DESC"
-    order_col = "id" if "id" in cols else (cols[0] if cols else "id")
+    order_lower = req.order.lower()
+    if order_lower == "random":
+        order_sql = "ORDER BY RANDOM()"
+    else:
+        order_dir = "ASC" if order_lower == "asc" else "DESC"
+        order_col = "id" if "id" in cols else (cols[0] if cols else "id")
+        order_sql = f"ORDER BY {order_col} {order_dir}"
 
     # LIMIT / OFFSET
     page_parts = []
@@ -336,7 +426,7 @@ def analyze(req: AnalyzeReq):
     page_sql = " ".join(page_parts)
 
     sql = (f"SELECT {', '.join(sel)} FROM {req.schema}.{req.table} "
-           f"{w_sql} ORDER BY {order_col} {order_dir} {page_sql}")
+           f"{w_sql} {order_sql} {page_sql}")
     print(f"  [쿼리] {sql[:120]}  params={params}")
     cur.execute(sql, params)
     rows = [dict(r) for r in cur.fetchall()]
@@ -351,6 +441,7 @@ def analyze(req: AnalyzeReq):
     # 분석
     t0      = time.time()
     results = []
+    
     for i, r in enumerate(rows):
         raw_chunk   = r.get("chunk")
         text        = str(raw_chunk).strip()[:400] if raw_chunk is not None else ""
@@ -365,15 +456,17 @@ def analyze(req: AnalyzeReq):
         except (ValueError, TypeError):
             db_id = None
 
-        pol, conf        = _predict(text)
+        pol, conf        = _predict_no_neutral(text)
         impact           = _impact(text, pol, conf)
         financial        = _financial(text, pol, conf)
         iro, fs, bs      = _iro(pol, conf, sim, impact, financial)
-
         
+        direction = "기회" if pol == "positive" else "리스크"
+        horizon   = _time_horizon(text, financial["fin_prob"])
         results.append(IROItem(
             idx=i+1, db_id=db_id,
-            iro=iro, final_score=fs, base_score=bs,
+            iro=iro, time_horizon=horizon, direction=direction,
+            final_score=fs, base_score=bs,
             impact_score=impact["impact_score"],
             scale=impact["scale"], scope=impact["scope"],
             probability=impact["probability"],
@@ -384,15 +477,18 @@ def analyze(req: AnalyzeReq):
             fin_scale=financial["fin_scale"],
             fin_prob=financial["fin_prob"],
             financial_score=financial["financial_score"],
-            
         ))
 
     n       = len(results)
     elapsed = round(time.time() - t0, 2)
-    opp     = [r for r in results if r.iro == "opportunity"]
-    risk    = [r for r in results if r.iro == "risk"]
-    opp_sc  = round(sum(r.final_score for r in opp)  / n, 4) if n else 0
-    risk_sc = round(sum(r.final_score for r in risk) / n, 4) if n else 0
+    g_short  = [r for r in results if r.iro == "기회_단기"]
+    g_long   = [r for r in results if r.iro == "기회_장기"]
+    r_short  = [r for r in results if r.iro == "리스크_단기"]
+    r_long   = [r for r in results if r.iro == "리스크_장기"]
+    opp_all  = g_short + g_long
+    risk_all = r_short + r_long
+    opp_sc   = round(sum(r.final_score for r in opp_all)  / n, 4) if n else 0
+    risk_sc  = round(sum(r.final_score for r in risk_all) / n, 4) if n else 0
 
     # CSV 저장
     csv_file = None
@@ -400,23 +496,50 @@ def analyze(req: AnalyzeReq):
         import csv
         ts       = datetime.now().strftime("%Y%m%d_%H%M%S")
         csv_file = f"result_{ts}.csv"
-        fields   = ["idx","db_id","iro","final_score","base_score","impact_score",
+        print(f"  💾 CSV 저장 중: {csv_file}", flush=True)
+        fields   = ["idx","db_id","iro","time_horizon","direction","final_score","base_score","impact_score",
                     "scale","scope","probability","irreversibility",
                     "fin_scale","fin_prob","financial_score",
                     "polarity","confidence","similarity",
-                    "issue_group","domain","sub_issue_name","text",
-                    ]
+                    "issue_group","domain","sub_issue_name","text"]
         with open(csv_file, "w", newline="", encoding="utf-8-sig") as f:
             w = csv.DictWriter(f, fieldnames=fields)
             w.writeheader()
             for r in results:
-                w.writerow(r.dict())
+                w.writerow({
+                    "idx":             r.idx,
+                    "db_id":           r.db_id,
+                    "iro":             r.iro,
+                    "time_horizon":    r.time_horizon,
+                    "direction":       r.direction,
+                    "final_score":     r.final_score,
+                    "base_score":      r.base_score,
+                    "impact_score":    r.impact_score,
+                    "scale":           r.scale,
+                    "scope":           r.scope,
+                    "probability":     r.probability,
+                    "irreversibility": r.irreversibility,
+                    "fin_scale":       r.fin_scale,
+                    "fin_prob":        r.fin_prob,
+                    "financial_score": r.financial_score,
+                    "polarity":        r.polarity,
+                    "confidence":      r.confidence,
+                    "similarity":      r.similarity,
+                    "issue_group":     r.issue_group,
+                    "domain":          r.domain,
+                    "sub_issue_name":  r.sub_issue_name,
+                    "text":            r.text,
+                })
 
-
+   
     return AnalyzeRes(
-        total=n, opportunity_cnt=len(opp), risk_cnt=len(risk),
-        context_cnt=n-len(opp)-len(risk),
-        opportunity_score=opp_sc, risk_score=risk_sc,
+        total=n,
+        기회_단기_cnt=len(g_short),
+        기회_장기_cnt=len(g_long),
+        리스크_단기_cnt=len(r_short),
+        리스크_장기_cnt=len(r_long),
+        기회_score=opp_sc,
+        리스크_score=risk_sc,
         backend=_backend, elapsed_sec=elapsed,
         csv_file=csv_file, items=results,
     )
@@ -433,4 +556,4 @@ def download(filename: str):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8100)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

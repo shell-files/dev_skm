@@ -22,7 +22,23 @@ const Main = () => {
 }
 
 const App = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(()=>{
+    if (typeof window !== "undefined") {
+      return window.innerWidth > 800;
+    }
+    return true;
+  });
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 800) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
 	return (
 		<div id="main_page">

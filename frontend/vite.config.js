@@ -10,10 +10,18 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 80,
     allowedHosts: ['localhost','skm.weareithero.cloud','skm.myapp.com'],
+    proxy: {
+        '/api': {
+          target: 'http://skm.weareithero.cloud', // 원래 찌르려던 백엔드 주소
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''), 
+        }
+      }
   },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      '@stores': fileURLToPath(new URL('./src/stores', import.meta.url)),
       '@components': fileURLToPath(new URL('./src/components', import.meta.url)),
       '@styles': fileURLToPath(new URL('./src/styles', import.meta.url)),
       '@errors': fileURLToPath(new URL('./src/homes/errors', import.meta.url)),

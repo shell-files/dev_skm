@@ -7,13 +7,17 @@ import App from '@/homes/App.jsx'
 import { AuthProvider } from '@hooks/AuthContext.jsx'
 import '@styles/App.css'
 import "@styles/mains.css";
+import { Provider } from 'react-redux';
+import store from '@stores'
 
 createRoot(document.getElementById('root')).render(
 	<StrictMode>
 		<BrowserRouter>
-			<AuthProvider>
-				<App />
-			</AuthProvider>
+			<Provider store={store}>
+				<AuthProvider>
+					<App />
+				</AuthProvider>
+			</Provider>
 		</BrowserRouter>
 	</StrictMode>,
 )

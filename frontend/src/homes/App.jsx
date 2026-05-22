@@ -13,11 +13,7 @@ import Dashboard from './Dashboard.jsx';
 import Headernav from '@components/Layout/HeaderNav.jsx'
 import Sidebarnav from '@components/Layout/SidebarNav.jsx'
 
-const Gate = () => {
-  return (
-    <h1>SKM</h1>
-  )
-}
+
 
 const Main = () => {
   return (
@@ -26,7 +22,23 @@ const Main = () => {
 }
 
 const App = () => {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(()=>{
+    if (typeof window !== "undefined") {
+      return window.innerWidth > 800;
+    }
+    return true;
+  });
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 800) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
 	return (
 		<div id="main_page">
@@ -59,13 +71,13 @@ const App = () => {
         {/* 4. 우측 메인 화면 영역 (URL 경로에 따라 컴포넌트 동적 전환) */}
         <main className="ob-body" style={{ flex: 1, width: '100%' }}>
           <Routes>
-            <Route path="/" element={<Gate />} />
+            <Route path="/" element={<Dashboard />} />
             <Route path="/company/:id" element={<Main />} />
             <Route path="/onb" element={<OnBoard />} />
             <Route path="/benchmk" element={<Benchmarking />} />
             <Route path="/media" element={<Media />} />
             <Route path="/survey" element={<Survey />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            {/* <Route path="/dashboard" element={<Dashboard />} /> */}
             <Route path="/mypage" element={<Mypage />} />
             <Route path="/manager" element={<Manager />} />
             <Route path="*" element={<NotFound />} />

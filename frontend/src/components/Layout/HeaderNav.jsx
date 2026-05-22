@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@hooks/AuthContext.jsx';
 // import { useAlarm } from '@hooks/AlarmContext.jsx'; 
-// import { api } from '@utils/network';
+// import { get } from '@utils/network';
 import logo from "@assets/images/logos/SKMlogo.png";
 
 const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
@@ -13,10 +13,9 @@ const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
     return (
         <header className="header">
             <div className="header-left-group">
-                <div className="logo-placeholder" onClick={goHome}>
-                    <img id="logo" className="logo" src={logo} />
+                <div className="logo-placeholder" style={{cursor:"pointer"}}>
+                    <img id="logo" className="logo" src={logo} onClick={goHome} alt="Logo" />
                 </div>
-                <button className="mobile-hamburger" onClick={toggleSidebarMobile} aria-label="메뉴 열기">☰</button>
             </div>
             <div className="header-right-group">
                 <div className="user-link" onClick={goMyPage}>
@@ -29,7 +28,6 @@ const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
                 </div>
             </div>
         </header>
-
     );
 }
 

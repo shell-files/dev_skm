@@ -30,7 +30,7 @@ def checkUser(userModel: UserModel):
 
     for com in companyResult:
         if com["company_id"] == int(company["companyId"]):
-            selectedCompany = com["company_name"]
+            selectedCompany = com
             break
-
+        
     return ResponseModel(True, "사용자 정보가 유효합니다.", {"userName": userModel.name, "companys": companyResult, "selectedCompany": selectedCompany})

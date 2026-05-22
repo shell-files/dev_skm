@@ -166,7 +166,6 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
     // navigate
     const goBenchMk = () => navigate("/benchmk");
     const goOnboard = () => navigate("/onb");
-    const goDash = () => navigate("/dashboard");
     const goManager = () => navigate("/manager");
     const toggleAccordionMenu = (element) => {
         const content = element.nextElementSibling;
@@ -190,7 +189,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
             <div className="nav-scroll-wrapper">
                 <div className="nav-scroll-area">
                     <div className="nav-group">
-                        <div className="nav-item" onClick={goDash}>
+                        <div className="nav-item" onClick={goHome}>
                             <span>대시보드</span>
                         </div>
                     </div>

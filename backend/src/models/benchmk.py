@@ -5,7 +5,7 @@ from fastapi import UploadFile
 from pathlib import Path
 from src.utils.settings import settings
 from src.utils.db import save, findOne
-from src.models.model import ResponseModel, FileModel, UserModel, FileFindModel
+from src.models.model import ResponseModel, FileModel, UserModel, FileFindModel, CompanyModel
 from src.utils.ocrai import gemini
 
 # 파일 업로드 및 저장
@@ -46,7 +46,7 @@ def uploadSr(fileModel:FileModel, userModel: UserModel):
             return ResponseModel(False, "파일 업로드에 실패하였습니다. 다시 시도해주세요.")
     
 #  파일 찾기
-async def findSr(fileFindModel:FileFindModel, userModel: UserModel):
+async def findSr(fileFindModel:FileFindModel, companyModel: CompanyModel, userModel: UserModel):
     UPLOAD_DIR = Path(settings.file_dir)
     results =[]
     filePaths = []
@@ -62,7 +62,6 @@ async def findSr(fileFindModel:FileFindModel, userModel: UserModel):
                 """
         fileIdParams = (file, userModel.id)
         result = findOne(fileIdSql, fileIdParams)
-
         if not result:
             return ResponseModel(False, f"존재하지 않는 파일이 포함되어 있습니다: {file}")
 
@@ -79,20 +78,31 @@ async def findSr(fileFindModel:FileFindModel, userModel: UserModel):
         results.append(result)
         filePaths.append(str(filePath))
     finalResult = await gemini(results, filePaths)
-    return ResponseModel(True, "파일 찾기 성공", finalResult)
+    
+
     # 결과(BENCHMK TABLE)DB 저장
     # 판단 ai 붙여서 도메인 넣기
     # 도메인 뽑 domainResult
-    # domainResult = None
-    # saveSql = f"""
-    #             INSERT INTO skm.`TE_BENCHMK` (`sr_id`,`domain`,`selected_issue`, `selected_sub_issue`)
-    #                     VALUES ( (SELECT id FROM skm.`TE_SR_FILE WHERE file_name = aes_e( ? , '{settings.maria_db_key}' ),
-    #                     ,aes_e( ? , '{settings.maria_db_key}' )
-    #                     ,aes_e( ? , '{settings.maria_db_key}' )
-    #                     ,aes_e( ?, '{settings.maria_db_key}' )
-    #                     );
-    #             """
-    # saveParams = (finalResult.result[""])
-##sr_id 넣는 방법 생각좀, => ocrai.py에서 파일명 같이 추출하고 where=파일명 = 추출한 파일명
+    if finalResult:
+        for item in finalResult.data:
+            if item == None:
+                continue
+            domainResult = "test"
+            dbFileName = item.get("fileName")
+            
+            for res in item["result"]:
+                issue= res.get("issue", "")
+                sub_issue = res.get("sub_issue", "")
+                saveSql = f"""
+                            INSERT INTO skm.`TE_BENCHMK` (`sr_id`,`domain`,`selected_issue`, `selected_sub_issue`)
+                                    VALUES ( (SELECT id FROM skm.`TE_SR_FILE WHERE file_name = aes_e( ? , '{settings.maria_db_key}' ),
+                                    ,aes_e( ? , '{settings.maria_db_key}' )
+                                    ,aes_e( ? , '{settings.maria_db_key}' )
+                                    ,aes_e( ?, '{settings.maria_db_key}' )
+                                    );
+                            """
+                saveParams = (dbFileName, domainResult, issue, sub_issue)
+                save(saveSql, saveParams)
+    return finalResult
 
     

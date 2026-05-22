@@ -673,6 +673,212 @@
 }
 
 /* =========================================================
+   Gap Analysis 결과 화면 레이아웃 (새로 추가된 영역)
+========================================================= */
+
+/* 결과 레이아웃 내부 배치 규칙 */
+.result-layout {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0; /* 파이어폭스/크롬 내부 스크롤 보장 */
+}
+
+/* AI 요약 메시지 박스 */
+.ai-message-box {
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid var(--sr-primary);
+    border-radius: 8px;
+    padding: 16px 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+/* Gap Analysis 테이블 컨테이너 (고정 높이 및 내부 스크롤 제공) */
+.gap-analysis-container {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #ffffff;
+    overflow: hidden;
+    margin-top: 10px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    
+    /* 대시보드 내부에서 적절히 늘어나며 넘치면 스크롤되도록 설정 */
+    flex: 1;
+    min-height: 320px; 
+    max-height: 480px; 
+}
+
+/* 테이블 헤더 */
+.gap-table-header {
+    display: flex;
+    align-items: center;
+    background-color: #f1f5f9;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 14px 20px;
+    font-weight: 800;
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+/* 테이블 바디 (데이터 행들이 스크롤되는 영역) */
+.gap-table-body {
+    overflow-y: auto;
+    flex: 1;
+    background: #ffffff;
+}
+
+/* 테이블 내부 스크롤바 커스텀 */
+.gap-table-body::-webkit-scrollbar {
+    width: 6px;
+}
+.gap-table-body::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 4px;
+}
+.gap-table-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* 테이블 각 행(Row) 공통 스타일 */
+.gap-table-row {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.2s ease;
+}
+
+.gap-table-row:last-child {
+    border-bottom: none;
+}
+
+.gap-table-row:hover {
+    background-color: #f8fafc;
+}
+
+/* =========================================================
+   테이블 컬럼 그리드 비율 설정 (Grid & Flex 대용)
+========================================================= */
+
+/* 1. 이슈 주제 컬럼 (가장 넓게 차지) */
+.col-info {
+    flex: 1.8;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0; /* 텍스트 생략 처리를 위한 안전장치 */
+}
+
+/* 2. 글로벌 기준 컬럼 */
+.col-framework {
+    flex: 0.7;
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* 3. 상태 우측 그룹 (리더, 피어, 자회사 통일) */
+.col-status-group {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+}
+
+/* 헤더용 상태 라벨 / 바디용 상태 셀 너비 맞춤 */
+.status-label, .status-cell {
+    width: 60px;
+    text-align: center;
+}
+
+.status-label {
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+/* =========================================================
+   이슈 카테고리 태그 & 매핑 심볼 스타일
+========================================================= */
+
+/* ESG 분류 태그 (E, S, G) */
+.category-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: #ffffff;
+    flex-shrink: 0;
+}
+
+.tag-e { background-color: #10b981; } /* Environment: 초록 */
+.tag-s { background-color: #3b82f6; } /* Social: 파랑 */
+.tag-g { background-color: #8b5cf6; } /* Governance: 보라 */
+
+/* 이슈 제목 텍스트 */
+.issue-title-text {
+    font-size: 0.9rem;
+    font-weight: 650;
+    color: #1e293b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* 글자가 너무 길면 ... 처리 */
+}
+
+/* 매핑 유무 도트 디자인 */
+.status-dot {
+    font-size: 1.1rem;
+    font-weight: bold;
+    display: inline-block;
+}
+
+/* 공시함 (●) */
+.status-dot.checked {
+    color: var(--sr-primary); /* 메인 테마 포인트 컬러 사용 */
+}
+
+/* 타사 공시안함 (○) */
+.status-dot.empty {
+    color: #cbd5e1;
+}
+
+/* 우리 자회사 공시 누락 및 미수립 (✕) */
+.status-dot.unreported {
+    color: #ef4444; /* 위험 요인이므로 강렬한 레드 계열 처리 */
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+/* =========================================================
+   반응형 모바일 대응 (768px 이하 화면일 때 축소 처리)
+========================================================= */
+@media (max-width: 768px) {
+    .gap-table-header {
+        padding: 10px 12px;
+    }
+    .gap-table-row {
+        padding: 10px 12px;
+    }
+    .issue-title-text {
+        font-size: 0.85rem;
+    }
+    .col-framework {
+        display: none; /* 모바일 크기에서는 프레임워크 열을 숨겨 가독성 확보 */
+    }
+    .col-info {
+        flex: 1.5;
+    }
+}
+
+/* =========================================================
    1200px
 ========================================================= */
 

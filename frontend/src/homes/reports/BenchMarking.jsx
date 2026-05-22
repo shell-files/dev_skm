@@ -7,35 +7,37 @@ import {
   showConfirmAlert,
 } from "@components/UI/ServiceAlert";
 
-// [추가] @utils/Network.js 임포트 및 더미 스위치 설정
+import axios from 'axios';
 import { POST } from "@utils/Network";
 
 const USE_DUMMY = true; // true: 더미 모드, false: 실제 API 연동 모드
 
-// [추가] 20개 핵심 이슈 + Gap Analysis 매핑 데이터 세트
-const DUMMY_ISSUES = [
-  { id: 1, category: "E", title: "기후변화 대응 및 탄소중립 전략 수립", leader: true, peer: true, sub: false },
-  { id: 2, category: "E", title: "수자원 관리 고도화 및 재활용률 확대", leader: true, peer: false, sub: false },
-  { id: 3, category: "E", title: "폐기물 제로(ZWTL) 인증 및 자원순환 체계",leader: true, peer: true, sub: true },
-  { id: 4, category: "E", title: "친환경 제품 설계 및 Eco-Design 프로세스 도입", leader: false, peer: true, sub: false },
-  { id: 5, category: "E", title: "유해물질 관리 및 화학물질 스크리닝 체계", leader: true, peer: true, sub: true },
-  { id: 6, category: "E", title: "사업장 생물다양성 보존 및 영향 평가", leader: false, peer: false, sub: false },
-  { id: 7, category: "E", title: "공급망 Scope 3 온실가스 배출량 산정", leader: true, peer: false, sub: false },
+// 온톨로지 사전 구조에 맞춘 실전형 더미 데이터 세트 (총 20개 로우 샘플)
+const DUMMY_DB_RESULTS = [
+  { domain: "E", selected_issue: "기후변화·온실가스", selected_sub_issue: "회사의 기후변화 대응 거버넌스, 온실가스(GHG) 산정체계 및 인벤토리 구축, 배출계수 적용을 설명하는 문장.", type: "leader" },
+  { domain: "E", selected_issue: "기후변화·온실가스", selected_sub_issue: "회사의 기후변화 대응 거버넌스, 온실가스(GHG) 산정체계 및 인벤토리 구축, 배출계수 적용을 설명하는 문장.", type: "peer" },
+  { domain: "E", selected_issue: "수자원·폐수 관리", selected_sub_issue: "취수량 저감 및 취수원 리스크 관리, 공정 내 용수 재활용률 확대, 자원 순환 체계 수립 현황을 설명하는 문장.", type: "leader" },
+  { domain: "E", selected_issue: "폐기물·자원순환", selected_sub_issue: "사업장 폐기물 총량 관리, 폐기물 매립 제로(ZWTL) 인증 획득 및 순환 자원 전환 노력을 설명하는 문장.", type: "leader" },
+  { domain: "E", selected_issue: "폐기물·자원순환", selected_sub_issue: "사업장 폐기물 총량 관리, 폐기물 매립 제로(ZWTL) 인증 획득 및 순환 자원 전환 노력을 설명하는 문장.", type: "peer" },
+  { domain: "E", selected_issue: "폐기물·자원순환", selected_sub_issue: "사업장 폐기물 총량 관리, 폐기물 매립 제로(ZWTL) 인증 획득 및 순환 자원 전환 노력을 설명하는 문장.", type: "sub" },
+  { domain: "E", selected_issue: "친환경 제품·Eco-Design", selected_sub_issue: "제품 설계 단계의 환경성 검토, 친환경 인증 원부자재 도입 및 Eco-Design 프로세스를 설명하는 문장.", type: "peer" },
   
-  { id: 8, category: "S", title: "임직원 안전보건 관리 및 ISO 45001 인증", leader: true, peer: true, sub: true },
-  { id: 9, category: "S", title: "공급망(협력사) ESG 행동규범 제정 및 실사", leader: true, peer: true, sub: false },
-  { id: 10, category: "S", title: "인권 실사(Human Rights Due Diligence) 체계 구축", leader: true, peer: false, sub: false },
-  { id: 11, category: "S", title: "다양성 및 포용성(DEI) 지표 관리 확대", leader: false, peer: true, sub: true },
-  { id: 12, category: "S", title: "개인정보 보호 및 정보보안 체계 강화", leader: true, peer: true, sub: true },
-  { id: 13, category: "S", title: "지역사회 기여 및 사회공헌 임팩트 측정", leader: true, peer: true, sub: true },
-  { id: 14, category: "S", title: "인재 확보 및 육성을 위한 교육 프로그램 운영", leader: true, peer: true, sub: true },
-  { id: 15, category: "S", title: "소비자 안전 및 제품 책임 주의 의무 준수", leader: false, peer: true, sub: false },
+  { domain: "S", selected_issue: "안전보건 보장", selected_sub_issue: "안전보건 경영시스템(ISO 45001) 인증 및 전사 재해율 관리, 유해 위험요인 상시 발굴 체계를 설명하는 문장.", type: "leader" },
+  { domain: "S", selected_issue: "안전보건 보장", selected_sub_issue: "안전보건 경영시스템(ISO 45001) 인증 및 전사 재해율 관리, 유해 위험요인 상시 발굴 체계를 설명하는 문장.", type: "peer" },
+  { domain: "S", selected_issue: "안전보건 보장", selected_sub_issue: "안전보건 경영시스템(ISO 45001) 인증 및 전사 재해율 관리, 유해 위험요인 상시 발굴 체계를 설명하는 문장.", type: "sub" },
+  { domain: "S", selected_issue: "공급망 ESG 관리", selected_sub_issue: "협력사 ESG 행동규범 제정, 서면 및 실사 평가 프로세스 구축, 공급망 지속가능성 리스크 실사 대응을 설명하는 문장.", type: "leader" },
+  { domain: "S", selected_issue: "공급망 ESG 관리", selected_sub_issue: "협력사 ESG 행동규범 제정, 서면 및 실사 평가 프로세스 구축, 공급망 지속가능성 리스크 실사 대응을 설명하는 문장.", type: "peer" },
+  { domain: "S", selected_issue: "인권 경영 체계", selected_sub_issue: "UNGP 기준 인권정책 선언, 전사 인권 영향평가 실시 및 인권침해 고충처리 채널 활성화를 설명하는 문장.", type: "leader" },
+  { domain: "S", selected_issue: "정보보안·개인정보", selected_sub_issue: "정보보호 관리체계(ISMS-P, ISO 27001) 운영, 개인정보 유출 방지 시스템 및 보안 사고 모니터링을 설명하는 문장.", type: "leader" },
+  { domain: "S", selected_issue: "정보보안·개인정보", selected_sub_issue: "정보보호 관리체계(ISMS-P, ISO 27001) 운영, 개인정보 유출 방지 시스템 및 보안 사고 모니터링을 설명하는 문장.", type: "peer" },
+  { domain: "S", selected_issue: "정보보안·개인정보", selected_sub_issue: "정보보호 관리체계(ISMS-P, ISO 27001) 운영, 개인정보 유출 방지 시스템 및 보안 사고 모니터링을 설명하는 문장.", type: "sub" },
 
-  { id: 16, category: "G", title: "이사회 중심 경영 및 사외이사 독립성 확보", leader: true, peer: true, sub: true },
-  { id: 17, category: "G", title: "윤리·준법경영 시스템 고도화 (ISO 37301)", leader: true, peer: true, sub: true },
-  { id: 18, category: "G", title: "주주 권리 보호 및 투명한 주주환원 정책", leader: true, peer: false, sub: false },
-  { id: 19, category: "G", title: "리스크 관리 체계(RM) 전사 통합 및 모니터링", leader: true, peer: true, sub: false },
-  { id: 20, category: "G", title: "ESG 정기 성과 연계 경영진 보상 지표 운영",  leader: true, peer: false, sub: false },
+  { domain: "G", selected_issue: "이사회 구성 및 독립성", selected_sub_issue: "이사회 내 사외이사 구성 비율, 이사회 의장과 CEO 분리 여부, 사외이사 후보추천위 독립성을 설명하는 문장.", type: "leader" },
+  { domain: "G", selected_issue: "이사회 구성 및 독립성", selected_sub_issue: "이사회 내 사외이사 구성 비율, 이사회 의장과 CEO 분리 여부, 사외이사 후보추천위 독립성을 설명하는 문장.", type: "peer" },
+  { domain: "G", selected_issue: "이사회 구성 및 독립성", selected_sub_issue: "이사회 내 사외이사 구성 비율, 이사회 의장과 CEO 분리 여부, 사외이사 후보추천위 독립성을 설명하는 문장.", type: "sub" },
+  { domain: "G", selected_issue: "윤리·준법경영 시스템", selected_sub_issue: "부패방지 경영시스템(ISO 37001) 운영, 임직원 윤리강령 준수 서약, 내부고발제도 활성화를 설명하는 문장.", type: "leader" },
+  { domain: "G", selected_issue: "윤리·준법경영 시스템", selected_sub_issue: "부패방지 경영시스템(ISO 37001) 운영, 임직원 윤리강령 준수 서약, 내부고발제도 활성화를 설명하는 문장.", type: "peer" },
+  { domain: "G", selected_issue: "윤리·준법경영 시스템", selected_sub_issue: "부패방지 경영시스템(ISO 37001) 운영, 임직원 윤리강령 준수 서약, 내부고발제도 활성화를 설명하는 문장.", type: "sub" },
 ];
 
 const Benchmarking = () => {
@@ -56,8 +58,8 @@ const Benchmarking = () => {
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [showResult, setShowResult] = useState(false);
 
-  // [추가] 분석을 거쳐 바인딩될 이슈 상태 정의
-  const [issues, setIssues] = useState([]);
+  // API 혹은 더미로부터 들어오는 원본 Row 보관 상태
+  const [rawRows, setRawRows] = useState([]);
 
   const particleRef = useRef(null);
   const navigate = useNavigate();
@@ -93,9 +95,8 @@ const Benchmarking = () => {
             setIsAnalyzing(false);
             setShowResult(true);
 
-            // [추가] 프로그레스 완료 시점에 데이터 처리 분기 추가
             if (USE_DUMMY) {
-              setIssues(DUMMY_ISSUES);
+              setRawRows(DUMMY_DB_RESULTS);
             }
 
             return 100;
@@ -107,6 +108,34 @@ const Benchmarking = () => {
 
     return () => clearInterval(interval);
   }, [isAnalyzing]);
+
+  /**
+   * DB 로우 데이터를selected_issue 기준으로 압축 결합하는 로직
+   * subIssueSentence(문장)를 framework 매핑 항목으로 치환하여 병합합니다.
+   */
+  const getGroupedIssues = () => {
+    const map = {};
+
+    rawRows.forEach((row) => {
+      const key = row.selected_issue;
+      if (!map[key]) {
+        map[key] = {
+          title: row.selected_issue,
+          category: row.domain || "E",
+          sentence: row.selected_sub_issue || "정의된 서브 이슈 문장이 없습니다.",
+          leader: false,
+          peer: false,
+          sub: false,
+        };
+      }
+      
+      if (row.type === "leader") map[key].leader = true;
+      if (row.type === "peer") map[key].peer = true;
+      if (row.type === "sub") map[key].sub = true;
+    });
+
+    return Object.values(map);
+  };
 
   const createParticles = () => {
     if (!particleRef.current) return;
@@ -178,29 +207,13 @@ const Benchmarking = () => {
   const runAnalysis = async () => {
     if (isAnalyzing) return;
 
-    if (!companyNames.leader.trim()) {
-      showDefaultAlert("입력 오류", "리더 그룹의 회사 이름을 입력해주세요.", "warning");
-      return;
-    }
-    if (!companyNames.peer.trim()) {
-      showDefaultAlert("입력 오류", "피어 그룹의 회사 이름을 입력해주세요.", "warning");
-      return;
-    }
-    if (!companyNames.sub.trim()) {
-      showDefaultAlert("입력 오류", "자회사 이름을 입력해주세요.", "warning");
+    if (!companyNames.leader.trim() || !companyNames.peer.trim() || !companyNames.sub.trim()) {
+      showDefaultAlert("입력 오류", "모든 그룹의 회사 이름을 입력해주세요.", "warning");
       return;
     }
 
-    if (fileStorage.leader.length !== 3) {
-      showDefaultAlert("파일 수 부족", `[${companyNames.leader}] 그룹은 정확히 3개의 파일이 필요합니다.`, "warning");
-      return;
-    }
-    if (fileStorage.peer.length !== 3) {
-      showDefaultAlert("파일 수 부족", `[${companyNames.peer}] 그룹은 정확히 3개의 파일이 필요합니다.`, "warning");
-      return;
-    }
-    if (fileStorage.sub.length !== 3) {
-      showDefaultAlert("파일 수 부족", `[${companyNames.sub}] 그룹은 정확히 3개의 파일이 필요합니다.`, "warning");
+    if (fileStorage.leader.length !== 3 || fileStorage.peer.length !== 3 || fileStorage.sub.length !== 3) {
+      showDefaultAlert("파일 수 부족", "각 그룹별 정확히 3개년치(3개) 파일 업로드가 필수적입니다.", "warning");
       return;
     }
 
@@ -210,7 +223,6 @@ const Benchmarking = () => {
     setIsAnalyzing(true);
     showDefaultAlert("분석 시작", "AI 벤치마킹 분석이 시작되었습니다.", "success");
 
-    // [추가] 실제 비동기 API 처리 분기 구조 (useEffect 내부 처리와 타이밍 보완)
     if (!USE_DUMMY) {
       try {
         const response = await POST("skm", "/api/v1/benchmark/analyze", {
@@ -218,7 +230,7 @@ const Benchmarking = () => {
           files: fileStorage,
         });
         if (response && response.status !== false) {
-          setIssues(response.issues || []);
+          setRawRows(response.data || []);
         } else {
           showDefaultAlert("데이터 분석 오류", "네트워크 통신 중 에러가 발생했습니다.", "error");
         }
@@ -259,9 +271,7 @@ const Benchmarking = () => {
 
         <div className="file-list-container">
           {files.length === 0 ? (
-            <div className="empty-file-text">
-              3개년치 파일 필수 업로드 (정확히 3개)
-            </div>
+            <div className="empty-file-text">3개년치 파일 필수 업로드</div>
           ) : (
             files.map((file, index) => (
               <div className="file-item-box" key={index}>
@@ -275,14 +285,8 @@ const Benchmarking = () => {
                 <button
                   className="file-cancel-btn"
                   onClick={async () => {
-                    const confirmed = await showConfirmAlert(
-                      "파일 삭제",
-                      "선택한 파일을 삭제하시겠습니까?",
-                      "warning"
-                    );
-                    if (confirmed) {
-                      removeFile(groupKey, index);
-                    }
+                    const confirmed = await showConfirmAlert("파일 삭제", "선택한 파일을 삭제하시겠습니까?", "warning");
+                    if (confirmed) removeFile(groupKey, index);
                   }}
                 >
                   ✕
@@ -295,6 +299,8 @@ const Benchmarking = () => {
     );
   };
 
+  const processedIssues = getGroupedIssues();
+
   return (
     <div className="sr-container">
       <header className="sr-header">
@@ -303,10 +309,7 @@ const Benchmarking = () => {
         <div className="sr-stepper-row">
           {steps.map((step, index) => (
             <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
-              <div
-                className={`step-box ${index === activeIndex ? "active" : ""}`}
-                onClick={() => moveStep(index)}
-              >
+              <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
                 <div className="step-icon-circle">{step.icon}</div>
                 <div style={{ fontSize: "0.8rem", fontWeight: 850 }}>{step.title}</div>
               </div>
@@ -318,16 +321,9 @@ const Benchmarking = () => {
 
       <main className="main-content">
         <div className="input-card">
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px" }}>
-            벤치마킹 분석
-          </h2>
-
-          <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "4px", lineHeight: 1.5 }}>
+          <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px" }}>벤치마킹 분석</h2>
+          <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "4px" }}>
             산업군 리더 기업들의 공시 지표를 수집하고 우리 기업과의 격차 분석을 시작합니다.
-          </p>
-
-          <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "4px", lineHeight: 1.5 }}>
-            업로드된 지속가능경영보고서(SR)를 기반으로 산업군별 ESG 공시 전략, 핵심 지표 및 중대 이슈 대응 수준을 AI가 비교 분석합니다.
           </p>
 
           <div className="upload-section-grid">
@@ -336,20 +332,14 @@ const Benchmarking = () => {
             {renderUploadGroup("sub", "자회사", "회사이름 필수 입력")}
           </div>
 
-          <button className="sr-btn" onClick={runAnalysis}>
-            ⚡ 실시간 AI 분석 시작
-          </button>
+          <button className="sr-btn" onClick={runAnalysis}>⚡ 실시간 AI 분석 시작</button>
         </div>
       </main>
 
       <div className={`sr-result-dashboard ${dashboardOpen ? "open" : ""}`} id="dashboard">
         <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen)}>
           <div className="handle-pill">
-            {isAnalyzing
-              ? "AI 분석 진행 중..."
-              : showResult
-              ? "분석 완료 - 결과 요약 확인"
-              : "실시간 분석 대기 중"}
+            {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인" : "실시간 분석 대기 중"}
           </div>
         </div>
 
@@ -363,17 +353,9 @@ const Benchmarking = () => {
                   <img src={robot} className="robot-main-img mascot-entrance-pop" alt="robot" />
                 </div>
               </div>
-
               <h3 style={{ fontSize: "1.2rem", fontWeight: 850, margin: "0 0 4px 0" }}>
                 {isAnalyzing ? "벤치마킹 분석 진행 중..." : "분석 준비가 완료되었습니다"}
               </h3>
-
-              <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>
-                {isAnalyzing
-                  ? "업로드한 3개년 지속가능경영보고서(SR) 통합 대조 분석 중입니다."
-                  : "상단의 분석 시작 버튼을 눌러주세요."}
-              </p>
-
               {isAnalyzing && (
                 <div className="progress-section">
                   <div className="progress-bar-wrap">
@@ -386,22 +368,21 @@ const Benchmarking = () => {
               )}
             </div>
           ) : (
-            // [변경 영역] 기존 summary-grid를 탈피하고 Gap Analysis 테이블 레이아웃 적용
-            <div className="result-layout">
+            <div className="result-layout" id="benchmarking-result">
               <div className="ai-message-box" style={{ marginBottom: "20px" }}>
                 <strong style={{ color: "var(--sr-primary)", fontWeight: 850 }}>
                   [AI 벤치마킹 이슈 도출 및 Gap Analysis]
                 </strong>
                 <p style={{ margin: "8px 0 0", color: "#334155", fontWeight: 500, lineHeight: 1.5 }}>
-                  보고서(SR) 교차 파싱 결과 상위 <strong>{issues.length}개</strong>의 핵심 이슈가 도출되었습니다.
+                  보고서(SR) 교차 파싱 결과 <strong>{processedIssues.length}개</strong>의 핵심 이슈가 식별되었습니다. 자회사의 누락(Gap) 요소를 보완하여 최적의 초안 요건을 빌드하세요.
                 </p>
               </div>
 
-              {/* 신규 중대이슈 맵핑 스크롤 테이블 */}
+              {/* 개선된 1컬럼 스택트 레이아웃 테이블 */}
               <div className="gap-analysis-container">
                 <div className="gap-table-header">
-                  <div className="col-info">식별된 ESG 핵심 이슈 주제</div>
-                  <div className="col-status-group">
+                  <div className="col-info-stacked-header">식별된 ESG 이슈그룹 및 세부 분석 문장(Sub Issue)</div>
+                  <div className="col-status-group-header">
                     <div className="status-label">리더</div>
                     <div className="status-label">피어</div>
                     <div className="status-label">자회사</div>
@@ -409,14 +390,22 @@ const Benchmarking = () => {
                 </div>
 
                 <div className="gap-table-body">
-                  {issues.map((issue) => (
-                    <div className="gap-table-row" key={issue.id}>
-                      <div className="col-info">
-                        <span className={`category-tag tag-${issue.category.toLowerCase()}`}>
-                          {issue.category}
-                        </span>
-                        <span className="issue-title-text">{issue.title}</span>
-                      </div>                      
+                  {processedIssues.map((issue, index) => (
+                    <div className="gap-table-row" key={index}>
+                      {/* 좌측: 이슈 대분류 태그 + 이슈그룹명 + 세부 문장 수직 누적 배치 */}
+                      <div className="col-info-stacked">
+                        <div className="issue-main-row">
+                          <span className={`category-tag tag-${issue.category.toLowerCase()}`}>
+                            {issue.category}
+                          </span>
+                          <span className="issue-title-text">{issue.title}</span>
+                        </div>
+                        <div className="issue-sub-sentence">
+                          {issue.sentence}
+                        </div>
+                      </div>
+                      
+                      {/* 우측: 공시 여부 심볼 체계 */}
                       <div className="col-status-group">
                         <div className="status-cell">
                           <span className={`status-dot ${issue.leader ? "checked" : "empty"}`}>

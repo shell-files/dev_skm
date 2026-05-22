@@ -18,5 +18,5 @@ async def tokenCheck(userModel = Depends(get_token)):
 @router.post("",
         summary="사용자 정보 확인 api",
         description="사용자 & 회사 선택 정보 반환")
-async def userCheck(companyModel: CompanyModel, userModel = Depends(get_token)):
-    return checkUser(companyModel,userModel)
+async def userCheck(userModel = Depends(get_token)):
+    return checkUser(userModel)

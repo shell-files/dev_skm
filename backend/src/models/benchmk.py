@@ -5,7 +5,7 @@ from fastapi import UploadFile
 from pathlib import Path
 from src.utils.settings import settings
 from src.utils.db import save, findOne
-from src.models.model import ResponseModel, FileModel, UserModel, FileFindModel, CompanyModel
+from src.models.model import ResponseModel, FileModel, UserModel, FileFindModel
 from src.utils.ocrai import gemini
 
 # 파일 업로드 및 저장

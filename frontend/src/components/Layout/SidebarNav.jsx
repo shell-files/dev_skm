@@ -5,9 +5,9 @@ import { useAuth } from '@hooks/AuthContext.jsx';
 const Sidebarnav = ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { selectedCompany, selectCompany, handleLogout, toggleSidebarMobile, goHome, goMyPage, openAlarmCenter } = useAuth();
+    const { selectedCompany, selectCompany, handleLogout, goHome, goMyPage, openAlarmCenter } = useAuth();
 
-    // 1. 권한 확인
+    // 권한 확인
     const role = selectedCompany?.role || "ESG담당자";
     const isSysAdmin = role === "시스템관리자";
     const isESG = role === "ESG담당자" || role === "ESG 담당자";
@@ -16,7 +16,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
     const canViewService = isSysAdmin || isESG || isConsultant;
     const canViewAdmin = isSysAdmin || isESG || isConsultant;
 
-    // 2. 아코디언 상태 관리
+    // 아코디언 상태 관리
     const [expanded, setExpanded] = useState({
         service: true,
         admin: false,
@@ -45,7 +45,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
     const isActive = (path) => location.pathname.includes(path);
 
-    // 3. 커스텀 스크롤 인디케이터 로직
+    // 커스텀 스크롤 인디케이터 로직
     const scrollRef = useRef(null);
     const indicatorRef = useRef(null);
     const isDraggingRef = useRef(false);
@@ -112,7 +112,6 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
         ];
         setCompanies(arr);
         setFilteredCompanies(arr);
-        // setCompanie(selectedCompany?.company_id);
         return () => {
             window.removeEventListener('pointermove', handlePointerMove);
             window.removeEventListener('pointerup', handlePointerUp);
@@ -156,41 +155,20 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
         }
     }
 
-    const handleReset = () => {
-        setSearchTerm("");
-        setFilteredCompanies(companies);
-    };
+    const goBenchMk = () => { navigate("/benchmk"); if(window.innerWidth <= 800) setIsOpen(false); };
+    const goOnboard = () => { navigate("/onb"); if(window.innerWidth <= 800) setIsOpen(false); };
+    const goManager = () => { navigate("/manager"); if(window.innerWidth <= 800) setIsOpen(false); };
+    const handleGoHome = () => { goHome(); if(window.innerWidth <= 800) setIsOpen(false); };
 
-    const subMenuItems = ["A", "B", "C", "D", "E"];
-
-    // navigate
-    const goBenchMk = () => navigate("/benchmk");
-    const goOnboard = () => navigate("/onb");
-    const goDash = () => navigate("/dashboard");
-    const goManager = () => navigate("/manager");
-    const toggleAccordionMenu = (element) => {
-        const content = element.nextElementSibling;
-        const arrow = element.querySelector('.nav-arrow');
-        if (content && content.classList.contains('nav-accordion-content')) {
-            const isExpanded = content.classList.toggle('expanded');
-            if (arrow) arrow.classList.toggle('expanded', isExpanded);
-        }
-    }
-    const resetCompanySearch = () => {
-        return;
-    }
-    const asyncHeaderCompany = () => {
-        return;
-    }
     return (
         <aside
             className={`sidebar ${isOpen ? "open" : "closed"}`}
             id="globalSidebar"
-            >
+        >
             <div className="nav-scroll-wrapper">
-                <div className="nav-scroll-area">
+                <div className="nav-scroll-area" ref={scrollRef}>
                     <div className="nav-group">
-                        <div className="nav-item" onClick={goDash}>
+                        <div className="nav-item" onClick={handleGoHome}>
                             <span>대시보드</span>
                         </div>
                     </div>
@@ -210,10 +188,10 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                         <div
                             className="nav-item"
                             onClick={() => toggleAccordion("admin")}
-                            >
+                        >
                             <div className="nav-accordion-header">
                                 <span>ESG 담당자 통합 관리</span>
-                                <svg className="nav-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                                <svg className={`nav-arrow ${expanded.admin ? "expanded" : ""}`} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M9 5l7 7-7 7"></path>
                                 </svg>
                             </div>
@@ -222,8 +200,6 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                         <div className={`nav-accordion-content ${expanded.admin ? "expanded" : ""}`}>
                             <div className="inner-wrapper">
                                 <div className="nav-item sub-item" onClick={goManager}>데이터 승인</div>
-                                {/* <div className="nav-item sub-item" onClick="loadSubPage('users')">유저 관리</div> */}
-                                {/* <div className="nav-item sub-item" onClick="loadSubPage('invite')">초대 관리</div> */}
                             </div>
                         </div>
                     </div>
@@ -231,7 +207,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                         <div className="nav-item" onClick={() => toggleAccordion("settings")}>
                             <div className="nav-accordion-header">
                                 <span>환경 설정</span>
-                                <svg className="nav-arrow" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                                <svg className={`nav-arrow ${expanded.settings ? "expanded" : ""}`} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
                                     <path d="M9 5l7 7-7 7"></path>
                                 </svg>
                             </div>
@@ -239,19 +215,18 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
                         <div className={`nav-accordion-content ${expanded.settings ? "expanded" : ""}`}>
                             <div className="inner-wrapper">
-                                <div className="nav-item sub-item" onClick={goMyPage}>
+                                <div className="nav-item sub-item" onClick={() => { goMyPage(); if(window.innerWidth <= 800) setIsOpen(false); }}>
                                     내 계정 설정
                                 </div>
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
 
             <div className="sidebar-footer">
                 <div className="search-container">
-                    <input type="text" className="company-search" id="companySearchInput" placeholder="회사 검색..." /* onInput="filterCompanyList()" */ />
+                    <input type="text" className="company-search" id="companySearchInput" placeholder="회사 검색..." />
                 </div>
                 <select className="company-select" id="sidebarCompanySelect">
                     <option value="SKM">SKM</option>
@@ -260,7 +235,6 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                 </select>
             </div>
         </aside>
-
     );
 }
 

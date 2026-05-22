@@ -5,6 +5,9 @@
 import { createContext, useState, useContext, useEffect } from "react";
 import { GET, POST, PUT, PATCH, DELETE } from "@utils/Network";
 import { useNavigate } from "react-router";
+import { checkUser } from "@stores/authSlice";
+import { useDispatch, useSelector } from "react-redux";
+
 const AuthContext = createContext(null);
 
 /**
@@ -22,21 +25,37 @@ export const AuthProvider = ({ children }) => {
 	// [변수] user: 현재 로그인한 사용자 정보
 	const [user, setUser] = useState(null);
   const navigate = useNavigate()
-	// [변수] companies: 해당 사용자의 전체 소속 회사 목록
-	const [companies, setCompanies] = useState([]);
 
-	// [변수] selectedCompany: 현재 선택된 회사 (role, company_id 등 포함)
-	const [selectedCompany, setSelectedCompany] = useState(null);
+  const dispatch = useDispatch();
+
+	const userName = useSelector((state) => state.auth.userName);
 
 	// [변수] isAuthReady: localStorage 복원 완료 여부 (라우터 가드에서 활용)
-	const [isAuthReady, setIsAuthReady] = useState(false);
+	const isAuthReady = useSelector((state) => state.auth.isAuthReady);
+
+  // [변수] 다이렉트 주소
+	const redirectUrl = useSelector((state) => state.auth.redirectUrl);
+
+	// [변수] companies: 해당 사용자의 전체 소속 회사 목록
+	const companies = useSelector((state) => state.auth.companies);
+
+  const selectedCompany = useSelector((state) => state.auth.selectedCompany);
+
+  // [변수] isLoading: 로딩 상태 여부
+	const isLoading = useSelector((state) => state.auth.loading);
 
 	/**
    * [이펙트] 앱 진입 시 localStorage에서 이전 세션 복원
    */
-  useEffect(() => {
+  useEffect(() => { 
+    dispatch(checkUser()); 
+  }, []);
+  
+  // selectedCompany
 
-	}, []);
+	/**
+   * [이펙트] 앱 진입 시 localStorage에서 이전 세션 복원
+   */
 
 	/**
    * [함수] selectCompany: CompanySelect 페이지에서 회사 선택 시 호출
@@ -104,7 +123,7 @@ export const AuthProvider = ({ children }) => {
 	};
 
 	// 전역 인증 상태 관리 컨텍스트에 필요한 값들을 객체로 묶어서 제공
-	const authContextValue = {login, goMyPage};
+	const authContextValue = {login, goMyPage, goHome, userName, selectedCompany, companies, isAuthReady, isLoading};
  
 	return (
 		<AuthContext.Provider value={authContextValue}>

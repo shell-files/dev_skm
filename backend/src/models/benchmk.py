@@ -46,7 +46,7 @@ def uploadSr(fileModel:FileModel, userModel: UserModel):
             return ResponseModel(False, "파일 업로드에 실패하였습니다. 다시 시도해주세요.")
     
 #  파일 찾기
-async def findSr(fileFindModel:FileFindModel, companyModel: CompanyModel, userModel: UserModel):
+async def findSr(fileFindModel:FileFindModel, userModel: UserModel):
     UPLOAD_DIR = Path(settings.file_dir)
     results =[]
     filePaths = []

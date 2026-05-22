@@ -31,6 +31,7 @@ services:
       - ./backend/src:/workspace/src
       - ./backend/srfiles:/workspace/srfiles
       - skm_secrets:/workspace/secrets
+      
     environment:
       - HOST_IP=${HOST_IP}
       - DOMAIN= ${DOMAIN}

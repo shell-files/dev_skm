@@ -27,7 +27,7 @@ class EmailModel(BaseModel):
    email: EmailStr = Field(..., description="비밀번호 찾기에 사용되는 이메일 모델")
 
 # Company 정보 모델
-class CompanyModel(BaseModel):
+class SignUpModel(BaseModel):
   """user.py 회원가입 통합 요청 모델"""
 
   # ── USER 테이블 필드

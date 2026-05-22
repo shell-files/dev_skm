@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from src.models.model import ResponseModel
+from src.models.model import ResponseModel, CompanyModel
 from src.models.auth import checkUser
 from src.utils.auth import get_token
 
@@ -18,5 +18,5 @@ async def tokenCheck(userModel = Depends(get_token)):
 @router.post("",
         summary="사용자 정보 확인 api",
         description="사용자 & 회사 선택 정보 반환")
-async def userCheck(userModel = Depends(get_token)):
-    return checkUser(userModel)
+async def userCheck(companyModel: CompanyModel, userModel = Depends(get_token)):
+    return checkUser(companyModel,userModel)

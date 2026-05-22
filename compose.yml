@@ -18,6 +18,7 @@ services:
       - ./backend/.python-version:/workspace/.python-version
       - ./backend/src:/workspace/src
       - ./backend/srfiles:/workspace/srfiles
+      
     environment:
       - HOST_IP=${HOST_IP}
       - DOMAIN= ${DOMAIN}

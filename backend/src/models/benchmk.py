@@ -84,15 +84,17 @@ async def findSr(fileFindModel:FileFindModel, companyModel: CompanyModel, userMo
     # 판단 ai 붙여서 도메인 넣기
     # 도메인 뽑 domainResult
     if finalResult:
-        for item in finalResult.data:
+        for item in finalResult["data"]:
             if item == None:
                 continue
-            domainResult = "test"
             dbFileName = item.get("fileName")
+            # 이건 나중에 AI 연결하면 변경
+            domainResult = "test"
             
             for res in item["result"]:
                 issue= res.get("issue", "")
                 sub_issue = res.get("sub_issue", "")
+
                 saveSql = f"""
                             INSERT INTO skm.`TE_BENCHMK` (`sr_id`,`domain`,`selected_issue`, `selected_sub_issue`)
                                     VALUES ( (SELECT id FROM skm.`TE_SR_FILE WHERE file_name = aes_e( ? , '{settings.maria_db_key}' ),

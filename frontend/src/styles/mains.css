@@ -471,7 +471,7 @@ body {
 }
 
 .sidebar-close-btn {
-    display: none; /* 기본적으로 숨김 (모바일에서만 노출) */
+    display: none; 
 }
 
 

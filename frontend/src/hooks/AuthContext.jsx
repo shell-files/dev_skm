@@ -104,7 +104,7 @@ export const AuthProvider = ({ children }) => {
 	};
 
 	// 전역 인증 상태 관리 컨텍스트에 필요한 값들을 객체로 묶어서 제공
-	const authContextValue = {login, goMyPage};
+	const authContextValue = {login, goMyPage, goHome};
  
 	return (
 		<AuthContext.Provider value={authContextValue}>

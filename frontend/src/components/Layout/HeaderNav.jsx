@@ -13,8 +13,8 @@ const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
     return (
         <header className="header">
             <div className="header-left-group">
-                <div className="logo-placeholder" onClick={goHome}>
-                    <img id="logo" className="logo" src={logo} />
+                <div className="logo-placeholder" style={{cursor:"pointer"}}>
+                    <img id="logo" className="logo" src={logo} onClick={goHome} />
                 </div>
                 <button className="mobile-hamburger" onClick={toggleSidebarMobile} aria-label="메뉴 열기">☰</button>
             </div>

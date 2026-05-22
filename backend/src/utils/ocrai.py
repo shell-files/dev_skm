@@ -27,7 +27,7 @@ def clean(responseText: str) -> list:
     return data
 
 # 오류 방지를 위하여 Max 파일 수 제한 및 재시도 로직
-MAX_TASKS = 3
+MAX_TASKS = 1
 MAX_RETRIES = 3
 RETRY_DELAY = 5  # seconds
 
@@ -39,6 +39,9 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> List[Di
     async def oneGemini(result: Dict[str, Any], filePath: str) -> Dict[str, Any]:
         async with semaphore:
             uploadedFile = None
+            fileName = result.get("file_name", "")
+            companyName = result.get("company_name", "")
+            type = result.get("type", "")
             try:
                 fileConfig = types.UploadFileConfig(mime_type="application/pdf")
                 with open(filePath, "rb") as f:
@@ -98,23 +101,26 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> List[Di
                     contents=[uploadedFile, refinedPrompt],
                     config=generationConfig
                 )
-
+                
+                
                 # 업로드한 파일 삭제 (임시 파일 서버에 안 남게)
                 if uploadedFile:
                     client.files.delete(name=uploadedFile.name)
                     uploadedFile = None
-
-                data = {"companyName": result["company_name"], "type": result["type"], "result": clean(response.text)}
                 
-                
+                data = {"fileName": result["file_name"], "companyName": result["company_name"], "type": result["type"], "result": clean(response.text)}
                 return data
                 
             except Exception as e:
+                # 어느 파일에서 에러나는지 확인용
+                print(f'{fileName}:', {str(e)})
                 if uploadedFile:
                     try:
                         client.files.delete(name=uploadedFile.name)
                     except Exception:
-                        pass                  
+                        pass  
+                data = {"fileName": fileName, "companyName": companyName, "type": type, "result": []} 
+                return data         
         
     tasks = [oneGemini(results[i], filePaths[i]) for i in range(len(filePaths))]
     
@@ -124,6 +130,7 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> List[Di
     for res in totalOutputs:
         if isinstance(res, Exception):
             finalResults.append({
+                "fileName": "", 
                 "companyName": "SYSTEM",
                 "type": "ERROR",
                 "result": [],

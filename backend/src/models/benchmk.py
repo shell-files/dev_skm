@@ -62,7 +62,6 @@ async def findSr(fileFindModel:FileFindModel, userModel: UserModel):
                 """
         fileIdParams = (file, userModel.id)
         result = findOne(fileIdSql, fileIdParams)
-
         if not result:
             return ResponseModel(False, f"존재하지 않는 파일이 포함되어 있습니다: {file}")
 
@@ -79,5 +78,46 @@ async def findSr(fileFindModel:FileFindModel, userModel: UserModel):
         results.append(result)
         filePaths.append(str(filePath))
     finalResult = await gemini(results, filePaths)
-    return ResponseModel(True, "", finalResult)
 
+    if not finalResult:
+        return ResponseModel(False, "파일 분석에 실패하였습니다. 다시 시도해주세요.")
+    
+
+    # 결과(BENCHMK TABLE)DB 저장
+    # 판단 ai 붙여서 도메인 넣기
+    # 도메인 뽑 domainResult
+    if finalResult:
+        for item in finalResult["data"]:
+            if item == None:
+                continue
+            dbFileName = item.get("fileName")
+            domainResult = "test" # 이건 나중에 AI 연결하면 변경
+            resultList = item.get("result",[])
+
+            # 파일 저장 실패시 알림
+            if not resultList or item.get("type") == "ERROR":
+                raise Exception(f"{dbFileName} 파일 분석 중 AI 엔진 내부 오류가 발생했습니다.")
+            
+            for res in item["result"]:
+                issue= res.get("issue", "")
+                sub_issue = res.get("sub_issue", "")
+
+                saveSql = f"""
+                            INSERT INTO skm.`TE_BENCHMK` (`sr_id`,`domain`,`selected_issue`, `selected_sub_issue`)
+                                    VALUES ( 
+                                    (SELECT `id` FROM skm.`TE_SR_FILE` WHERE `file_name` = aes_e( ? , '{settings.maria_db_key}' ))
+                                    ,aes_e( ? , '{settings.maria_db_key}' )
+                                    ,aes_e( ? , '{settings.maria_db_key}' )
+                                    ,aes_e( ?, '{settings.maria_db_key}' )
+                                    );
+                            """
+                saveParams = (dbFileName, domainResult, issue, sub_issue)
+                try:
+                    save(saveSql, saveParams)
+                except Exception as e:
+                    raise Exception(f"{dbFileName} 파일 분석 중 DB 저장 중 오류가 발생했습니다.")
+        return ResponseModel(True, "파일 분석에 성공하였습니다.", finalResult)
+           
+    return finalResult
+
+    

@@ -21,7 +21,7 @@ const DUMMY_DB_RESULTS = [
   { domain: "E", selected_issue: "폐기물·자원순환", selected_sub_issue: "사업장 폐기물 총량 관리, 폐기물 매립 제로(ZWTL) 인증 획득 및 순환 자원 전환 노력을 설명하는 문장.", type: "peer" },
   { domain: "E", selected_issue: "폐기물·자원순환", selected_sub_issue: "사업장 폐기물 총량 관리, 폐기물 매립 제로(ZWTL) 인증 획득 및 순환 자원 전환 노력을 설명하는 문장.", type: "sub" },
   { domain: "E", selected_issue: "친환경 제품·Eco-Design", selected_sub_issue: "제품 설계 단계의 환경성 검토, 친환경 인증 원부자재 도입 및 Eco-Design 프로세스를 설명하는 문장.", type: "peer" },
-  
+
   { domain: "S", selected_issue: "안전보건 보장", selected_sub_issue: "안전보건 경영시스템(ISO 45001) 인증 및 전사 재해율 관리, 유해 위험요인 상시 발굴 체계를 설명하는 문장.", type: "leader" },
   { domain: "S", selected_issue: "안전보건 보장", selected_sub_issue: "안전보건 경영시스템(ISO 45001) 인증 및 전사 재해율 관리, 유해 위험요인 상시 발굴 체계를 설명하는 문장.", type: "peer" },
   { domain: "S", selected_issue: "안전보건 보장", selected_sub_issue: "안전보건 경영시스템(ISO 45001) 인증 및 전사 재해율 관리, 유해 위험요인 상시 발굴 체계를 설명하는 문장.", type: "sub" },
@@ -128,7 +128,7 @@ const Benchmarking = () => {
           sub: false,
         };
       }
-      
+
       if (row.type === "leader") map[key].leader = true;
       if (row.type === "peer") map[key].peer = true;
       if (row.type === "sub") map[key].sub = true;
@@ -182,6 +182,20 @@ const Benchmarking = () => {
         showDefaultAlert(
           "파일 형식 오류",
           `오직 PDF 형식의 문서만 업로드 가능합니다.<br/>
+          대상 파일: ${file.name}`,
+          "error"
+        );
+        e.target.value = "";
+        return;
+      }
+
+      const isDuplicate = fileStorage[groupKey].some(
+        (existingFile) => existingFile.name === file.name
+      );
+      if (isDuplicate) {
+        showDefaultAlert(
+          "중복 파일 오류",
+          `이미 업로드된 파일입니다.<br/>
           대상 파일: ${file.name}`,
           "error"
         );
@@ -320,7 +334,7 @@ const Benchmarking = () => {
       </header>
 
       <main className="main-content">
-        <div className="input-card">
+        <div className="input-card" style={{ marginBottom: "50px" }}>
           <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px" }}>벤치마킹 분석</h2>
           <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "4px" }}>
             산업군 리더 기업들의 공시 지표를 수집하고 우리 기업과의 격차 분석을 시작합니다.
@@ -332,7 +346,7 @@ const Benchmarking = () => {
             {renderUploadGroup("sub", "자회사", "회사이름 필수 입력")}
           </div>
 
-          <button className="sr-btn" onClick={runAnalysis}>⚡ 실시간 AI 분석 시작</button>
+          <button className="sr-btn" id="bench-btn" onClick={runAnalysis}> 실시간 AI 분석 시작</button>
         </div>
       </main>
 
@@ -404,7 +418,7 @@ const Benchmarking = () => {
                           {issue.sentence}
                         </div>
                       </div>
-                      
+
                       {/* 우측: 공시 여부 심볼 체계 */}
                       <div className="col-status-group">
                         <div className="status-cell">

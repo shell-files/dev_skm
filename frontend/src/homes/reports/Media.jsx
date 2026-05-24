@@ -533,6 +533,7 @@ const Media = () => {
             <button
               className="sr-btn"
               onClick={startMediaCollection}
+              style={{marginBottom: "50px"}}
             >
               실시간 AI 분석 시작
             </button>

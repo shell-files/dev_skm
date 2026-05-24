@@ -526,7 +526,7 @@
 }
 
 .sr-result-dashboard.open {
-    height: var(--sr-dashboard-height);
+    height: 740px;
 }
 
 .dashboard-handle {
@@ -561,7 +561,6 @@
 
     flex: 1;
 
-    display: grid;
     gap: 40px;
 
     padding: 30px 50px;
@@ -680,8 +679,8 @@
 
 .result-layout {
     width: 100%;
-
     display: flex;
+    
     flex-direction: column;
     gap: 14px;
 
@@ -910,7 +909,7 @@
     }
 
     .sr-result-dashboard.open {
-        height: 500px;
+        height: 735px;
     }
 }
 
@@ -1019,6 +1018,6 @@
     }
 
     .sr-result-dashboard.open {
-        height: 85vh;
+        height: 77.5vh;
     }
 }

@@ -133,7 +133,7 @@
     overflow-y: auto;
     overflow-x: hidden;
 
-    padding: 24px;
+    padding: 24px 0px;
     padding-bottom: 180px;
 
     display: flex;
@@ -149,6 +149,7 @@
     justify-content: flex-start;
 
     padding: 32px 48px 120px;
+
     background: #fff;
 
     text-align: center;
@@ -189,8 +190,6 @@
     border-radius: 14px;
 
     background: #fff;
-
-    /* overflow: hidden; */
 }
 
 .upload-group-badge {
@@ -448,7 +447,6 @@
     overflow: hidden;
 
     background: radial-gradient(circle at center, #ffffff 0%, #f8fafc 100%);
-
 }
 
 .particle-field {
@@ -677,7 +675,6 @@
 ========================================================= */
 
 @media (max-width: 1200px) {
-
     .input-card {
         padding: 28px 28px 120px;
     }
@@ -692,7 +689,6 @@
 ========================================================= */
 
 @media (max-width: 992px) {
-
     .main-content {
         padding: 18px;
         padding-bottom: 220px;
@@ -717,7 +713,6 @@
 ========================================================= */
 
 @media (max-width: 768px) {
-
     .sr-header {
         padding: 16px;
     }
@@ -783,7 +778,6 @@
 ========================================================= */
 
 @media (max-width: 480px) {
-
     .main-content {
         padding: 10px;
         padding-bottom: 260px;
@@ -799,9 +793,7 @@
 
     .upload-group-badge {
         left: 10px;
-
         padding: 2px 10px;
-
         font-size: 0.72rem;
     }
 
@@ -814,10 +806,208 @@
     }
 
     .sr-result-dashboard.open {
-        height: 200vh;
+        height: 85vh;
     }
+} /* [완료] 끊겨있던 미디어쿼리 중괄호 복구 완료 */
+
+
+/* ==========================================================================
+   #benchmarking-result 고유 ID 스코프 지정 (타 페이지와 스타일 섞임 차단)
+========================================================================== */
+
+/* 1. 갭 분석 결과 테이블 메인 프레임 */
+#benchmarking-result .gap-analysis-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    border: 1px solid var(--sr-border);
+    border-radius: 10px;
+    background: #ffffff;
+    overflow: hidden;
+    margin-top: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    
+    /* 대시보드 내부 영역 스크롤 고정 */
+    flex: 1;
+    min-height: 320px;
+    max-height: 500px;
 }
 
-#bench-btn .sr-btn {
-    margin-bottom: 800px;
+/* 2. 테이블 레이아웃 헤더 */
+#benchmarking-result .gap-table-header {
+    display: flex;
+    align-items: center;
+    background-color: #f1f5f9;
+    border-bottom: 2px solid var(--sr-border);
+    padding: 14px 20px;
+    font-weight: 800;
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+#benchmarking-result .col-info-stacked-header {
+    flex: 2.8;
+}
+
+#benchmarking-result .col-status-group-header {
+    flex: 130px;
+    display: flex;
+    justify-content: space-around;
+    padding-right: 15px;
+}
+
+/* 3. 테이블 리스트 바디 내부 스크롤 처리 */
+#benchmarking-result .gap-table-body {
+    overflow-y: auto;
+    flex: 1;
+    background: #ffffff;
+}
+
+#benchmarking-result .gap-table-body::-webkit-scrollbar {
+    width: 6px;
+}
+#benchmarking-result .gap-table-body::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 4px;
+}
+#benchmarking-result .gap-table-body::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* 4. [★겹침 방지] 개별 데이터 줄(Row) 배치 규칙 */
+#benchmarking-result .gap-table-row {
+    display: flex;
+    align-items: flex-start; /* 문장이 길어져도 가로 행 찌그러짐을 방지하는 상단 정렬 */
+    padding: 18px 20px;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.2s ease;
+    
+    min-height: 84px;         /* 박스 압착 현상 절대 방지용 최소 높이 */
+    box-sizing: border-box;
+}
+
+#benchmarking-result .gap-table-row:last-child {
+    border-bottom: none;
+}
+
+#benchmarking-result .gap-table-row:hover {
+    background-color: #f8fafc;
+}
+
+/* 5. [★공간 분리] 좌측 대분류 + 중대이슈 + 세부 문장 수직 정렬 규칙 */
+#benchmarking-result .col-info-stacked {
+    flex: 2.8;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;                 /* 타이틀과 서브 문장 사이 충돌 방지 세로 간격 */
+    min-width: 0;
+    width: 100%;
+}
+
+#benchmarking-result .issue-main-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* ESG 식별 심볼 배지 (E, S, G) */
+#benchmarking-result .category-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: #ffffff;
+    flex-shrink: 0;
+}
+#benchmarking-result .tag-e { background-color: #10b981; }
+#benchmarking-result .tag-s { background-color: #3b82f6; }
+#benchmarking-result .tag-g { background-color: #8b5cf6; }
+
+#benchmarking-result .issue-title-text {
+    font-size: 0.95rem;
+    font-weight: 750;
+    color: #1e293b;
+}
+
+/* [★가독성 극대화] 장문형 서브 이슈 정의 텍스트 공간 */
+#benchmarking-result .issue-sub-sentence {
+    font-size: 0.83rem;
+    color: #64748b;
+    font-weight: 500;
+    line-height: 1.5;
+    padding-left: 36px;       /* 대분류 태그 줄과 맞춘 들여쓰기 구조 */
+    
+    width: 100%;              /* 영역 가로폭 이탈 완전 제어 */
+    word-break: keep-all;     /* 한글 단어 단위 개행 처리 */
+    overflow-wrap: break-word;/* 긴 영문/숫자 예외 케이스 줄바꿈 처리 */
+}
+
+/* 6. [★압착 방지] 우측 공시 Matrix 체크 마킹 고정 프레임 */
+#benchmarking-result .col-status-group {
+    flex: 130px;
+    flex-shrink: 0;           /* 브라우저 폭 축소 시 아이콘 겹침 및 깨짐 차단 */
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    
+    align-self: center;       /* 왼쪽 문장의 줄 수에 관계없이 아이콘은 상시 수직 정중앙 유지 */
+    margin-left: 16px;        /* 텍스트 박스와의 최소 안전 마진 */
+}
+
+#benchmarking-result .status-label, 
+#benchmarking-result .status-cell {
+    width: 40px;
+    text-align: center;
+}
+
+#benchmarking-result .status-label {
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+/* 7. 상태 아이콘 커스텀 폰트 */
+#benchmarking-result .status-dot {
+    font-size: 1.1rem;
+    font-weight: bold;
+    display: inline-block;
+}
+
+/* 리더/피어 공시 상태 (●) */
+#benchmarking-result .status-dot.checked {
+    color: var(--sr-primary);
+}
+
+/* 미공시 상태 (○) */
+#benchmarking-result .status-dot.empty {
+    color: #cbd5e1;
+}
+
+/* 자회사 공시 누락에 따른 Gap 리스크 포인트 (✕) */
+#benchmarking-result .status-dot.unreported {
+    color: #ef4444;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+/* 8. 미디어 쿼리 반응형 처리 */
+@media (max-width: 768px) {
+    #benchmarking-result .gap-table-header, 
+    #benchmarking-result .gap-table-row {
+        padding: 14px 10px;
+    }
+    #benchmarking-result .issue-title-text {
+        font-size: 0.85rem;
+    }
+    #benchmarking-result .issue-sub-sentence {
+        padding-left: 0;     /* 모바일 뷰에서는 인덴트를 제거하여 가로폭 가독성 최대 확보 */
+        font-size: 0.78rem;
+    }
+    #benchmarking-result .col-status-group, 
+    #benchmarking-result .col-status-group-header {
+        flex: 110px;
+    }
 }

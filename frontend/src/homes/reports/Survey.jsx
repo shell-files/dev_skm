@@ -698,6 +698,7 @@ const Survey = () => {
             <button
               className="sr-btn secondary"
               onClick={runSurveyAnalysis}
+              style={{marginBottom: "50px"}}
             >
               설문 결과 분석
             </button>

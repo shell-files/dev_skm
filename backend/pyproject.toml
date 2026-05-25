@@ -18,5 +18,8 @@ dependencies = [
     "pypdf>=6.11.0",
     "python-multipart>=0.0.26",
     "redis>=7.4.0",
+    "scikit-learn>=1.8.0",
+    "sentence-transformers>=5.5.1",
     "tiktoken>=0.7.0",
+    "torch>=2.12.0",
 ]

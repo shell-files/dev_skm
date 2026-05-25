@@ -3,6 +3,8 @@ from google import genai
 from google.genai import types
 from pypdf import PdfReader, PdfWriter
 
+from settings import settings
+
 import tempfile
 import asyncio
 import traceback
@@ -25,9 +27,9 @@ logging.basicConfig(
 
 log = logging.getLogger(__name__)
 
-geminiKey = ""
+geminiKey = settings.gemini_api_key
 
-modelName = ""
+modelName = settings.gemini_model
 
 maxWait = 120
 retryCount = 3
@@ -55,7 +57,7 @@ client = genai.Client(
 
 
 # =========================
-# OCR 프롬프트
+# OCR 프롬프트 (camelCase 반영)
 # =========================
 
 PROMPT = """
@@ -64,11 +66,20 @@ You are OCR engine.
 Extract ALL visible text.
 
 Rules:
+
 - Preserve page order
 - No summarize
 - No interpretation
 - No omit
 - Return RAW TEXT ONLY
+
+IMPORTANT:
+- Output each page with marker:
+==Page N==
+- Page numbers MUST continue sequentially
+- NEVER restart page numbering
+- NEVER duplicate page numbers
+- Keep original page order
 """
 
 
@@ -197,7 +208,7 @@ async def generateContent(uploadedFile):
                     ],
                     config=types.GenerateContentConfig(
                         temperature=0,
-                        max_output_tokens=32768
+                        max_output_tokens=65536
                     )
                 )
             )

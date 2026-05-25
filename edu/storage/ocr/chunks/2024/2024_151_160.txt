@@ -1,0 +1,466 @@
+==Page 151==
+Letter to Stakeholders Corporate Overview Environment Social Governance Appendix HYUNDAI MOBIS SUSTAINABILITY REPORT 2024 151
+
+GRI Standards | ESRS Disclosure Requirements | WEF IBC Stakeholder Capitalism Metrics | SASB | TCFD | UN SDGs | 가입 현황 | 인증 현황 | 온실가스 검증의견서 | 제3자 검증의견서 | About this report
+
+# SASB
+
+## Auto Parts
+
+### 지속 가능성 공개 주제 및 회계 지표
+
+| Topic | Accounting Metrics | Code | 보고 | 보고 위치 |
+| :--- | :--- | :--- | :--- | :--- |
+| 에너지 관리 | 총 에너지 사용량 | TR-AP-130a.1 | SR | 47 |
+| | 전력에너지 비율 | | SR | 49 |
+| | 재생에너지 비율 | | SR | 48 |
+| 폐기물 관리 | 제조에 의한 총 폐기물 발생량 | TR-AP-150a.1 | SR | 65-66 |
+| | 지정폐기물 비율 | | SR | 65-66 |
+| | 재활용 비율 | | SR | 65-66 |
+| 제품 안전 | 리콜 발생 수, 총 리콜된 제품 수 | TR-AP-250a.1 | SR | 126, 129 |
+| 연비 개선 설계 | 연비 개선 및/또는 배출량 저감을 위해 설계된 제품 매출 | TR-AP-410a.1 | SR | 42-44 |
+| 원자재 구매 | 분쟁광물 사용에 관한 리스크 관리 서술 | TR-AP-440a.1 | SR | 105 |
+| 원자재 효율성 | 판매된 제품 중 재활용 가능 비율 | TR-AP-440b.1 | SR | 63 |
+| | 재활용 또는 재생산된 원자재 투입 비율 | TR-AP-440b.2 | SR | 64 |
+| 경쟁 행위 | 반경쟁행위 규제와 관련된 법적 절차에 따른 금전적 손실액 | TR-AP-520a.1 | - | - |
+
+### 활동 지표
+
+| Activity Metrics | Code | 보고 | 보고 위치 |
+| :--- | :--- | :--- | :--- |
+| 생산된 부품 총 개수 | TR-AP-000.A | - | - |
+| 생산된 부품 총 중량 | TR-AP-000.B | SR | 67 |
+| 생산부지 면적 | TR-AP-000.C | - | - |
+
+SR: 지속가능성보고서
+AR: 연결감사보고서
+BR: 사업보고서
+
+---
+
+# TCFD
+
+### TCFD 권고안
+
+| Core Elements | Recommendations | 보고 | 보고 위치 | CDP Climate Change 2023 |
+| :--- | :--- | :--- | :--- | :--- |
+| 거버넌스 | a) 기후변화 관련 위험과 기회를 관리 · 감독하는 이사회 활동 설명 | SR | 36 | C1.1, C1.1a, C1.1b, C1.1d |
+| | b) 기후변화 관련 위험과 기회를 평가·관리하는 경영진의 역할 설명 | SR | 36 | C1.2 |
+| 전략 | a) 단기 · 중기 · 장기 측면에서 기후변화 관련 위험과 기회 설명 | SR | 39 | C2.2a, C2.3, C2.3a, C2.4, C2.4a |
+| | b) 기후변화 관련 위험과 기회가 조직의 사업 · 전략 · 재무계획에 미치는 영향 설명 | SR | 39 | C3.4, C3.5, C3.5a |
+| | c) 2℃ 이하 시나리오 등 다양한 기후변화 관련 시나리오를 고려하여 경영 전략의 유연성 설명 | SR | 38 | C3.1, C3.2, C3.2a, C3.2b, C3.3 |
+| 리스크 관리 | a) 기후변화 관련 위험을 식별하고 평가하기 위한 절차 설명 | SR | 38 | C2.1, C2.1a, C2.1b, C2.2 |
+| | b) 기후변화 관련 위험을 관리하기 위한 절차 설명 | SR | 38 | C2.2 |
+| | c) 기후변화 관련 위험을 식별 · 평가 · 관리하는 절차가 조직의 전반적인 위험관리 체계에 통합되는 방법 설명 | SR | 38 | C2.2, C2.2a |
+| 지표 및 감축목표 | a) 조직이 경영 전략 및 위험 관리 절차에 따라 기후변화 관련 위험과 기회를 평가하기 위해 사용한 지표 공개 | SR | 44-49 | C3.5a, C4.5a, C6, C7, C8 |
+| | b) Scope 1(직접배출), Scope 2(간접배출) 및 Scope 3(기타간접배출)에 따른 온실가스 배출량과 관련 위험 공개 | SR | 39, 40, 45-46 | C2.3a, C3.2b, C3.3, C3.4, C6, C7, C8 |
+| | c) 기후변화 관련 위험과 기회 관리를 위해 조직에서 사용하는 목표와 목표 대비 성과 설명 | SR | 44 | C4 |
+
+==Page 152==
+Letter to Stakeholders Corporate Overview Environment Social Governance Appendix HYUNDAI MOBIS SUSTAINABILITY REPORT 2024 152
+
+GRI Standards | ESRS Disclosure Requirements | WEF IBC Stakeholder Capitalism Metrics | SASB | TCFD | UN SDGs | 가입 현황 | 인증 현황 | 온실가스 검증의견서 | 제3자 검증의견서 | About this report
+
+# UN SDGs
+
+현대모비스는 지속가능발전목표(UN SDGs, UN Sustainable Development Goals) 달성에 동참하고자 합니다. 이에 UN SDGs 세부 목표별 대응 목표를 설정하고 관련 활동을 이행하고 있습니다.
+
+| SDGs | 추진 방향 | 주요 활동 | 보고 위치 |
+| :--- | :--- | :--- | :--- |
+| Goal 1. No Poverty | 사회적 취약계층을 위한 지원 조치 이행 및 사회 · 경제적 자원에 대한 접근성 제고 | • 장애아동 이동편의 지원<br>• 임직원 자원봉사 전개<br>• 결연기관, 교통사고 피해가정 후원 | 117, 118 |
+| Goal 3. Good Health and Well-Being | 아동 교통사고 저감 노력 및 임직원 건강, 웰빙 증진 | • 투명우산 나눔 활동<br>• 의료비 지원 및 건강관리실 운영 | 87, 117 |
+| Goal 4. Quality Education | 아동 · 청소년 대상 공학 교육 및 일자리 연계 교육 제공, 다양성 · 포용성에 대한 인식 교육 확대 | • 청소년 공학리더 프로그램 및 주니어 공학교실 운영<br>• 청년 대상 ESG아이디어톤 운영<br>• 채용 연계형 SW 아카데미, 계약학과 운영<br>• 장애 인식개선 동화책 발간 및 무료 배포 | 79, 117, 119 |
+| Goal 5. Gender Equality | 여성 역량 강화 및 리더 육성 | • 젠더 다양성 확대를 위한 계획 수립 및 이행<br>• 임직원 다양성 프로그램(ERG) 운영 | 75 |
+| Goal 6. Clean Water and Sanitation | 수자원 오염 저감 및 물 관련 생태계 보호 · 복원 | • 수질오염물질 관리<br>• 국내외 사업장별 물 스트레스 분석<br>• 진천 미호강 지역 생물다양성 프로그램 운영 | 50-51, 53, 55-58 |
+| Goal 7. Affordable and Clean Energy | 재생에너지 비율 증대 및 에너지 효율 향상 | • 2040 RE100 추진<br>• 에너지 관리 시스템 구축 및 운영<br>• 사업장 내 지속적인 에너지 효율 개선 노력 | 37, 41, 44, 48-49 |
+| Goal 8. Decent Work and Economic Growth | 양질의 일자리 창출 및 강제 · 아동 노동 근절 | • 스타트업 육성 프로그램 참여(그룹 주관)<br>• 사업장 실사 이행(노동, SHE, 윤리, 공급망 영역) | 22, 25, 73, 74, 89, 108, 112 |
+
+| SDGs | 추진 방향 | 주요 활동 | 보고 위치 |
+| :--- | :--- | :--- | :--- |
+| Goal 9. Industry, Innovation and Infrastructure | 연구 강화를 통한 산업 기술 역량 향상 | • 연구개발 투자 및 인력 확대 | 21-24 |
+| Goal 10. Reduced Inequalities | 동등 권리 보장 및 불평등 감소 | • 다양성과 포용(D&I) 정책 제정<br>• 동일 직군 동일 급여 체계 운영 | 70, 75 |
+| Goal 12. Responsible Consumption and Production | 재활용/재사용을 통한 폐기물 감축 노력 및 지속가능한 기업 활동 내재화 | • 유해화학물질 관리<br>• 2025 사업장 폐기물 매립 Zero 추진<br>• ESG 거버넌스 확보 및 전략 추진<br>• 지속가능성보고서 발간을 통한 관련 활동 공개 | 25, 51, 61-62, 63, 65, 66 |
+| Goal 13. Climate Action | 기후변화 대응 | • 2045 Net-Zero 달성 추진<br>• 전과정평가 통한 제품 환경영향(탄소) 분석<br>• 임직원 환경 교육 진행 | 25, 34, 36-49, 59-60 |
+| Goal 15. Life on Land | 복원 · 조림을 통한 지속가능한 산림 관리, 생물다양성 보호 | • 교실 숲 조성 프로그램 운영<br>• 국내외 사업장별 생물다양성 리스크 분석<br>• 진천 미호강 지역 생물다양성 프로그램 운영 | 56-57, 118 |
+| Goal 16. Peace, Justice and Strong Institutions | 모든 형태의 부정부패 저감 | • 임직원 · 협력회사 행동강령 보유<br>• 신고채널 및 컴플라이언스 프로그램 운영 | 72, 104, 106, 116, 125, 137-138 |
+| Goal 17. Partnerships for the Goals | 파트너십 활성화를 통한 지식, 기술, 전문성 공유 확대 | • 지속가능경영 이니셔티브 참여 | 153 |
+
+==Page 153==
+Letter to Stakeholders Corporate Overview Environment Social Governance Appendix HYUNDAI MOBIS SUSTAINABILITY REPORT 2024 153
+
+GRI Standards | ESRS Disclosure Requirements | WEF IBC Stakeholder Capitalism Metrics | SASB | TCFD | UN SDGs | 가입 현황 | 인증 현황 | 온실가스 검증의견서 | 제3자 검증의견서 | About this report
+
+# 가입 현황
+
+현대모비스는 2008년부터 유엔글로벌 콤팩트(UN Global Compact, UNGC) 회원사로 참여하고 있으며, UNGC 10대 원칙을 준수하고 내재화하기 위한 노력을 이어갈 것입니다.
+
+### 지속가능성 이니셔티브 가입 현황
+
+| 단체 | 가입 목적 |
+| :--- | :--- |
+| RE100 | 재생에너지 전환 100% 달성을 위한 추진 동력 확보 |
+| SBTi | 과학기반 감축 목표를 설정할 것을 국제적으로 서약, 2024년 검증 진행 |
+| TCFD Supporter | 기후변화 대응을 위한 글로벌 노력 동참 |
+| UNGC 한국협회 | UN Global Compact 10대 원칙 준수 |
+
+### 주요 단체 가입 현황
+
+| 단체 | 가입 목적 |
+| :--- | :--- |
+| 서울상공회의소 | 상공회의소법에 의한 의무 가입, 수출입 업무 서류 발급 등 |
+| 한국경영자총협회 | 노사 간 협력체제 구축을 위한 협업 및 정책 건의 등 |
+| 한국자동차산업협동조합 | 자동차 산업 발전을 위한 관련 기업 간 협력 |
+| 한국공정경쟁연합회 | 공정거래 준수를 위한 정부 및 기업과의 정보 및 의견 교류 |
+| 한국무역협회 | 수출, 관세 등 무역정보 획득 및 정책 건의 |
+| 한국공학한림원 | 산업기술 현안에 대한 정보교류 및 네트워크 교류 |
+| 한국산업기술진흥협회 | 기술협력 네트워크 활성화 및 기술혁신 역량 강화 |
+| 한국자동차공학회 | 자동차 관련 학문 기술의 공유를 통한 기술 발전 |
+
+---
+
+```
+THE GLOBAL COMPACT
+COMMUNICATION ON PROGRESS
+
+This is our Communication on Progress in implementing the principles of the United Nations Global Compact and supporting broader UN goals.
+
+We welcome feedback on its contents.
+```
+
+==Page 154==
+Letter to Stakeholders Corporate Overview Environment Social Governance Appendix HYUNDAI MOBIS SUSTAINABILITY REPORT 2024 154
+
+GRI Standards | ESRS Disclosure Requirements | WEF IBC Stakeholder Capitalism Metrics | SASB | TCFD | UN SDGs | 가입 현황 | 인증 현황 | 온실가스 검증의견서 | 제3자 검증의견서 | About this report
+
+# 인증 현황
+
+\*2023년 12월 기준
+
+| 구분 | | | 환경경영시스템 ISO 14001 | 안전보건경영시스템 ISO 45001 | 품질경영시스템 IATF 16949 | 품질경영시스템 ISO 9001 |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: |
+| 국내 | 생산공장/거점 | 진천 | O | O | O | - |
+| | | 창원 | O | O | O | |
+| | | 울산 전동화 | O | O | O | |
+| | | 대구 전동화 | O | O | O | |
+| | 부품사업장<sup>1)</sup> | | O | O | - | O |
+| | 자회사<sup>2)</sup> | 모트라스 | O | O | O | - |
+| | | 유니투스 | O | O | O | |
+| | | 에이치그린파워 | O | O | O | |
+| | | 현대아이에이치엘 | O | O | O | |
+| | | GIT | N/A | N/A | N/A | |
+| 해외 | 생산공장/거점<sup>3)</sup> | 중국 MBJ | O | O | O | - |
+| | | MJS | O | O | O | |
+| | | MWX | O | O | O | |
+| | | MTJ | O | O | O | |
+| | | MCJ | N/A | N/A | N/A | |
+| | | MCQ | N/A | N/A | N/A | |
+| | | 미국 MAL | O | O | O | |
+| | | MNAe | N/A | N/A | N/A | |
+| | | MNA<sup>4)</sup> | X | X | N/A | |
+| | | MUSe | N/A | N/A | N/A | |
+| | | MUA<sup>4)</sup> | X | X | N/A | |
+| | | 브라질 MBR | O | O | O | |
+| | | 멕시코 MMX | O | O | O | |
+| | | 슬로바키아 MSK | O | O | O | |
+| | | 체코 MCZ | O | O | O | |
+| | | MCZ-OS | O | O | O | |
+| | | 러시아 MRU | N/A | N/A | N/A | |
+| | | 스페인 MSPe | N/A | N/A | N/A | |
+| | | 헝가리 MHU | N/A | N/A | N/A | |
+| | | 터키 MTR | O | O | O | |
+| | | 인도 MIN | O | O | O | |
+| | | MIA | O | O | O | |
+| | | 인도네시아 HEI | N/A | N/A | N/A | |
+
+1) 인증서 기준 부품사업장 개소
+- ISO 14001 & ISO 45001(29개소): 본사(서비스BU), 물류센터(5개소), 부품사업소(22개소), 천안비축창고
+- ISO 9001(32개소): 본사(서비스BU), 부품사업소(23개소), 물류센터(5개소), 권역(3개소)
+2) 인증서 기준 자회사 사업장 개소
+[모트라스] ISO 14001 & ISO 45001 12개소, IATF 16949 2개소 / [유니투스] ISO 14001 & ISO 45001 4개소, IATF 16949 5개소
+[에이치그린파워] ISO 14001 & ISO 45001 & IATF 16949 2개소 / [현대아이에이치엘] ISO 14001 & ISO 45001 & IATF 16949 1개소 / [지아이티] 대상 사업장 없음(N/A)
+3) 2023년 말 기준 미가동(양산 전, 생산 중단 등) 거점 대상 제외(N/A)
+4) ISO 14001 & ISO 45001: 2024년 취득 예정, IATF 16949: 생산 안정화 중인 거점으로 대상 제외(N/A)
+
+==Page 155==
+Letter to Stakeholders Corporate Overview Environment Social Governance Appendix HYUNDAI MOBIS SUSTAINABILITY REPORT 2024 155
+
+GRI Standards | ESRS Disclosure Requirements | WEF IBC Stakeholder Capitalism Metrics | SASB | TCFD | UN SDGs | 가입 현황 | 인증 현황 | 온실가스 검증의견서 | 제3자 검증의견서 | About this report
+
+# 온실가스 검증의견서
+
+### 현대모비스(주) 국내(개별)
+
+1) 환경부고시 제2023-221호
+2) 환경부고시 제2021-112호
+
+## 온실가스배출량
+
+### 검증 대상
+(재)한국품질재단은 현대모비스㈜(이하 ‘회사’라 함)의 2023년 온실가스 배출량에 대한 검증을 수행하였습니다.
+
+### 검증 범위
+현대모비스(주)의 2023년 기준 운영통제 하에 있는 전체 사업장의 모든 온실가스 배출시설을 대상으로 하였습니다.
+
+### 검증 기준
+[온실가스 배출권거래제의 배출량 보고 및 인증에 관한 지침<sup>1)</sup>]와 [온실가스 배출권거래제 운영을 위한 검증지침<sup>2)</sup>] 및 [ISO14064-3]를 기준으로 하였습니다.
+
+### 보증 수준
+검증은 온실가스 배출권거래제 운영을 위한 검증지침에 규정된 절차에 따라 계획 및 수행되었고, 검증의 보증 수준은 합리적 보증 수준을 만족하도록 수행 되었습니다. 또한 검증 전 과정에 대한 절차가 효과적 수행되었는지 내부심의를 통해 확인하였습니다.
+
+### 검증 한계
+검증은 기준 및 방법 등을 적용하는 과정에서 발생될 수 있는 고유의 한계를 내포하고 있습니다.
+
+### 검증 결론
+명세서에 수록되어 있는 온실가스 배출량 데이터에 대해 아래와 같은 결론을 제시합니다.
+1) 온실가스 배출량은 “온실가스 배출권거래제의 배출량 보고 및 인증에 관한 지침” 및 “ISO14064-1” 산정기준에 따라 적절하게 산정되었습니다.
+2) 각 회사의 온실가스 배출량에 대한 중요성 평가결과 50만톤 $\text{CO}_2\text{-eq}$ 미만 업체로서, 양적 기준치로 중요도는 총 배출량의 5% 기준 미만을 만족하고 있습니다.
+3) 따라서 다음의 2023년 온실가스 배출량에 대해 “적정” 의견을 제시합니다.
+
+(단위: $\text{tCO}_2\text{eq}$)
+| | 지역기반 | | | 시장기반 | | |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| | **Scope 1** | **Scope 2** | **총계** | **Scope 1** | **Scope 2** | **총계** |
+| | 7,433.681 | 96,800.410 | 104,234 | 7,433.681 | 93,270.319 | 100,704 |
+
+\* 온실가스 배출권거래제 배출량 보고 및 인증 지침에 따르면, 총 배출량은 사업장단위 소수점 절사값이므로 Scope 1, 2 배출량 합과 총 배출량값이 일부 상이할 수 있음.
+
+2024년 5월 28일
+
+**Ji Young Song**
+CEO Ji-Young Song
+Korean Foundation for Quality
+
+kfq Korean Foundation for Quality
+www.kfq.or.kr
+서울시 금천구 가산디지털1로 168, 13F
+
+IAF
+국립환경과학원
+
+==Page 156==
+Letter to Stakeholders Corporate Overview Environment Social Governance Appendix HYUNDAI MOBIS SUSTAINABILITY REPORT 2024 156
+
+GRI Standards | ESRS Disclosure Requirements | WEF IBC Stakeholder Capitalism Metrics | SASB | TCFD | UN SDGs | 가입 현황 | 인증 현황 | 온실가스 검증의견서 | 제3자 검증의견서 | About this report
+
+### 현대모비스(주) 국내 자회사
+
+1) 유니투스(주), 모트라스(주), 현대아이에이치엘(주), 에이치그린파워(주), 지아이티(주)
+2) 환경부고시 제2023-221호
+
+## 온실가스배출량
+
+### 서문
+(재)한국품질재단은 현대모비스(주) 국내 자회사<sup>1)</sup>(이하 ‘회사’라 함)의 2023년 Scope 1, 2 온실가스 배출량(이하 ‘온실가스 배출량’이라 함)에 대한 검증을 수행하였습니다.
+
+### 검증 범위
+2023년 기준 5개 자회사의 운영통제 하에 있는 국내 사업장의 모든 온실가스 배출시설을 대상으로 하였습니다.
+
+### 검증 기준
+[온실가스 배출권거래제의 배출량 보고 및 인증에 관한 지침<sup>2)</sup>], [2006 IPCC Guidelines for National Greenhouse Gas Inventories], [ISO14064-1]를 기준으로 하였습니다.
+
+### 보증 수준
+검증은 ISO14064-3에 규정된 절차에 따라 계획 및 수행되었고, 검증의 보증 수준은 제한적 보증 수준을 만족하도록 수행 되었습니다. 또한 검증 전 과정에 대한 절차가 효과적 수행되었는지 내부심의를 통해 확인하였습니다.
+
+### 검증 한계
+검증은 기준 및 방법 등을 적용하는 과정에서 발생될 수 있는 고유의 한계를 내포하고 있습니다.
+
+### 검증 결론
+온실가스 배출량 보고서에 수록되어 있는 온실가스 배출량 데이터에 대해 아래와 같은 결론을 제시합니다.
+1) 온실가스 배출량은 검증기준에 따라 적절하게 산정되었습니다.
+2) 온실가스 배출량 산정에 사용된 데이터와 정보는 적절하고 합리적이며, 검증의견에 영향을 줄 수 있는 중대한 오류 및 누락은 발견되지 않았습니다. 온실가스 배출량에 대한 중요성평가결과 합의된 5% 기준 미만을 만족하고 있습니다.
+3) 따라서 다음의 2023년 온실가스 배출량에 대해 “적정” 의견을 제시합니다.
+
+(단위: $\text{tCO}_2\text{eq}$)
+| 구분 | 지역기반 | | | 시장기반 | | |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| | **Scope 1** | **Scope 2** | **총계** | **Scope 1** | **Scope 2** | **총계** |
+| 유니투스 | 8,409 | 60,693 | 69,102 | 8,409 | 57,776 | 66,185 |
+| 모트라스 | 6,082 | 13,690 | 19,772 | 6,082 | 13,218 | 19,301 |
+| 현대아이에이치엘 | 146 | 8,583 | 8,729 | 146 | 8,583 | 8,729 |
+| 에이치그린파워 | 150 | 10,759 | 10,909 | 150 | 10,759 | 10,909 |
+| 지아이티 | 63 | 432 | 495 | 63 | 432 | 495 |
+
+\* 전체 배출량은 합산 과정에서 반올림 차이로 인해 $\pm 1\text{tCO}_2\text{eq}$ 차이가 날 수 있음.
+
+2024년 5월 28일
+
+**Ji Young Song**
+CEO Ji-Young Song
+Korean Foundation for Quality
+
+kfq Korean Foundation for Quality
+www.kfq.or.kr
+서울시 금천구 가산디지털1로 168, 13F
+
+IAF
+국립환경과학원
+
+==Page 157==
+Letter to Stakeholders Corporate Overview Environment Social Governance Appendix HYUNDAI MOBIS SUSTAINABILITY REPORT 2024 157
+
+GRI Standards | ESRS Disclosure Requirements | WEF IBC Stakeholder Capitalism Metrics | SASB | TCFD | UN SDGs | 가입 현황 | 인증 현황 | 온실가스 검증의견서 | 제3자 검증의견서 | About this report
+
+### 현대모비스(주) 해외 자회사
+
+1) 환경부고시 제2023-221호
+
+## 온실가스배출량
+
+### 서문
+(재)한국품질재단은 현대모비스(주) 해외 사업장(이하 ‘회사’라 함)의 2023년 Scope 1, 2 온실가스 배출량(이하 ‘온실가스 배출량’이라 함)에 대한 검증을 수행하였습니다.
+
+### 검증 범위
+2023년 기준 81개 사업장의 운영통제 하에 있는 전체 사업장의 모든 온실가스 배출시설을 대상으로 하였습니다.
+
+### 검증 기준
+[온실가스 배출권거래제의 배출량 보고 및 인증에 관한 지침<sup>1)</sup>], [2006 IPCC Guidelines for National Greenhouse Gas Inventories], [ISO14064-1]를 기준으로 하였습니다.
+
+### 보증 수준
+검증은 ISO14064-3에 규정된 절차에 따라 계획 및 수행되었고, 검증의 보증 수준은 제한적 보증 수준을 만족하도록 수행 되었습니다. 또한 검증 전 과정에 대한 절차가 효과적 수행되었는지 내부심의를 통해 확인하였습니다.
+
+### 검증 한계
+검증은 기준 및 방법 등을 적용하는 과정에서 발생될 수 있는 고유의 한계를 내포하고 있습니다.
+
+### 검증 결론
+온실가스 배출량 보고서에 수록되어 있는 온실가스 배출량 데이터에 대해 아래와 같은 결론을 제시합니다.
+1) 온실가스 배출량은 검증기준에 따라 적절하게 산정되었습니다.
+2) 온실가스 배출량 산정에 사용된 데이터와 정보는 적절하고 합리적이며, 검증의견에 영향을 줄 수 있는 중대한 오류 및 누락은 발견되지 않았습니다. 온실가스 배출량에 대한 중요성평가결과 합의된 5% 기준 미만을 만족하고 있습니다.
+3) 따라서 다음의 2023년 온실가스 배출량에 대해 “적정” 의견을 제시합니다.
+
+(단위: $\text{tCO}_2\text{eq}$)
+| 지역기반 | | | 시장기반 | | |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| **Scope 1** | **Scope 2** | **총계** | **Scope 1** | **Scope 2** | **총계** |
+| 30,420 | 158,465 | 188,885 | 30,420 | 147,999 | 178,419 |
+
+\* 전체 배출량은 합산 과정에서 반올림 차이로 인해 $\pm 1\text{tCO}_2\text{eq}$ 차이가 날 수 있음.
+
+2024년 5월 28일
+
+**Ji Young Song**
+CEO Ji-Young Song
+Korean Foundation for Quality
+
+kfq Korean Foundation for Quality
+www.kfq.or.kr
+서울시 금천구 가산디지털1로 168, 13F
+
+IAF
+국립환경과학원
+
+==Page 158==
+Letter to Stakeholders Corporate Overview Environment Social Governance Appendix HYUNDAI MOBIS SUSTAINABILITY REPORT 2024 158
+
+GRI Standards | ESRS Disclosure Requirements | WEF IBC Stakeholder Capitalism Metrics | SASB | TCFD | UN SDGs | 가입 현황 | 인증 현황 | 온실가스 검증의견서 | 제3자 검증의견서 | About this report
+
+### 현대모비스(주) Scope 3
+
+## 온실가스배출량
+
+### 서문
+(재)한국품질재단은 현대모비스(주)(이하 ‘회사’라 함)의 2023년 Scope 3 온실가스 배출량(이하 ‘온실가스 배출량’이라 함)에 대한 검증을 수행하였습니다.
+
+### 검증 범위
+온실가스 인벤토리 검증 범위는 회사가 자체적으로 선정한 Category 대상으로 2023.1.1.부터 2023.12.31.까지의 배출량에 대하여 수행하였습니다.
+
+### 검증 기준
+**기준**
+- ISO14064-1:2018, ISO14064-3:2019
+- GHG Protocol : Corporate Value Chain(Scope 3) Accounting and Reporting Standard
+- 온실가스 배출권거래제의 배출량 보고 및 인증에 관한 지침(환경부고시 제2023-221호)
+
+**배출계수**
+- Environmental Product Declaration evaluation coefficient (2021), GREET2 (2022)
+- 2006 IPCC Guidelines for National Greenhouse Gas Inventories
+
+### 보증 수준
+검증은 ISO 14064-3에 규정된 절차에 따라 수행되었고, 검증의 보증 수준은 제한적 보증 수준을 만족하도록 수행되었습니다.
+
+### 검증 한계
+온실가스 배출량 검증은 조직의 데이터 특성, 계산 및 추정, 샘플링 방식, 제한적보증 수준에 따라 발생할 수 있는 고유한 한계를 포함합니다. 또한 본 검증에서는 회사가 제공한 원본 데이터의 정확성에 대한 책임이 포함되어 있지 않습니다.
+
+### 검증 결론
+ISO 14064-3 등의 검증절차를 통해 확인한 온실가스 배출량에 대해 아래와 같은 결론을 제시합니다.
+1) 회사의 2023년 온실가스 배출량은 검증기준에 따라 적절하게 산정되었습니다.
+2) 온실가스 배출량은 선정된 Category 범위 내에서 고려하지 않은 배출량 정보를 제외하고는 중대한 오류 및 누락이 발견되지 않았습니다.
+3) 배출량 산정 시 자체적으로 설정 또는 추정/가정한 기준 및 해당 과정에 대해서는 내부 산정절차에 투명하게 반영되었습니다.
+
+**부록 A. 2023년 Scope 3 배출량 산정 결과 ▶**
+
+2024년 5월 28일
+
+**Ji Young Song**
+CEO Ji-Young Song
+Korean Foundation for Quality
+
+kfq Korean Foundation for Quality
+www.kfq.or.kr
+서울시 금천구 가산디지털1로 168, 13F
+
+IAF
+국립환경과학원
+
+==Page 159==
+Letter to Stakeholders Corporate Overview Environment Social Governance Appendix HYUNDAI MOBIS SUSTAINABILITY REPORT 2024 159
+
+GRI Standards | ESRS Disclosure Requirements | WEF IBC Stakeholder Capitalism Metrics | SASB | TCFD | UN SDGs | 가입 현황 | 인증 현황 | 온실가스 검증의견서 | 제3자 검증의견서 | About this report
+
+## 부록 A. 2023년 Scope 3 배출량 산정 결과
+
+**조직명**
+현대모비스(주)
+
+**배출량 산정 대상기간**
+2023년 1월 1일 ~ 2023년 12월 31일
+
+### Scope 3 배출량
+
+| Category | Scope 3 배출량 |
+| :--- | :---: |
+| 1 구매한 제품 & 서비스 | 640,577 |
+| 5 운영과정에서 발생된 폐기물 | 1,442 |
+| 6 출장 | 11,299 |
+| 7 직원 통근 | 1,576 |
+| 8 업스트림 임차 자산 | 151 |
+| 11 판매된 제품의 사용 | 24,300,960 |
+| 12 판매된 제품의 폐기 | 290,027 |
+| **합 계** | **25,246,032** |
+
+www.kfq.or.kr
+서울시 금천구 가산디지털1로 168, 13F
+
+==Page 160==
+Letter to Stakeholders Corporate Overview Environment Social Governance Appendix HYUNDAI MOBIS SUSTAINABILITY REPORT 2024 160
+
+GRI Standards | ESRS Disclosure Requirements | WEF IBC Stakeholder Capitalism Metrics | SASB | TCFD | UN SDGs | 가입 현황 | 인증 현황 | 온실가스 검증의견서 | 제3자 검증의견서 | About this report
+
+# 제3자 검증의견서
+
+## 현대모비스 주식회사의 지속가능경영보고서에 대한 독립된 인증인의 인증보고서
+
+삼정회계법인은 현대모비스 주식회사(이하 ‘회사’)의 2023년 12월 31일로 종료하는 기간에 대한 ‘현대모비스 지속가능성보고서 2024’(이하 ‘보고서’)에 대해 제한적 확신업무를 수행하였습니다. 우리의 인증업무 범위는 2023년 1월 1일부터 2023년 12월 31일까지의 정보이며, 2024년 보고서 발행전까지의 중요한 이슈에 대해 포함하였습니다.
+
+### 인증대상정보
+우리는 첨부된 보고서에 포함된 지속가능성정보(이하 ‘지속가능성정보’)에 대해 인증업무를 수행하였습니다. 우리의 인증업무는 이미지, 오디오 파일, 내장된 비디오를 포함하여, 이전기간과 관련된 지속가능성정보로 확대되지 않습니다.
+
+### 회사가 사용한 작성기준
+회사가 보고서 작성을 위해 사용한 작성기준(이하 ‘준거기준’)은 글로벌보고이니셔티브가 제정한 GRI입니다.
+지속가능성정보를 평가하고 측정하는 데 일반적으로 인정된 보고체계 또는 충분히 확립된 관행이 없기 때문에, 다양한 측정 기법이 수용 가능하며, 이는 기업별·기간별 비교가능성에 영향을 미칠 수 있습니다. 따라서, 지속가능성정보는 회사가 지속가능성정보를 작성하는 데 사용한 준거기준과 함께 보고 이해하여야 합니다.
+
+### 인증결론
+우리가 수행한 절차(‘인증결론을 위한 근거로서 수행한 업무 요약’ 참고)와 입수한 증거에 근거할 때, 회사의 2023년 12월 31일로 종료하는 기간에 대한 보고서에 포함된 지속가능성정보는 중요성의 관점에서 회사가 사용한 작성기준에 따라 작성되지 않았다고 믿을 만한 사항이 발견되지 아니하였습니다.
+우리는 이미지, 오디오 파일, 내장된 비디오를 포함하여, 이전 기간과 관련된 지속가능성정보에 대해 인증절차를 수행하지 않았으므로 인증결론을 표명하지 않습니다.
+
+### 지속가능성정보 작성의 고유 한계
+지속가능성정보는 고유의 불확실성이 내재된 기후 관련 시나리오 등과 같은 미래지향적인 정보를 포함합니다. 이러한 불확실성은 미래에 가능한 기후 관련 물리적 영향과 전환 영향의 발생가능성, 발생 시점, 영향 등에 대한 과학적, 경제적 지식이 불완전함에 기인합니다.
+
+### 회사의 책임
+회사의 경영진은 지속가능성정보 보고와 관련된 법규를 고려하여, 지속가능성정보 작성을 위한 적합한 준거기준을 선택하고 확립하여 준거기준에 따라 지속가능성정보를 작성할 책임이 있습니다. 또한, 부정이나 오류로 인한 왜곡표시가 없는 지속가능성정보 작성을 위해 관련 정보에 대한 내부통제를 설계, 실행, 유지하여야 할 책임이 있습니다.
+
+### 인증인의 책임
+우리의 책임은 지속가능성정보에 부정이나 오류로 인한 중요한 왜곡표시가 없는지에 대해 제한적 확신을 얻을 수 있도록 업무를 계획하고 수행하고, 입수한 증거에 근거하여 독립적인 결론을 형성하여 회사의 경영진에 보고하는 데 있습니다. 우리는 경영진이 작성한 지속가능성정보에 대해 독립적인 결론을 형성하는 업무를 수행하므로, 우리가 지속가능성정보의 작성에 관여하는 것은 독립성을 훼손할 수 있으므로 허용되지 않습니다.
+
+### 인증인의 업무 수행 기준
+우리의 인증 활동은 국제감사인증기준위원회(The International Auditing and Assurance Standards Board, IAASB)가 발행한 ISAE 3000(재무정보의 감사 및 검토 외 사항에 대한 국제검증기준)에 따라 실시되었습니다.
+
+KPMG

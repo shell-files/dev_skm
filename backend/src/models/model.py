@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
-from typing import Optional, Union, List
+from typing import Optional, Union, List, Literal
 from datetime import date
 from fastapi import UploadFile
 
@@ -89,3 +89,6 @@ class FileFindModel(BaseModel):
     """ file.py 파일 읽어오기 모델 """
     file: List[str] = Field(..., description="읽어올 SR PDF 파일이름")
     page: str = Field(..., description="벤치마킹(SR) or 온보딩 구분(ONBOARD)")
+    esg_materiality_run_id: int = Field(1, description="ESG Materiality Run ID")
+    source_step: Literal["benchmark", "media_external", "survey"] = Field("benchmark", description="Source Step")
+    source_type: Optional[str] = Field(None, description="Source Type (예: leader_sr, peer_sr, own_sr, news, regulation)")

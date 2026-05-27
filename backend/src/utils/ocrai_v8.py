@@ -9,7 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from src.utils.settings import settings
 from src.models.model import ResponseModel
-from src.models.dma_engine import LLMExtractorOutput, DMAScoreDetail, ImpactAssessment, FinancialAssessment
+from src.models.dma_engine import LLMExtractorOutput, DMASignal, ImpactFactor, FinancialFactor
 from src.utils.subissuemaster_v8 import subissueMaster
 
 router = APIRouter()
@@ -128,28 +128,39 @@ def normalize_mapping_weights(raw_label, threshold=0.35, alpha=1.5, top_k=3):
         return []
 
     # 5. 각 항목의 가중치를 총합으로 나눠서 비율을 만듭니다 (예: 0.7, 0.2, 0.1)
-    for rank, item in enumerate(scored, start=1):
-        item["mapping_weight"] = item["raw_weight"] / total
-        item["similarity_rank"] = rank
+    for item in scored:
+        item["mapping_weight"] = float(item["raw_weight"] / total)
+        item["similarity_rank"] = scored.index(item) + 1
 
     return scored
 
-def calculate_evidence_severity(evidence_spans, iro_type, source_type):
+def get_baseline_factors(sub_issue_code: str):
     """
-    [기능] 증거(evidence_spans)를 보고 기초 점수(Severity)를 만듭니다.
-    LLM이 직접 1~5점을 주지 못하므로, "증거 문장이 많으면 점수가 높다" 같은 규칙(Rule-based)을 적용합니다.
+    [기능] 자동차부품 산업 기준 기본(Baseline) Factor를 제공합니다.
+    LLM이 직접 Factor를 정확히 산출하기 어렵기 때문에, MVP 단계에서는 매핑된 sub_issue에 따라 기본 강도를 부여합니다.
     """
-    if not evidence_spans:
-        return 0.0 # 증거가 없으면 0점!
-        
-    # [더미 로직] 기본 40점에, 증거 문장 1개당 10점씩 추가
-    score = 40.0 + len(evidence_spans) * 10
-    if score > 100: score = 100
+    scale, scope, likelihood, irremediability = 3, 3, 3, 3
+    mag = 3
     
-    # 벤치마크(타사 보고서 등)에서 나온 거면 가중치 1.1배 부여
-    if source_type == "benchmark":
-        score *= 1.1
-    return score
+    if sub_issue_code in ["E_CLIMATE_TRANSITION_PLAN", "E_GHG_EMISSION"] or "CLIMATE" in sub_issue_code:
+        scale, scope, likelihood = 4, 4, 4
+        mag = 4
+    elif "SUPPLY_CHAIN" in sub_issue_code:
+        scale, scope = 4, 3
+        mag = 4
+    elif "PRODUCT_SAFETY" in sub_issue_code:
+        scale, scope, irremediability = 4, 4, 4
+        mag = 4
+    elif "TRAINING" in sub_issue_code or "CAPABILITY" in sub_issue_code:
+        scale, scope, likelihood, irremediability = 3, 3, 4, 1
+        mag = 3
+    elif "LOW_CARBON_PRODUCT" in sub_issue_code or "ECO_FRIENDLY_PRODUCT" in sub_issue_code:
+        scale, scope, likelihood, irremediability = 4, 4, 4, 1
+        mag = 4
+        
+    return scale, scope, likelihood, irremediability, mag
+
+
 
 # ------------------------------------------------------------------
 # 8단계 텍스트 분석 엔진 메인 함수 (v8.2 Rule-based Scorer 적용)
@@ -272,88 +283,69 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                         if not mapped_terms:
                             continue
                             
-                        # 증거의 개수/출처 등을 바탕으로 기본 점수(Severity)를 만듭니다.
-                        base_evidence_score = calculate_evidence_severity(evidence_spans, iro_hint, source_type)
-                        
-                        # 배분된 비율(mapping_weight)만큼 점수를 쪼개서 넣어줍니다.
+                        # 배분된 비율(mapping_weight)만큼 신뢰도를 분할하여 할당합니다.
                         for mapped in mapped_terms:
                             term = mapped["term"]
+                            key = mapped["key"]
                             weight = mapped["mapping_weight"]
                             sim = mapped["similarity"]
-                            rank = mapped["similarity_rank"]
                             
-                            impact_score = 0.0
-                            financial_score = 0.0
+                            impact_factor = None
+                            financial_factor = None
                             
-                            # [핵심] 재무적 중대성(Financial)과 환경/사회적 중대성(Impact) 점수를 분리해서 저장합니다!
+                            scale, scope, likelihood, irremediability, mag = get_baseline_factors(key)
+                            
+                            # [핵심] 재무적 중대성(Financial)과 환경/사회적 중대성(Impact) 요소를 분리해서 저장합니다! (점수 계산은 안함)
                             if iro_hint in ["negative_impact", "positive_impact"]:
-                                impact_score = base_evidence_score * weight
+                                impact_factor = ImpactFactor(
+                                    impact_direction="negative" if "negative" in iro_hint else "positive",
+                                    actuality="actual",
+                                    scale=scale, scope=scope, irremediability=irremediability, likelihood=likelihood,
+                                    time_horizon=time_horizon_hint,
+                                    evidence_spans=evidence_spans
+                                )
                                 
                             if iro_hint in ["financial_risk", "financial_opportunity"]:
-                                financial_score = base_evidence_score * weight
+                                financial_factor = FinancialFactor(
+                                    financial_iro_type="risk" if "risk" in iro_hint else "opportunity",
+                                    revenue_magnitude=mag, cost_magnitude=mag, capex_magnitude=0,
+                                    asset_liability_magnitude=0, financing_magnitude=0, legal_regulatory_magnitude=0,
+                                    likelihood=likelihood,
+                                    time_horizon=time_horizon_hint,
+                                    evidence_spans=evidence_spans
+                                )
                                 
                             # ------------------------------------------------------------------
-                            # [상세 데이터 저장 (Audit 추적용)]
-                            # 여기서 만든 DMAScoreDetail 객체는 나중에 DB의 원장 테이블에 그대로 저장됩니다.
-                            # "누가, 왜, 어떤 문장 때문에 이 점수를 줬는지" 전부 증명할 수 있습니다.
+                            # [상세 데이터 저장 (Audit 추적용 DMASignal)]
+                            # 추출된 증거와 매핑 정보를 Rule Engine으로 넘길 준비를 합니다.
                             # ------------------------------------------------------------------
-                            detail = DMAScoreDetail(
-                                sub_issue_code=term,
-                                issue_similarity_score=sim,
-                                similarity_rank=rank,
-                                similarity_threshold=0.60,
-                                mapping_weight=weight,
-                                mapping_method="dictionary_similarity",
-                                matched_dictionary_terms=[term],
+                            signal = DMASignal(
+                                sub_issue_code=key,
                                 source_step=source_step,
                                 source_type=source_type,
-                                iro_type=iro_hint,
-                                time_horizon=time_horizon_hint,
-                                impacts=[
-                                    ImpactAssessment(
-                                        impact_direction="negative" if "negative" in iro_hint else "positive",
-                                        actuality="actual",
-                                        scale=0, scope=0, irremediability=0, likelihood=0,
-                                        time_horizon=time_horizon_hint,
-                                        impact_score=impact_score,
-                                        evidence_spans=evidence_spans
-                                    )
-                                ] if impact_score > 0 else [],
-                                financials=[
-                                    FinancialAssessment(
-                                        financial_iro_type="risk" if "risk" in iro_hint else "opportunity",
-                                        revenue_magnitude=0, cost_magnitude=0, capex_magnitude=0,
-                                        asset_liability_magnitude=0, financing_magnitude=0, legal_regulatory_magnitude=0,
-                                        likelihood=0,
-                                        time_horizon=time_horizon_hint,
-                                        financial_score=financial_score,
-                                        evidence_spans=evidence_spans
-                                    )
-                                ] if financial_score > 0 else [],
-                                confidence_score=confidence_score,
-                                evidence_id=None,
+                                impact_factor=impact_factor,
+                                financial_factor=financial_factor,
+                                impact_score_0_5=None,  # Rule Engine이 나중에 계산
+                                financial_score_0_5=None, # Rule Engine이 나중에 계산
+                                confidence_score=confidence_score * weight,
+                                raw_issue_label=f"{raw_label} ({term})",
+                                display_sub_issue_name=term,
+                                similarity_score=sim,
+                                similarity_rank=mapped.get("similarity_rank"),
+                                mapping_weight=weight,
                                 judge_status=judge_status,
-                                judge_reason="Evidence extracted and similarity passed" if judge_status == "pass" else "No evidence"
+                                evidence_spans=evidence_spans
                             )
-                            dma_details.append(detail)
+                            dma_details.append(signal)
                             
                             # ==================================================
-                            # Step 8. Aggregator (프론트엔드로 보내줄 최종 결과 조립)
+                            # Step 8. Gateway 응답 준비 (프론트엔드로 보내줄 1차 결과 조립)
                             # ==================================================
-                            # 위의 거대한 DMAScoreDetail은 DB용이고, 화면(UI)에 띄우기 위해서는 가벼운 Dict 형태가 좋습니다.
-                            final_results.append({
-                                "issue": term,
-                                "sub_issue": f"{raw_label} ({iro_hint})",
-                                "financial_score": round(financial_score, 2),
-                                "impact_score": round(impact_score, 2),
-                                "similarity_score": sim,
-                                "mapping_weight": round(weight, 4),
-                                "judge_status": judge_status,
-                                "evidence_spans": evidence_spans,
-                                "time_horizon": time_horizon_hint,
-                                "source_step": source_step,
-                                "source_type": source_type
-                            })
+                            # Rule Engine이 없더라도 파이프라인 진행을 위해 signal 데이터를 딕셔너리로 반환합니다.
+                            sig_dict = signal.model_dump()
+                            sig_dict["similarity_score"] = sim
+                            sig_dict["judge_status"] = judge_status
+                            final_results.append(sig_dict)
                     
                     data = {"fileName": fileName, "companyName": companyName, "type": type, "result": final_results}
                     return data

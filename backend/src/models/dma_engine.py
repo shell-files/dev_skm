@@ -71,3 +71,66 @@ class LLMSubIssueExtraction(BaseModel):
 
 class LLMExtractorOutput(BaseModel):
     extracted_issues: List[LLMSubIssueExtraction] = Field(..., description="문서에서 추출된 이슈 목록")
+
+# --- v8.2 Phase 1: DMA Common Contracts ---
+
+class DMAAgentRequest(BaseModel):
+    company_id: int
+    reporting_year: int
+    esg_materiality_run_id: int
+    source_type: str
+    source_step: str
+    payload: dict
+
+class ImpactFactor(BaseModel):
+    impact_direction: Literal["positive", "negative"]
+    actuality: Literal["actual", "potential"]
+    scale: int = Field(..., ge=0, le=5)
+    scope: int = Field(..., ge=0, le=5)
+    irremediability: Optional[int] = Field(None, ge=0, le=5)
+    likelihood: Optional[int] = Field(None, ge=0, le=5)
+    time_horizon: Literal["short", "mid", "long"]
+    evidence_spans: List[str] = []
+
+class FinancialFactor(BaseModel):
+    financial_iro_type: Literal["risk", "opportunity"]
+    revenue_magnitude: Optional[int] = Field(None, ge=0, le=5)
+    cost_magnitude: Optional[int] = Field(None, ge=0, le=5)
+    capex_magnitude: Optional[int] = Field(None, ge=0, le=5)
+    asset_liability_magnitude: Optional[int] = Field(None, ge=0, le=5)
+    financing_magnitude: Optional[int] = Field(None, ge=0, le=5)
+    legal_regulatory_magnitude: Optional[int] = Field(None, ge=0, le=5)
+    likelihood: Optional[int] = Field(None, ge=0, le=5)
+    time_horizon: Literal["short", "mid", "long"]
+    evidence_spans: List[str] = []
+
+class DMASignal(BaseModel):
+    sub_issue_code: str
+    source_step: Literal["benchmark", "media_external", "survey"]
+    source_type: str
+    impact_factor: Optional[ImpactFactor] = None
+    financial_factor: Optional[FinancialFactor] = None
+    impact_score_0_5: Optional[float] = None
+    financial_score_0_5: Optional[float] = None
+    confidence_score: float = 1.0
+    evidence_id: Optional[str] = None
+    te_sr_file_id: Optional[int] = None
+    raw_issue_label: Optional[str] = None
+    display_sub_issue_name: Optional[str] = None
+    similarity_score: Optional[float] = None
+    similarity_rank: Optional[int] = None
+    mapping_weight: Optional[float] = None
+    mapping_method: Optional[str] = "dictionary_similarity"
+    judge_status: Optional[str] = None
+    evidence_spans: List[str] = []
+
+class StageScore(BaseModel):
+    impact_score_0_5: Optional[float]
+    financial_score_0_5: Optional[float]
+
+class FinalMaterialityScore(BaseModel):
+    sub_issue_code: str
+    final_impact_score: Optional[float]
+    final_financial_score: Optional[float]
+    final_score: Optional[float]
+    coverage: dict

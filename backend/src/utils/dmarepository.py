@@ -20,6 +20,7 @@ def saveDmaSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] =
     for sig in signals:
         # 1. ESG_DMA_EVIDENCE 저장 (addKey 사용)
         evidenceText = " ".join(sig.evidenceSpans) if sig.evidenceSpans else ""
+        currentSourceTitle = sig.sourceTitle if getattr(sig, "sourceTitle", None) else sourceTitle
         evidenceSql = """
             INSERT INTO ESG_DMA_EVIDENCE (
                 esg_materiality_run_id, source_step, source_type, 
@@ -28,7 +29,7 @@ def saveDmaSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] =
         """
         evidenceParams = (
             runId, sig.sourceStep, sig.sourceType,
-            sourceTitle, fileId, evidenceText
+            currentSourceTitle, fileId, evidenceText
         )
         
         evidenceId = None

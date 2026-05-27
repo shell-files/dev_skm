@@ -4,12 +4,15 @@ from src.services.medias.baseline import applyMediaBaseline
 from src.utils.dmascoring import scoreDmaSignals
 from src.utils.dmarepository import saveDmaSignals
 
-def runMediaAnalysis(articles: list, runId: int):
+def runMediaAnalysis(articles: list, runId: int, keywords: list = None):
     """
     미디어/언론 분석 전체 워크플로우를 실행합니다.
     """
+    if keywords is None:
+        keywords = []
+        
     # 1. Pipeline: chunk -> embedding -> similarity
-    pipelineResults = processMediaPipeline(articles)
+    pipelineResults = processMediaPipeline(articles, companyKeywords=keywords)
     
     # 2. Adapter: convert to DMASignal
     signals = convertMediaToDmaSignals(pipelineResults)

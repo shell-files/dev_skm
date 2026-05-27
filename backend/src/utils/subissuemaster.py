@@ -3038,6 +3038,21 @@ def isAllowedIro(subIssueCode: str, iroType: str) -> bool:
     allowed = meta.get("scoring_axis_allowed", "")
     return iroType in allowed.split(";")
 
+# v1 freeze에서 dmascoring.py가 처리 가능한 IRO 유형 (4개만)
+SCORING_CAPABLE_IROS = {"negative_impact", "positive_impact", "financial_risk", "financial_opportunity"}
+
+def getScoringAllowedIros(subIssueCode: str) -> list:
+    """
+    subIssue의 scoring_axis_allowed 중 현재 scoring engine이 처리 가능한 IRO만 반환합니다.
+    governance_quality, risk_management_maturity 등 보조 axis는 제외됩니다.
+    반환 예시: ["negative_impact", "financial_risk"]
+    빈 리스트를 반환하면 해당 subIssue에 대해 factor를 생성하지 않아야 합니다.
+    """
+    meta = subissueMaster.get(subIssueCode)
+    if not meta: return []
+    allowed = meta.get("scoring_axis_allowed", "")
+    return [iro for iro in allowed.split(";") if iro in SCORING_CAPABLE_IROS]
+
 if __name__ == "__main__":
     count = getSubissueCount()
     print(f"========================================")

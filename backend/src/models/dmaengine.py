@@ -137,6 +137,12 @@ class DMASignal(BaseModel):
     mappingMethod: Optional[str] = Field("dictionary_similarity", alias="mapping_method")
     judgeStatus: Optional[str] = Field(None, alias="judge_status")
     evidenceSpans: List[str] = Field(default=[], alias="evidence_spans")
+    
+    # 확장된 메타데이터 추적 필드
+    sourceTitle: Optional[str] = Field(None, alias="source_title")
+    sourceUrl: Optional[str] = Field(None, alias="source_url")
+    publishedAt: Optional[str] = Field(None, alias="published_at")
+    scoringPayloadJson: Optional[dict] = Field(None, alias="scoring_payload_json")
 
 class StageScore(BaseModel):
     model_config = ConfigDict(populate_by_name=True)

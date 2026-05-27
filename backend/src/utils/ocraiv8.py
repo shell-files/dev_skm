@@ -9,8 +9,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from src.utils.settings import settings
 from src.models.model import ResponseModel
-from src.models.dma_engine import LLMExtractorOutput, DMASignal, ImpactFactor, FinancialFactor
-from src.utils.subissuemaster_v8 import subissueMaster
+from src.models.dmaengine import LLMExtractorOutput, DMASignal, ImpactFactor, FinancialFactor
+from src.utils.subissuemaster import subissueMaster
 
 router = APIRouter()
 
@@ -298,21 +298,21 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                             # [핵심] 재무적 중대성(Financial)과 환경/사회적 중대성(Impact) 요소를 분리해서 저장합니다! (점수 계산은 안함)
                             if iro_hint in ["negative_impact", "positive_impact"]:
                                 impact_factor = ImpactFactor(
-                                    impact_direction="negative" if "negative" in iro_hint else "positive",
+                                    impactDirection="negative" if "negative" in iro_hint else "positive",
                                     actuality="actual",
                                     scale=scale, scope=scope, irremediability=irremediability, likelihood=likelihood,
-                                    time_horizon=time_horizon_hint,
-                                    evidence_spans=evidence_spans
+                                    timeHorizon=time_horizon_hint,
+                                    evidenceSpans=evidence_spans
                                 )
                                 
                             if iro_hint in ["financial_risk", "financial_opportunity"]:
                                 financial_factor = FinancialFactor(
-                                    financial_iro_type="risk" if "risk" in iro_hint else "opportunity",
-                                    revenue_magnitude=mag, cost_magnitude=mag, capex_magnitude=0,
-                                    asset_liability_magnitude=0, financing_magnitude=0, legal_regulatory_magnitude=0,
+                                    financialIroType="risk" if "risk" in iro_hint else "opportunity",
+                                    revenueMagnitude=mag, costMagnitude=mag, capexMagnitude=0,
+                                    assetLiabilityMagnitude=0, financingMagnitude=0, legalRegulatoryMagnitude=0,
                                     likelihood=likelihood,
-                                    time_horizon=time_horizon_hint,
-                                    evidence_spans=evidence_spans
+                                    timeHorizon=time_horizon_hint,
+                                    evidenceSpans=evidence_spans
                                 )
                                 
                             # ------------------------------------------------------------------
@@ -320,21 +320,21 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                             # 추출된 증거와 매핑 정보를 Rule Engine으로 넘길 준비를 합니다.
                             # ------------------------------------------------------------------
                             signal = DMASignal(
-                                sub_issue_code=key,
-                                source_step=source_step,
-                                source_type=source_type,
-                                impact_factor=impact_factor,
-                                financial_factor=financial_factor,
-                                impact_score_0_5=None,  # Rule Engine이 나중에 계산
-                                financial_score_0_5=None, # Rule Engine이 나중에 계산
-                                confidence_score=confidence_score * weight,
-                                raw_issue_label=f"{raw_label} ({term})",
-                                display_sub_issue_name=term,
-                                similarity_score=sim,
-                                similarity_rank=mapped.get("similarity_rank"),
-                                mapping_weight=weight,
-                                judge_status=judge_status,
-                                evidence_spans=evidence_spans
+                                subIssueCode=key,
+                                sourceStep=source_step,
+                                sourceType=source_type,
+                                impactFactor=impact_factor,
+                                financialFactor=financial_factor,
+                                impactScore05=None,  # Rule Engine이 나중에 계산
+                                financialScore05=None, # Rule Engine이 나중에 계산
+                                confidenceScore=confidence_score * weight,
+                                rawIssueLabel=f"{raw_label} ({term})",
+                                displaySubIssueName=term,
+                                similarityScore=sim,
+                                similarityRank=mapped.get("similarity_rank"),
+                                mappingWeight=weight,
+                                judgeStatus=judge_status,
+                                evidenceSpans=evidence_spans
                             )
                             dma_details.append(signal)
                             
@@ -343,8 +343,6 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                             # ==================================================
                             # Rule Engine이 없더라도 파이프라인 진행을 위해 signal 데이터를 딕셔너리로 반환합니다.
                             sig_dict = signal.model_dump()
-                            sig_dict["similarity_score"] = sim
-                            sig_dict["judge_status"] = judge_status
                             final_results.append(sig_dict)
                     
                     data = {"fileName": fileName, "companyName": companyName, "type": type, "result": final_results}
@@ -383,6 +381,3 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
             finalResults.append(res)
             
     return ResponseModel(True, "분석이 완료되었습니다.", finalResults)
-
-
-

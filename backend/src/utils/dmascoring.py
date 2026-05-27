@@ -19,16 +19,16 @@ def calculateImpactScore(
     환경/사회적 중대성(Impact) 요소를 기반으로 v3.2 산식에 따라 점수를 산출합니다.
     """
     if sourceType == "regulation":
-        if subIssueCode == "공급망 관리" or "SUPPLY_CHAIN" in subIssueCode:
+        if "SUPPLY_CHAIN" in subIssueCode:
             return 4.0
-        elif subIssueCode in ["기후변화", "온실가스 배출"] or "CLIMATE" in subIssueCode:
+        elif "CLIMATE" in subIssueCode:
             return 3.5
-        elif subIssueCode in ["데이터 보안", "개인정보 보호"] or "DATA_SECURITY" in subIssueCode:
+        elif "DATA_SECURITY" in subIssueCode:
             return 3.0
 
     urgency = timeHorizonToUrgency(factor.timeHorizon)
-    likelihood = factor.likelihood if factor.likelihood else 0.0
-    irremediability = factor.irremediability if factor.irremediability else 0.0
+    likelihood = factor.likelihood if factor.likelihood is not None else 0.0
+    irremediability = factor.irremediability if factor.irremediability is not None else 0.0
     scale = factor.scale
     scope = factor.scope
 
@@ -49,11 +49,11 @@ def calculateFinancialScore(
     재무적 중대성(Financial) 요소를 기반으로 v3.2 산식에 따라 점수를 산출합니다.
     """
     if sourceType == "regulation":
-        if subIssueCode == "공급망 관리" or "SUPPLY_CHAIN" in subIssueCode:
+        if "SUPPLY_CHAIN" in subIssueCode:
             return 4.0
-        elif subIssueCode in ["기후변화", "온실가스 배출"] or "CLIMATE" in subIssueCode:
+        elif "CLIMATE" in subIssueCode:
             return 3.5
-        elif subIssueCode in ["데이터 보안", "개인정보 보호"] or "DATA_SECURITY" in subIssueCode:
+        elif "DATA_SECURITY" in subIssueCode:
             return 3.0
 
     magnitudes = [
@@ -68,7 +68,7 @@ def calculateFinancialScore(
     
     base_mag = float(max(valid_mags)) if valid_mags else 0.0
     urgency = timeHorizonToUrgency(factor.timeHorizon)
-    likelihood = factor.likelihood if factor.likelihood else 0.0
+    likelihood = factor.likelihood if factor.likelihood is not None else 0.0
     
     if factor.financialIroType == "risk":
         score = (0.45 * base_mag) + (0.35 * likelihood) + (0.20 * urgency)

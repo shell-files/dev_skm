@@ -9,6 +9,16 @@ import {
   showDefaultAlert,
 } from "@components/UI/ServiceAlert";
 
+import { POST } from "@utils/Network";
+
+const DUMMY_ARTICLES = [
+  { source: "news", title: "기업들의 기후목표 설정과 온실가스 감축 노력", url: "http://example.com/1", publishedAt: "2026-05-27" },
+  { source: "news", title: "공급망 내 협력사 ESG 리스크 심화", url: "http://example.com/2", publishedAt: "2026-05-27" },
+  { source: "news", title: "글로벌 소비자 안전 규제 강화, 제품 안전성 확보 비상", url: "http://example.com/3", publishedAt: "2026-05-27" },
+  { source: "news", title: "저탄소 친환경 제품 출시 경쟁 본격화", url: "http://example.com/4", publishedAt: "2026-05-27" },
+  { source: "news", title: "임직원 역량 개발 및 교육 프로그램 확대", url: "http://example.com/5", publishedAt: "2026-05-27" }
+];
+
 const Media = () => {
   const particleRef = useRef(null);
 
@@ -25,6 +35,13 @@ const Media = () => {
     press: "ready",
     reg: "ready",
     expert: "ready",
+  });
+
+  const [analysisResult, setAnalysisResult] = useState({
+    articleCount: 0,
+    observedSubIssueCount: 0,
+    savedSignalCount: 0,
+    topIssues: []
   });
 
   const [formData, setFormData] = useState({
@@ -139,7 +156,7 @@ const Media = () => {
     }));
   };
 
-  const startMediaCollection = () => {
+  const startMediaCollection = async () => {
     if (isAnalyzing) return;
 
     if (!formData.pressKeyword.trim()) {
@@ -170,9 +187,7 @@ const Media = () => {
     }
 
     setIsAnalyzing(true);
-
     setDashboardOpen(true);
-
     setShowResult(false);
 
     setStatus({
@@ -187,17 +202,32 @@ const Media = () => {
       "success"
     );
 
+    try {
+      const response = await POST("skm", "/api/v1/media/news/analyze", {
+        runId: 1, // 테스트용 하드코딩된 runId
+        articles: DUMMY_ARTICLES,
+        keywords: formData.pressKeyword.split(",").map(k => k.trim())
+      });
+
+      if (response && response.status !== false) {
+        setAnalysisResult(response.data || response);
+      }
+    } catch (e) {
+      console.error(e);
+      showDefaultAlert("통신 오류", "미디어 분석 중 서버 에러가 발생했습니다.", "error");
+    }
+
+    // UX용 딜레이
     setTimeout(() => {
       setStatus({
         press: "complete",
-        reg: "complete",
-        expert: "complete",
+        reg: "ready",
+        expert: "ready",
       });
 
       setShowResult(true);
-
       setIsAnalyzing(false);
-    }, 2500);
+    }, 1000);
   };
 
   const getStatusText = (type) => {
@@ -619,8 +649,7 @@ const Media = () => {
                   color: "#03A94D",
                 }}
               >
-                ✓ 실시간 데이터 파이프라인 분석
-                완료
+                ✓ 실시간 데이터 파이프라인 분석 완료 (언론 분석)
               </h3>
 
               <p
@@ -638,12 +667,23 @@ const Media = () => {
                     color: "#ef4444",
                   }}
                 >
-                  14건
+                  {analysisResult.articleCount || 0}건
                 </span>
-                의 리스크 시그널(언론 8건,
-                규제 4건, 리서치 2건)이
-                식별되었습니다.
+                의 기사 중{" "}
+                <span
+                  style={{
+                    fontWeight: 700,
+                    color: "#03A94D",
+                  }}
+                >
+                  {analysisResult.savedSignalCount || 0}건
+                </span>
+                의 관련 시그널이 식별되었습니다. (관측된 서브이슈: {analysisResult.observedSubIssueCount || 0}개)
                 <br />
+                <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
+                  * 규제·전문기관 분석은 현재 준비 중입니다.
+                </span>
+                <br /><br />
                 다음 스텝인{" "}
                 <span
                   style={{

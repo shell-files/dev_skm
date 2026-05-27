@@ -1,4 +1,4 @@
-﻿# ESG 온톨로지 사전 (v4.3)
+# ESG 온톨로지 사전 (v4.3)
 
 subissueMaster = {
     "E_CLIMATE__CLIMATE_GOVERNANCE_INVENTORY": {
@@ -3024,6 +3024,19 @@ subissueMaster = {
 
 def getSubissueCount():
     return len(subissueMaster)
+
+def getSubIssueMeta(subIssueCode: str) -> dict:
+    return subissueMaster.get(subIssueCode, {})
+
+def getSubIssueDisplayName(subIssueCode: str) -> str:
+    meta = subissueMaster.get(subIssueCode)
+    return meta["subIssueNameKr"] if meta else subIssueCode
+
+def isAllowedIro(subIssueCode: str, iroType: str) -> bool:
+    meta = subissueMaster.get(subIssueCode)
+    if not meta: return False
+    allowed = meta.get("scoring_axis_allowed", "")
+    return iroType in allowed.split(";")
 
 if __name__ == "__main__":
     count = getSubissueCount()

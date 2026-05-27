@@ -21,5 +21,7 @@ def runMediaAnalysis(articles: list, runId: int):
     scoredSignals = scoreDmaSignals(baselinedSignals)
     
     # 5. DB Save
-    # saveDmaSignals(runId=runId, signals=scoredSignals, fileId=None, sourceTitle="Media Analysis")
+    if scoredSignals:
+        saveDmaSignals(runId=runId, signals=scoredSignals, fileId=None, sourceTitle="Media Analysis")
+        
     return scoredSignals

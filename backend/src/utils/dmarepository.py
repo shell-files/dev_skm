@@ -41,7 +41,7 @@ def saveDmaSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] =
             print(f"Error saving evidence: {e}")
 
         # 2. JSON 직렬화 및 ESG_DMA_SIGNAL_DETAIL 저장
-        payload = sig.model_dump(by_alias=True)
+        payload = sig.model_dump(by_alias=False)
         payloadJson = json.dumps(payload, ensure_ascii=False)
         
         impactScore = sig.impactScore05 if sig.impactScore05 is not None else None
@@ -126,12 +126,21 @@ def recalculateStageScore(runId: int, subIssueCode: str, sourceStep: str):
         
         from src.utils.settings import settings
         totalSql = f"""
-            SELECT aes_d(type, '{settings.maria_db_key}') as source_type, COUNT(id) as total_count
+            SELECT aes_d(type, '{settings.maria_db_key}') as raw_source_type
             FROM TE_SR_FILE
             WHERE delete_yn = 0
-            GROUP BY aes_d(type, '{settings.maria_db_key}')
         """
-        typeCounts = {row["source_type"]: row["total_count"] for row in findAll(totalSql)}
+        rows = findAll(totalSql)
+        
+        typeCounts = {"leader_sr": 0, "peer_sr": 0, "own_sr": 0}
+        for row in rows:
+            raw_type = str(row.get("raw_source_type", "")).lower()
+            if "leader" in raw_type or "리더" in raw_type:
+                typeCounts["leader_sr"] += 1
+            elif "peer" in raw_type or "피어" in raw_type or "동종" in raw_type:
+                typeCounts["peer_sr"] += 1
+            elif "own" in raw_type or "자사" in raw_type:
+                typeCounts["own_sr"] += 1
         
         totalLeader = max(1, typeCounts.get("leader_sr", 1))
         totalPeer = max(1, typeCounts.get("peer_sr", 1))

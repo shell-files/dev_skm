@@ -93,7 +93,6 @@ class FileFindModel(BaseModel):
 # 비번 체크 모델
 class pwdCheckModel(BaseModel):
    """ auth.py patch 비밀번호 확인 모델"""
-   uuid: str = Field(..., description="비밀번호 확인에서 사용되는 uuid 모델")
    password: str = Field(..., description="비밀번호 확인에서 사용하는 pwd 모델")
 
 # 로그아웃 모델

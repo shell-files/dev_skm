@@ -123,11 +123,11 @@ const requestApi = {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthReady) console.log(userName, selectedCompany, companies);
+    if (isAuthReady) console.log(user,userName, selectedCompany, companies);
     setUserData({
       name: userName || '사용자',
       email: user?.email || selectedCompany?.email || '-',
-      role: selectedCompany?.role 
+      role: selectedCompany?.role_name 
     });
   }, [user, selectedCompany]);
 

@@ -17,6 +17,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@hooks/AuthContext.jsx';
+import { GET, POST, PUT, PATCH, DELETE} from '@utils/Network';
 import { showDefaultAlert, showConfirmAlert } from '@components/UI/ServiceAlert';
 import '@styles/mypage.css';
 
@@ -36,7 +37,7 @@ const requestApi = {
      return { status: true, message: "회원 정보가 수정되었습니다." };
     }
     try {
-      const res = await api.patch("/user", { uuid, name });
+      const res = await PATCH("/user", { uuid, name });
       return { status: res.data.status, message: res.data.message };
     } catch (e) {
       return { status: false, message: e.response?.data?.message || "정보 수정 중 오류가 발생했습니다." };
@@ -54,7 +55,7 @@ const requestApi = {
      return { status: true, message: "비밀번호 변경 완료" };
     }
     try {
-      const res = await api.patch("/user", { 
+      const res = await PATCH("/user", { 
         uuid, 
         newPassword: passwords.new, 
         newPasswordConfirm: passwords.confirm 
@@ -82,19 +83,21 @@ const requestApi = {
     }
   },
   
-  /** 4. checkPassword: 본인 확인용 비밀번호 체크 (PATCH /auth) */
+  /** 4. checkPassword: 본인 확인용 비밀번호 체크 (PATCH /PATCH) */
   checkPassword: async (password, uuid) => {
     if (USE_DUMMY_API) {
       await new Promise(r => setTimeout(r, 400));
       return password === '1234' ? { status: true } : { status: false, message: "비밀번호가 일치하지 않습니다." };
     }
     try {
-      const res = await api.patch("/verification", { uuid, password });
+      const res = await PATCH("/auth", {uuid, password });
+      console.log("=== 서버가 보내준 응답 구조 ===", res);
       if (res.data.data.uuid.data.uuid) localStorage.setItem("uuid", res.data.data.uuid.data.uuid)
-        if (res.data.status)
-          return { status: res.data.status, data: res.data };
-        return { status: res.data.status, message: res.data.message };
+        
+        if (res.data?.status) return { status: res.data.status, data: res.data };
+    return { status: res.data?.status, message: res.data?.message };
       } catch (e) {
+        console.error("에러 발생:", e); // 에러 원인 확인
         return { status: false, message: e.response?.data?.message || "비밀번호가 일치하지 않습니다." };
       }
     }
@@ -123,7 +126,8 @@ const requestApi = {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isAuthReady) console.log(user,userName, selectedCompany, companies);
+    if (isAuthReady) console.log(userName, selectedCompany, companies);
+    console.log(userData.name)
     setUserData({
       name: userName || '사용자',
       email: user?.email || selectedCompany?.email || '-',
@@ -155,8 +159,7 @@ const requestApi = {
 
     try {
       setLoading(true);
-      const res = await requestApi.checkPassword(passwordForm.current, user?.uuid);
-      
+      const res = await requestApi.checkPassword(passwordForm.current, user?.uuid, userData.email);
       if (res.status) {
         const action = modal.nextAction;
         if (action === 'edit') {

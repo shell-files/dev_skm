@@ -19,11 +19,16 @@ def checkUser(userModel: UserModel):
             aes_d(c.company_name, '{settings.maria_db_key}') AS company_name,
             aes_d(r.`role`, '{settings.maria_db_key}') AS role,
             aes_d(r.`name`, '{settings.maria_db_key}') AS role_name
+            aes_d(u.`email` ,'{settings.maria_db_key}') AS email
         FROM `with`.`USER_ROLE` AS ur
         INNER JOIN `skm`.`COMPANY` AS c
             ON (c.id = ur.company_id)
         INNER JOIN `with`.`ROLE` AS r
             ON (r.id = ur.role_id)
+        INNER JOIN `with`.`USER` AS u
+            ON (u.id - ur.id)
+        INNER JOIN `with`.`USER` AS u
+            ON (u.id = ur.user_id)
         WHERE 1 = 1
         AND ur.user_id = ?
         AND ur.role_id IN (2,3,4)
@@ -37,7 +42,7 @@ def checkUser(userModel: UserModel):
             selectedCompany = com
             break
 
-    return ResponseModel(True, "사용자 정보가 유효합니다.", {"userName": userModel.name, "companys": companyResult, "selectedCompany": selectedCompany})
+    return ResponseModel(True, "사용자 정보가 유효합니다.", {"user": userModel.email, "userName": userModel.name, "companys": companyResult, "selectedCompany": selectedCompany})
 
 # --------------------------
 # 비밀번호 찾기 로직 처리 함수
@@ -53,7 +58,7 @@ def findPwdProcess(emailModel: EmailModel):
         # 1. db에서 이메일 확인
         emailCheckSql=f"""
                     SELECT id, aes_d(email, '{settings.maria_db_key}' ) as email
-                    FROM `USER`
+                    FROM `with`.`USER`
                     WHERE email = aes_e( ? , '{settings.maria_db_key}' ) AND delete_yn = 0;
                     """
         emailCheckParams = (emailModel.email,)
@@ -74,7 +79,7 @@ def findPwdProcess(emailModel: EmailModel):
         tempPwd = ''.join(tempPwdList)
 
         updatePwdSql = f"""
-            UPDATE `USER`
+            UPDATE `with`.`USER`
             SET password = aes_e( ? , '{settings.maria_db_key}' )
             WHERE id = ?
         """

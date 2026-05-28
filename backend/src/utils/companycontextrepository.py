@@ -5,6 +5,10 @@ from typing import Any, Optional
 from src.utils.db import addKey, findAll, findOne, save
 
 
+SYSTEM_MODIFIER_MIN = -0.5
+SYSTEM_MODIFIER_MAX = 0.5
+
+
 def getMaterialityRunContext(runId: int) -> dict:
     sql = """
         SELECT
@@ -165,6 +169,8 @@ def replaceCompanyContextProfile(
 def updateContextModifiers(runId: int, modifiers: list[dict]) -> int:
     updated = 0
     for modifier in modifiers:
+        impactModifier = clampSystemModifier(modifier.get("impactModifier", 0.0))
+        financialModifier = clampSystemModifier(modifier.get("financialModifier", 0.0))
         ok = save(
             """
             UPDATE ESG_DMA_SCORE_SUMMARY
@@ -175,8 +181,8 @@ def updateContextModifiers(runId: int, modifiers: list[dict]) -> int:
               AND delete_yn = 0
             """,
             (
-                modifier.get("impactModifier", 0.0),
-                modifier.get("financialModifier", 0.0),
+                impactModifier,
+                financialModifier,
                 runId,
                 modifier.get("subIssueCode"),
             ),
@@ -213,3 +219,15 @@ def decimalToFloat(value: Any) -> Any:
     if isinstance(value, Decimal):
         return float(value)
     return value
+
+
+def clampSystemModifier(value: Any) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        parsed = 0.0
+    if parsed < SYSTEM_MODIFIER_MIN:
+        return SYSTEM_MODIFIER_MIN
+    if parsed > SYSTEM_MODIFIER_MAX:
+        return SYSTEM_MODIFIER_MAX
+    return parsed

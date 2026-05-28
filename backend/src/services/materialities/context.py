@@ -18,12 +18,18 @@ from src.utils.companycontextrepository import (
 )
 from src.utils.dmaaggregator import calculateFinalMateriality
 from src.utils.dmarepository import recalculateFinalScore
+from src.utils.dmarepository import updateDmaRankings
 from src.utils.dmascoring import clamp
 from src.utils.subissuemaster import subissueMaster
 
 
-MODIFIER_MIN = -0.5
-MODIFIER_MAX = 0.5
+MVP_MODIFIER_MIN = -0.3
+MVP_MODIFIER_MAX = 0.3
+SYSTEM_MODIFIER_MIN = -0.5
+SYSTEM_MODIFIER_MAX = 0.5
+MIN_PROFILE_CONFIDENCE_FOR_MODIFIER = 0.5
+MAX_RANK_MOVEMENT = 2
+TOP5_ENTRY_RAW_RANK_LIMIT = 8
 MODIFIER_RULE_VERSION = "company-context-modifier-v1"
 
 
@@ -40,18 +46,21 @@ def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDt
     reportingYear = int(runContext["reporting_year"])
     facts = _toFactDtos(getCompanyG0Facts(companyId, reportingYear))
     profile = buildCompanyContextProfile(runId, runContext, facts)
+    profileConfidence = _profileConfidence(profile)
     summaryRows = getDmaScoreSummaryRowsForContext(runId)
 
     modifiers = [
-        calculateContextModifier(profile, row)
+        calculateContextModifier(profile, row, profileConfidence)
         for row in summaryRows
         if row.get("sub_issue_code") in subissueMaster
     ]
+    modifiers = applyRankMovementGuards(modifiers)
     modifierPayload = _buildModifierPayload(modifiers)
     contextPayload = {
         "profile": profile.model_dump(),
         "profileSource": profile.profileSource,
         "ruleVersion": MODIFIER_RULE_VERSION,
+        "profileConfidence": profileConfidence,
     }
     contextProfileId = replaceCompanyContextProfile(
         runId=runId,
@@ -61,7 +70,7 @@ def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDt
         businessModel=profile.businessModel,
         contextPayload=contextPayload,
         modifierPayload=modifierPayload,
-        confidenceScore=_profileConfidence(profile),
+        confidenceScore=profileConfidence,
     )
 
     updatedCount = updateContextModifiers(
@@ -78,8 +87,18 @@ def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDt
 
     recalculatedCount = 0
     for item in modifiers:
-        recalculateFinalScore(runId, item.subIssueCode)
+        recalculateFinalScore(runId, item.subIssueCode, updateRankingsYn=False)
         recalculatedCount += 1
+    updateDmaRankings(runId)
+
+    messages = [
+        "Context modifiers were applied only to final aggregation.",
+        "Benchmark/media/survey stage scores were not changed.",
+    ]
+    if profileConfidence < MIN_PROFILE_CONFIDENCE_FOR_MODIFIER:
+        messages.append("LOW_CONTEXT_CONFIDENCE: all context modifiers were forced to 0.0000.")
+    if any(item.guardAppliedYn for item in modifiers):
+        messages.append("One or more context modifier guards were applied.")
 
     return CompanyContextModifierResponseDto(
         runId=runId,
@@ -91,11 +110,10 @@ def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDt
         modifiers=modifiers,
         updatedModifierCount=updatedCount,
         recalculatedFinalCount=recalculatedCount,
+        modifierRange={"min": MVP_MODIFIER_MIN, "max": MVP_MODIFIER_MAX},
+        systemModifierRange={"min": SYSTEM_MODIFIER_MIN, "max": SYSTEM_MODIFIER_MAX},
         stageScoreChangedYn=False,
-        messages=[
-            "Context modifiers were applied only to final aggregation.",
-            "Benchmark/media/survey stage scores were not changed.",
-        ],
+        messages=messages,
         rawPayload={
             "ruleVersion": MODIFIER_RULE_VERSION,
             "modifierJson": modifierPayload,
@@ -176,9 +194,14 @@ def buildCompanyContextProfile(
     )
 
 
-def calculateContextModifier(profile: CompanyContextProfileDto, row: dict) -> SubIssueContextModifierDto:
+def calculateContextModifier(
+    profile: CompanyContextProfileDto,
+    row: dict,
+    profileConfidence: Optional[float] = None,
+) -> SubIssueContextModifierDto:
     subIssueCode = row.get("sub_issue_code")
     rules: list[ContextRuleHitDto] = []
+    confidence = _profileConfidence(profile) if profileConfidence is None else profileConfidence
 
     if subIssueCode == "E_CLIMATE__CLIMATE_TARGETS_TRANSITION" and profile.transitionExposure == "high":
         rules.append(_rule("CTX_AUTO_TRANSITION_FIN_001", subIssueCode, 0.0, 0.3, "High transition exposure increases financial relevance of transition planning."))
@@ -200,9 +223,71 @@ def calculateContextModifier(profile: CompanyContextProfileDto, row: dict) -> Su
     if subIssueCode == "G_GOVERNANCE__BUSINESS_MODEL_VALUE_CHAIN" and profile.valueChainExposure == "high":
         rules.append(_rule("CTX_AUTO_VALUE_CHAIN_GOV_001", subIssueCode, 0.1, 0.1, "High value chain exposure increases business model and value chain governance relevance."))
 
-    impactModifier = clamp(sum(item.impactModifier for item in rules), MODIFIER_MIN, MODIFIER_MAX)
-    financialModifier = clamp(sum(item.financialModifier for item in rules), MODIFIER_MIN, MODIFIER_MAX)
-    return _withScorePreview(row, impactModifier, financialModifier, rules)
+    impactModifier = clamp(sum(item.impactModifier for item in rules), MVP_MODIFIER_MIN, MVP_MODIFIER_MAX)
+    financialModifier = clamp(sum(item.financialModifier for item in rules), MVP_MODIFIER_MIN, MVP_MODIFIER_MAX)
+    guardReason = None
+
+    if not hasObservedStage(row):
+        impactModifier = 0.0
+        financialModifier = 0.0
+        guardReason = "NO_OBSERVED_STAGE"
+    elif confidence < MIN_PROFILE_CONFIDENCE_FOR_MODIFIER:
+        impactModifier = 0.0
+        financialModifier = 0.0
+        guardReason = "LOW_CONTEXT_CONFIDENCE"
+
+    return _withScorePreview(
+        row,
+        impactModifier,
+        financialModifier,
+        rules if guardReason is None else [],
+        guardAppliedYn=guardReason is not None,
+        guardReason=guardReason,
+    )
+
+
+def hasObservedStage(row: dict) -> bool:
+    return any([
+        row.get("benchmark_impact_score") is not None,
+        row.get("benchmark_financial_score") is not None,
+        row.get("media_external_impact_score") is not None,
+        row.get("media_external_financial_score") is not None,
+        row.get("survey_impact_score") is not None,
+        row.get("survey_financial_score") is not None,
+    ])
+
+
+def applyRankMovementGuards(
+    modifiers: list[SubIssueContextModifierDto],
+) -> list[SubIssueContextModifierDto]:
+    _assignRawRanks(modifiers)
+    _assignAdjustedRanks(modifiers)
+
+    changed = True
+    while changed:
+        changed = False
+        for item in modifiers:
+            if item.guardAppliedYn and item.guardReason in ["NO_OBSERVED_STAGE", "LOW_CONTEXT_CONFIDENCE"]:
+                continue
+            violation = _rankGuardViolation(item)
+            if violation and _hasNonZeroModifier(item):
+                _zeroModifier(item, violation)
+                changed = True
+        if changed:
+            _assignAdjustedRanks(modifiers)
+
+    # Final global pass: if any remaining rank movement still exceeds the MVP
+    # limit, remove all still-active modifiers. This keeps selection stable.
+    if any(
+        item.rankDelta is not None and abs(item.rankDelta) > MAX_RANK_MOVEMENT
+        for item in modifiers
+    ):
+        for item in modifiers:
+            if _hasNonZeroModifier(item):
+                _zeroModifier(item, "RANK_MOVEMENT_LIMIT_GLOBAL")
+        _assignAdjustedRanks(modifiers)
+
+    return modifiers
 
 
 def _withScorePreview(
@@ -210,8 +295,12 @@ def _withScorePreview(
     impactModifier: float,
     financialModifier: float,
     rules: list[ContextRuleHitDto],
+    guardAppliedYn: bool = False,
+    guardReason: Optional[str] = None,
 ) -> SubIssueContextModifierDto:
     subIssueCode = row.get("sub_issue_code")
+    impactModifier = clamp(impactModifier, MVP_MODIFIER_MIN, MVP_MODIFIER_MAX)
+    financialModifier = clamp(financialModifier, MVP_MODIFIER_MIN, MVP_MODIFIER_MAX)
     raw = calculateFinalMateriality(
         subIssueCode=subIssueCode,
         surveyImpact=_floatOrNone(row.get("survey_impact_score")),
@@ -239,12 +328,16 @@ def _withScorePreview(
         subIssueCode=subIssueCode,
         impactModifier=round(float(impactModifier), 4),
         financialModifier=round(float(financialModifier), 4),
+        contextModifier=_combinedModifier(impactModifier, financialModifier),
         rawFinalImpactScore=_roundOrNone(raw.finalImpactScore),
         finalImpactScoreAfterModifier=_roundOrNone(final.finalImpactScore),
         rawFinalFinancialScore=_roundOrNone(raw.finalFinancialScore),
         finalFinancialScoreAfterModifier=_roundOrNone(final.finalFinancialScore),
         rawFinalScore=_roundOrNone(raw.finalScore),
         finalScoreAfterModifier=_roundOrNone(final.finalScore),
+        adjustedFinalScore=_roundOrNone(final.finalScore),
+        guardAppliedYn=guardAppliedYn,
+        guardReason=guardReason,
         appliedRules=rules,
     )
 
@@ -253,7 +346,13 @@ def _buildModifierPayload(modifiers: list[SubIssueContextModifierDto]) -> dict:
     return {
         "ruleVersion": MODIFIER_RULE_VERSION,
         "modifierType": "ADDITIVE",
-        "modifierRange": {"min": MODIFIER_MIN, "max": MODIFIER_MAX},
+        "modifierRange": {"min": MVP_MODIFIER_MIN, "max": MVP_MODIFIER_MAX},
+        "systemModifierRange": {"min": SYSTEM_MODIFIER_MIN, "max": SYSTEM_MODIFIER_MAX},
+        "rankGuard": {
+            "maxRankMovement": MAX_RANK_MOVEMENT,
+            "top5EntryRawRankLimit": TOP5_ENTRY_RAW_RANK_LIMIT,
+            "minProfileConfidenceForModifier": MIN_PROFILE_CONFIDENCE_FOR_MODIFIER,
+        },
         "scoreFormula": {
             "impact": "clamp(raw_final_impact_score + context_impact_modifier, 0, 5)",
             "financial": "clamp(raw_final_financial_score + context_financial_modifier, 0, 5)",
@@ -261,6 +360,62 @@ def _buildModifierPayload(modifiers: list[SubIssueContextModifierDto]) -> dict:
         "modifiers": [item.model_dump() for item in modifiers],
         "appliedRuleCount": sum(len(item.appliedRules) for item in modifiers),
     }
+
+
+def _assignRawRanks(items: list[SubIssueContextModifierDto]) -> None:
+    ranked = sorted(
+        [item for item in items if item.rawFinalScore is not None],
+        key=lambda item: (-float(item.rawFinalScore), item.subIssueCode),
+    )
+    for rank, item in enumerate(ranked, start=1):
+        item.rawRank = rank
+
+
+def _assignAdjustedRanks(items: list[SubIssueContextModifierDto]) -> None:
+    ranked = sorted(
+        [item for item in items if item.adjustedFinalScore is not None],
+        key=lambda item: (-float(item.adjustedFinalScore), item.subIssueCode),
+    )
+    adjustedByCode = {item.subIssueCode: rank for rank, item in enumerate(ranked, start=1)}
+    for item in items:
+        item.adjustedRank = adjustedByCode.get(item.subIssueCode)
+        if item.rawRank is None or item.adjustedRank is None:
+            item.rankDelta = None
+            item.rankChangedYn = False
+            continue
+        item.rankDelta = item.rawRank - item.adjustedRank
+        item.rankChangedYn = item.rankDelta != 0
+
+
+def _rankGuardViolation(item: SubIssueContextModifierDto) -> Optional[str]:
+    if item.rawRank is None or item.adjustedRank is None:
+        return None
+    if item.adjustedRank <= 5 and item.rawRank > TOP5_ENTRY_RAW_RANK_LIMIT:
+        return "TOP5_RAW_RANK_LIMIT"
+    if item.rankDelta is not None and abs(item.rankDelta) > MAX_RANK_MOVEMENT:
+        return "RANK_MOVEMENT_LIMIT"
+    return None
+
+
+def _zeroModifier(item: SubIssueContextModifierDto, reason: str) -> None:
+    item.impactModifier = 0.0
+    item.financialModifier = 0.0
+    item.contextModifier = 0.0
+    item.finalImpactScoreAfterModifier = item.rawFinalImpactScore
+    item.finalFinancialScoreAfterModifier = item.rawFinalFinancialScore
+    item.finalScoreAfterModifier = item.rawFinalScore
+    item.adjustedFinalScore = item.rawFinalScore
+    item.appliedRules = []
+    item.guardAppliedYn = True
+    item.guardReason = reason
+
+
+def _hasNonZeroModifier(item: SubIssueContextModifierDto) -> bool:
+    return abs(item.impactModifier) > 0.00001 or abs(item.financialModifier) > 0.00001
+
+
+def _combinedModifier(impactModifier: float, financialModifier: float) -> float:
+    return round((float(impactModifier) + float(financialModifier)) / 2.0, 4)
 
 
 def _toFactDtos(rows: list[dict]) -> list[CompanyContextFactDto]:

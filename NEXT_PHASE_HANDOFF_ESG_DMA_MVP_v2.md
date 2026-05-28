@@ -9,6 +9,7 @@
 - 수동 실행 endpoint: `POST /materiality/context/{runId}/apply`
 - 구현은 deterministic MVP context profile builder와 rule engine으로 구성.
 - 실제 LLM profiler를 붙이더라도 AI는 profile flag만 만들고 modifier 산정은 rule engine이 담당한다.
+- guard 반영 완료: MVP range `-0.3 ~ +0.3`, system range `-0.5 ~ +0.5`, 최소 stage 관측, confidence >= 0.5, rank movement 최대 2단계, Top 5 진입 rawRank Top 8 제한.
 
 ## 1. 문서 목적
 
@@ -31,6 +32,7 @@
 | score 기준 | 확정 | DB/API canonical `score05`, UI 표시 `score10 = score05 * 2` |
 | final aggregation | 안정화 | survey 0.40, benchmark 0.35, media_external 0.25 |
 | context modifier semantics | 확정/DB 반영 완료 | additive, 기본값 0.0000, final 단계 1회 |
+| context modifier guard | 구현 완료 | MVP range, confidence, observed stage, rank movement, Top 5 entry guard |
 | Materiality result API | 1차 구현 완료 | 결과/매트릭스/topIssues/selection fallback 포함 |
 | Report API | skeleton 완료 | DB 조회 가능한 범위 반환, edit/export 본구현은 후속 |
 | Media news crawler E2E | 대부분 완료 | 실제 사이트 fixed scope + 필터 결과 0건 가능성은 remaining risk |
@@ -208,10 +210,14 @@ POST /materiality/context/{runId}/apply
 - AI는 구조화된 `CompanyContextProfile`만 만든다.
 - AI가 modifier 값을 직접 최종 확정하지 않는다.
 - rule engine이 profile flag를 기준으로 modifier를 산정한다.
-- modifier는 `-0.5 ~ +0.5`로 clamp한다.
+- modifier는 MVP 적용 범위 `-0.3 ~ +0.3`로 clamp하고, DB/재계산 직전 시스템 절대 상한 `-0.5 ~ +0.5`로 한 번 더 방어한다.
 - final aggregation 단계에서만 additive 적용한다.
 - stage score는 순수 benchmark/media/survey 결과로 유지한다.
 - 판단 근거는 `ESG_DMA_CONTEXT_PROFILE.context_json`, `modifier_json` 또는 `scoring_payload_json` 계열 payload에 보존한다.
+- stage score가 하나도 없는 subIssue에는 modifier를 적용하지 않는다.
+- profile confidence가 0.5 미만이면 modifier는 0.0000이다.
+- rawRank 대비 adjustedRank 변동은 최대 2단계로 제한한다.
+- rawRank 9위 이하 이슈는 context modifier만으로 Top 5에 진입할 수 없다.
 
 설계 문서는 `COMPANY_CONTEXT_MODIFIER_PLAN_v1.md`를 따른다.
 

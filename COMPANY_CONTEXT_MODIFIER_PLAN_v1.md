@@ -43,6 +43,17 @@ final_financial_score =
 -0.5 ~ +0.5
 ```
 
+MVP 적용 범위:
+
+```text
+-0.3 ~ +0.3
+```
+
+구현은 이중 guard를 사용한다.
+
+- candidate 산정 단계: MVP 범위 `-0.3 ~ +0.3`
+- DB 저장/최종 재계산 단계: 시스템 절대 상한 `-0.5 ~ +0.5`
+
 ### 2.2 적용 위치
 
 modifier는 final aggregation 단계에서만 1회 적용한다.
@@ -182,9 +193,23 @@ Rule engine은 `CompanyContextProfile`과 `subIssueCode`를 입력받아 modifie
 최종 modifier는 rule hit 합산 후 clamp한다.
 
 ```text
-impactModifier = clamp(sum(rule.impactModifier), -0.5, 0.5)
-financialModifier = clamp(sum(rule.financialModifier), -0.5, 0.5)
+impactModifier = clamp(sum(rule.impactModifier), -0.3, 0.3)
+financialModifier = clamp(sum(rule.financialModifier), -0.3, 0.3)
 ```
+
+### 6.2 guard rules
+
+MVP backend 구현은 다음 guard를 적용한다.
+
+| Guard | 기준 | 처리 |
+|---|---|---|
+| `NO_OBSERVED_STAGE` | benchmark/media/survey stage score가 모두 NULL | modifier 0.0000 |
+| `LOW_CONTEXT_CONFIDENCE` | profile confidence < 0.5 | modifier 0.0000 |
+| `RANK_MOVEMENT_LIMIT` | rawRank 대비 adjustedRank 변동이 2단계 초과 | modifier 0.0000 |
+| `TOP5_RAW_RANK_LIMIT` | rawRank 9위 이하 이슈가 modifier만으로 Top 5 진입 | modifier 0.0000 |
+| `RANK_MOVEMENT_LIMIT_GLOBAL` | 개별 guard 후에도 전체 rank 변동이 2단계 초과 | 남은 active modifier 0.0000 |
+
+G0만으로 새로운 이슈 점수를 만들지 않는다. 최소 1개 stage score가 관측된 subIssue에만 modifier 후보를 계산한다.
 
 ## 7. 저장 위치
 
@@ -226,6 +251,12 @@ modifier 적용 전후 점수 설명 가능성을 위해 `modifier_json`에는 r
   "rawFinalFinancialScore": 3.41,
   "contextFinancialModifier": 0.3,
   "finalFinancialScoreAfterModifier": 3.71,
+  "rawRank": 4,
+  "adjustedRank": 3,
+  "rankChangedYn": true,
+  "rankDelta": 1,
+  "guardAppliedYn": false,
+  "guardReason": null,
   "appliedRules": []
 }
 ```
@@ -317,6 +348,7 @@ def recalculateFinalScoresWithContext(runId: int) -> None:
 2. modifier가 NULL이면 0.0으로 처리한다.
 3. `calculateFinalMateriality(..., contextImpactModifier=..., contextFinancialModifier=...)`에 전달한다.
 4. final score/rank를 갱신한다.
+5. DB 저장/재계산 직전 시스템 절대 상한 `-0.5 ~ +0.5`로 한 번 더 clamp한다.
 
 중요:
 
@@ -360,6 +392,7 @@ ORDER BY rank_no;
 - modifier 변경 전후 final score만 바뀜.
 - clamp가 0~5 범위를 보장.
 - rank_no가 final_score 기준으로 재정렬.
+- rawRank/adjustedRank/rankDelta/guardReason이 modifier_json에 남음.
 
 ### 11.3 regression
 

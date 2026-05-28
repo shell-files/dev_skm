@@ -47,12 +47,20 @@ class SubIssueContextModifierDto(BaseModel):
     subIssueCode: str
     impactModifier: float = 0.0
     financialModifier: float = 0.0
+    contextModifier: Optional[float] = None
     rawFinalImpactScore: Optional[float] = None
     finalImpactScoreAfterModifier: Optional[float] = None
     rawFinalFinancialScore: Optional[float] = None
     finalFinancialScoreAfterModifier: Optional[float] = None
     rawFinalScore: Optional[float] = None
     finalScoreAfterModifier: Optional[float] = None
+    adjustedFinalScore: Optional[float] = None
+    rawRank: Optional[int] = None
+    adjustedRank: Optional[int] = None
+    rankChangedYn: bool = False
+    rankDelta: Optional[int] = None
+    guardAppliedYn: bool = False
+    guardReason: Optional[str] = None
     appliedRules: List[ContextRuleHitDto] = Field(default_factory=list)
 
 
@@ -66,7 +74,8 @@ class CompanyContextModifierResponseDto(BaseModel):
     modifiers: List[SubIssueContextModifierDto] = Field(default_factory=list)
     updatedModifierCount: int = 0
     recalculatedFinalCount: int = 0
-    modifierRange: Dict[str, float] = Field(default_factory=lambda: {"min": -0.5, "max": 0.5})
+    modifierRange: Dict[str, float] = Field(default_factory=lambda: {"min": -0.3, "max": 0.3})
+    systemModifierRange: Dict[str, float] = Field(default_factory=lambda: {"min": -0.5, "max": 0.5})
     stageScoreChangedYn: bool = False
     messages: List[str] = Field(default_factory=list)
     rawPayload: Dict[str, Any] = Field(default_factory=dict)

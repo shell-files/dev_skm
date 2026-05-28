@@ -336,7 +336,7 @@ def safeFloatOrNone(value):
     except Exception:
         return None
 
-def recalculateFinalScore(runId: int, subIssueCode: str):
+def recalculateFinalScore(runId: int, subIssueCode: str, updateRankingsYn: bool = True):
     sql = """
         SELECT 
             benchmark_impact_score, benchmark_financial_score,
@@ -363,7 +363,8 @@ def recalculateFinalScore(runId: int, subIssueCode: str):
     )
     
     upsertFinalScoreSummary(runId, finalScoreObj)
-    updateDmaRankings(runId)
+    if updateRankingsYn:
+        updateDmaRankings(runId)
 
 def clampContextModifier(value):
     parsed = safeFloat(value, 0.0)

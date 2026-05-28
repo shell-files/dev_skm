@@ -22,6 +22,28 @@ class UserModel(BaseModel):
     role: str = Field(..., description="사용자 역할 리스트")
     role_name: str = Field(..., description="사용자 역할 이름 리스트")
 
+
+class logoutModel(BaseModel):
+    """Legacy logout request/session model kept for auth import compatibility."""
+    uuid: str = Field(..., description="사용자 세션 UUID")
+
+
+class pwdCheckModel(BaseModel):
+    """Password confirmation request model."""
+    password: str = Field(..., description="확인할 비밀번호")
+
+
+class userUpdateModel(BaseModel):
+    """Legacy user update request model kept for user router compatibility."""
+    uuid: str = Field(..., description="사용자 세션 UUID")
+    name: Optional[str] = Field(None, description="변경할 사용자 이름")
+    newPassword: Optional[str] = Field(None, description="변경할 비밀번호")
+
+
+class userDeleteModel(BaseModel):
+    """Legacy user delete request model kept for user router compatibility."""
+    uuid: str = Field(..., description="사용자 세션 UUID")
+
 #이메일 모델
 class EmailModel(BaseModel):
    email: EmailStr = Field(..., description="비밀번호 찾기에 사용되는 이메일 모델")

@@ -83,3 +83,19 @@ class CompanyContextModifierResponseDto(BaseModel):
     stageScoreChangedYn: bool = False
     messages: List[str] = Field(default_factory=list)
     rawPayload: Dict[str, Any] = Field(default_factory=dict)
+
+
+class CompanyContextProfileResponseDto(BaseModel):
+    runId: int
+    contextProfileId: Optional[int] = None
+    companyId: Optional[int] = None
+    reportingYear: Optional[int] = None
+    profile: Optional[CompanyContextProfileDto] = None
+    profileSource: Optional[str] = None
+    profileConfidence: Optional[float] = None
+    modifierRange: Dict[str, float] = Field(default_factory=lambda: {"min": -0.3, "max": 0.3})
+    systemModifierRange: Dict[str, float] = Field(default_factory=lambda: {"min": -0.5, "max": 0.5})
+    graphTrace: List[Dict[str, Any]] = Field(default_factory=list)
+    modifiers: List[SubIssueContextModifierDto] = Field(default_factory=list)
+    messages: List[str] = Field(default_factory=list)
+    implementationStatus: str = "READY"

@@ -1,7 +1,7 @@
 from src.utils.db import executeTransaction, findAll, save
 from src.models.model import logoutModel, ResponseModel
 from src.utils.validatetok import validateToken
-from src.utils.tokenset import decryptFromJwe
+from src.utils.token import decryptFromJwe
 from src.utils.rediscl import delTokenRedis, getTokenRedis
 
 

@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import List, Optional
 from src.services.medias.service import runMediaAnalysis
 from src.utils.auth import get_token
-from src.utils.dmarepository import getTopIssuesByMediaScore, getMediaCoverageFromSummary
+from src.utils.dmarepository import getTopIssuesByMediaScore, getMediaCoverageFromSummary, getMediaObservedSubIssueCount
 from src.utils.subissuemaster import getSubIssueDisplayName
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER
 
@@ -19,6 +19,8 @@ class MediaTopIssue(BaseModel):
     displaySubIssueName: str
     mediaImpactScore05: Optional[float]
     mediaFinancialScore05: Optional[float]
+    mediaImpactScore10: Optional[float]
+    mediaFinancialScore10: Optional[float]
     mediaAvgScore05: Optional[float]
     mediaAvgScore10: Optional[float]
     finalScore05: Optional[float]
@@ -58,13 +60,15 @@ async def analyze_media_news(request: MediaAnalyzeRequest, userModel = Depends(g
                 displaySubIssueName=getSubIssueDisplayName(code),
                 mediaImpactScore05=mediaImp,
                 mediaFinancialScore05=mediaFin,
+                mediaImpactScore10=round(mediaImp * SCORE_UI_MULTIPLIER, 2) if mediaImp is not None else None,
+                mediaFinancialScore10=round(mediaFin * SCORE_UI_MULTIPLIER, 2) if mediaFin is not None else None,
                 mediaAvgScore05=mediaAvg,
                 mediaAvgScore10=round(mediaAvg * SCORE_UI_MULTIPLIER, 2) if mediaAvg is not None else None,
                 finalScore05=finalScore,
                 rankNo=rankNo
             ))
         
-        observedSubIssueCount = len(topIssueRows)
+        observedSubIssueCount = getMediaObservedSubIssueCount(request.runId)
         
         # 3. coverage: DB summary에서 실제 관측 stage 수 기반
         coverageInfo = getMediaCoverageFromSummary(request.runId)

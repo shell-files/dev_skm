@@ -16,7 +16,7 @@ def _validateIroHint(subIssueCode: str, iroHint: str) -> Optional[str]:
     AI가 반환한 iroHint를 검증합니다.
     1. isAllowedIro()로 허용 여부 확인
     2. 불허 시 getScoringAllowedIros()에서 같은 축의 허용 값으로 대체
-    3. 대체 불가 시 원본 유지 (factor 생성 단계에서 None 처리)
+    3. 대체 불가 시 None 반환 (호출부에서 factor 제거)
     """
     if isAllowedIro(subIssueCode, iroHint):
         return iroHint
@@ -25,7 +25,7 @@ def _validateIroHint(subIssueCode: str, iroHint: str) -> Optional[str]:
     allowedIros = getScoringAllowedIros(subIssueCode)
     
     if not allowedIros:
-        return iroHint  # 허용된 scoring IRO가 없음 → factor 생성 단계에서 None 처리
+        return None  # 허용된 scoring IRO가 없으면 None 반환 → 호출부에서 factor 제거
     
     # 같은 축 내에서 대체 시도
     impactIros = {"negative_impact", "positive_impact"}

@@ -413,3 +413,21 @@ def getMediaCoverageFromSummary(runId: int) -> dict:
         "surveyObserved": int(row.get("survey_count", 0) or 0) > 0
     }
 
+def getMediaObservedSubIssueCount(runId: int) -> int:
+    """
+    ESG_DMA_SCORE_SUMMARY 기준 media_external score가 존재하는 전체 subIssue 수를 반환합니다.
+    """
+    sql = """
+        SELECT COUNT(*) as cnt
+        FROM ESG_DMA_SCORE_SUMMARY
+        WHERE esg_materiality_run_id = ?
+          AND (media_external_impact_score IS NOT NULL
+               OR media_external_financial_score IS NOT NULL)
+    """
+    row = findOne(sql, (runId,))
+    if row and "cnt" in row:
+        return int(row["cnt"])
+    elif row and list(row.values())[0] is not None:
+        return int(list(row.values())[0])
+    return 0
+

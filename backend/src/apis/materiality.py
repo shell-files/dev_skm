@@ -45,6 +45,13 @@ class DmaResultItem(BaseModel):
     mediaFinancialScore05: Optional[float]
     surveyImpactScore05: Optional[float]
     surveyFinancialScore05: Optional[float]
+    # Stage scores (0~10 UI display)
+    benchmarkImpactScore10: Optional[float]
+    benchmarkFinancialScore10: Optional[float]
+    mediaImpactScore10: Optional[float]
+    mediaFinancialScore10: Optional[float]
+    surveyImpactScore10: Optional[float]
+    surveyFinancialScore10: Optional[float]
     # Final scores (0~5 canonical)
     finalImpactScore05: Optional[float]
     finalFinancialScore05: Optional[float]
@@ -58,7 +65,8 @@ class DmaResultItem(BaseModel):
 
 class DmaResultResponse(BaseModel):
     runId: int
-    totalSubIssueCount: int
+    totalCandidateSubIssueCount: int
+    summaryRowCount: int
     scoredSubIssueCount: int
     items: List[DmaResultItem]
 
@@ -140,6 +148,12 @@ async def get_dma_results(runId: int, userModel=Depends(get_token)):
                 mediaFinancialScore05=mediaFin,
                 surveyImpactScore05=surveyImp,
                 surveyFinancialScore05=surveyFin,
+                benchmarkImpactScore10=_toScore10(benchImp),
+                benchmarkFinancialScore10=_toScore10(benchFin),
+                mediaImpactScore10=_toScore10(mediaImp),
+                mediaFinancialScore10=_toScore10(mediaFin),
+                surveyImpactScore10=_toScore10(surveyImp),
+                surveyFinancialScore10=_toScore10(surveyFin),
                 finalImpactScore05=finalImp,
                 finalFinancialScore05=finalFin,
                 finalScore05=finalScore,
@@ -153,7 +167,8 @@ async def get_dma_results(runId: int, userModel=Depends(get_token)):
 
         return DmaResultResponse(
             runId=runId,
-            totalSubIssueCount=len(items),
+            totalCandidateSubIssueCount=62,
+            summaryRowCount=len(items),
             scoredSubIssueCount=scoredCount,
             items=items
         )

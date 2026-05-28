@@ -51,7 +51,7 @@
 | `S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_CODE_DUE_DILIGENCE` | negative_impact | negative | **None** | 2.35 | **None** |
 
 > [!TIP]
-> `SUPPLIER_CODE_DUE_DILIGENCE`는 `scoring_axis_allowed`에 `negative_impact`만 있으므로, financial factor가 정확히 `None`으로 처리됩니다. 이것이 `isAllowedIro()` 검증이 작동하는 증거입니다.
+> `SUPPLIER_CODE_DUE_DILIGENCE`는 `scoring_axis_allowed`에 `negative_impact`만 있으므로, financial factor가 정확히 `None`으로 처리됩니다. 이것이 `getScoringAllowedIros()` 기반으로 scoring 가능한 IRO만 factor 생성하는 구조가 작동하는 증거입니다.
 
 ### 12개 완료 기준 체크
 
@@ -61,12 +61,12 @@
  3. [x] 한글명은 displaySubIssueName으로만 사용한다
  4. [x] AI는 점수를 직접 주지 않는다
  5. [x] Impact/Financial 점수는 dmascoring.py가 계산한다
- 6. [x] IRO 유형은 source rule → scoring_axis_allowed → baseline → AI hint 순
+ 6. [x] IRO 유형은 source rule → scoring_axis_allowed → baseline → AI hint 순 (호출 함수는 getScoringAllowedIros())
  7. [x] stage aggregation은 source별 weight와 NULL 제외 평균
  8. [x] final aggregation은 benchmark/media/survey NULL 제외 재가중 평균
  9. [x] DB에는 0~5 점수만 저장한다
 10. [x] UI에는 필요 시 0~10으로 환산한다
-11. [x] coverage status를 API response에 포함한다
+11. [x] coverage status를 media API smoke response에 포함한다 (최종 결과 API는 Phase 1에서 별도 구현)
 12. [x] ESG_DMA_SCORE_SUMMARY 기준으로 topIssues와 rank를 반환한다
 ```
 

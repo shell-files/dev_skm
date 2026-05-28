@@ -53,7 +53,7 @@ def findPwdProcess(emailModel: EmailModel):
         # 1. db에서 이메일 확인
         emailCheckSql=f"""
                     SELECT id, aes_d(email, '{settings.maria_db_key}' ) as email
-                    FROM `USER`
+                    FROM `with`.`USER`
                     WHERE email = aes_e( ? , '{settings.maria_db_key}' ) AND delete_yn = 0;
                     """
         emailCheckParams = (emailModel.email,)
@@ -74,7 +74,7 @@ def findPwdProcess(emailModel: EmailModel):
         tempPwd = ''.join(tempPwdList)
 
         updatePwdSql = f"""
-            UPDATE `USER`
+            UPDATE `with`.`USER`
             SET password = aes_e( ? , '{settings.maria_db_key}' )
             WHERE id = ?
         """

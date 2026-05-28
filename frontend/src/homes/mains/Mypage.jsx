@@ -31,13 +31,13 @@ const requestApi = {
    * @param {string} name - 변경할 사용자 이름
    * @param {string} uuid - 사용자 식별자
   */
- updateProfile: async (name, uuid) => {
+ updateProfile: async (name) => {
    if (USE_DUMMY_API) {
      await new Promise(r => setTimeout(r, 600));
      return { status: true, message: "회원 정보가 수정되었습니다." };
     }
     try {
-      const res = await PATCH("/user", { uuid, name });
+      const res = await PATCH("/user", {  name });
       return { status: res.data.status, message: res.data.message };
     } catch (e) {
       return { status: false, message: e.response?.data?.message || "정보 수정 중 오류가 발생했습니다." };
@@ -49,14 +49,13 @@ const requestApi = {
    * @param {object} passwords - 새 비밀번호 객체
    * @param {string} uuid - 사용자 식별자
   */
- changePassword: async (passwords, uuid) => {
+ changePassword: async (passwords) => {
    if (USE_DUMMY_API) {
      await new Promise(r => setTimeout(r, 600));
      return { status: true, message: "비밀번호 변경 완료" };
     }
     try {
       const res = await PATCH("/user", { 
-        uuid, 
         newPassword: passwords.new, 
         newPasswordConfirm: passwords.confirm 
       });
@@ -70,37 +69,38 @@ const requestApi = {
    * 3. deleteAccount: 회원 탈퇴 (DELETE /user)
    * @param {string} uuid - 사용자 식별자
    */
-  deleteAccount: async (uuid) => {
+  deleteAccount: async () => {
     if (USE_DUMMY_API) {
       await new Promise(r => setTimeout(r, 800));
       return { status: true, message: "탈퇴 완료" };
     }
     try {
-      const res = await api.delete("/user", { data: { uuid } });
+      const res = await api.delete("/user", { data: {  } });
       return { status: true, message: "탈퇴 처리 완료" };
     } catch (e) {
       return { status: false, message: e.response?.data?.message || "탈퇴 처리 중 오류가 발생했습니다." };
     }
   },
   
-  /** 4. checkPassword: 본인 확인용 비밀번호 체크 (PATCH /PATCH) */
-  checkPassword: async (password, uuid) => {
+  /** 4. checkPassword: 본인 확인용 비밀번호 체크 */
+  checkPassword: async (password) => {
     if (USE_DUMMY_API) {
       await new Promise(r => setTimeout(r, 400));
       return password === '1234' ? { status: true } : { status: false, message: "비밀번호가 일치하지 않습니다." };
     }
     try {
-      const res = await PATCH("/auth", {uuid, password });
-      console.log("=== 서버가 보내준 응답 구조 ===", res);
-      if (res.data.data.uuid.data.uuid) localStorage.setItem("uuid", res.data.data.uuid.data.uuid)
-        
-        if (res.data?.status) return { status: res.data.status, data: res.data };
-    return { status: res.data?.status, message: res.data?.message };
-      } catch (e) {
-        console.error("에러 발생:", e); // 에러 원인 확인
-        return { status: false, message: e.response?.data?.message || "비밀번호가 일치하지 않습니다." };
+      const res = await PATCH("/auth", { password });
+      if (res.data?.status) {
+        return { status: true, data: res.data };
+      } else {
+        return { status: false, message: res.data?.message || "비밀번호가 일치하지 않습니다." };
       }
+    } catch (e) {
+      // 서버가 422 등을 반환하면 catch로 들어옵니다.
+      console.error("에러 발생:", e.response?.data || e);
+      return { status: false, message: "비밀번호 확인 중 오류가 발생했습니다." };
     }
+  }
   };
   
   const Mypage = () => {
@@ -124,10 +124,12 @@ const requestApi = {
   // [모달] 활성 모달 및 상태 메시지
   const [modal, setModal] = useState({ active: null, nextAction: null, error: '' });
   const [loading, setLoading] = useState(false);
-
+  const authData = useAuth();
   useEffect(() => {
     if (isAuthReady) console.log(userName, selectedCompany, companies);
     console.log(userData.name)
+    // --- 여기 추가 ---
+    console.log("=== 지금 보내려는 user 객체 내용 ===", authData);
     setUserData({
       name: userName || '사용자',
       email: user?.email || selectedCompany?.email || '-',
@@ -152,6 +154,7 @@ const requestApi = {
   /** [인증 승인] 본인 확인 성공 시 후속 작업 연결 */
   const handleVerifySubmit = async (e) => {
     if (e) e.preventDefault();
+    
     if (!passwordForm.current) {
       setModal(p => ({ ...p, error: '현재 비밀번호를 입력해주세요.' }));
       return;
@@ -159,7 +162,7 @@ const requestApi = {
 
     try {
       setLoading(true);
-      const res = await requestApi.checkPassword(passwordForm.current, user?.uuid, userData.email);
+      const res = await requestApi.checkPassword(passwordForm.current, userData.email);
       if (res.status) {
         const action = modal.nextAction;
         if (action === 'edit') {
@@ -189,7 +192,7 @@ const requestApi = {
     }
     try {
       setLoading(true);
-      const res = await requestApi.updateProfile(editForm.name, user?.uuid);
+      const res = await requestApi.updateProfile(editForm.name);
       if (res.status) {
         setUserData(p => ({ ...p, name: editForm.name }));
         setIsEditMode(false);
@@ -209,7 +212,7 @@ const requestApi = {
     }
     try {
       setLoading(true);
-      const res = await requestApi.changePassword(passwordForm, user?.uuid);
+      const res = await requestApi.changePassword(passwordForm);
       if (res.status) {
         closeModal();
         showDefaultAlert('변경 완료', res.message || '비밀번호가 성공적으로 변경되었습니다.', 'success');

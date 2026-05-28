@@ -147,3 +147,37 @@ def getPageList(sql:str, parmas=None):
         print(f"MariaDB Error : {e}")
     return result
 # limit = 보여줄 개수, offset = 건너뛸 개수
+
+
+
+# --------------------------
+# 여러 SQL 문을 하나의 트랜잭션으로 처리
+# --------------------------
+def executeTransaction(queries: list):
+    """
+    여러 SQL 문을 하나의 트랜잭션으로 처리 (All or Nothing)
+    queries: [(sql1, params1), (sql2, params2), ...] 형식의 리스트
+    """
+    result = False
+    conn = getConn()
+    if not conn:
+        return False
+    
+    try:
+        # 트랜잭션 시작 (mariadb 커넥션은 기본적으로 autocommit=False 상태가 많지만 명시적 처리)
+        with conn.cursor(dictionary=True) as cur:
+            for sql, params in queries:
+                cur.execute(sql, params)
+            
+            # 모든 쿼리가 성공적으로 실행되면 커밋
+            conn.commit()
+            result = True
+    except mariadb.Error as e:
+        # 하나라도 실패하면 전체 취소
+        print(f"MariaDB Transaction Error : {e}")
+        conn.rollback()
+        result = False
+    finally:
+        conn.close()
+        
+    return result

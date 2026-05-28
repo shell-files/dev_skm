@@ -18,15 +18,13 @@ def checkUser(userModel: UserModel):
             c.id AS company_id,
             aes_d(c.company_name, '{settings.maria_db_key}') AS company_name,
             aes_d(r.`role`, '{settings.maria_db_key}') AS role,
-            aes_d(r.`name`, '{settings.maria_db_key}') AS role_name
+            aes_d(r.`name`, '{settings.maria_db_key}') AS role_name,
             aes_d(u.`email` ,'{settings.maria_db_key}') AS email
         FROM `with`.`USER_ROLE` AS ur
         INNER JOIN `skm`.`COMPANY` AS c
             ON (c.id = ur.company_id)
         INNER JOIN `with`.`ROLE` AS r
             ON (r.id = ur.role_id)
-        INNER JOIN `with`.`USER` AS u
-            ON (u.id - ur.id)
         INNER JOIN `with`.`USER` AS u
             ON (u.id = ur.user_id)
         WHERE 1 = 1

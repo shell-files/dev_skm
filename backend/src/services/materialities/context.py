@@ -256,10 +256,12 @@ def calculateContextModifier(
         guardReason = "LOW_CONTEXT_CONFIDENCE"
 
     return _withScorePreview(
+        profile,
         row,
         impactModifier,
         financialModifier,
         rules if guardReason is None else [],
+        profileConfidence=confidence,
         guardAppliedYn=guardReason is not None,
         guardReason=guardReason,
     )
@@ -286,7 +288,7 @@ def applyRankMovementGuards(
     while changed:
         changed = False
         for item in modifiers:
-            if item.guardAppliedYn and item.guardReason in ["NO_OBSERVED_STAGE", "LOW_CONTEXT_CONFIDENCE"]:
+            if item.guardAppliedYn and item.guardReason in ["NO_STAGE_OBSERVATION", "LOW_CONTEXT_CONFIDENCE"]:
                 continue
             violation = _rankGuardViolation(item)
             if violation and _hasNonZeroModifier(item):
@@ -310,10 +312,12 @@ def applyRankMovementGuards(
 
 
 def _withScorePreview(
+    profile: CompanyContextProfileDto,
     row: dict,
     impactModifier: float,
     financialModifier: float,
     rules: list[ContextRuleHitDto],
+    profileConfidence: Optional[float] = None,
     guardAppliedYn: bool = False,
     guardReason: Optional[str] = None,
 ) -> SubIssueContextModifierDto:
@@ -534,7 +538,9 @@ def _unique(values: list[Optional[str]]) -> list[str]:
 
 
 def _profileConfidence(profile: CompanyContextProfileDto) -> float:
-    observed = len([value for value in [
+    if profile.confidence is not None:
+        return round(clamp(float(profile.confidence), 0, 1), 4)
+    return _profileConfidenceFromValues([
         profile.industryExposure,
         profile.valueChainExposure,
         profile.globalCustomerExposure,
@@ -543,7 +549,11 @@ def _profileConfidence(profile: CompanyContextProfileDto) -> float:
         profile.supplyChainDependency,
         profile.productSafetyExposure,
         profile.businessScaleExposure,
-    ] if value != "unknown"])
+    ])
+
+
+def _profileConfidenceFromValues(values: list[str]) -> float:
+    observed = len([value for value in values if value != "unknown"])
     return round(min(1.0, 0.25 + observed * 0.09), 4)
 
 

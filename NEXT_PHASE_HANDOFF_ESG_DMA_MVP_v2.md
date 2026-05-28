@@ -57,8 +57,8 @@ LangGraph/LLM 실패는 API 실패가 아니라 deterministic fallback으로 처
 - 수동 실행 endpoint: `POST /materiality/context/{runId}/apply`
 - 구현은 deterministic MVP context profile builder와 rule engine으로 구성.
 - 실제 LLM profiler를 붙이더라도 AI는 profile flag만 만들고 modifier 산정은 rule engine이 담당한다.
-- guard는 문서 기준 확정, 코드 보강 필요: MVP range `-0.3 ~ +0.3`, system range `-0.5 ~ +0.5`, 최소 stage 관측, confidence >= 0.5, rank movement 최대 2단계, Top 5 진입 rawRank Top 8 제한을 필수 반영 기준으로 둔다.
-- LangGraph profiler는 설계 완료, 구현 전이다.
+- guard는 문서 기준 확정, deterministic rule guard 보강 완료: MVP range `-0.3 ~ +0.3`, system range `-0.5 ~ +0.5`, 최소 stage 관측, confidence >= 0.5, rank movement 최대 2단계, Top 5 진입 rawRank Top 8 제한을 필수 반영 기준으로 둔다.
+- LangGraph profiler는 optional adapter 1차 추가. dependency/env 미설치, 비활성, 실패 시 deterministic fallback을 사용한다.
 
 ## 1. 문서 목적
 
@@ -81,7 +81,7 @@ LangGraph/LLM 실패는 API 실패가 아니라 deterministic fallback으로 처
 | score 기준 | 확정 | DB/API canonical `score05`, UI 표시 `score10 = score05 * 2` |
 | final aggregation | 안정화 | survey 0.40, benchmark 0.35, media_external 0.25 |
 | context modifier semantics | 확정/DB 반영 완료 | additive, 기본값 0.0000, final 단계 1회 |
-| context modifier guard | 부분 구현, 코드 보강 필요 | MVP range, confidence, observed stage, rank movement, Top 5 entry guard를 필수 반영 |
+| context modifier guard | deterministic guard 보강 완료 | MVP range, confidence, observed stage, rank movement, Top 5 entry guard 반영 |
 | Materiality result API | 1차 구현 완료 | 결과/매트릭스/topIssues/selection fallback 포함 |
 | Report API | skeleton 완료 | DB 조회 가능한 범위 반환, edit/export 본구현은 후속 |
 | Media news crawler E2E | 대부분 완료 | 실제 사이트 fixed scope + 필터 결과 0건 가능성은 remaining risk |
@@ -233,7 +233,7 @@ COMMENT 'DMASignal camelCase payload and evidence trace JSON';
 
 ### WP-01. Company Context Modifier 설계 및 구현
 
-MVP backend 1차 구현 완료. guard는 문서 기준 확정, 코드 보강 필요.
+MVP backend 1차 구현 완료. deterministic guard는 보강 완료했고, LangGraph profiler는 optional adapter로만 1차 추가했다.
 
 구현 파일:
 

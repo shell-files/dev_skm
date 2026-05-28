@@ -7,6 +7,8 @@ from src.models.materiality import (
     SelectionProcessResponseDto,
     SurveyResponseDto,
 )
+from src.models.materialitycontext import CompanyContextModifierResponseDto
+from src.services.materialities.context import applyCompanyContextModifiers
 from src.services.materialities.service import (
     getBenchmarkResult,
     getMaterialityResults,
@@ -60,5 +62,17 @@ async def get_survey_result(runId: int, userModel=Depends(get_token)):
 async def get_selection_process(runId: int, userModel=Depends(get_token)):
     try:
         return getSelectionProcess(runId)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/context/{runId}/apply",
+    response_model=CompanyContextModifierResponseDto,
+    summary="Apply company context modifiers",
+)
+async def apply_company_context_modifiers(runId: int, userModel=Depends(get_token)):
+    try:
+        return applyCompanyContextModifiers(runId)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

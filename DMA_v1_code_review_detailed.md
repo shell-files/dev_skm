@@ -1,6 +1,5 @@
 # DMA 점수 로직 v1 Freeze 코드 리뷰 및 의사결정 문서
 
-작성 기준: `leeej9801-max/total` GitHub `main` 브랜치  
 대상 루트: `dev_skm-feature-ai_score_ljb/`  
 주요 대상: `backend/src/models/dmaengine.py`, `backend/src/utils/dmascoring.py`, `backend/src/utils/dmaaggregator.py`, `backend/src/utils/dmarepository.py`, `backend/src/services/medias/*`, `backend/src/services/benchmarks/*`, `backend/src/utils/ocraiv8.py`, `backend/src/apis/media.py`
 

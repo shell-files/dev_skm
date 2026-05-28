@@ -1,7 +1,8 @@
 import json
 from typing import List, Dict, Any, Optional
 from collections import defaultdict
-from src.utils.db import save, addKey, findAll, findOne
+from datetime import datetime
+from src.utils.db import save, addKey, findAll, findOne, getConn
 from src.models.dmaengine import DMASignal, FinalMaterialityScore
 from src.utils.dmaaggregator import (
     aggregateMediaSignals, 
@@ -21,20 +22,23 @@ def saveDmaSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] =
         # 1. ESG_DMA_EVIDENCE 저장 (addKey 사용)
         evidenceText = " ".join(sig.evidenceSpans) if sig.evidenceSpans else ""
         currentSourceTitle = sig.sourceTitle if getattr(sig, "sourceTitle", None) else sourceTitle
-        evidenceSql = """
-            INSERT INTO ESG_DMA_EVIDENCE (
-                esg_materiality_run_id, source_step, source_type, 
-                source_title, te_sr_file_id, text_span
-            ) VALUES (?, ?, ?, ?, ?, ?)
-        """
-        evidenceParams = (
-            runId, sig.sourceStep, sig.sourceType,
-            currentSourceTitle, fileId, evidenceText
+        currentSourceUrl = sig.sourceUrl if getattr(sig, "sourceUrl", None) else None
+        currentPublishedAt = normalizeEvidencePublishedAt(
+            sig.publishedAt if getattr(sig, "publishedAt", None) else None
         )
         
         evidenceId = None
         try:
-            res = addKey(evidenceSql, evidenceParams)
+            res = insertDmaEvidence(
+                runId=runId,
+                sourceStep=sig.sourceStep,
+                sourceType=sig.sourceType,
+                sourceTitle=currentSourceTitle,
+                sourceUrl=currentSourceUrl,
+                sourcePublishedAt=currentPublishedAt,
+                fileId=fileId,
+                evidenceText=evidenceText,
+            )
             if res[0]:
                 evidenceId = res[1]
                 sig.evidenceId = str(evidenceId)
@@ -86,6 +90,76 @@ def saveDmaSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] =
     # 3. 변경된 subIssueCode 단위로 Stage Aggregation 수행
     for subIssueCode, sourceStep in updatedSubIssues:
         recalculateStageScore(runId, subIssueCode, sourceStep)
+
+def normalizeEvidencePublishedAt(value: Optional[str]) -> Optional[str]:
+    if not value:
+        return None
+
+    raw = str(value).strip()
+    for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%Y.%m.%d", "%Y.%m.%d %H:%M"):
+        try:
+            parsed = datetime.strptime(raw, fmt)
+            return parsed.strftime("%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            continue
+    return None
+
+def insertDmaEvidence(
+    runId: int,
+    sourceStep: str,
+    sourceType: str,
+    sourceTitle: Optional[str],
+    sourceUrl: Optional[str],
+    sourcePublishedAt: Optional[str],
+    fileId: Optional[int],
+    evidenceText: str,
+):
+    evidenceSql = """
+        INSERT INTO ESG_DMA_EVIDENCE (
+            esg_materiality_run_id, source_step, source_type,
+            source_title, source_url, source_published_at, te_sr_file_id, text_span
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """
+    evidenceParams = (
+        runId,
+        sourceStep,
+        sourceType,
+        sourceTitle,
+        sourceUrl,
+        sourcePublishedAt,
+        fileId,
+        evidenceText,
+    )
+
+    try:
+        with getConn() as conn:
+            with conn.cursor(dictionary=True) as cur:
+                cur.execute(evidenceSql, evidenceParams)
+                cur.execute("SELECT LAST_INSERT_ID() as id")
+                data = cur.fetchone()
+                conn.commit()
+                return [True, data["id"] if data else 0]
+    except Exception as e:
+        errorMessage = str(e)
+        if "source_url" not in errorMessage and "source_published_at" not in errorMessage:
+            raise
+
+        fallbackSql = """
+            INSERT INTO ESG_DMA_EVIDENCE (
+                esg_materiality_run_id, source_step, source_type,
+                source_title, te_sr_file_id, text_span
+            ) VALUES (?, ?, ?, ?, ?, ?)
+        """
+        fallbackParams = (
+            runId,
+            sourceStep,
+            sourceType,
+            sourceTitle,
+            fileId,
+            evidenceText,
+        )
+        print("Warning: ESG_DMA_EVIDENCE source_url/source_published_at columns are missing. Falling back to legacy evidence insert.")
+        return addKey(fallbackSql, fallbackParams)
 
 def getSignalsByGroup(runId: int, subIssueCode: str, sourceStep: str) -> List[DMASignal]:
     """
@@ -254,12 +328,21 @@ def safeFloat(value, default=0.0):
     except Exception:
         return default
 
+def safeFloatOrNone(value):
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except Exception:
+        return None
+
 def recalculateFinalScore(runId: int, subIssueCode: str):
     sql = """
         SELECT 
             benchmark_impact_score, benchmark_financial_score,
             media_external_impact_score, media_external_financial_score,
-            survey_impact_score, survey_financial_score
+            survey_impact_score, survey_financial_score,
+            context_impact_modifier, context_financial_modifier
         FROM ESG_DMA_SCORE_SUMMARY
         WHERE esg_materiality_run_id = ? AND sub_issue_code = ?
     """
@@ -269,18 +352,26 @@ def recalculateFinalScore(runId: int, subIssueCode: str):
         
     finalScoreObj = calculateFinalMateriality(
         subIssueCode=subIssueCode,
-        surveyImpact=row.get("survey_impact_score"), 
-        surveyFinancial=row.get("survey_financial_score"),
-        benchmarkImpact=row.get("benchmark_impact_score"), 
-        benchmarkFinancial=row.get("benchmark_financial_score"),
-        mediaImpact=row.get("media_external_impact_score"), 
-        mediaFinancial=row.get("media_external_financial_score"),
-        contextImpactModifier=0.0,
-        contextFinancialModifier=0.0
+        surveyImpact=safeFloatOrNone(row.get("survey_impact_score")),
+        surveyFinancial=safeFloatOrNone(row.get("survey_financial_score")),
+        benchmarkImpact=safeFloatOrNone(row.get("benchmark_impact_score")),
+        benchmarkFinancial=safeFloatOrNone(row.get("benchmark_financial_score")),
+        mediaImpact=safeFloatOrNone(row.get("media_external_impact_score")),
+        mediaFinancial=safeFloatOrNone(row.get("media_external_financial_score")),
+        contextImpactModifier=clampContextModifier(row.get("context_impact_modifier")),
+        contextFinancialModifier=clampContextModifier(row.get("context_financial_modifier"))
     )
     
     upsertFinalScoreSummary(runId, finalScoreObj)
     updateDmaRankings(runId)
+
+def clampContextModifier(value):
+    parsed = safeFloat(value, 0.0)
+    if parsed < -0.5:
+        return -0.5
+    if parsed > 0.5:
+        return 0.5
+    return parsed
 
 def updateDmaRankings(runId: int):
     sql = """

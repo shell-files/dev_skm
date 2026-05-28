@@ -16,7 +16,7 @@ router = APIRouter(tags=["company-profile"])
 
 
 @router.get(
-    "/company-profile/g0/{companyId}",
+    "/g0/{companyId}",
     response_model=G0ProfileResponseDto,
     summary="Get G0 company profile inputs",
 )
@@ -32,7 +32,7 @@ async def get_g0_profile(
 
 
 @router.post(
-    "/company-profile/g0/{companyId}",
+    "/g0/{companyId}",
     response_model=G0ProfileUpsertResponseDto,
     summary="Create G0 company profile inputs",
 )
@@ -48,7 +48,7 @@ async def post_g0_profile(
 
 
 @router.patch(
-    "/company-profile/g0/{companyId}",
+    "/g0/{companyId}",
     response_model=G0ProfileUpsertResponseDto,
     summary="Update G0 company profile inputs",
 )
@@ -64,7 +64,7 @@ async def patch_g0_profile(
 
 
 @router.get(
-    "/company-profile/g0/{companyId}/status",
+    "/g0/{companyId}/status",
     response_model=G0ProfileStatusResponseDto,
     summary="Get G0 company profile input status",
 )

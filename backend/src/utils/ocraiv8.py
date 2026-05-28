@@ -55,7 +55,8 @@ def load_issue_dictionary():
         for key in _ISSUE_KEYS:
             meta = subissueMaster[key]
             # 설명문이 있으면 설명문 사용, 없으면 이름 사용
-            text = meta.get("subIssueSentence") or meta.get("subIssueNameKr")
+            # sentence: subissuemaster.py의 핵심 anchor (media pipeline과 동일)
+            text = meta.get("sentence") or meta.get("subIssueSentence") or meta.get("subIssueNameKr")
             issue_texts.append(text)
             _ISSUE_DICTIONARY_LIST.append(meta.get("subIssueNameKr"))
             

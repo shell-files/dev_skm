@@ -319,3 +319,97 @@ def upsertFinalScoreSummary(runId: int, score: FinalMaterialityScore):
         save(sql, params)
     except Exception as e:
         print(f"Error upserting final DMA Summary {score.subIssueCode}: {e}")
+
+# ──────────────────────────────────────────────
+# Result API / Media API 조회 함수
+# ──────────────────────────────────────────────
+
+def getDmaResults(runId: int) -> list:
+    """
+    통합 결과 조회 API용.
+    ESG_DMA_SCORE_SUMMARY에서 runId 기준 전체 행을 rank_no ASC로 반환합니다.
+    final_score가 NULL인 행도 포함하되, rank_no가 있는 행이 먼저 나옵니다.
+    """
+    sql = """
+        SELECT 
+            sub_issue_code,
+            benchmark_impact_score,
+            benchmark_financial_score,
+            media_external_impact_score,
+            media_external_financial_score,
+            survey_impact_score,
+            survey_financial_score,
+            final_impact_score,
+            final_financial_score,
+            final_score,
+            rank_no
+        FROM ESG_DMA_SCORE_SUMMARY
+        WHERE esg_materiality_run_id = ?
+        ORDER BY 
+            CASE WHEN rank_no IS NULL THEN 1 ELSE 0 END,
+            rank_no ASC
+    """
+    rows = findAll(sql, (runId,))
+    return rows if rows else []
+
+def getTopIssuesByMediaScore(runId: int, limit: int = 5) -> list:
+    """
+    Media API topIssues용.
+    media_external stage score 기준으로 정렬합니다 (final_score 아님).
+    media impact/financial 중 non-null 평균을 기준으로 내림차순 정렬.
+    """
+    sql = """
+        SELECT 
+            sub_issue_code,
+            media_external_impact_score,
+            media_external_financial_score,
+            final_impact_score,
+            final_financial_score,
+            final_score,
+            rank_no,
+            (
+                (COALESCE(media_external_impact_score, 0) + COALESCE(media_external_financial_score, 0))
+                / CASE
+                    WHEN media_external_impact_score IS NOT NULL AND media_external_financial_score IS NOT NULL THEN 2
+                    WHEN media_external_impact_score IS NOT NULL OR media_external_financial_score IS NOT NULL THEN 1
+                    ELSE 1
+                  END
+            ) AS media_avg_score
+        FROM ESG_DMA_SCORE_SUMMARY
+        WHERE esg_materiality_run_id = ?
+          AND (media_external_impact_score IS NOT NULL OR media_external_financial_score IS NOT NULL)
+        ORDER BY media_avg_score DESC
+        LIMIT ?
+    """
+    rows = findAll(sql, (runId, limit))
+    return rows if rows else []
+
+def getMediaCoverageFromSummary(runId: int) -> dict:
+    """
+    Media API coverage용.
+    해당 runId에서 각 stage별로 scored 이슈가 존재하는지 확인하여
+    전체 coverage 상태를 반환합니다.
+    """
+    sql = """
+        SELECT 
+            SUM(CASE WHEN media_external_impact_score IS NOT NULL OR media_external_financial_score IS NOT NULL THEN 1 ELSE 0 END) AS media_count,
+            SUM(CASE WHEN benchmark_impact_score IS NOT NULL OR benchmark_financial_score IS NOT NULL THEN 1 ELSE 0 END) AS benchmark_count,
+            SUM(CASE WHEN survey_impact_score IS NOT NULL OR survey_financial_score IS NOT NULL THEN 1 ELSE 0 END) AS survey_count
+        FROM ESG_DMA_SCORE_SUMMARY
+        WHERE esg_materiality_run_id = ?
+    """
+    row = findOne(sql, (runId,))
+    if not row:
+        return {"stageCount": 0, "coverageStatus": "NO_DATA"}
+    
+    from src.utils.dmaaggregator import getCoverageStatus
+    stageCount = sum(1 for k in ["media_count", "benchmark_count", "survey_count"] 
+                     if row.get(k) and int(row.get(k, 0)) > 0)
+    return {
+        "stageCount": stageCount,
+        "coverageStatus": getCoverageStatus(stageCount),
+        "mediaObserved": int(row.get("media_count", 0) or 0) > 0,
+        "benchmarkObserved": int(row.get("benchmark_count", 0) or 0) > 0,
+        "surveyObserved": int(row.get("survey_count", 0) or 0) > 0
+    }
+

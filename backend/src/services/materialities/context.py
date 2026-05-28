@@ -9,6 +9,7 @@ from src.models.materialitycontext import (
     ContextRuleHitDto,
     SubIssueContextModifierDto,
 )
+from src.services.materialities.context_graph import buildCompanyContextProfileWithOptionalGraph
 from src.utils.companycontextrepository import (
     getCompanyG0Facts,
     getDmaScoreSummaryRowsForContext,
@@ -45,7 +46,12 @@ def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDt
     companyId = int(runContext["company_id"])
     reportingYear = int(runContext["reporting_year"])
     facts = _toFactDtos(getCompanyG0Facts(companyId, reportingYear))
-    profile = buildCompanyContextProfile(runId, runContext, facts)
+    profile, graphTrace = buildCompanyContextProfileWithOptionalGraph(
+        runId=runId,
+        runContext=runContext,
+        facts=facts,
+        deterministicBuilder=buildCompanyContextProfile,
+    )
     profileConfidence = _profileConfidence(profile)
     summaryRows = getDmaScoreSummaryRowsForContext(runId)
 
@@ -61,6 +67,7 @@ def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDt
         "profileSource": profile.profileSource,
         "ruleVersion": MODIFIER_RULE_VERSION,
         "profileConfidence": profileConfidence,
+        "graphTrace": graphTrace,
     }
     contextProfileId = replaceCompanyContextProfile(
         runId=runId,
@@ -190,6 +197,18 @@ def buildCompanyContextProfile(
         evidenceMetricIds=evidenceMetricIds,
         evidenceAtomicMetricIds=evidenceAtomicMetricIds,
         profileSummary=profileSummary,
+        profileSource="DETERMINISTIC_FALLBACK",
+        confidence=_profileConfidenceFromValues([
+            industryExposure,
+            valueChainExposure,
+            globalCustomerExposure,
+            euRegulationExposure,
+            transitionExposure,
+            supplyChainDependency,
+            productSafetyExposure,
+            businessScaleExposure,
+        ]),
+        evidenceText=[fact.valueText[:300] for fact in facts if fact.valueText][:5],
         facts=facts,
     )
 
@@ -230,7 +249,7 @@ def calculateContextModifier(
     if not hasObservedStage(row):
         impactModifier = 0.0
         financialModifier = 0.0
-        guardReason = "NO_OBSERVED_STAGE"
+        guardReason = "NO_STAGE_OBSERVATION"
     elif confidence < MIN_PROFILE_CONFIDENCE_FOR_MODIFIER:
         impactModifier = 0.0
         financialModifier = 0.0
@@ -326,6 +345,8 @@ def _withScorePreview(
 
     return SubIssueContextModifierDto(
         subIssueCode=subIssueCode,
+        profileSource=profile.profileSource,
+        profileConfidence=_roundOrNone(profileConfidence),
         impactModifier=round(float(impactModifier), 4),
         financialModifier=round(float(financialModifier), 4),
         contextModifier=_combinedModifier(impactModifier, financialModifier),

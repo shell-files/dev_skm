@@ -18,7 +18,8 @@ class CompanyContextProfileDto(BaseModel):
     runId: int
     companyId: int
     reportingYear: int
-    profileSource: str = "MVP_CONTEXT_PROFILE_BUILDER"
+    profileSource: str = "DETERMINISTIC_FALLBACK"
+    confidence: Optional[float] = None
     industryProfile: Optional[str] = None
     businessModel: Optional[str] = None
     industryExposure: str = "unknown"
@@ -31,6 +32,7 @@ class CompanyContextProfileDto(BaseModel):
     businessScaleExposure: str = "unknown"
     evidenceMetricIds: List[str] = Field(default_factory=list)
     evidenceAtomicMetricIds: List[str] = Field(default_factory=list)
+    evidenceText: List[str] = Field(default_factory=list)
     profileSummary: Optional[str] = None
     facts: List[CompanyContextFactDto] = Field(default_factory=list)
 
@@ -45,6 +47,8 @@ class ContextRuleHitDto(BaseModel):
 
 class SubIssueContextModifierDto(BaseModel):
     subIssueCode: str
+    profileSource: Optional[str] = None
+    profileConfidence: Optional[float] = None
     impactModifier: float = 0.0
     financialModifier: float = 0.0
     contextModifier: Optional[float] = None

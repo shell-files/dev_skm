@@ -1,5 +1,72 @@
 # COMPANY_CONTEXT_MODIFIER_PLAN_v1
 
+## 0. 2026-05-28 아키텍처 정정: 선택적 멀티에이전트화
+
+본 문서의 Company Context Modifier 구현 방향은 아래 원칙으로 정정한다. 프로젝트의 최종 목적은 AI 에이전트를 활용한 ESG 공시보고서 자동화이지만, 모든 DMA 로직을 LangGraph/LangChain 기반 에이전트로 전환하지 않는다.
+
+영역별 적용 범위:
+
+| 영역 | Agent 적용 방향 | 원칙 |
+|---|---|---|
+| G0 AI 판단 / Company Context Profile | LangGraph/LangChain 적용 후보 | AI는 회사 context profile만 생성한다. |
+| DMA 점수화 / 집계 / selected issue 확정 | LangGraph 비적용 | 기존 deterministic rule pipeline을 유지한다. |
+| 보고서 생성 | 후속 WP에서 본격 적용 | selected issue, KPI/rollup fact, SR reference, 문단 생성, QA/reviewer workflow를 별도 설계한다. |
+
+WP-01에서 LangGraph를 적용하는 범위는 G0 Company Context Profiler에 한정한다. 기존 deterministic builder는 삭제하지 않고 fallback으로 유지한다.
+
+```text
+LangGraph profiler = 1순위
+Deterministic builder = fallback
+Rule Engine = 최종 modifier 산정
+DMA scoring = 기존 pipeline 유지
+```
+
+LangGraph node 구조는 아래를 기준으로 한다.
+
+```text
+loadG0Facts
+  -> normalizeG0Context
+  -> analyzeCompanyProfileByLLM
+  -> validateProfileSchema
+  -> verifyProfileAgainstEvidence
+  -> fallbackIfLowConfidence
+  -> returnCompanyContextProfile
+```
+
+AI/LangGraph의 역할은 `CompanyContextProfile` 후보 생성까지다. AI는 0~5 score, context modifier, rank, selected subIssue를 직접 계산하거나 확정하지 않는다. modifier 산정, clamp, 최소 stage 관측 조건, confidence guard, rank movement guard, final score 재계산은 기존 rule engine에서만 수행한다.
+
+Ollama/LangGraph 설정은 환경변수로만 제어한다.
+
+```text
+COMPANY_CONTEXT_LLM_PROVIDER=ollama
+COMPANY_CONTEXT_LLM_MODEL=qwen2.5
+COMPANY_CONTEXT_LLM_TIMEOUT_SEC=60
+COMPANY_CONTEXT_LLM_ENABLED=true
+```
+
+LangGraph import 실패, LLM 설정 누락, timeout, JSON parsing 실패, schema validation 실패, evidence 부족, confidence < 0.5이면 API를 실패시키지 않고 deterministic fallback을 사용한다.
+
+Guard 기준은 다음으로 고정한다.
+
+- MVP modifier range: -0.3 ~ +0.3
+- System absolute range: -0.5 ~ +0.5
+- stage score가 하나도 없는 subIssue는 `NO_STAGE_OBSERVATION`으로 modifier 0.0000
+- profile confidence < 0.5이면 `LOW_CONTEXT_CONFIDENCE`로 modifier 0.0000
+- rank movement는 최대 2단계
+- Top 5 진입은 rawRank Top 8 이내만 허용
+- response와 `modifier_json`에는 `rawRank`, `adjustedRank`, `rankChangedYn`, `rankDelta`, `guardAppliedYn`, `guardReason`, `profileSource`, `profileConfidence`를 남긴다.
+
+G0와 일반 온보딩의 순서는 아래처럼 구분한다.
+
+```text
+G0 입력: DMA 전
+G0 읽기: DMA final aggregation 시점
+G0 활용: selected subIssue 확정 전
+일반 온보딩: selected subIssue 확정 후
+```
+
+보고서 생성 LangGraph, React 수정, DMA scoring pipeline의 LangGraph 전환은 이번 WP-01 범위에 포함하지 않는다.
+
 작성일: 2026-05-28
 대상: G0/회사 profile 기반 DMA final score additive 보정
 구현 상태: MVP backend 구현 완료.

@@ -1,5 +1,53 @@
 # NEXT_PHASE_HANDOFF_ESG_DMA_MVP_v2
 
+## 0. 2026-05-28 아키텍처 정정 및 다음 단계 기준
+
+이 핸드오프 문서는 최신 아키텍처 결정을 아래 기준으로 해석한다.
+
+프로젝트의 최종 방향은 “AI 에이전트를 활용한 ESG 공시보고서 자동화”이지만, 모든 로직을 LangGraph/LangChain으로 바꾸지 않는다. 영역별 선택적 멀티에이전트화를 적용한다.
+
+| 영역 | 다음 단계 적용 범위 | 비고 |
+|---|---|---|
+| G0 AI 판단 / Company Context Profile | WP-01에서 LangGraph profiler 제한 도입 | deterministic builder는 fallback으로 유지 |
+| DMA 점수화 / 집계 / selected issue 확정 | LangGraph 비적용 | scoring, aggregation, ranking, selected issue rule은 deterministic pipeline 유지 |
+| 보고서 생성 | 후속 WP의 핵심 LangGraph 적용 영역 | `references/sr` 기술 테스트를 기반으로 SR reference 검색, 문단 생성, QA/reviewer를 고도화 |
+
+WP-01의 다음 구현 기준:
+
+```text
+loadG0Facts
+  -> normalizeG0Context
+  -> analyzeCompanyProfileByLLM
+  -> validateProfileSchema
+  -> verifyProfileAgainstEvidence
+  -> fallbackIfLowConfidence
+  -> returnCompanyContextProfile
+  -> deterministic Rule Engine
+  -> final score additive modifier
+```
+
+AI는 `CompanyContextProfile`만 생성한다. AI가 0~5 score, modifier, rank, selected subIssue를 직접 산정하거나 확정하지 않는다.
+
+Rule Engine은 계속 아래를 담당한다.
+
+- subIssue별 rule mapping
+- modifier 산정과 clamp
+- stage observation guard
+- profile confidence guard
+- rank movement guard
+- final score와 rank 재계산
+
+환경변수:
+
+```text
+COMPANY_CONTEXT_LLM_PROVIDER=ollama
+COMPANY_CONTEXT_LLM_MODEL=qwen2.5
+COMPANY_CONTEXT_LLM_TIMEOUT_SEC=60
+COMPANY_CONTEXT_LLM_ENABLED=true
+```
+
+LangGraph/LLM 실패는 API 실패가 아니라 deterministic fallback으로 처리한다. 보고서 생성 LangGraph와 React 수정은 이번 WP-01 범위에서 제외한다.
+
 작성일: 2026-05-28
 대상 프로젝트: SKM ESG 지속가능경영보고서 AI 자동 생성 플랫폼 MVP
 

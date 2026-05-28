@@ -1,5 +1,5 @@
 from src.utils.db import executeTransaction, findAll, save
-from src.models.model import logoutModel, responseModel
+from src.models.model import logoutModel, ResponseModel
 from src.utils.validatetok import validateToken
 from src.utils.tokenset import decryptFromJwe
 from src.utils.rediscl import delTokenRedis, getTokenRedis
@@ -58,7 +58,7 @@ def updateUserProcess(userUpdateModel):
 
         if not updateFields:
             # 변경사항은 없지만 세션은 유효하므로 현재 UUID를 담아 반환
-            return responseModel(False, "변경할 내용이 없습니다.", {"uuid": activeUuid})
+            return ResponseModel(False, "변경할 내용이 없습니다.", {"uuid": activeUuid})
 
         # 4. DB 업데이트 수행
         updateSql = f"""
@@ -71,11 +71,11 @@ def updateUserProcess(userUpdateModel):
         save(updateSql, tuple(updateParams))
 
         # 5. 성공 응답: 최신 UUID를 함께 전달하여 프론트엔드 세션 유지
-        return responseModel(True, "회원 정보가 수정되었습니다.", {"uuid": activeUuid})
+        return ResponseModel(True, "회원 정보가 수정되었습니다.", {"uuid": activeUuid})
 
     except Exception as e:
         print(f"updateUserProcess Error: {e}")
-        return responseModel(False, f"수정 중 오류 발생: {str(e)}")
+        return ResponseModel(False, f"수정 중 오류 발생: {str(e)}")
     
 # --------------------------
 # 회원 탈퇴 로직 처리 함수
@@ -119,7 +119,7 @@ def deleteUserProcess(userDeleteModel):
           roles = findAll(roleCheckSql, (userId,))
           
           if not roles:
-            return responseModel(False, "회원 정보가 존재하지 않습니다.")
+            return ResponseModel(False, "회원 정보가 존재하지 않습니다.")
           queries = []
           # 4. roles 리스트의 모든 항목은 동일한 user_id를 가지므로 첫 번째 항목에서 추출
           targetUserId = roles[0]['user_id']
@@ -179,10 +179,10 @@ def deleteUserProcess(userDeleteModel):
                 print(f"탈퇴 후 세션 파기 실패: {redis_e}")
                 # DB는 이미 지워졌으므로 사용자에게 실패를 알릴 필요는 없으나 로그는 남깁니다.
 
-            return responseModel(True, "회원 탈퇴가 성공적으로 완료되었습니다.", {"uuid": None}) 
+            return ResponseModel(True, "회원 탈퇴가 성공적으로 완료되었습니다.", {"uuid": None}) 
           else:
-            return responseModel(False, "데이터베이스 업데이트 중 오류가 발생했습니다.")
+            return ResponseModel(False, "데이터베이스 업데이트 중 오류가 발생했습니다.")
 
     except Exception as e:
         print(f"deleteUserProcess Error: {e}")
-        return responseModel(False, "탈퇴 처리 중 시스템 오류 발생")
+        return ResponseModel(False, "탈퇴 처리 중 시스템 오류 발생")

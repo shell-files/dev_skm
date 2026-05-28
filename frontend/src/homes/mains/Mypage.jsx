@@ -90,17 +90,18 @@ const requestApi = {
     }
     try {
       const res = await PATCH("/auth", { password });
-      if (res.data?.status) {
-        return { status: true, data: res.data };
-      } else {
-        return { status: false, message: res.data?.message || "비밀번호가 일치하지 않습니다." };
+      console.log("=== API 응답 확인 ===", res); // 이걸로 데이터 구조를 먼저 확인하세요!
+      
+      const status = res.data?.status ?? res.status; 
+      
+      if (status) {
+        return { status: true, data: res.data || res };
       }
+      return { status: false, message: "비밀번호가 일치하지 않습니다." };
     } catch (e) {
-      // 서버가 422 등을 반환하면 catch로 들어옵니다.
-      console.error("에러 발생:", e.response?.data || e);
-      return { status: false, message: "비밀번호 확인 중 오류가 발생했습니다." };
+      return { status: false, message: "오류 발생" };
     }
-  }
+}
   };
   
   const Mypage = () => {

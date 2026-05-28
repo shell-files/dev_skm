@@ -24,9 +24,10 @@ def run():
     for _, module_name, _ in pkgutil.iter_modules(apis.__path__):
         module = importlib.import_module(f"src.apis.{module_name}")
         if hasattr(module, "router"):
+            route_prefix = module_name.replace("_", "-")
             app.include_router(
                 module.router,
-                prefix=f"/{module_name}",
+                prefix=f"/{route_prefix}",
                 tags=[module_name]
             )
 

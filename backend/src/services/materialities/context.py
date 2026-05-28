@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from typing import Optional
 
 from src.models.materialitycontext import (
     CompanyContextFactDto,
     CompanyContextModifierResponseDto,
+    CompanyContextProfileResponseDto,
     CompanyContextProfileDto,
     ContextRuleHitDto,
     SubIssueContextModifierDto,
@@ -13,6 +15,7 @@ from src.services.materialities.context_graph import buildCompanyContextProfileW
 from src.utils.companycontextrepository import (
     getCompanyG0Facts,
     getDmaScoreSummaryRowsForContext,
+    getLatestCompanyContextProfile,
     getMaterialityRunContext,
     replaceCompanyContextProfile,
     updateContextModifiers,
@@ -51,6 +54,52 @@ def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDt
         runContext=runContext,
         facts=facts,
         deterministicBuilder=buildCompanyContextProfile,
+    )
+
+
+def getCompanyContextProfile(runId: int) -> CompanyContextProfileResponseDto:
+    row = getLatestCompanyContextProfile(runId)
+    if not row:
+        return CompanyContextProfileResponseDto(
+            runId=runId,
+            implementationStatus="NO_CONTEXT_PROFILE",
+            messages=["No ESG_DMA_CONTEXT_PROFILE row found for runId."],
+        )
+
+    contextPayload = _parseJsonDict(row.get("context_json"))
+    modifierPayload = _parseJsonDict(row.get("modifier_json"))
+    profilePayload = contextPayload.get("profile") or None
+    profile = None
+    if profilePayload:
+        try:
+            profile = CompanyContextProfileDto(**profilePayload)
+        except Exception:
+            profile = None
+
+    modifiers = []
+    for item in modifierPayload.get("modifiers", []) or []:
+        try:
+            modifiers.append(SubIssueContextModifierDto(**item))
+        except Exception:
+            continue
+
+    profileSource = contextPayload.get("profileSource")
+    profileConfidence = _floatOrNone(contextPayload.get("profileConfidence"))
+
+    return CompanyContextProfileResponseDto(
+        runId=runId,
+        contextProfileId=int(row["id"]) if row.get("id") is not None else None,
+        companyId=int(row["company_id"]) if row.get("company_id") is not None else None,
+        reportingYear=int(row["reporting_year"]) if row.get("reporting_year") is not None else None,
+        profile=profile,
+        profileSource=profileSource,
+        profileConfidence=profileConfidence,
+        modifierRange=modifierPayload.get("modifierRange") or {"min": MVP_MODIFIER_MIN, "max": MVP_MODIFIER_MAX},
+        systemModifierRange=modifierPayload.get("systemModifierRange") or {"min": SYSTEM_MODIFIER_MIN, "max": SYSTEM_MODIFIER_MAX},
+        graphTrace=contextPayload.get("graphTrace") or [],
+        modifiers=modifiers,
+        messages=["OK"],
+        implementationStatus="READY",
     )
     profileConfidence = _profileConfidence(profile)
     summaryRows = getDmaScoreSummaryRowsForContext(runId)
@@ -570,3 +619,14 @@ def _roundOrNone(value) -> Optional[float]:
     if value is None:
         return None
     return round(float(value), 4)
+
+
+def _parseJsonDict(value) -> dict:
+    if not value:
+        return {}
+    if isinstance(value, dict):
+        return value
+    try:
+        return json.loads(value)
+    except Exception:
+        return {}

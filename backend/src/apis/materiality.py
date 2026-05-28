@@ -7,8 +7,11 @@ from src.models.materiality import (
     SelectionProcessResponseDto,
     SurveyResponseDto,
 )
-from src.models.materialitycontext import CompanyContextModifierResponseDto
-from src.services.materialities.context import applyCompanyContextModifiers
+from src.models.materialitycontext import (
+    CompanyContextModifierResponseDto,
+    CompanyContextProfileResponseDto,
+)
+from src.services.materialities.context import applyCompanyContextModifiers, getCompanyContextProfile
 from src.services.materialities.service import (
     getBenchmarkResult,
     getMaterialityResults,
@@ -74,5 +77,17 @@ async def get_selection_process(runId: int, userModel=Depends(get_token)):
 async def apply_company_context_modifiers(runId: int, userModel=Depends(get_token)):
     try:
         return applyCompanyContextModifiers(runId)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/context/{runId}",
+    response_model=CompanyContextProfileResponseDto,
+    summary="Get latest company context profile and modifiers",
+)
+async def get_company_context_profile(runId: int, userModel=Depends(get_token)):
+    try:
+        return getCompanyContextProfile(runId)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -1,7 +1,7 @@
 from fastapi import APIRouter,  Form, Depends
 from typing import List, Annotated
-from src.models.benchmk import uploadSr, findSr
-from src.models.model import FileModel, FileFindModel
+from src.services.benchmarks.service import uploadSr, findSr
+from src.models.benchmk import FileModel, FileFindModel
 from src.utils.auth import get_token
 
 

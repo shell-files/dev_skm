@@ -418,11 +418,13 @@ def getMediaObservedSubIssueCount(runId: int) -> int:
     ESG_DMA_SCORE_SUMMARY 기준 media_external score가 존재하는 전체 subIssue 수를 반환합니다.
     """
     sql = """
-        SELECT COUNT(*) as cnt
+        SELECT COUNT(*) AS cnt
         FROM ESG_DMA_SCORE_SUMMARY
         WHERE esg_materiality_run_id = ?
-          AND (media_external_impact_score IS NOT NULL
-               OR media_external_financial_score IS NOT NULL)
+          AND (
+            media_external_impact_score IS NOT NULL
+            OR media_external_financial_score IS NOT NULL
+          )
     """
     row = findOne(sql, (runId,))
     if row and "cnt" in row:
@@ -431,3 +433,198 @@ def getMediaObservedSubIssueCount(runId: int) -> int:
         return int(list(row.values())[0])
     return 0
 
+def getMaterialityRunInfo(runId: int) -> dict:
+    sql = """
+        SELECT id, company_id, reporting_year, run_status
+        FROM ESG_MATERIALITY_RUN
+        WHERE id = ? AND delete_yn = 0
+    """
+    return findOne(sql, (runId,)) or {}
+
+def getSelectedSubIssues(runId: int) -> list:
+    sql = """
+        SELECT
+            sub_issue_code,
+            selected_rank_no,
+            selection_type,
+            selection_reason
+        FROM ESG_MATERIALITY_SELECTED_SUB_ISSUE
+        WHERE esg_materiality_run_id = ? AND delete_yn = 0
+        ORDER BY
+            CASE WHEN selected_rank_no IS NULL THEN 1 ELSE 0 END,
+            selected_rank_no ASC
+    """
+    return findAll(sql, (runId,)) or []
+
+def getTopIssuesByStageScore(runId: int, stage: str, limit: int = 10) -> list:
+    stageColumns = {
+        "benchmark": ("benchmark_impact_score", "benchmark_financial_score"),
+        "media_external": ("media_external_impact_score", "media_external_financial_score"),
+        "survey": ("survey_impact_score", "survey_financial_score"),
+    }
+    if stage not in stageColumns:
+        return []
+
+    impactColumn, financialColumn = stageColumns[stage]
+    sql = f"""
+        SELECT
+            sub_issue_code,
+            {impactColumn} AS impact_score,
+            {financialColumn} AS financial_score,
+            rank_no,
+            (
+                (COALESCE({impactColumn}, 0) + COALESCE({financialColumn}, 0))
+                / CASE
+                    WHEN {impactColumn} IS NOT NULL AND {financialColumn} IS NOT NULL THEN 2
+                    WHEN {impactColumn} IS NOT NULL OR {financialColumn} IS NOT NULL THEN 1
+                    ELSE 1
+                  END
+            ) AS avg_score
+        FROM ESG_DMA_SCORE_SUMMARY
+        WHERE esg_materiality_run_id = ?
+          AND ({impactColumn} IS NOT NULL OR {financialColumn} IS NOT NULL)
+        ORDER BY avg_score DESC
+        LIMIT ?
+    """
+    return findAll(sql, (runId, limit)) or []
+
+def getSignalObservationCounts(runId: int, sourceStep: str) -> list:
+    sql = """
+        SELECT
+            sub_issue_code,
+            source_type,
+            COUNT(*) AS signal_count,
+            COUNT(DISTINCT evidence_id) AS evidence_count
+        FROM ESG_DMA_SIGNAL_DETAIL
+        WHERE esg_materiality_run_id = ?
+          AND source_step = ?
+          AND delete_yn = 0
+        GROUP BY sub_issue_code, source_type
+    """
+    return findAll(sql, (runId, sourceStep)) or []
+
+def getDistinctObservedSubIssueCount(runId: int, sourceStep: str) -> int:
+    sql = """
+        SELECT COUNT(DISTINCT sub_issue_code) AS cnt
+        FROM ESG_DMA_SIGNAL_DETAIL
+        WHERE esg_materiality_run_id = ?
+          AND source_step = ?
+          AND delete_yn = 0
+    """
+    row = findOne(sql, (runId, sourceStep)) or {}
+    return int(row.get("cnt") or 0)
+
+def getEvidenceCountsBySource(runId: int, sourceStep: str) -> list:
+    sql = """
+        SELECT
+            source_type,
+            COUNT(*) AS evidence_count,
+            COUNT(DISTINCT te_sr_file_id) AS report_count
+        FROM ESG_DMA_EVIDENCE
+        WHERE esg_materiality_run_id = ?
+          AND source_step = ?
+          AND delete_yn = 0
+        GROUP BY source_type
+    """
+    return findAll(sql, (runId, sourceStep)) or []
+
+def getEvidenceSamples(runId: int, sourceStep: str, limit: int = 10) -> list:
+    sql = """
+        SELECT
+            id,
+            source_step,
+            source_type,
+            source_title,
+            source_url,
+            source_published_at,
+            te_sr_file_id,
+            text_span,
+            summary_text
+        FROM ESG_DMA_EVIDENCE
+        WHERE esg_materiality_run_id = ?
+          AND source_step = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT ?
+    """
+    return findAll(sql, (runId, sourceStep, limit)) or []
+
+def getSurveyGroupCounts(runId: int) -> list:
+    sql = """
+        SELECT
+            respondent_group,
+            COUNT(*) AS response_count,
+            COUNT(DISTINCT respondent_user_id) AS unique_respondent_count
+        FROM ESG_DMA_SURVEY_RESPONSE
+        WHERE esg_materiality_run_id = ?
+          AND delete_yn = 0
+        GROUP BY respondent_group
+    """
+    return findAll(sql, (runId,)) or []
+
+def getSurveyGroupScores(runId: int) -> list:
+    sql = """
+        SELECT
+            sub_issue_code,
+            respondent_group,
+            AVG(normalized_score) AS avg_score,
+            COUNT(*) AS response_count
+        FROM ESG_DMA_SURVEY_RESPONSE
+        WHERE esg_materiality_run_id = ?
+          AND sub_issue_code IS NOT NULL
+          AND delete_yn = 0
+        GROUP BY sub_issue_code, respondent_group
+    """
+    return findAll(sql, (runId,)) or []
+
+def getRequiredMetricCountForSubIssues(subIssueCodes: list[str]) -> int:
+    if not subIssueCodes:
+        return 0
+    placeholders = ",".join(["?"] * len(subIssueCodes))
+    sql = f"""
+        SELECT COUNT(DISTINCT atomic_metric_id) AS cnt
+        FROM ESG_SUB_ISSUE_ATOMIC_MAP
+        WHERE sub_issue_code IN ({placeholders})
+          AND required_yn = 1
+          AND delete_yn = 0
+    """
+    row = findOne(sql, tuple(subIssueCodes)) or {}
+    return int(row.get("cnt") or 0)
+
+def getMissingRequiredMetricCount(runId: int, subIssueCodes: list[str]) -> int:
+    if not subIssueCodes:
+        return 0
+
+    runInfo = getMaterialityRunInfo(runId)
+    companyId = runInfo.get("company_id")
+    reportingYear = runInfo.get("reporting_year")
+    if companyId is None or reportingYear is None:
+        return 0
+
+    placeholders = ",".join(["?"] * len(subIssueCodes))
+    sql = f"""
+        SELECT COUNT(DISTINCT sam.atomic_metric_id) AS cnt
+        FROM ESG_SUB_ISSUE_ATOMIC_MAP sam
+        LEFT JOIN ESG_KPI_FACT kf
+          ON kf.atomic_metric_id = sam.atomic_metric_id
+         AND kf.company_id = ?
+         AND kf.reporting_year = ?
+         AND kf.delete_yn = 0
+        WHERE sam.sub_issue_code IN ({placeholders})
+          AND sam.required_yn = 1
+          AND sam.delete_yn = 0
+          AND kf.id IS NULL
+    """
+    row = findOne(sql, tuple([companyId, reportingYear] + subIssueCodes)) or {}
+    return int(row.get("cnt") or 0)
+
+def getLatestReportRunByMaterialityRun(runId: int) -> dict:
+    sql = """
+        SELECT id, report_status, created_at
+        FROM ESG_REPORT_RUN
+        WHERE source_materiality_run_id = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+    """
+    return findOne(sql, (runId,)) or {}

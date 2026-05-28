@@ -2,7 +2,7 @@
 from fastapi.security import APIKeyCookie
 from src.utils.settings import settings
 from src.utils.validatetok import validateToken
-from src.utils.tokenset import decryptFromJwe
+from src.utils.token import decryptFromJwe
 from src.utils.rediscl import getTokenRedis
 from src.models.model import UserModel
 

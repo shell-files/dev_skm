@@ -471,23 +471,88 @@ const Benchmarking = () => {
                     <div className="stat-label">식별 이슈</div>
                     <div className="stat-value">{dashboardData.stats.identifiedIssues}개</div>
                   </div>
-
+                </div>
                 <div className="result-stat-card">
-                  <div className="stat-icon-wrap>👥</div>
+                  <div className="stat-icon-wrap">👥</div>
                   <div>
-                    <div className="stat-label">공통 이슈</div>
+                    <div className="stat-label"> 공통 이슈</div>
                     <div className="stat-value">{dashboardData.stats.commonIssues}개</div>
                   </div>
                 </div>
 
-                <div>
+                
                   <div className="result-stat-card">
                     <div className="stat-icon-wrap">🎯</div>
                     <div>
                       <div className="stat-label">자사 Blind Spot</div>
                       <div className="stat-value">{dashboardData.stats.blindSpots}개</div>
+                    </div>
+                  </div>
+              </div>
+                {/* 하단 3패널 (Top 이슈 점수 / 공통 선정 이슈 / Blind Spot) */}
+              <div className="result-panels-row">
+                {/* 패널1: 벤치마킹 Top 이슈 점수 */}
+                <div className="result-panel">
+                  <div className="panel-header-row">
+                    <span className="panel-title">벤치마킹 Top 이슈 점수</span>
+                    <span className="panel-info-btn">ⓘ</span>
+                  </div>
+                  <table className="issue-table">
+                    <thead>
+                      <tr><th>순위</th><th>Sub Issue</th><th>Impact</th><th>Financial</th></tr>
+                    </thead>
+                    <tbody>
+                      {dashboardData.topIssues.map((item) => (
+                        <tr key={item.rank}>
+                          <td>{item.rank}</td>
+                          <td>{item.name}</td>
+                          <td>{item.impact}</td>
+                          <td>{item.financial}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
+                {/* 패널2: 공통 선정 이슈 */}
+                <div className="result-panel">
+                  <div className="panel-header-row">
+                    <span className="panel-title">공통 선정 이슈</span>
+                    <span className="panel-info-btn">ⓘ</span>
+                  </div>
+                  <table className="issue-table">
+                    <thead>
+                      <tr><th>Sub Issue</th><th>리더</th><th>피어</th><th>자사</th></tr>
+                    </thead>
+                    <tbody>
+                      {dashboardData.commonIssues.map((item, index) => (
+                        <tr key={index}>
+                          <td>{item.name}</td>
+                          <td>{item.leader && <span className="chk">✓</span>}</td>
+                          <td>{item.peer && <span className="chk">✓</span>}</td>
+                          <td>{item.sub && <span className="chk">✓</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
+                {/* 패널3: 자사 Blind Spot */}
+                <div className="result-panel">
+                  <div className="panel-header-row">
+                    <span className="panel-title">자사 Blind Spot</span>
+                    <span className="panel-info-btn">ⓘ</span>
+                  </div>
+                  <ul className="blind-spot-list">
+                    {dashboardData.blindSpots.map((item, index) => (
+                      <li key={index}>
+                        <div className="blind-spot-title">{item.title}</div>
+                        <p className="blind-spot-desc">{item.desc}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
 
 
 

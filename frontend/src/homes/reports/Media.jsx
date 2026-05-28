@@ -11,12 +11,9 @@ import {
 
 import { POST } from "@utils/Network";
 
-const DUMMY_ARTICLES = [
-  { source: "news", title: "기업들의 기후목표 설정과 온실가스 감축 노력", url: "http://example.com/1", publishedAt: "2026-05-27" },
-  { source: "news", title: "공급망 내 협력사 ESG 리스크 심화", url: "http://example.com/2", publishedAt: "2026-05-27" },
-  { source: "news", title: "글로벌 소비자 안전 규제 강화, 제품 안전성 확보 비상", url: "http://example.com/3", publishedAt: "2026-05-27" },
-  { source: "news", title: "저탄소 친환경 제품 출시 경쟁 본격화", url: "http://example.com/4", publishedAt: "2026-05-27" },
-  { source: "news", title: "임직원 역량 개발 및 교육 프로그램 확대", url: "http://example.com/5", publishedAt: "2026-05-27" }
+const MEDIA_SOURCE_OPTIONS = [
+  { value: "impacton", label: "임팩트온" },
+  { value: "esgeconomy", label: "ESG경제" },
 ];
 
 const Media = () => {
@@ -39,13 +36,16 @@ const Media = () => {
 
   const [analysisResult, setAnalysisResult] = useState({
     articleCount: 0,
+    collectedArticleCount: 0,
+    filteredArticleCount: 0,
     observedSubIssueCount: 0,
     savedSignalCount: 0,
+    sourceBreakdown: [],
     topIssues: []
   });
 
   const [formData, setFormData] = useState({
-    pressKeyword: "",
+    pressSource: "impacton",
 
     regOrg: "",
 
@@ -159,28 +159,19 @@ const Media = () => {
   const startMediaCollection = async () => {
     if (isAnalyzing) return;
 
-    if (!formData.pressKeyword.trim()) {
+    if (!formData.pressSource) {
       showDefaultAlert(
         "입력 오류",
-        "언론사명 또는 키워드를 입력해주세요.",
+        "수집 언론사를 선택해주세요.",
         "warning"
       );
       return;
     }
 
-    if (!formData.regOrg) {
+    if (!formData.pressStartDate || !formData.pressEndDate) {
       showDefaultAlert(
         "입력 오류",
-        "규제 기관을 선택해주세요.",
-        "warning"
-      );
-      return;
-    }
-
-    if (!formData.expertOrg) {
-      showDefaultAlert(
-        "입력 오류",
-        "평가 기관을 선택해주세요.",
+        "수집 희망 기간을 선택해주세요.",
         "warning"
       );
       return;
@@ -203,10 +194,11 @@ const Media = () => {
     );
 
     try {
-      const response = await POST("skm", "/api/v1/media/news/analyze", {
+      const response = await POST("/api/v1/media/news/crawl-and-analyze", {
         runId: 1, // 테스트용 하드코딩된 runId
-        articles: DUMMY_ARTICLES,
-        keywords: formData.pressKeyword.split(",").map(k => k.trim())
+        sources: [formData.pressSource],
+        dateFrom: formData.pressStartDate,
+        dateTo: formData.pressEndDate,
       });
 
       if (response && response.status !== false) {
@@ -323,19 +315,41 @@ const Media = () => {
                 style={{ marginTop: "8px" }}
               >
                 <label>
-                  수집 언론사명 / 키워드
+                  수집 언론사
                 </label>
 
-                <input
-                  type="text"
-                  className="media-input"
-                  placeholder="예: 매일경제, ESG 규제, 탄소배출"
-                  name="pressKeyword"
+                <select
+                  className="media-select"
+                  name="pressSource"
                   value={
-                    formData.pressKeyword
+                    formData.pressSource
                   }
                   onChange={handleChange}
-                />
+                >
+                  {MEDIA_SOURCE_OPTIONS.map((source) => (
+                    <option
+                      key={source.value}
+                      value={source.value}
+                    >
+                      {source.label}
+                    </option>
+                  ))}
+                </select>
+
+                <div
+                  style={{
+                    marginTop: "6px",
+                    padding: "6px 10px",
+                    borderRadius: "8px",
+                    background: "#f0fdf4",
+                    color: "#15803d",
+                    fontSize: "0.76rem",
+                    fontWeight: 700,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  자동 적용 필터: 현대자동차 · 자동차부품산업
+                </div>
               </div>
 
               <div className="form-group">
@@ -667,18 +681,18 @@ const Media = () => {
                     color: "#ef4444",
                   }}
                 >
-                  {analysisResult.articleCount || 0}건
+                  {analysisResult.collectedArticleCount || analysisResult.articleCount || 0}건
                 </span>
-                의 기사 중{" "}
+                의 수집 기사 중{" "}
                 <span
                   style={{
                     fontWeight: 700,
                     color: "#03A94D",
                   }}
                 >
-                  {analysisResult.savedSignalCount || 0}건
+                  {analysisResult.filteredArticleCount || 0}건
                 </span>
-                의 관련 시그널이 식별되었습니다. (관측된 서브이슈: {analysisResult.observedSubIssueCount || 0}개)
+                이 자동 필터를 통과했고, {analysisResult.savedSignalCount || 0}건의 관련 시그널이 식별되었습니다. (관측된 서브이슈: {analysisResult.observedSubIssueCount || 0}개)
                 <br />
                 <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
                   * 규제·전문기관 분석은 현재 준비 중입니다.

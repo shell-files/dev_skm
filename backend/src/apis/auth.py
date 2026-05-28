@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response, Request
 from src.models.model import ResponseModel, logoutModel, pwdCheckModel
 from src.models.auth import checkUser, logoutProcess, pwdCheckProcess
 from src.utils.auth import get_token
@@ -38,5 +38,6 @@ def pwdCheck(pwdCheckModel: pwdCheckModel):
 @router.delete("",
         summary="로그아웃 api",
         description="deleteYn 0 : 로그인 상태 / 1 : 로그아웃")
-def userDel(logoutModel: logoutModel):
-    return logoutProcess(logoutModel)
+def userDel(response: Response, request: Request, userModel = Depends(get_token)):
+    return logoutProcess(response, request, userModel)
+

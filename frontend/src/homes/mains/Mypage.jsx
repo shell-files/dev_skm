@@ -17,7 +17,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@hooks/AuthContext.jsx';
-import { PUT } from '@utils/network'; // 경로에 맞게 수정
+import { GET, POST, PUT, PATCH, DELETE} from '@utils/Network';
 import { showDefaultAlert, showConfirmAlert } from '@components/UI/ServiceAlert';
 import '@styles/mypage.css';
 
@@ -37,7 +37,7 @@ const requestApi = {
      return { status: true, message: "회원 정보가 수정되었습니다." };
     }
     try {
-      const res = await api.patch("/user", { uuid, name });
+      const res = await PATCH("/user", { uuid, name });
       return { status: res.data.status, message: res.data.message };
     } catch (e) {
       return { status: false, message: e.response?.data?.message || "정보 수정 중 오류가 발생했습니다." };
@@ -55,7 +55,7 @@ const requestApi = {
      return { status: true, message: "비밀번호 변경 완료" };
     }
     try {
-      const res = await patch("/user", { 
+      const res = await PATCH("/user", { 
         uuid, 
         newPassword: passwords.new, 
         newPasswordConfirm: passwords.confirm 
@@ -90,7 +90,7 @@ const requestApi = {
       return password === '1234' ? { status: true } : { status: false, message: "비밀번호가 일치하지 않습니다." };
     }
     try {
-      const res = await PATCH("/PATCH", {uuid, password });
+      const res = await PATCH("/auth", {uuid, password });
       console.log("=== 서버가 보내준 응답 구조 ===", res);
       if (res.data.data.uuid.data.uuid) localStorage.setItem("uuid", res.data.data.uuid.data.uuid)
         

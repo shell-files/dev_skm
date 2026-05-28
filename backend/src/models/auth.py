@@ -3,7 +3,7 @@ from src.utils.rediscl import getCompanyRedis, delTokenRedis, getTokenRedis
 from src.utils.settings import settings
 from src.utils.db import findOne, save, findAll
 from src.utils.kafkasv import sendToKafka
-from src.utils.token import decryptFromJwe
+from src.utils.tokenset import decryptFromJwe
 from src.utils.validatetok import validateToken
 from fastapi import Request
 
@@ -103,17 +103,12 @@ def findPwdProcess(emailModel: EmailModel):
 # --------------------------
 # 로그아웃 로직 처리 함수
 # --------------------------
-def logoutProcess(response=None, request=None, userModel=None):
+def logoutProcess(logoutModel):
     """
     1. db에서 refresh token delete_yn 1으로 변경
     2. redis에서 uuid 삭제
     """
-    uuidKey = getattr(userModel, "uuid", None)
-    if not uuidKey and request is not None:
-        uuidKey = request.cookies.get(settings.cookie_key)
-
-    if not uuidKey:
-        return ResponseModel(False, "로그아웃할 세션 정보를 찾을 수 없습니다.")
+    uuidKey = logoutModel.uuid
 
     try:
         # 1. db에서 refresh token delete_yn 1으로 변경

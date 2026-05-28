@@ -4,12 +4,15 @@ import psycopg
 import re
 import logging
 import time
+import json
 
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from sentence_transformers import SentenceTransformer
 from settings import settings
+
+from pgvector.psycopg import register_vector
 
 # ==================================================
 # 설정 및 로깅
@@ -90,20 +93,34 @@ def getFactData(companyId):
     dataMap["COMPANY_NAME"] = {"value": companyName, "unit": ""}
     return dataMap
 
-def searchSrKnowledgeHybrid(issueTag, queryVector):
-    conn = psycopg.connect(settings.pg_database_url)
+def searchSrKnowledgeHybrid(subIssueIds, queryVector):
+    conn = psycopg.connect(
+        dbname=settings.pg_db_database,
+        user=settings.pg_db_user,
+        password=settings.pg_db_password,
+        host=settings.pg_db_host,
+        port=settings.pg_db_port
+    )
+    register_vector(conn)
     cur = conn.cursor()
+
     sql = """
-    SELECT source, title, chunk, (1-(chunk_embedding <=> %s::vector)) score
-    FROM esg_chunks WHERE (1-(chunk_embedding <=> %s::vector)) > 0.55
-    ORDER BY (CASE WHEN issue_group=%s THEN 1.5 ELSE 1 END) * (1-(chunk_embedding <=> %s::vector)) DESC
-    LIMIT 3
+    SELECT year, page, text, (1-(embedding <=> %s::vector)) as score
+    FROM ai_sr 
+    WHERE mapped_issues @> %s::jsonb
+    ORDER BY score DESC
     """
-    cur.execute(sql, (queryVector, queryVector, issueTag, queryVector))
-    rows = cur.fetchall()
-    cur.close(); conn.close()
     
-    context = "\n\n".join([f"[참고]: {r[2]}" for r in rows]) if rows else "참고할 문체 데이터 없음"
+    # 1. 인자로 받은 subIssueIds 리스트를 JSON 배열 형태로 변환
+    tagJson = json.dumps([{"subIssueId": sid} for sid in subIssueIds])
+    
+    # 2. queryVector와 tag_json을 쿼리에 전달
+    cur.execute(sql, (queryVector, tagJson))
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    
+    context = "\n\n".join([f"[참고({r[0]}년, {r[1]}페이지)]: {r[2]}" for r in rows]) if rows else "참고할 문체 데이터 없음"
     return context, rows
 
 # ==================================================
@@ -221,18 +238,17 @@ if __name__ == "__main__":
     aStartTotal = time.time()
     verifyTemplateData(6, templates)
     aTotalTime = time.time() - aStartTotal
-    
+    print(f"검증 소요 시간: {aTotalTime:.2f}초")
     # 2. 보고서 생성 및 시간 측정
     bStartTotal = time.time()
     report, debug = generateFullReport(6, templates)
     bTotalTime = time.time() - bStartTotal
-    
+    print(f"생성 소요 시간: {bTotalTime:.2f}초")
     # 3. 성능 요약 및 데이터 상태 확인
-    print(f"총 소요 시간: {aTotalTime + bTotalTime:.2f}초")
     print("\n" + "="*50)
+    print(f"총 소요 시간: {aTotalTime + bTotalTime:.2f}초")
     print(f"분석 결과 요약")
     print("="*50)
-    print(f"총 소요 시간: {bTotalTime:.2f}초")
     print(f"생성된 섹션 수: {len(report)}개")
     print(f"데이터 매칭 상태: {'양호' if '[데이터 미집계]' not in str(report) else '일부 데이터 누락됨'}")
     print("="*50)

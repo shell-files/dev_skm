@@ -5,10 +5,12 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi-mail>=1.6.2",
     "fastapi[standard]>=0.136.1",
     "google>=3.0.0",
     "google-genai>=2.4.0",
     "jwcrypto>=1.5.7",
+    "kafka-python>=2.3.1",
     "mariadb>=1.1.14",
     "ollama>=0.6.2",
     "prometheus-fastapi-instrumentator>=7.1.0",
@@ -19,4 +21,5 @@ dependencies = [
     "python-multipart>=0.0.26",
     "redis>=7.4.0",
     "tiktoken>=0.7.0",
+    "uuid>=1.30",
 ]

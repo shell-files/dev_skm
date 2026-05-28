@@ -10,7 +10,7 @@ const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
     const { user, userName, selectedCompany, companies, isAuthReady, logout, handleLogout, toggleSidebarMobile, goHome, goMyPage, openAlarmCenter } = useAuth();
     // const { toggleAlarm, unreadCount } = useAlarm();
 
-    if (isAuthReady) console.log(userName, selectedCompany, companies);
+    // if (isAuthReady) console.log(userName, selectedCompany, companies);
     
     return (
         <header className="header">

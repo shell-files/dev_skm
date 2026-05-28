@@ -17,7 +17,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '@hooks/AuthContext.jsx';
-// import { GET } from '@utils/Network';
 import { showDefaultAlert, showConfirmAlert } from '@components/UI/ServiceAlert';
 import '@styles/mypage.css';
 
@@ -30,11 +29,11 @@ const requestApi = {
    * 1. updateProfile: 개인 정보 수정 (PATCH /user)
    * @param {string} name - 변경할 사용자 이름
    * @param {string} uuid - 사용자 식별자
-   */
-  updateProfile: async (name, uuid) => {
-    if (USE_DUMMY_API) {
-      await new Promise(r => setTimeout(r, 600));
-      return { status: true, message: "회원 정보가 수정되었습니다." };
+  */
+ updateProfile: async (name, uuid) => {
+   if (USE_DUMMY_API) {
+     await new Promise(r => setTimeout(r, 600));
+     return { status: true, message: "회원 정보가 수정되었습니다." };
     }
     try {
       const res = await api.patch("/user", { uuid, name });
@@ -48,11 +47,11 @@ const requestApi = {
    * 2. changePassword: 비밀번호 변경 (PATCH /user)
    * @param {object} passwords - 새 비밀번호 객체
    * @param {string} uuid - 사용자 식별자
-   */
-  changePassword: async (passwords, uuid) => {
-    if (USE_DUMMY_API) {
-      await new Promise(r => setTimeout(r, 600));
-      return { status: true, message: "비밀번호 변경 완료" };
+  */
+ changePassword: async (passwords, uuid) => {
+   if (USE_DUMMY_API) {
+     await new Promise(r => setTimeout(r, 600));
+     return { status: true, message: "비밀번호 변경 완료" };
     }
     try {
       const res = await api.patch("/user", { 
@@ -65,7 +64,7 @@ const requestApi = {
       return { status: false, message: e.response?.data?.message || "비밀번호 변경 중 오류가 발생했습니다." };
     }
   },
-
+  
   /** 
    * 3. deleteAccount: 회원 탈퇴 (DELETE /user)
    * @param {string} uuid - 사용자 식별자
@@ -82,7 +81,7 @@ const requestApi = {
       return { status: false, message: e.response?.data?.message || "탈퇴 처리 중 오류가 발생했습니다." };
     }
   },
-
+  
   /** 4. checkPassword: 본인 확인용 비밀번호 체크 (PATCH /auth) */
   checkPassword: async (password, uuid) => {
     if (USE_DUMMY_API) {
@@ -90,28 +89,28 @@ const requestApi = {
       return password === '1234' ? { status: true } : { status: false, message: "비밀번호가 일치하지 않습니다." };
     }
     try {
-      const res = await api.patch("/auth", { uuid, password });
+      const res = await api.patch("/verification", { uuid, password });
       if (res.data.data.uuid.data.uuid) localStorage.setItem("uuid", res.data.data.uuid.data.uuid)
-      if (res.data.status)
-        return { status: res.data.status, data: res.data };
-      return { status: res.data.status, message: res.data.message };
-    } catch (e) {
-      return { status: false, message: e.response?.data?.message || "비밀번호가 일치하지 않습니다." };
+        if (res.data.status)
+          return { status: res.data.status, data: res.data };
+        return { status: res.data.status, message: res.data.message };
+      } catch (e) {
+        return { status: false, message: e.response?.data?.message || "비밀번호가 일치하지 않습니다." };
+      }
     }
-  }
-};
-
-const Mypage = () => {
+  };
+  
+  const Mypage = () => {
   const navigate = useNavigate();
-  const { user, selectedCompany, logout } = useAuth();
+  const { user, userName, selectedCompany, companies, isAuthReady, logout, handleLogout, toggleSidebarMobile, goHome, goMyPage, openAlarmCenter } = useAuth();
 
   // ── States ──
 
   // [데이터] 사용자 기본 정보 (이메일 고정)
   const [userData, setUserData] = useState({
-    name: user?.name || '사용자',
+    name: userName || '사용자',
     email: user?.email || selectedCompany?.email || '-',
-    role: selectedCompany?.role || user?.role || '-'
+    role: selectedCompany?.role
   });
 
   // [편집] 정보 수정 및 비밀번호 양식
@@ -124,10 +123,11 @@ const Mypage = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (isAuthReady) console.log(userName, selectedCompany, companies);
     setUserData({
-      name: user?.name || '사용자',
+      name: userName || '사용자',
       email: user?.email || selectedCompany?.email || '-',
-      role: selectedCompany?.role || user?.role || '-'
+      role: selectedCompany?.role 
     });
   }, [user, selectedCompany]);
 

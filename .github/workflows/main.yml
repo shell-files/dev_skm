@@ -24,6 +24,7 @@ jobs:
           "VITE_API_URL=${{ secrets.VITE_API_URL }}" | Set-Content -Path .env -Encoding UTF8
           "VITE_API_URL_MAIN=${{ secrets.VITE_API_URL_MAIN }}" | Add-Content -Path .env
           "VITE_API_URL_SKM=${{ secrets.VITE_API_URL_SKM }}" | Add-Content -Path .env
+          "VITE_API_URL_SKM_BACK=${{ secrets.VITE_API_URL_SKM_BACK }}" | Add-Content -Path .env
           "VITE_API_URL_HG=${{ secrets.VITE_API_URL_HG }}" | Add-Content -Path .env
           "VITE_API_URL_TV=${{ secrets.VITE_API_URL_TV }}" | Add-Content -Path .env
       - name: Node Build

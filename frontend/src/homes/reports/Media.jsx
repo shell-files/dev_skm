@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-
 import "@styles/media.css";
-
 import robot from "@assets/images/robot/robot_media_t.png";
+
+
+
 
 import {
   showDefaultAlert,
@@ -43,6 +44,25 @@ const Media = () => {
     expertStartDate: "",
     expertEndDate: "",
   });
+
+  const startMediaCollection = () => {
+    if (isAnalyzing) return;
+    setIsAnalyzing(true);
+    setDashboardOpen(true);
+    setBadgeStatuses({ press: "ing", reg: "ing", expert: "ready" });
+    setLoadingTitle("실시간 크롤링 엔진 가동 중...");
+    setLoadingDesc("네이버 뉴스 API 및 공공 데이터 포털 커넥터를 통해 웹 파싱을 실행하고 있습니다.");
+
+    timerRef.current = setTimeout(() => {
+      setIsAnalyzing(false);
+      setShowResult(true);
+      setBadgeStatuses({ press: "complete", reg: "complete", expert: "complete" });
+    }, 2500);
+  };
+
+  
+  
+
 
   const navigate = useNavigate();
 
@@ -95,9 +115,7 @@ const Media = () => {
    */
   const moveStep = (index) => {
     if (isAnalyzing) return;
-
     if (index === activeIndex) return;
-
     navigate(steps[index].path);
   };
 
@@ -107,16 +125,11 @@ const Media = () => {
 
   const createParticles = () => {
     if (!particleRef.current) return;
-
     particleRef.current.innerHTML = "";
-
     for (let i = 0; i < 12; i++) {
       const p = document.createElement("div");
-
       p.className = "particle";
-
       const size = Math.random() * 5 + 3;
-
       p.style.width = `${size}px`;
       p.style.height = `${size}px`;
       p.style.left = `${Math.random() * 100}%`;
@@ -187,7 +200,7 @@ const Media = () => {
       "success"
     );
 
-    setTimeout(() => {
+    timeerRef.current = setTimeout(() => {
       setStatus({
         press: "complete",
         reg: "complete",
@@ -541,127 +554,132 @@ const Media = () => {
         </div>
       </main>
 
-      <div
-        className={`sr-result-dashboard ${
-          dashboardOpen ? "open" : ""
-        }`}
-      >
-        <div
-          className="dashboard-handle"
-          onClick={() =>
-            setDashboardOpen(
-              !dashboardOpen
-            )
-          }
-        >
-          <div className="handle-pill">
-            {isAnalyzing
-              ? "AI 파이프라인 수집 가동 중..."
-              : showResult
-              ? "분석 완료 - 결과 요약 확인 (클릭)"
-              : "빅데이터 연동 현황 확인하기 (클릭)"}
-          </div>
-        </div>
+      <div className="result-layout">
+              {/* 결과 배너 */}
+              <div className="result-banner">
+                <div className="result-banner-left">
+                  <div className="result-banner-title" style={{ textAlign: "center", alignSelf: "center" }}>
+                    [AI 미디어 시그널 분석 결과]
+                  </div>
+                  <p className="result-banner-desc">
+                    언론 기사, 전문기관 자료, 핵심규제 프레임을 종합 반영하여<br />
+                    외부 시그널 기반의 주요 서브이슈를 도출했습니다.
+                  </p>
+                </div>
+              </div>
 
-        <div className="robot-view-container">
-          <div
-            id="particle-field"
-            ref={particleRef}
-          ></div>
+              {/* 통계 카드 4개 */}
+              <div className="result-stats-row">
+                <div className="result-stat-card">
+                  <div className="stat-icon-wrap">📰</div>
+                  <div>
+                    <div className="stat-label">언론 기사</div>
+                    <div className="stat-value">{dashboardData.stats.press.count}</div>
+                    <div className="stat-sub">{dashboardData.stats.press.sub}</div>
+                  </div>
+                </div>
+                <div className="result-stat-card">
+                  <div className="stat-icon-wrap">🏛️</div>
+                  <div>
+                    <div className="stat-label">전문기관 자료</div>
+                    <div className="stat-value">{dashboardData.stats.expert.count}</div>
+                    <div className="stat-sub">{dashboardData.stats.expert.sub}</div>
+                  </div>
+                </div>
+                <div className="result-stat-card">
+                  <div className="stat-icon-wrap">⚖️</div>
+                  <div>
+                    <div className="stat-label">규제 프레임</div>
+                    <div className="stat-value">{dashboardData.stats.regulation.count}</div>
+                    <div className="stat-sub">{dashboardData.stats.regulation.sub}</div>
+                  </div>
+                </div>
+                <div className="result-stat-card">
+                  <div className="stat-icon-wrap">🔗</div>
+                  <div>
+                    <div className="stat-label">반영 방식 안내</div>
+                    <div className="stat-value">{dashboardData.stats.total.count}</div>
+                  </div>
+                </div>
+              </div>
 
-          <img
-            src={robot}
-            className="robot-main-img"
-            alt="마스코트"
-          />
+              {/* 하단 3패널 */}
+              <div className="result-panels-row">
+                {/* 패널1: Source 별 반영 현황 */}
+                <div className="result-panel">
+                  <div className="panel-header-row">
+                    <span className="panel-title">Source 별 반영 현황</span>
+                    <span className="panel-info-btn">ⓘ</span>
+                  </div>
+                  <table className="issue-table">
+                    <thead>
+                      <tr>
+                        <th>Source</th><th>수집·기준 건수</th><th>반영 이슈</th><th>적용 방식</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dashboardData.sourceTable.map((row, i) => (
+                        <tr key={i}>
+                          <td>{row.source}</td>
+                          <td>{row.count}</td>
+                          <td>{row.issues}</td>
+                          <td>{row.method}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-          {!showResult ? (
-            <div
-              style={{
-                textAlign: "center",
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: "1.1rem",
-                  fontWeight: 850,
-                  margin: "0 0 4px 0",
-                }}
-              >
-                {isAnalyzing
-                  ? "실시간 크롤링 엔진 가동 중..."
-                  : "미디어 수집 현황 대기 중"}
-              </h3>
+                {/* 패널2: 미디어 TOP 이슈 점수 */}
+                <div className="result-panel">
+                  <div className="panel-header-row">
+                    <span className="panel-title">미디어 TOP 이슈 점수</span>
+                    <span className="panel-info-btn">ⓘ</span>
+                  </div>
+                  <table className="issue-table">
+                    <thead>
+                      <tr>
+                        <th>순위</th><th>Sub Issue</th><th>Impact</th><th>Financial</th><th>Source</th><th>Evidence</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {dashboardData.topIssues.map((item) => (
+                        <tr key={item.rank}>
+                          <td>{item.rank}</td>
+                          <td>{item.name}</td>
+                          <td>{item.impact}</td>
+                          <td>{item.financial}</td>
+                          <td>{item.source}</td>
+                          <td>
+                            <button className="evidence-btn" onClick={() => navigate("/result")}>보기</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
 
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "#64748b",
-                  margin: 0,
-                }}
-              >
-                {isAnalyzing
-                  ? "AI 기반 외부 데이터 수집 엔진이 ESG 관련 미디어 및 기관 데이터를 분석하고 있습니다."
-                  : "상단의 분석 시작 버튼을 누르면 AI 기반 외부 데이터 분석이 시작됩니다."}
-              </p>
+                {/* 패널3: 반영 방식 안내 (정적 SVG 아이콘 리스트) */}
+                <div className="result-panel">
+                  <div className="panel-header-row">
+                    <span className="panel-title">반영 방식 안내</span>
+                    <span className="panel-info-btn">ⓘ</span>
+                  </div>
+                  <ul className="reflect-list">
+                    {REFLECT_METHODS.map((item) => (
+                      <li key={item.key} className="reflect-item">
+                        <div className="reflect-icon">{item.icon}</div>
+                        <div>
+                          <div className="reflect-title">{item.title}</div>
+                          <p className="reflect-desc">{item.desc}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="reflect-note">ⓘ 향후 MSCI·S&P·EcoVadis 등 외부 평가기관 자료 확장 가능</div>
+                </div>
+              </div>
             </div>
-          ) : (
-            <div
-              style={{
-                textAlign: "center",
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: "1.1rem",
-                  fontWeight: 850,
-                  margin: "0 0 8px 0",
-                  color: "#03A94D",
-                }}
-              >
-                ✓ 실시간 데이터 파이프라인 분석
-                완료
-              </h3>
-
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "#334155",
-                  margin: 0,
-                  lineHeight: 1.6,
-                }}
-              >
-                선택된 타임라인 범위 내 총{" "}
-                <span
-                  style={{
-                    fontWeight: 700,
-                    color: "#ef4444",
-                  }}
-                >
-                  14건
-                </span>
-                의 리스크 시그널(언론 8건,
-                규제 4건, 리서치 2건)이
-                식별되었습니다.
-                <br />
-                다음 스텝인{" "}
-                <span
-                  style={{
-                    fontWeight: 700,
-                  }}
-                >
-                  {
-                    steps[
-                      activeIndex + 1
-                    ]?.title
-                  }
-                </span>{" "}
-                단계 분석으로 이동해 주세요.
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 };

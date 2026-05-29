@@ -1,0 +1,348 @@
+/* =========================================================================
+   온보딩 모달 전용 스타일 (OnboardingModalShell & 5종 패널)
+========================================================================= */
+
+/* 1. Modal Overlay & Shell */
+.ob-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+}
+
+.ob-modal-shell {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 1280px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* 2. Header */
+.ob-modal-header {
+  padding: 20px 32px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #f8fafc;
+}
+
+.ob-modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ob-modal-tag {
+  background: #e2e8f0;
+  color: #475569;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ob-header-badges {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ob-deadline-badge {
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.ob-status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.ob-status-badge.draft { background: #fef3c7; color: #d97706; }
+.ob-status-badge.submitted { background: #dbeafe; color: #2563eb; }
+
+/* 3. Layout (Body) */
+.ob-modal-body-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  height: 100%;
+}
+
+.ob-modal-left-panel {
+  flex: 7; /* 70% */
+  overflow-y: auto;
+  padding: 24px 32px;
+  border-right: 1px solid #e2e8f0;
+  background: #ffffff;
+}
+
+.ob-modal-right-panel {
+  flex: 3; /* 30% */
+  overflow-y: auto;
+  padding: 24px;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 4. Context Summary Panel */
+.ob-info-summary-box {
+  display: flex;
+  background: #f1f5f9;
+  border-radius: 8px;
+  padding: 16px 20px;
+  gap: 32px;
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+}
+
+.ob-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ob-info-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ob-info-val {
+  font-size: 0.95rem;
+  color: #1e293b;
+  font-weight: 500;
+}
+
+/* 5. Dynamic Input Panels */
+.ob-input-panel-section {
+  margin-bottom: 32px;
+}
+
+.ob-section-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+/* Tables for Direct & Calc Input */
+.ob-input-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.ob-input-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: left;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ob-input-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #1e293b;
+  font-size: 0.9rem;
+}
+
+.ob-table-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.ob-table-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.ob-table-input.readonly {
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+/* Narrative Text Area */
+.ob-narrative-textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 16px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  resize: vertical;
+  background: #ffffff;
+}
+
+.ob-narrative-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Calc formula display */
+.ob-calc-formula-card {
+  background: #f0fdfa;
+  border: 1px dashed #5eead4;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 0.95rem;
+  color: #0f766e;
+}
+
+/* 6. Evidence & Validation (Right Panel) */
+.ob-side-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.ob-side-card h4 {
+  margin: 0 0 16px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ob-file-upload-btn {
+  width: 100%;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  color: #475569;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ob-file-upload-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
+}
+
+.ob-evidence-list {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ob-evidence-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #334155;
+}
+
+.ob-validation-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.ob-validation-item.pass { color: #16a34a; }
+.ob-validation-item.fail { color: #dc2626; }
+
+/* 7. Footer */
+.ob-modal-footer {
+  padding: 20px 32px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #ffffff;
+}
+
+.ob-btn {
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.ob-btn-secondary {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+
+.ob-btn-secondary:hover {
+  background: #f8fafc;
+  color: #1e293b;
+}
+
+.ob-btn-primary {
+  background: #2563eb;
+  border: 1px solid #2563eb;
+  color: #ffffff;
+}
+
+.ob-btn-primary:hover {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}

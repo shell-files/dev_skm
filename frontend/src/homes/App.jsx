@@ -4,6 +4,7 @@ import '@styles/App.css'
 import "@styles/mains.css";
 import NotFound from '@errors/NotFound.jsx';
 import OnBoard from '@onboards/OnBoard.jsx';
+import OnBoard1 from '@onboards/OnBoard1.jsx';
 import Benchmarking from '@reports/Benchmarking.jsx';
 import Media from '@reports/Media.jsx';
 import Survey from '@reports/Survey.jsx';
@@ -75,7 +76,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/company/:id" element={<Main />} />
-            <Route path="/onb" element={<OnBoard />} />
+            <Route path="/onb" element={<OnBoard1 />} />
             <Route path="/benchmk" element={<Benchmarking />} />
             <Route path="/result" element={<Result />} />
             <Route path="/media" element={<Media />} />

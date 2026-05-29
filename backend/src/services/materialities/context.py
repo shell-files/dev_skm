@@ -52,8 +52,8 @@ from src.utils.companycontextrepository import (
     updateModifiers,
 )
 from src.utils.dmaaggregator import calcFinal
-from src.utils.dmarepository import recalculateFinalScore
-from src.utils.dmarepository import updateDmaRankings
+from src.utils.dmarepository import recalcFinal
+from src.utils.dmarepository import updateRanks
 from src.utils.dmascoring import clamp
 from src.utils.subissuemaster import subissueMaster
 
@@ -128,9 +128,9 @@ def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
 
     recalculatedCount = 0
     for item in modifiers:
-        recalculateFinalScore(runId, item.subIssueCode, updateRankingsYn=False)
+        recalcFinal(runId, item.subIssueCode, updateRankingsYn=False)
         recalculatedCount += 1
-    updateDmaRankings(runId)
+    updateRanks(runId)
 
     messages = [
         "Context modifiers were applied only to final aggregation.",

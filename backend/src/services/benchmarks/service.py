@@ -8,7 +8,7 @@ from src.utils.db import save, findOne
 from src.models.model import ResponseModel, UserModel
 from src.models.benchmk import FileModel, FileFindModel
 from src.utils.ocraiv8 import gemini
-from src.utils.dmarepository import saveDmaSignals
+from src.utils.dmarepository import saveSignals
 from src.utils.dmascoring import scoreSignals
 from src.services.benchmarks.adapter import convertToDmaSignals
 
@@ -164,7 +164,7 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
                     
             # Repository를 통해 DB에 저장(동적으로 run_id 전달)
             try:
-                saveDmaSignals(
+                saveSignals(
                     runId=fileFindModel.esgMaterialityRunId, 
                     signals=scoredSignals,
                     fileId=fileId,

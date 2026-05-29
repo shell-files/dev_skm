@@ -7,10 +7,14 @@ Responsibility:
 - Update DMA rankings
 - Query persisted DMA scoring state
 Public functions:
-- saveDmaSignals
-- recalculateStageScore
-- recalculateFinalScore
-- updateDmaRankings
+- saveSignals / saveDmaSignals
+- recalcStage / recalculateStageScore
+- recalcFinal / recalculateFinalScore
+- updateRanks / updateDmaRankings
+- listResults / getDmaResults
+- listTopMediaIssues / getTopIssuesByMediaScore
+- getMediaCoverage / getMediaCoverageFromSummary
+- query/count helpers for materiality result APIs
 Do not:
 - do not mutate unrelated DB state
 - do not change scoring formula unless explicitly requested
@@ -32,7 +36,7 @@ from src.utils.dmaaggregator import (
     calcFinal,
 )
 
-def saveDmaSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] = None, sourceTitle: str = ""):
+def saveSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] = None, sourceTitle: str = ""):
     """
     DMASignal 목록을 ESG_DMA_SIGNAL_DETAIL 테이블에 저장합니다.
     scoring_payload_json을 사용하여 상세 정보를 보존하고, ESG_DMA_EVIDENCE와 함께 저장합니다.
@@ -45,13 +49,13 @@ def saveDmaSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] =
         evidenceText = " ".join(sig.evidenceSpans) if sig.evidenceSpans else ""
         currentSourceTitle = sig.sourceTitle if getattr(sig, "sourceTitle", None) else sourceTitle
         currentSourceUrl = sig.sourceUrl if getattr(sig, "sourceUrl", None) else None
-        currentPublishedAt = normalizeEvidencePublishedAt(
+        currentPublishedAt = normalizePublishedAt(
             sig.publishedAt if getattr(sig, "publishedAt", None) else None
         )
         
         evidenceId = None
         try:
-            res = insertDmaEvidence(
+            res = insertEvidence(
                 runId=runId,
                 sourceStep=sig.sourceStep,
                 sourceType=sig.sourceType,
@@ -111,9 +115,9 @@ def saveDmaSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] =
 
     # 3. 변경된 subIssueCode 단위로 Stage Aggregation 수행
     for subIssueCode, sourceStep in updatedSubIssues:
-        recalculateStageScore(runId, subIssueCode, sourceStep)
+        recalcStage(runId, subIssueCode, sourceStep)
 
-def normalizeEvidencePublishedAt(value: Optional[str]) -> Optional[str]:
+def normalizePublishedAt(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
 
@@ -126,7 +130,7 @@ def normalizeEvidencePublishedAt(value: Optional[str]) -> Optional[str]:
             continue
     return None
 
-def insertDmaEvidence(
+def insertEvidence(
     runId: int,
     sourceStep: str,
     sourceType: str,
@@ -183,7 +187,7 @@ def insertDmaEvidence(
         print("Warning: ESG_DMA_EVIDENCE source_url/source_published_at columns are missing. Falling back to legacy evidence insert.")
         return addKey(fallbackSql, fallbackParams)
 
-def getSignalsByGroup(runId: int, subIssueCode: str, sourceStep: str) -> List[DMASignal]:
+def listSignals(runId: int, subIssueCode: str, sourceStep: str) -> List[DMASignal]:
     """
     특정 런의 특정 이슈, 특정 스테이지에 해당하는 모든 Signal Detail을 DB에서 가져와 DMASignal 객체 리스트로 반환합니다.
     """
@@ -203,12 +207,12 @@ def getSignalsByGroup(runId: int, subIssueCode: str, sourceStep: str) -> List[DM
                 print(f"Error parsing JSON payload for {subIssueCode}: {e}")
     return signals
 
-def recalculateStageScore(runId: int, subIssueCode: str, sourceStep: str):
+def recalcStage(runId: int, subIssueCode: str, sourceStep: str):
     """
     DB에 저장된 Signal들을 기반으로 Stage Score를 다시 계산하고 UPSERT합니다.
     그 후 Final Score 산출을 트리거합니다.
     """
-    signals = getSignalsByGroup(runId, subIssueCode, sourceStep)
+    signals = listSignals(runId, subIssueCode, sourceStep)
     
     if not signals:
         return
@@ -272,14 +276,14 @@ def recalculateStageScore(runId: int, subIssueCode: str, sourceStep: str):
         financialScore = stageScore.financialScore05
         
     if sourceStep in ["benchmark", "media_external"]:
-        upsertStageScoreSummary(runId, subIssueCode, sourceStep, impactScore, financialScore)
+        upsertStage(runId, subIssueCode, sourceStep, impactScore, financialScore)
         
     elif sourceStep == "survey":
-        recalculateSurveyScore(runId, subIssueCode)
+        recalcSurvey(runId, subIssueCode)
         
-    recalculateFinalScore(runId, subIssueCode)
+    recalcFinal(runId, subIssueCode)
 
-def recalculateSurveyScore(runId: int, subIssueCode: str):
+def recalcSurvey(runId: int, subIssueCode: str):
     """
     ESG_DMA_SURVEY_RESPONSE 테이블을 조회하여 그룹별 가중 평균을 내어 Stage Score를 계산합니다.
     """
@@ -307,9 +311,9 @@ def recalculateSurveyScore(runId: int, subIssueCode: str):
         externalScore=float(externalScore) if externalScore else None
     )
     
-    upsertStageScoreSummary(runId, subIssueCode, "survey", finalSurveyScore, finalSurveyScore)
+    upsertStage(runId, subIssueCode, "survey", finalSurveyScore, finalSurveyScore)
 
-def upsertStageScoreSummary(runId: int, subIssueCode: str, stage: str, impactScore: Optional[float], financialScore: Optional[float]):
+def upsertStage(runId: int, subIssueCode: str, stage: str, impactScore: Optional[float], financialScore: Optional[float]):
     if stage == "benchmark":
         sql = """
             INSERT INTO ESG_DMA_SCORE_SUMMARY (esg_materiality_run_id, sub_issue_code, benchmark_impact_score, benchmark_financial_score)
@@ -358,7 +362,7 @@ def safeFloatOrNone(value):
     except Exception:
         return None
 
-def recalculateFinalScore(runId: int, subIssueCode: str, updateRankingsYn: bool = True):
+def recalcFinal(runId: int, subIssueCode: str, updateRankingsYn: bool = True):
     sql = """
         SELECT 
             benchmark_impact_score, benchmark_financial_score,
@@ -384,9 +388,9 @@ def recalculateFinalScore(runId: int, subIssueCode: str, updateRankingsYn: bool 
         contextFinancialModifier=clampContextModifier(row.get("context_financial_modifier"))
     )
     
-    upsertFinalScoreSummary(runId, finalScoreObj)
+    upsertFinal(runId, finalScoreObj)
     if updateRankingsYn:
-        updateDmaRankings(runId)
+        updateRanks(runId)
 
 def clampContextModifier(value):
     parsed = safeFloat(value, 0.0)
@@ -396,7 +400,7 @@ def clampContextModifier(value):
         return 0.5
     return parsed
 
-def updateDmaRankings(runId: int):
+def updateRanks(runId: int):
     sql = """
         SELECT id
         FROM ESG_DMA_SCORE_SUMMARY
@@ -413,7 +417,7 @@ def updateDmaRankings(runId: int):
     from src.utils.db import saveMany
     saveMany(updateSql, params)
 
-def upsertFinalScoreSummary(runId: int, score: FinalMaterialityScore):
+def upsertFinal(runId: int, score: FinalMaterialityScore):
     sql = """
         INSERT INTO ESG_DMA_SCORE_SUMMARY (
             esg_materiality_run_id, sub_issue_code, 
@@ -438,7 +442,7 @@ def upsertFinalScoreSummary(runId: int, score: FinalMaterialityScore):
 # Result API / Media API 조회 함수
 # ──────────────────────────────────────────────
 
-def getDmaResults(runId: int) -> list:
+def listResults(runId: int) -> list:
     """
     통합 결과 조회 API용.
     ESG_DMA_SCORE_SUMMARY에서 runId 기준 전체 행을 rank_no ASC로 반환합니다.
@@ -466,7 +470,7 @@ def getDmaResults(runId: int) -> list:
     rows = findAll(sql, (runId,))
     return rows if rows else []
 
-def getTopIssuesByMediaScore(runId: int, limit: int = 5) -> list:
+def listTopMediaIssues(runId: int, limit: int = 5) -> list:
     """
     Media API topIssues용.
     media_external stage score 기준으로 정렬합니다 (final_score 아님).
@@ -498,7 +502,7 @@ def getTopIssuesByMediaScore(runId: int, limit: int = 5) -> list:
     rows = findAll(sql, (runId, limit))
     return rows if rows else []
 
-def getMediaCoverageFromSummary(runId: int) -> dict:
+def getMediaCoverage(runId: int) -> dict:
     """
     Media API coverage용.
     해당 runId에서 각 stage별로 scored 이슈가 존재하는지 확인하여
@@ -527,7 +531,7 @@ def getMediaCoverageFromSummary(runId: int) -> dict:
         "surveyObserved": int(row.get("survey_count", 0) or 0) > 0
     }
 
-def getMediaObservedSubIssueCount(runId: int) -> int:
+def countMediaSubIssues(runId: int) -> int:
     """
     ESG_DMA_SCORE_SUMMARY 기준 media_external score가 존재하는 전체 subIssue 수를 반환합니다.
     """
@@ -547,7 +551,7 @@ def getMediaObservedSubIssueCount(runId: int) -> int:
         return int(list(row.values())[0])
     return 0
 
-def getMaterialityRunInfo(runId: int) -> dict:
+def getRunInfo(runId: int) -> dict:
     sql = """
         SELECT id, company_id, reporting_year, run_status
         FROM ESG_MATERIALITY_RUN
@@ -555,7 +559,7 @@ def getMaterialityRunInfo(runId: int) -> dict:
     """
     return findOne(sql, (runId,)) or {}
 
-def getSelectedSubIssues(runId: int) -> list:
+def listSelectedSubIssues(runId: int) -> list:
     sql = """
         SELECT
             sub_issue_code,
@@ -570,7 +574,7 @@ def getSelectedSubIssues(runId: int) -> list:
     """
     return findAll(sql, (runId,)) or []
 
-def getTopIssuesByStageScore(runId: int, stage: str, limit: int = 10) -> list:
+def listTopStageIssues(runId: int, stage: str, limit: int = 10) -> list:
     stageColumns = {
         "benchmark": ("benchmark_impact_score", "benchmark_financial_score"),
         "media_external": ("media_external_impact_score", "media_external_financial_score"),
@@ -602,7 +606,7 @@ def getTopIssuesByStageScore(runId: int, stage: str, limit: int = 10) -> list:
     """
     return findAll(sql, (runId, limit)) or []
 
-def getSignalObservationCounts(runId: int, sourceStep: str) -> list:
+def listSignalCounts(runId: int, sourceStep: str) -> list:
     sql = """
         SELECT
             sub_issue_code,
@@ -617,7 +621,7 @@ def getSignalObservationCounts(runId: int, sourceStep: str) -> list:
     """
     return findAll(sql, (runId, sourceStep)) or []
 
-def getDistinctObservedSubIssueCount(runId: int, sourceStep: str) -> int:
+def countObservedSubIssues(runId: int, sourceStep: str) -> int:
     sql = """
         SELECT COUNT(DISTINCT sub_issue_code) AS cnt
         FROM ESG_DMA_SIGNAL_DETAIL
@@ -628,7 +632,7 @@ def getDistinctObservedSubIssueCount(runId: int, sourceStep: str) -> int:
     row = findOne(sql, (runId, sourceStep)) or {}
     return int(row.get("cnt") or 0)
 
-def getEvidenceCountsBySource(runId: int, sourceStep: str) -> list:
+def listEvidenceCounts(runId: int, sourceStep: str) -> list:
     sql = """
         SELECT
             source_type,
@@ -642,7 +646,7 @@ def getEvidenceCountsBySource(runId: int, sourceStep: str) -> list:
     """
     return findAll(sql, (runId, sourceStep)) or []
 
-def getEvidenceSamples(runId: int, sourceStep: str, limit: int = 10) -> list:
+def listEvidenceSamples(runId: int, sourceStep: str, limit: int = 10) -> list:
     sql = """
         SELECT
             id,
@@ -663,7 +667,7 @@ def getEvidenceSamples(runId: int, sourceStep: str, limit: int = 10) -> list:
     """
     return findAll(sql, (runId, sourceStep, limit)) or []
 
-def getSurveyGroupCounts(runId: int) -> list:
+def listSurveyCounts(runId: int) -> list:
     sql = """
         SELECT
             respondent_group,
@@ -676,7 +680,7 @@ def getSurveyGroupCounts(runId: int) -> list:
     """
     return findAll(sql, (runId,)) or []
 
-def getSurveyGroupScores(runId: int) -> list:
+def listSurveyScores(runId: int) -> list:
     sql = """
         SELECT
             sub_issue_code,
@@ -691,7 +695,7 @@ def getSurveyGroupScores(runId: int) -> list:
     """
     return findAll(sql, (runId,)) or []
 
-def getRequiredMetricCountForSubIssues(subIssueCodes: list[str]) -> int:
+def countRequiredMetrics(subIssueCodes: list[str]) -> int:
     if not subIssueCodes:
         return 0
     placeholders = ",".join(["?"] * len(subIssueCodes))
@@ -705,11 +709,11 @@ def getRequiredMetricCountForSubIssues(subIssueCodes: list[str]) -> int:
     row = findOne(sql, tuple(subIssueCodes)) or {}
     return int(row.get("cnt") or 0)
 
-def getMissingRequiredMetricCount(runId: int, subIssueCodes: list[str]) -> int:
+def countMissingMetrics(runId: int, subIssueCodes: list[str]) -> int:
     if not subIssueCodes:
         return 0
 
-    runInfo = getMaterialityRunInfo(runId)
+    runInfo = getRunInfo(runId)
     companyId = runInfo.get("company_id")
     reportingYear = runInfo.get("reporting_year")
     if companyId is None or reportingYear is None:
@@ -732,7 +736,7 @@ def getMissingRequiredMetricCount(runId: int, subIssueCodes: list[str]) -> int:
     row = findOne(sql, tuple([companyId, reportingYear] + subIssueCodes)) or {}
     return int(row.get("cnt") or 0)
 
-def getLatestReportRunByMaterialityRun(runId: int) -> dict:
+def getLatestReportRun(runId: int) -> dict:
     sql = """
         SELECT id, report_status, created_at
         FROM ESG_REPORT_RUN
@@ -742,3 +746,191 @@ def getLatestReportRunByMaterialityRun(runId: int) -> dict:
         LIMIT 1
     """
     return findOne(sql, (runId,)) or {}
+
+
+# Compatibility wrappers for pre-canonical public names.
+def saveDmaSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] = None, sourceTitle: str = ""):
+    return saveSignals(runId, signals, fileId, sourceTitle)
+
+
+def normalizeEvidencePublishedAt(value: Optional[str]) -> Optional[str]:
+    return normalizePublishedAt(value)
+
+
+def insertDmaEvidence(
+    runId: int,
+    sourceStep: str,
+    sourceType: str,
+    sourceTitle: Optional[str],
+    sourceUrl: Optional[str],
+    sourcePublishedAt: Optional[str],
+    fileId: Optional[int],
+    evidenceText: str,
+):
+    return insertEvidence(
+        runId,
+        sourceStep,
+        sourceType,
+        sourceTitle,
+        sourceUrl,
+        sourcePublishedAt,
+        fileId,
+        evidenceText,
+    )
+
+
+def getSignalsByGroup(runId: int, subIssueCode: str, sourceStep: str) -> List[DMASignal]:
+    return listSignals(runId, subIssueCode, sourceStep)
+
+
+def recalculateStageScore(runId: int, subIssueCode: str, sourceStep: str):
+    return recalcStage(runId, subIssueCode, sourceStep)
+
+
+def recalculateSurveyScore(runId: int, subIssueCode: str):
+    return recalcSurvey(runId, subIssueCode)
+
+
+def upsertStageScoreSummary(
+    runId: int,
+    subIssueCode: str,
+    stage: str,
+    impactScore: Optional[float],
+    financialScore: Optional[float],
+):
+    return upsertStage(runId, subIssueCode, stage, impactScore, financialScore)
+
+
+def recalculateFinalScore(runId: int, subIssueCode: str, updateRankingsYn: bool = True):
+    return recalcFinal(runId, subIssueCode, updateRankingsYn)
+
+
+def updateDmaRankings(runId: int):
+    return updateRanks(runId)
+
+
+def upsertFinalScoreSummary(runId: int, score: FinalMaterialityScore):
+    return upsertFinal(runId, score)
+
+
+def getDmaResults(runId: int) -> list:
+    return listResults(runId)
+
+
+def getTopIssuesByMediaScore(runId: int, limit: int = 5) -> list:
+    return listTopMediaIssues(runId, limit)
+
+
+def getMediaCoverageFromSummary(runId: int) -> dict:
+    return getMediaCoverage(runId)
+
+
+def getMediaObservedSubIssueCount(runId: int) -> int:
+    return countMediaSubIssues(runId)
+
+
+def getMaterialityRunInfo(runId: int) -> dict:
+    return getRunInfo(runId)
+
+
+def getSelectedSubIssues(runId: int) -> list:
+    return listSelectedSubIssues(runId)
+
+
+def getTopIssuesByStageScore(runId: int, stage: str, limit: int = 10) -> list:
+    return listTopStageIssues(runId, stage, limit)
+
+
+def getSignalObservationCounts(runId: int, sourceStep: str) -> list:
+    return listSignalCounts(runId, sourceStep)
+
+
+def getDistinctObservedSubIssueCount(runId: int, sourceStep: str) -> int:
+    return countObservedSubIssues(runId, sourceStep)
+
+
+def getEvidenceCountsBySource(runId: int, sourceStep: str) -> list:
+    return listEvidenceCounts(runId, sourceStep)
+
+
+def getEvidenceSamples(runId: int, sourceStep: str, limit: int = 10) -> list:
+    return listEvidenceSamples(runId, sourceStep, limit)
+
+
+def getSurveyGroupCounts(runId: int) -> list:
+    return listSurveyCounts(runId)
+
+
+def getSurveyGroupScores(runId: int) -> list:
+    return listSurveyScores(runId)
+
+
+def getRequiredMetricCountForSubIssues(subIssueCodes: list[str]) -> int:
+    return countRequiredMetrics(subIssueCodes)
+
+
+def getMissingRequiredMetricCount(runId: int, subIssueCodes: list[str]) -> int:
+    return countMissingMetrics(runId, subIssueCodes)
+
+
+def getLatestReportRunByMaterialityRun(runId: int) -> dict:
+    return getLatestReportRun(runId)
+
+
+__all__ = [
+    "saveSignals",
+    "saveDmaSignals",
+    "normalizePublishedAt",
+    "normalizeEvidencePublishedAt",
+    "insertEvidence",
+    "insertDmaEvidence",
+    "listSignals",
+    "getSignalsByGroup",
+    "recalcStage",
+    "recalculateStageScore",
+    "recalcSurvey",
+    "recalculateSurveyScore",
+    "upsertStage",
+    "upsertStageScoreSummary",
+    "safeFloat",
+    "safeFloatOrNone",
+    "recalcFinal",
+    "recalculateFinalScore",
+    "clampContextModifier",
+    "updateRanks",
+    "updateDmaRankings",
+    "upsertFinal",
+    "upsertFinalScoreSummary",
+    "listResults",
+    "getDmaResults",
+    "listTopMediaIssues",
+    "getTopIssuesByMediaScore",
+    "getMediaCoverage",
+    "getMediaCoverageFromSummary",
+    "countMediaSubIssues",
+    "getMediaObservedSubIssueCount",
+    "getRunInfo",
+    "getMaterialityRunInfo",
+    "listSelectedSubIssues",
+    "getSelectedSubIssues",
+    "listTopStageIssues",
+    "getTopIssuesByStageScore",
+    "listSignalCounts",
+    "getSignalObservationCounts",
+    "countObservedSubIssues",
+    "getDistinctObservedSubIssueCount",
+    "listEvidenceCounts",
+    "getEvidenceCountsBySource",
+    "listEvidenceSamples",
+    "getEvidenceSamples",
+    "listSurveyCounts",
+    "getSurveyGroupCounts",
+    "listSurveyScores",
+    "getSurveyGroupScores",
+    "countRequiredMetrics",
+    "getRequiredMetricCountForSubIssues",
+    "countMissingMetrics",
+    "getMissingRequiredMetricCount",
+    "getLatestReportRun",
+    "getLatestReportRunByMaterialityRun",
+]

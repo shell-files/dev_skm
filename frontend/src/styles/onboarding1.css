@@ -1,0 +1,451 @@
+/* =========================================================================
+   온보딩 메인 대시보드 리뉴얼 스타일 (onboarding1.css)
+========================================================================= */
+#ob1-page {
+  padding: 16px 24px;
+  background-color: #ffffff;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: #1e293b;
+}
+
+.ob1-content-layout {
+  display: flex;
+  gap: 20px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 2. 대시보드 위젯 (좌측 사이드바) */
+.ob1-sidebar {
+  width: 240px;
+  min-width: 240px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow-y: auto;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.ob1-sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ob1-company-name {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+.ob1-report-year {
+  font-size: 0.95rem;
+  color: #475569;
+}
+.ob1-status-badge-main {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  background-color: #dcfce7;
+  color: #166534;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 16px;
+  width: fit-content;
+  border: 1px solid #bbf7d0;
+  margin-top: 8px;
+}
+
+.ob1-dash-center {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+}
+
+/* 도넛 차트 (CSS-only) */
+.ob1-donut-chart {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: conic-gradient(#22c55e calc(var(--percent) * 1%), #e2e8f0 0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ob1-donut-inner {
+  width: 60px;
+  height: 60px;
+  background: #f8fafc;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.ob1-donut-label {
+  display: none; /* Hide label to save space */
+}
+.ob1-donut-percent {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+.ob1-donut-sub {
+  font-size: 0.65rem;
+  color: #94a3b8;
+}
+
+.ob1-stat-list-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 16px 0;
+}
+.ob1-stat-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ob1-stat-label {
+  font-size: 0.8rem;
+  color: #475569;
+  font-weight: 500;
+}
+.ob1-stat-val {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+.ob1-stat-val.success { color: #16a34a; }
+.ob1-stat-val.warning { color: #f59e0b; }
+.ob1-stat-val.neutral { color: #64748b; }
+
+.ob1-deadline-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+}
+.ob1-deadline-label {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+.ob1-deadline-date {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+.ob1-deadline-dday {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #16a34a;
+}
+
+.ob1-type-dist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ob1-type-dist-title {
+  font-size: 0.8rem;
+  color: #475569;
+  margin-bottom: 4px;
+}
+.ob1-type-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+.ob1-type-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 0.75rem;
+}
+.ob1-type-badge.direct { background: #dcfce7; color: #166534; }
+.ob1-type-badge.calc { background: #dbeafe; color: #1e40af; }
+.ob1-type-badge.narrative { background: #ffedd5; color: #c2410c; }
+.ob1-type-badge.ref { background: #f3f4f6; color: #4b5563; }
+.ob1-type-badge.mixed { background: #e0e7ff; color: #4338ca; }
+.ob1-type-count {
+  font-weight: 600;
+  color: #334155;
+}
+
+/* 3. 우측 메인 영역 */
+.ob1-main-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* 필터바 */
+.ob1-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.ob1-search-input {
+  flex: 1;
+  padding: 6px 10px 6px 32px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="%2394a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>') no-repeat 10px center;
+}
+.ob1-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ob1-filter-label {
+  font-size: 0.7rem;
+  color: #64748b;
+  padding-left: 2px;
+}
+.ob1-select {
+  padding: 6px 28px 6px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #334155;
+  background-color: #fff;
+  min-width: 120px;
+  appearance: none;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="%2364748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>');
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+}
+.ob1-btn-reset {
+  margin-top: 14px;
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 4px;
+  color: #475569;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ob1-btn-reset:hover { background: #f1f5f9; }
+.ob1-filter-right {
+  margin-left: auto;
+  margin-top: 14px;
+}
+.ob1-btn-excel {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 4px;
+  color: #475569;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.ob1-btn-excel:hover { background: #f8fafc; }
+
+/* 4. 데이터 테이블 */
+.ob1-table-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+.ob1-table-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+.ob1-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ob1-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 1px 0 #e2e8f0;
+}
+.ob1-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.85rem;
+  color: #1e293b;
+  vertical-align: middle;
+  text-align: center;
+}
+.ob1-table .ob1-th-name,
+.ob1-table .ob1-td-name {
+  text-align: left !important;
+}
+.ob1-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+/* 테이블 내부 요소 스타일 */
+.ob1-td-group { color: #475569; }
+.ob1-td-sub { color: #334155; border-right: 1px solid #f1f5f9; }
+.ob1-td-id { color: #64748b; font-family: monospace; font-size: 0.8rem; border-right: 1px solid #f1f5f9; }
+.ob1-td-name { font-weight: 500; color: #1e293b; }
+.ob1-td-rnr {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ob1-rnr-icon { color: #94a3b8; }
+.ob1-rnr-info { display: flex; flex-direction: column; }
+.ob1-rnr-name { font-size: 0.85rem; color: #334155; }
+.ob1-rnr-team { font-size: 0.75rem; color: #64748b; }
+
+.ob1-status-pill {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  display: inline-block;
+  white-space: nowrap;
+}
+.ob1-status-pill.draft { background: #ffedd5; color: #ea580c; }
+.ob1-status-pill.submitted { background: #dbeafe; color: #2563eb; }
+.ob1-status-pill.approved { background: #dcfce7; color: #166534; }
+.ob1-status-pill.not-started { background: #f1f5f9; color: #64748b; }
+
+.ob1-btn-input {
+  padding: 6px 12px;
+  border: 1px solid #22c55e;
+  color: #16a34a;
+  background: #ffffff;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  min-width: 80px;
+}
+.ob1-btn-input:hover {
+  background: #f0fdf4;
+}
+
+.ob1-btn-more {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+}
+.ob1-btn-more:hover { color: #475569; }
+
+/* 5. Pagination (간이 구현) */
+.ob1-pagination-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 16px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  position: relative;
+}
+.ob1-total-count {
+  position: absolute;
+  left: 16px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+.ob1-page-controls {
+  display: flex;
+  gap: 4px;
+}
+.ob1-page-btn {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 0.9rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.ob1-page-btn.active {
+  background: #dcfce7;
+  color: #166534;
+  font-weight: 600;
+}
+.ob1-page-btn:hover:not(.active) { background: #f1f5f9; }
+.ob1-page-select {
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+
+/* 6. 반응형 (Media Queries) */
+@media (max-width: 1100px) {
+  .ob1-content-layout {
+    flex-direction: column;
+    overflow: auto;
+  }
+  .ob1-sidebar {
+    width: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .ob1-stat-list-vertical {
+    flex-direction: row;
+    border: none;
+    gap: 16px;
+    padding: 0;
+  }
+  .ob1-main-area {
+    overflow: visible;
+  }
+}
+@media (max-width: 900px) {
+  .ob1-filter-bar {
+    flex-wrap: wrap;
+  }
+  .ob1-filter-right {
+    margin-left: 0;
+  }
+}

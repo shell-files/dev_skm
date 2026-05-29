@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, ConfigDict
+from pydantic import BaseModel, EmailStr, Field, ConfigDict, model_validator
 from typing import Optional, Union, List
 from datetime import date
 from fastapi import UploadFile
@@ -89,3 +89,34 @@ class FileFindModel(BaseModel):
     """ file.py 파일 읽어오기 모델 """
     file: List[str] = Field(..., description="읽어올 SR PDF 파일이름")
     page: str = Field(..., description="벤치마킹(SR) or 온보딩 구분(ONBOARD)")
+
+# 비번 체크 모델
+class pwdCheckModel(BaseModel):
+   """ auth.py patch 비밀번호 확인 모델"""
+   password: str = Field(..., description="비밀번호 확인에서 사용하는 pwd 모델")
+
+# 로그아웃 모델
+class logoutModel(BaseModel):
+   """ auth.py delete 로그아웃 모델"""
+   uuid: str = Field(..., description="로그아웃에서 사용되는 uuid 모델")
+   
+#회원 정보 확인 모델
+class userUpdateModel(BaseModel):
+    """ user.py patch 회원 수정 페이지 전용 모델 (화면 항목: 새 비밀번호, 확인, 이름) """
+    name: Optional[str] = Field(None, description="변경할 이름")
+    newPassword: Optional[str] = Field(None, description="변경할 비밀번호")
+    newPasswordConfirm: Optional[str] = Field(None, description="변경할 비밀번호 확인")
+
+    # Pydantic 라이브러리에서 정의한 이름이라 카멜케이스 안 됨
+    @model_validator(mode='after')
+    def checkPasswordsMatch(self) -> 'userUpdateModel':
+        # 비밀번호 변경 값이 들어온 경우에만 두 값이 일치하는지 검증
+        if self.newPassword or self.newPasswordConfirm:
+            if self.newPassword != self.newPasswordConfirm:
+                raise ValueError("변경할 비밀번호가 서로 일치하지 않습니다.")
+        return self
+    
+# 회원 탈퇴 모델
+class userDeleteModel(BaseModel):
+    """ user.py delete 회원 탈퇴 페이지 전용 모델 (uuid 이용) """
+    uuid: str = Field(..., description="회원탈퇴시 사용되는 uuid 모델")

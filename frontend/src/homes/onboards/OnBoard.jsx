@@ -34,7 +34,7 @@ import { useAuth } from '@hooks/AuthContext.jsx';
 
 // import { skmApi } from "@utils/Network";
 // 모달 임포트
-import DataInputModal from "./DataInputModal";
+import OnboardingModalShell from "./components/modal/OnboardingModalShell";
 
 // ── 0. API 설정 ──
 const USE_DUMMY_API = false;
@@ -146,6 +146,7 @@ const Onboarding = () => {
   const [metrics, setMetrics] = useState(() => JSON.parse(localStorage.getItem('onboarding_metrics_dummy')) || initialMetrics);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [activeFlow, setActiveFlow] = useState('G0'); // 'G0' | 'GENERAL'
   const [activeCategory, setActiveCategory] = useState("전체");
   const [selectedIGs, setSelectedIGs] = useState([]);
   const [activeService, setActiveService] = useState('disclosure');
@@ -175,6 +176,8 @@ const Onboarding = () => {
     const s = searchTerm.toLowerCase();
     return metrics.filter(m => {
       if ((m.service || 'disclosure') !== activeService) return false;
+      if (activeFlow === 'G0' && m.category !== '경영일반') return false;
+      if (activeFlow === 'GENERAL' && m.category === '경영일반') return false;
       if (activeStatusFilters.length && !activeStatusFilters.includes(m.status)) return false;
       if (!activeStatusFilters.length) {
         if (activeCategory !== "전체" && m.category !== activeCategory) return false;
@@ -310,6 +313,24 @@ const Onboarding = () => {
   return (
     <div id="onboarding_page">
       <main className="ob-body">
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+          <button 
+            type="button"
+            className={`ob-btn ${activeFlow === 'G0' ? 'ob-btn-primary' : 'ob-btn-secondary'}`}
+            style={{ padding: '8px 20px', borderRadius: '24px', fontSize: '0.95rem' }}
+            onClick={() => { setActiveFlow('G0'); setCurrentPage(1); setActiveCategory("전체"); }}
+          >
+            📋 1단계: G0 (회사 프로파일) 입력
+          </button>
+          <button 
+            type="button"
+            className={`ob-btn ${activeFlow === 'GENERAL' ? 'ob-btn-primary' : 'ob-btn-secondary'}`}
+            style={{ padding: '8px 20px', borderRadius: '24px', fontSize: '0.95rem' }}
+            onClick={() => { setActiveFlow('GENERAL'); setCurrentPage(1); setActiveCategory("전체"); }}
+          >
+            ✅ 2단계: 일반 온보딩 (DMA 확정 지표)
+          </button>
+        </div>
         <div className="ob-header-row">
           <div className="ob-header-left">
             <div className="ob-cat-tabs-container">
@@ -521,12 +542,13 @@ const Onboarding = () => {
           </div>
         )}
       </main>
-      <DataInputModal 
+      <OnboardingModalShell 
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         metricItem={selectedItem?.parent}
         subMetrics={selectedItem?.metrics || []}
-        onSaveAndSubmit={async (values, files) => {
+        modalType="MIXED"
+        onSaveAndSubmit={async (values, files, status) => {
           if (!selectedItem) return;
 
           try {
@@ -546,7 +568,7 @@ const Onboarding = () => {
                   return {
                     ...metric,
                     value: values[metric.issueId] || "",
-                    status: "SUBMITTED",
+                    status: status || "SUBMITTED",
                     evidenceAttached: !!files[metric.issueId],
                     evidenceFileName: files[metric.issueId]?.name || ""
                   };
@@ -562,12 +584,14 @@ const Onboarding = () => {
                 value: values[issueId]
               });
 
-              await requestApi.submit(issueId);
+              if (status === 'SUBMITTED') {
+                await requestApi.submit(issueId);
+              }
             }
 
             showDefaultAlert(
               "완료",
-              "임시저장 및 제출이 완료되었습니다.",
+              status === 'DRAFT' ? "임시저장이 완료되었습니다." : "데이터 제출이 완료되었습니다.",
               "success"
             );
 

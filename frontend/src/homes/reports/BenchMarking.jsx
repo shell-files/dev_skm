@@ -281,7 +281,7 @@ const Benchmarking = () => {
       <div className="upload-group-container" id={`group-${groupKey}`}>
         <div className="upload-group-badge">{label}</div>
 
-        <div className="company-top-input-row">
+        <div className="company-top-Bench-input-row">
           <input
             type="text"
             className="company-name-input"
@@ -352,14 +352,14 @@ const Benchmarking = () => {
         </div>
       </header>
 
-      <main className="main-content">
-        <div className="input-card" style={{ marginBottom: "50px" }}>
+      <main className="Bench-main-content">
+        <div className="Bench-input-card" style={{ marginBottom: "50px" }}>
           <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px" }}>벤치마킹 분석</h2>
           <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "4px" }}>
             산업군 리더 기업들의 공시 지표를 수집하고 우리 기업과의 격차 분석을 시작합니다.
           </p>
 
-          <div className="upload-section-grid">
+          <div className="Bench-upload-section-grid">
             {renderUploadGroup("leader", "리더", "회사이름 필수 입력")}
             {renderUploadGroup("peer", "피어", "회사이름 필수 입력")}
             {renderUploadGroup("sub", "자회사", "회사이름 필수 입력")}

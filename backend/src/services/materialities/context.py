@@ -18,7 +18,7 @@ Do not:
 - do not change benchmark/media/survey stage scores
 - do not change API routes
 - do not call FastAPI router directly
-- do not fix flow integrity in this metadata-only step
+- do not bypass context modifier guard flow
 - do not modify auth/token/common code
 """
 
@@ -78,52 +78,6 @@ def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDt
         runContext=runContext,
         facts=facts,
         deterministicBuilder=buildCompanyContextProfile,
-    )
-
-
-def getCompanyContextProfile(runId: int) -> CompanyContextProfileResponseDto:
-    row = getLatestCompanyContextProfile(runId)
-    if not row:
-        return CompanyContextProfileResponseDto(
-            runId=runId,
-            implementationStatus="NO_CONTEXT_PROFILE",
-            messages=["No ESG_DMA_CONTEXT_PROFILE row found for runId."],
-        )
-
-    contextPayload = _parseJsonDict(row.get("context_json"))
-    modifierPayload = _parseJsonDict(row.get("modifier_json"))
-    profilePayload = contextPayload.get("profile") or None
-    profile = None
-    if profilePayload:
-        try:
-            profile = CompanyContextProfileDto(**profilePayload)
-        except Exception:
-            profile = None
-
-    modifiers = []
-    for item in modifierPayload.get("modifiers", []) or []:
-        try:
-            modifiers.append(SubIssueContextModifierDto(**item))
-        except Exception:
-            continue
-
-    profileSource = contextPayload.get("profileSource")
-    profileConfidence = _floatOrNone(contextPayload.get("profileConfidence"))
-
-    return CompanyContextProfileResponseDto(
-        runId=runId,
-        contextProfileId=int(row["id"]) if row.get("id") is not None else None,
-        companyId=int(row["company_id"]) if row.get("company_id") is not None else None,
-        reportingYear=int(row["reporting_year"]) if row.get("reporting_year") is not None else None,
-        profile=profile,
-        profileSource=profileSource,
-        profileConfidence=profileConfidence,
-        modifierRange=modifierPayload.get("modifierRange") or {"min": MVP_MODIFIER_MIN, "max": MVP_MODIFIER_MAX},
-        systemModifierRange=modifierPayload.get("systemModifierRange") or {"min": SYSTEM_MODIFIER_MIN, "max": SYSTEM_MODIFIER_MAX},
-        graphTrace=contextPayload.get("graphTrace") or [],
-        modifiers=modifiers,
-        messages=["OK"],
-        implementationStatus="READY",
     )
     profileConfidence = _profileConfidence(profile)
     summaryRows = getDmaScoreSummaryRowsForContext(runId)
@@ -198,6 +152,52 @@ def getCompanyContextProfile(runId: int) -> CompanyContextProfileResponseDto:
             "ruleVersion": MODIFIER_RULE_VERSION,
             "modifierJson": modifierPayload,
         },
+    )
+
+
+def getCompanyContextProfile(runId: int) -> CompanyContextProfileResponseDto:
+    row = getLatestCompanyContextProfile(runId)
+    if not row:
+        return CompanyContextProfileResponseDto(
+            runId=runId,
+            implementationStatus="NO_CONTEXT_PROFILE",
+            messages=["No ESG_DMA_CONTEXT_PROFILE row found for runId."],
+        )
+
+    contextPayload = _parseJsonDict(row.get("context_json"))
+    modifierPayload = _parseJsonDict(row.get("modifier_json"))
+    profilePayload = contextPayload.get("profile") or None
+    profile = None
+    if profilePayload:
+        try:
+            profile = CompanyContextProfileDto(**profilePayload)
+        except Exception:
+            profile = None
+
+    modifiers = []
+    for item in modifierPayload.get("modifiers", []) or []:
+        try:
+            modifiers.append(SubIssueContextModifierDto(**item))
+        except Exception:
+            continue
+
+    profileSource = contextPayload.get("profileSource")
+    profileConfidence = _floatOrNone(contextPayload.get("profileConfidence"))
+
+    return CompanyContextProfileResponseDto(
+        runId=runId,
+        contextProfileId=int(row["id"]) if row.get("id") is not None else None,
+        companyId=int(row["company_id"]) if row.get("company_id") is not None else None,
+        reportingYear=int(row["reporting_year"]) if row.get("reporting_year") is not None else None,
+        profile=profile,
+        profileSource=profileSource,
+        profileConfidence=profileConfidence,
+        modifierRange=modifierPayload.get("modifierRange") or {"min": MVP_MODIFIER_MIN, "max": MVP_MODIFIER_MAX},
+        systemModifierRange=modifierPayload.get("systemModifierRange") or {"min": SYSTEM_MODIFIER_MIN, "max": SYSTEM_MODIFIER_MAX},
+        graphTrace=contextPayload.get("graphTrace") or [],
+        modifiers=modifiers,
+        messages=["OK"],
+        implementationStatus="READY",
     )
 
 

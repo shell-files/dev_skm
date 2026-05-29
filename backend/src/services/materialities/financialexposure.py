@@ -8,11 +8,21 @@ Responsibility:
 Public functions:
 - applyG0FinancialExposure
 - applyG0FinancialExposureForRun
+- applyExposure
+- applyRunExposure
 - buildFinancialExposureForSignal
 - buildFinancialExposureForSignalWithBasis
+- buildExposure
+- buildExposureWithBasis
 - calculateChannelScore
+- calcChannelScore
+- calcSourceBonus
+- calcConfidenceCap
 - canApplyFinancialExposure
+- checkIro
 - resolvePreferConsolidated
+- resolveDominant
+- resolveScope
 Do not:
 - do not mutate unrelated DB state
 - do not mutate DB
@@ -703,6 +713,78 @@ def _safeFloat(value: Any, default: Optional[float] = None) -> Optional[float]:
         return default
 
 
+# Compatibility aliases / short naming wrappers
+
+def applyExposure(
+    signals: list[DMASignal],
+    companyId: int,
+    reportingYear: int,
+    preferConsolidated: bool = True,
+) -> list[DMASignal]:
+    return applyG0FinancialExposure(signals, companyId, reportingYear, preferConsolidated)
+
+
+def applyRunExposure(
+    signals: list[DMASignal],
+    runId: int,
+) -> list[DMASignal]:
+    return applyG0FinancialExposureForRun(signals, runId)
+
+
+def buildExposure(
+    signal: DMASignal,
+    companyId: int,
+    reportingYear: int,
+    preferConsolidated: bool = True,
+) -> tuple[DMASignal, dict]:
+    return buildFinancialExposureForSignal(signal, companyId, reportingYear, preferConsolidated)
+
+
+def buildExposureWithBasis(
+    signal: DMASignal,
+    financialBasis: dict,
+) -> tuple[DMASignal, dict]:
+    return buildFinancialExposureForSignalWithBasis(signal, financialBasis)
+
+
+def calcChannelScore(
+    channel: str,
+    ratioPreset: float,
+    rationale: str,
+    financialBasis: dict,
+    sourceType: str,
+    confidence: float,
+) -> dict:
+    return calculateChannelScore(channel, ratioPreset, rationale, financialBasis, sourceType, confidence)
+
+
+def calcSourceBonus(
+    channel: str,
+    magnitude: int,
+    sourceType: str,
+    confidence: float,
+) -> int:
+    return sourceTypeMagnitudeBonus(channel, magnitude, sourceType, confidence)
+
+
+def calcConfidenceCap(confidence: float) -> Optional[int]:
+    return confidenceMagnitudeCap(confidence)
+
+
+def resolveDominant(
+    magnitudes: dict[str, Optional[int]],
+) -> tuple[Optional[str], Optional[int]]:
+    return dominantMagnitude(magnitudes)
+
+
+def checkIro(subIssueCode: str, financialIroType: str) -> bool:
+    return canApplyFinancialExposure(subIssueCode, financialIroType)
+
+
+def resolveScope(runContext: dict) -> tuple[bool, list[str]]:
+    return resolvePreferConsolidated(runContext)
+
+
 __all__ = [
     "CHANNEL_DENOMINATORS",
     "DOMINANT_MAGNITUDE_PRIORITY",
@@ -710,15 +792,25 @@ __all__ = [
     "FINANCIAL_EXPOSURE_RULES",
     "applyG0FinancialExposure",
     "applyG0FinancialExposureForRun",
+    "applyExposure",
+    "applyRunExposure",
     "buildEnhancedFinancialFactor",
     "buildFinancialExposureForSignal",
     "buildFinancialExposureForSignalWithBasis",
+    "buildExposure",
+    "buildExposureWithBasis",
+    "calcChannelScore",
+    "calcConfidenceCap",
+    "calcSourceBonus",
     "canApplyFinancialExposure",
     "calculateChannelScore",
+    "checkIro",
     "confidenceMagnitudeCap",
     "dominantMagnitude",
     "ratioToMagnitude",
+    "resolveDominant",
     "resolvePreferConsolidated",
+    "resolveScope",
     "selectDenominator",
     "sourceTypeMagnitudeBonus",
 ]

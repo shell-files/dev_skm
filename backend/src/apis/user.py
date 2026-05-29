@@ -17,13 +17,14 @@ router = APIRouter()
 @router.patch("", 
         summary="회원수정 api", 
         description="회원 정보를 수정합니다.")
-async def updateUser(request: Request,userUpdateModel: userUpdateModel):
+async def updateUser(request: Request, userUpdateModel: userUpdateModel):
     return updateUserProcess(request, userUpdateModel)
+
 # --------------------------
 # 회원 탈퇴 API
 # --------------------------
 @router.delete("", 
         summary="회원탈퇴 api", 
-        description="회원 탈퇴 처리(delete_yn)입니다.")
-def deleteUser(userDeleteModel: userDeleteModel):
-    return deleteUserProcess(userDeleteModel)
+        description="회원 탈퇴 처리입니다.")
+def deleteUser(request: Request):
+    return deleteUserProcess(request)

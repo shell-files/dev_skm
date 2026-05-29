@@ -30,7 +30,8 @@ async def userCheck(userModel = Depends(get_token)):
               summary="비밀번호 확인",
               description="회원수정 버튼 누를때 비밀번호 확인")
 async def pwdCheck(request: Request, pwdCheckModel: pwdCheckModel):
-
+    
+    # 3. 여기에서 request를 넘겨주어야 합니다!
     return pwdCheckProcess(request, pwdCheckModel)
 
 # --------------------------

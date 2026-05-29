@@ -14,8 +14,7 @@ from src.utils.subissuemaster import subissueMaster
 
 router = APIRouter()
 
-print("Loading SentenceTransformer model...")
-embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+embedding_model = None
 
 # ------------------------------------------------------------------
 # [AI 에이전트 가이드]
@@ -64,7 +63,7 @@ def load_issue_dictionary():
         
         # 62개 표준 이슈의 임베딩 벡터 사전 계산 (배치 인코딩)
         print("Pre-computing SubIssue master vectors...")
-        _ISSUE_VECTORS = embedding_model.encode(issue_texts)
+        _ISSUE_VECTORS = _getEmbeddingModel().encode(issue_texts)
         
     except Exception as e:
         print("Failed to load issue dict:", e)
@@ -72,6 +71,14 @@ def load_issue_dictionary():
         _ISSUE_DICTIONARY_LIST = []
         
     return _ISSUE_DICTIONARY_STR, _ISSUE_DICTIONARY_LIST
+
+
+def _getEmbeddingModel():
+    global embedding_model
+    if embedding_model is None:
+        print("Loading SentenceTransformer model...")
+        embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+    return embedding_model
 
 # JSON 응답 정제용 함수 (LLM이 준 문자열을 파이썬에서 쓰기 좋게 딕셔너리로 바꿉니다)
 def clean(responseText: str) -> list:
@@ -101,7 +108,7 @@ def normalize_mapping_weights(raw_label, threshold=0.35, alpha=1.5, top_k=3):
         return []
 
     # 1. 원문(raw_label)을 임베딩 벡터로 변환
-    vec = embedding_model.encode([raw_label], show_progress_bar=False)[0]
+    vec = _getEmbeddingModel().encode([raw_label], show_progress_bar=False)[0]
     
     # 2. 62개 전체 표준 이슈와 코사인 유사도 일괄 계산
     sims = cosine_similarity([vec], _ISSUE_VECTORS)[0]

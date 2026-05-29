@@ -282,13 +282,533 @@ DMA 결과 화면:
 - `final_score/rank_no` 재계산
 - benchmark/media/survey stage score 불변
 
-제약:
+추가 안정화 결과:
 
-- 전체 FastAPI app boot 기반 HTTP smoke는 기존 `src.apis.auth` import 오류로 보류했다.
+- 전체 FastAPI app boot smoke는 통과했다. route count는 32개다.
+- `logoutModel`, `pwdCheckModel`, `userUpdateModel`, `userDeleteModel` legacy DTO import 문제를 해결했다.
+- Kafka/mail optional dependency import 실패는 app boot 실패가 아니라 기능 호출 시 graceful unavailable로 처리한다.
+- `company_profile.py` 내부 module prefix는 `fastset.py`에서 underscore를 hyphen으로 변환하여 외부 path `/company-profile`로 노출한다.
 - materiality result API는 재계산된 final score/rank는 반환하지만 context guard transparency fields는 아직 직접 반환하지 않는다.
 
 ## 10. Open Questions
 
-1. 결과 API에 context transparency section을 추가할지, 별도 `GET /materiality/context/{runId}`를 둘지 결정 필요.
+1. 결과 API에 context transparency section을 추가할지, 현재처럼 별도 `GET /materiality/context/{runId}`를 사용할지 최종 UI 선택 필요.
 2. branch `feature/onborading_renewal`의 오타를 `feature/onboarding_renewal`로 정리할지 결정 필요.
 3. LangGraph dependency를 `pyproject.toml`에 명시할 시점 결정 필요.
+
+## 11. Phase1 Frontend API Samples
+
+아래 sample의 외부 호출 경로는 `/api/v1/...`로 표기한다. backend 내부 등록 경로는 gateway/baseURL prefix를 제외한 path다.
+
+### 11.1 GET /company-profile/g0/{companyId}
+
+Request:
+
+```http
+GET /api/v1/company-profile/g0/6?reportingYear=2024
+```
+
+Success response:
+
+```json
+{
+  "companyId": 6,
+  "reportingYear": 2024,
+  "g0ProfileStatus": "COMPLETED",
+  "items": [
+    {
+      "metricId": "G0-01",
+      "atomicMetricId": "G0-01__QL0001",
+      "metricName": "회사 개요",
+      "atomicName": "회사 개요",
+      "valueText": "A_GROUP은 자동차 부품과 전동화 부품 사업을 운영한다.",
+      "valueNumeric": null,
+      "unit": null,
+      "requiredYn": true,
+      "updatedAt": "2026-05-28 20:00:00"
+    }
+  ],
+  "missingRequiredItems": [],
+  "message": "OK",
+  "implementationStatus": "READY"
+}
+```
+
+Empty/no data response:
+
+```json
+{
+  "companyId": 6,
+  "reportingYear": 2026,
+  "g0ProfileStatus": "NOT_STARTED",
+  "items": [],
+  "missingRequiredItems": [],
+  "message": "OK",
+  "implementationStatus": "READY"
+}
+```
+
+Error response:
+
+```json
+{ "detail": "server error message" }
+```
+
+Field 설명: `items`는 G0 master 기준 입력 항목이다. `requiredYn=true`인 항목이 모두 채워지면 `COMPLETED`다.
+
+### 11.2 GET /company-profile/g0/{companyId}/status
+
+Request:
+
+```http
+GET /api/v1/company-profile/g0/6/status?reportingYear=2024
+```
+
+Success response:
+
+```json
+{
+  "companyId": 6,
+  "reportingYear": 2024,
+  "g0ProfileStatus": "COMPLETED",
+  "requiredItemCount": 15,
+  "completedRequiredItemCount": 15,
+  "missingRequiredItemCount": 0,
+  "message": "OK",
+  "implementationStatus": "READY"
+}
+```
+
+Empty/no data response:
+
+```json
+{
+  "companyId": 6,
+  "reportingYear": 2026,
+  "g0ProfileStatus": "NOT_STARTED",
+  "requiredItemCount": 15,
+  "completedRequiredItemCount": 0,
+  "missingRequiredItemCount": 15,
+  "message": "OK",
+  "implementationStatus": "READY"
+}
+```
+
+Error response:
+
+```json
+{ "detail": "server error message" }
+```
+
+Field 설명: MVP 상태 enum은 `NOT_STARTED`, `IN_PROGRESS`, `COMPLETED`, `STALE`이며 `STALE`은 아직 본구현하지 않는다.
+
+### 11.3 POST /materiality/context/{runId}/apply
+
+Request:
+
+```http
+POST /api/v1/materiality/context/6/apply
+```
+
+Success response:
+
+```json
+{
+  "runId": 6,
+  "contextProfileId": 3,
+  "companyId": 6,
+  "reportingYear": 2024,
+  "implementationStatus": "APPLIED",
+  "profile": {
+    "profileSource": "DETERMINISTIC_FALLBACK",
+    "confidence": 0.88,
+    "industryExposure": "automotive_parts_high"
+  },
+  "modifiers": [
+    {
+      "subIssueCode": "S_PRODUCT_RESP__PRODUCT_SAFETY_QUALITY",
+      "profileSource": "DETERMINISTIC_FALLBACK",
+      "profileConfidence": 0.88,
+      "impactModifier": 0.1,
+      "financialModifier": 0.1,
+      "rawRank": 1,
+      "adjustedRank": 1,
+      "guardAppliedYn": false,
+      "guardReason": null
+    }
+  ],
+  "modifierRange": { "min": -0.3, "max": 0.3 },
+  "systemModifierRange": { "min": -0.5, "max": 0.5 },
+  "stageScoreChangedYn": false,
+  "messages": ["Context modifiers were applied only to final aggregation."]
+}
+```
+
+Empty/no data response:
+
+```json
+{
+  "runId": 9999,
+  "implementationStatus": "NO_RUN",
+  "messages": ["No ESG_MATERIALITY_RUN row found for runId."]
+}
+```
+
+Error response:
+
+```json
+{ "detail": "server error message" }
+```
+
+Field 설명: `stageScoreChangedYn`은 항상 false여야 한다. context modifier는 final score/rank에만 반영된다.
+
+### 11.4 GET /materiality/context/{runId}
+
+Request:
+
+```http
+GET /api/v1/materiality/context/6
+```
+
+Success response:
+
+```json
+{
+  "runId": 6,
+  "contextProfileId": 3,
+  "companyId": 6,
+  "reportingYear": 2024,
+  "profileSource": "DETERMINISTIC_FALLBACK",
+  "profileConfidence": 0.88,
+  "modifierRange": { "min": -0.3, "max": 0.3 },
+  "systemModifierRange": { "min": -0.5, "max": 0.5 },
+  "graphTrace": [
+    {
+      "node": "fallbackIfLowConfidence",
+      "status": "SKIPPED",
+      "message": "COMPANY_CONTEXT_LLM_ENABLED is not true."
+    }
+  ],
+  "modifiers": [
+    {
+      "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_RISK_AUDIT_CAP",
+      "rawRank": 10,
+      "adjustedRank": 10,
+      "guardAppliedYn": true,
+      "guardReason": "TOP5_RAW_RANK_LIMIT"
+    }
+  ],
+  "messages": ["OK"],
+  "implementationStatus": "READY"
+}
+```
+
+Empty/no data response:
+
+```json
+{
+  "runId": 1,
+  "contextProfileId": null,
+  "profile": null,
+  "modifiers": [],
+  "messages": ["No ESG_DMA_CONTEXT_PROFILE row found for runId."],
+  "implementationStatus": "NO_CONTEXT_PROFILE"
+}
+```
+
+Error response:
+
+```json
+{ "detail": "server error message" }
+```
+
+Field 설명: 프론트는 context 설명 패널/guard 안내를 이 endpoint에서 읽는다.
+
+### 11.5 GET /materiality/results/{runId}
+
+Request:
+
+```http
+GET /api/v1/materiality/results/6
+```
+
+Success response:
+
+```json
+{
+  "runId": 6,
+  "summaryRowCount": 11,
+  "scoredSubIssueCount": 10,
+  "selectedSubIssueCount": 5,
+  "selectionSource": "RANK_FALLBACK",
+  "fallbackYn": true,
+  "items": [],
+  "matrixItems": [],
+  "topIssues": [],
+  "selectionReasons": [],
+  "coverageSummary": {
+    "fullCount": 0,
+    "partialCount": 0,
+    "limitedCount": 10,
+    "noDataCount": 1
+  }
+}
+```
+
+Empty/no data response:
+
+```json
+{
+  "runId": 9999,
+  "summaryRowCount": 0,
+  "scoredSubIssueCount": 0,
+  "selectedSubIssueCount": 0,
+  "items": [],
+  "matrixItems": [],
+  "topIssues": []
+}
+```
+
+Error response:
+
+```json
+{ "detail": "server error message" }
+```
+
+Field 설명: 이 API는 context 적용 후 final score/rank를 보여주지만 guard transparency는 직접 포함하지 않는다.
+
+### 11.6 POST /media/news/crawl-and-analyze
+
+Request:
+
+```json
+{
+  "runId": 6,
+  "sources": ["impacton", "esgeconomy"],
+  "dateFrom": "2024-01-01",
+  "dateTo": "2024-12-31"
+}
+```
+
+Success response:
+
+```json
+{
+  "runId": 6,
+  "requestedSources": ["impacton", "esgeconomy"],
+  "allowedSources": ["impacton", "esgeconomy"],
+  "rejectedSources": [],
+  "companyKeywords": ["현대자동차"],
+  "industryKeywords": ["자동차부품산업"],
+  "keywordSource": "MVP_SERVICE_CONSTANT",
+  "collectedArticleCount": 78,
+  "filteredArticleCount": 40,
+  "articleCount": 40,
+  "savedSignalCount": 120,
+  "observedSubIssueCount": 19,
+  "sourceBreakdown": [],
+  "topIssues": [],
+  "coverage": {},
+  "coverageStatus": "LIMITED",
+  "errors": []
+}
+```
+
+Empty/no data response:
+
+```json
+{
+  "runId": 6,
+  "requestedSources": ["impacton"],
+  "allowedSources": ["impacton", "esgeconomy"],
+  "rejectedSources": [],
+  "collectedArticleCount": 0,
+  "filteredArticleCount": 0,
+  "articleCount": 0,
+  "savedSignalCount": 0,
+  "observedSubIssueCount": 0,
+  "sourceBreakdown": [
+    {
+      "sourceKey": "impacton",
+      "sourceLabel": "임팩트온",
+      "requestedYn": true,
+      "executedYn": true,
+      "collectedCount": 0,
+      "filteredCount": 0,
+      "savedSignalCount": 0,
+      "status": "SUCCESS",
+      "errorMessage": null
+    }
+  ],
+  "topIssues": [],
+  "coverage": {},
+  "coverageStatus": "NO_DATA",
+  "errors": []
+}
+```
+
+Error response:
+
+```json
+{ "detail": "dateFrom must be before or equal to dateTo" }
+```
+
+Field 설명: `sources`는 배열이다. MVP 허용값은 `impacton`, `esgeconomy` 두 개이며, 동시 실행은 `["impacton", "esgeconomy"]`로 호출한다. `["all"]` 계약은 사용하지 않는다.
+
+### 11.7 GET /materiality/media/{runId}
+
+Request:
+
+```http
+GET /api/v1/materiality/media/6
+```
+
+Success response:
+
+```json
+{
+  "runId": 6,
+  "summary": {
+    "articleCount": 0,
+    "agencyCount": 0,
+    "regulationFrameCount": 0,
+    "observedSubIssueCount": 0
+  },
+  "sourceBreakdown": [],
+  "topIssues": [],
+  "evidenceSamples": [],
+  "coverage": {}
+}
+```
+
+Empty/no data response는 success response와 동일하게 빈 배열/0 count를 반환한다.
+
+Error response:
+
+```json
+{ "detail": "server error message" }
+```
+
+Field 설명: Media topIssues는 final score가 아니라 `media_external` stage score 기준이다.
+
+### 11.8 Benchmark Upload/Analyze API
+
+Upload request:
+
+```http
+POST /api/v1/benchmk
+Content-Type: multipart/form-data
+file=<PDF[]>
+fileType=Leader
+companyName=Peer Company
+page=SR
+```
+
+Upload success response:
+
+```json
+{
+  "status": true,
+  "message": "파일이 성공적으로 업로드되었습니다.",
+  "data": {
+    "files": [{ "fileName": "uuid.pdf", "origin": "report.pdf" }],
+    "page": "SR"
+  }
+}
+```
+
+Analyze request:
+
+```json
+{
+  "file": ["uuid.pdf"],
+  "page": "SR",
+  "esg_materiality_run_id": 6,
+  "source_step": "benchmark",
+  "source_type": "leader_sr"
+}
+```
+
+Analyze success response:
+
+```json
+{
+  "status": true,
+  "message": "분석이 성공적으로 완료되었습니다.",
+  "data": {}
+}
+```
+
+Empty/error response:
+
+```json
+{
+  "status": false,
+  "message": "존재하지 않는 파일이 포함되어 있습니다: uuid.pdf",
+  "data": {}
+}
+```
+
+Field 설명: 분석 API는 `esg_materiality_run_id`를 받아 `ESG_DMA_SIGNAL_DETAIL`과 `ESG_DMA_SCORE_SUMMARY`로 연결한다. runId 하드코딩은 사용하지 않는다.
+
+### 11.9 GET /materiality/benchmark/{runId}
+
+Request:
+
+```http
+GET /api/v1/materiality/benchmark/6
+```
+
+Success response:
+
+```json
+{
+  "runId": 6,
+  "summary": {
+    "analyzedReportCount": 0,
+    "leaderReportCount": 0,
+    "peerReportCount": 0,
+    "ownReportCount": 0,
+    "identifiedIssueCount": 0,
+    "commonIssueCount": 0,
+    "blindSpotCount": 0
+  },
+  "topIssues": [],
+  "commonIssues": [],
+  "blindSpotIssues": [],
+  "evidenceSummary": {
+    "implementationStatus": "READY_WITH_GRACEFUL_EMPTY"
+  }
+}
+```
+
+Empty/no data response는 success response와 동일하게 빈 배열/0 count를 반환한다.
+
+Error response:
+
+```json
+{ "detail": "server error message" }
+```
+
+Field 설명: benchmark upload/analyze API와 result API는 분리되어 있다.
+
+## 12. Frontend Connection Notes
+
+Media:
+
+- `POST /media/news/analyze`는 수동 articles smoke/fallback용이다.
+- `POST /media/news/crawl-and-analyze`가 Media.jsx 메인 플로우 대상이다.
+- `sources`는 배열이며 `impacton`, `esgeconomy` 두 source를 동시에 보낼 수 있다.
+- 실제 사이트 HTML이 crawler regex와 맞지 않으면 `collectedArticleCount=0` 또는 `filteredArticleCount=0`이 될 수 있다. 이 경우 UI는 실패가 아니라 empty state로 표시한다.
+
+Benchmark:
+
+- `POST /benchmk`는 upload, `PUT /benchmk`는 analyze다.
+- `PUT /benchmk` request의 `esg_materiality_run_id`가 DMA run 연결 키다.
+- 결과 조회는 `GET /materiality/benchmark/{runId}`를 사용한다.
+
+Context:
+
+- 적용은 `POST /materiality/context/{runId}/apply`.
+- 재조회는 `GET /materiality/context/{runId}`.
+- context가 없으면 404가 아니라 `200 + implementationStatus="NO_CONTEXT_PROFILE"`이다.

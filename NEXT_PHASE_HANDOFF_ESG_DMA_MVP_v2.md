@@ -59,7 +59,8 @@ LangGraph/LLM 실패는 API 실패가 아니라 deterministic fallback으로 처
 - 실제 LLM profiler를 붙이더라도 AI는 profile flag만 만들고 modifier 산정은 rule engine이 담당한다.
 - guard는 문서 기준 확정, deterministic rule guard 보강 완료: MVP range `-0.3 ~ +0.3`, system range `-0.5 ~ +0.5`, 최소 stage 관측, confidence >= 0.5, rank movement 최대 2단계, Top 5 진입 rawRank Top 8 제한을 필수 반영 기준으로 둔다.
 - LangGraph profiler는 optional adapter 1차 추가. dependency/env 미설치, 비활성, 실패 시 deterministic fallback을 사용한다.
-- 실DB smoke 완료: smoke runId `6`, `7`, `8`에서 context profile 저장, modifier_json transparency, final/rank 재계산, stage score 불변을 확인했다. 전체 FastAPI app 부팅 smoke는 기존 `src.apis.auth` import 오류로 별도 보류.
+- 실DB smoke 완료: smoke runId `6`, `7`, `8`에서 context profile 저장, modifier_json transparency, final/rank 재계산, stage score 불변을 확인했다. 전체 FastAPI app 부팅 smoke도 통과했다.
+- Phase1 backend stabilization 완료: legacy auth/user DTO import, optional Kafka/mail dependency import, app boot, `GET /materiality/context/{runId}`, G0 profile API skeleton, API sample 문서화를 반영했다.
 
 ## 1. 문서 목적
 

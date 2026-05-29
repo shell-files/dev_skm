@@ -59,7 +59,7 @@ LangGraph/LLM 실패는 API 실패가 아니라 deterministic fallback으로 처
 - 실제 LLM profiler를 붙이더라도 AI는 profile flag만 만들고 modifier 산정은 rule engine이 담당한다.
 - guard는 문서 기준 확정, deterministic rule guard 보강 완료: MVP range `-0.3 ~ +0.3`, system range `-0.5 ~ +0.5`, 최소 stage 관측, confidence >= 0.5, rank movement 최대 2단계, Top 5 진입 rawRank Top 8 제한을 필수 반영 기준으로 둔다.
 - LangGraph profiler는 optional adapter 1차 추가. dependency/env 미설치, 비활성, 실패 시 deterministic fallback을 사용한다.
-- 실DB smoke 완료: smoke runId `6`, `7`, `8`에서 context profile 저장, modifier_json transparency, final/rank 재계산, stage score 불변을 확인했다. 전체 FastAPI app 부팅 smoke도 통과했다.
+- 실DB smoke 완료: smoke runId `6`, `7`, `8`에서 context profile 저장, modifier_json transparency, final/rank 재계산, stage score 불변을 확인했다. 전체 FastAPI app 부팅 smoke는 기존 `src.apis.auth` import 오류로 별도 보류.
 - Phase1 backend stabilization 완료: legacy auth/user DTO import, optional Kafka/mail dependency import, app boot, `GET /materiality/context/{runId}`, G0 profile API skeleton, API sample 문서화를 반영했다.
 
 ## 1. 문서 목적
@@ -364,3 +364,111 @@ Company Context Modifier의 MVP backend 구현은 완료됐다.
 3. context profile service/repository 구현.
 4. final aggregation에 modifier 조회/적용 연결.
 5. regression smoke: stage score 불변, final score만 modifier 반영 확인.
+
+## 10. G0-02 Financial Basis Utility
+
+다음 단계인 DMA financial scoring redesign의 1단계로 `getG0FinancialBasis()`를 추가했다.
+
+구현 위치:
+
+```text
+backend/src/utils/dmafinancialrepository.py
+```
+
+이번 작업 범위:
+
+- G0-02 재무 기준값 조회 utility만 구현.
+- financial score 산식 변경 없음.
+- `dmascoring.py`, `dmaaggregator.py`, media adapter, benchmark adapter 수정 없음.
+
+조회 원칙:
+
+- `metric_id='G0-02'`만 사용한다.
+- AP-E-06 및 selected subIssue 이후 본 온보딩 지표는 사용하지 않는다.
+- G consolidated atomic과 Q entity atomic은 동시에 합산하지 않는다.
+- 한 priority level의 값만 선택한다.
+
+우선순위:
+
+```text
+preferConsolidated=true
+1. ESG_GROUP_ROLLUP_RESULT G values
+2. ESG_KPI_FACT G values
+3. ESG_KPI_FACT Q values
+4. ESG_ONBOARDING_INPUT_VALUE Q values
+
+preferConsolidated=false
+1. ESG_KPI_FACT Q values
+2. ESG_ONBOARDING_INPUT_VALUE Q values
+3. ESG_GROUP_ROLLUP_RESULT G values
+4. ESG_KPI_FACT G values
+```
+
+Smoke 결과:
+
+- companyId 6, reportingYear 2024, `preferConsolidated=True`: `basisType=CONSOLIDATED`, `basisSource=ESG_GROUP_ROLLUP_RESULT`.
+- companyId 6, reportingYear 2024, `preferConsolidated=False`: `basisType=ENTITY`, `basisSource=ESG_KPI_FACT`.
+- partial/no-data/unit normalization controlled fixture 통과.
+- `sourceRows`에는 `sourcePriority`, `updatedAt` trace를 포함한다.
+
+다음 작업은 구현이 아니라 rule design 확정이다.
+
+```text
+FINANCIAL_EXPOSURE_RULE_DESIGN_v1.md
+```
+
+이 문서는 G0-02 financial basis를 사용해 `FinancialFactor`의 `revenueMagnitude`, `costMagnitude`, `capexMagnitude`, `assetLiabilityMagnitude`, `financingMagnitude`, `legalRegulatoryMagnitude`를 어떻게 산정할지 정의한다.
+
+확정 방향:
+
+- Magnitude 0~5 변환은 MVP에서 공통 threshold 하나를 사용한다.
+- channel별 차이는 denominator, subIssue ratio preset, sourceType adjustment, confidence adjustment, 일부 channel cap에서 반영한다.
+- `legalRegulatoryMagnitude`는 `sourceType=regulation`일 때 +1 보정, max 5를 허용한다.
+- `assetLiabilityMagnitude`는 MVP 기본 미사용 또는 revenue fallback + magnitude 3 상한으로 둔다.
+- ISSB/IFRS S1, ESRS는 cash flows, access to finance, cost of capital, financial position/performance/cash flow 영향 관점의 rationale로 사용하고, threshold 자체는 내부 methodology로 명시한다.
+
+후속 구현 순서:
+
+```text
+1. FINANCIAL_EXPOSURE_RULE_DESIGN_v1.md 승인
+2. backend/src/services/materialities/financial_exposure.py 구현
+3. controlled fixture smoke
+4. media/benchmark adapter 연결 위치 승인
+5. scoring_payload_json.financialExposureTrace 저장 연결
+```
+
+아직 하지 말 것:
+
+- `dmascoring.py` 산식 변경
+- media/benchmark adapter 연결
+- `FinancialFactor` DTO 변경
+- survey weight 분리
+- benchmark common/blind spot bonus 변경
+
+현재 구현 상태:
+
+```text
+backend/src/services/materialities/financial_exposure.py
+```
+
+pure function 모듈 1차 구현 완료. 아직 media/benchmark adapter에는 연결하지 않았다.
+
+Smoke 결과:
+
+- subIssue key 정합성: `FINANCIAL_EXPOSURE_RULES` 9개 key 모두 `subissuemaster.py`에 존재, missing 없음.
+- IRO guard: `canApplyFinancialExposure()` 추가, `getScoringAllowedIros()` 기준으로 financial_risk/financial_opportunity 허용 여부 확인.
+- not allowed case: `S_SAFETY__OHS_MANAGEMENT` risk는 현재 scoring-capable financial axis가 아니므로 financialFactor 제거 및 warning 반환.
+- runId wrapper: `applyG0FinancialExposureForRun()` 추가, `getMaterialityRunContext(runId)`에서 companyId/reportingYear/company_scope_type 조회.
+- preferConsolidated: `PARENT/GROUP/HOLDING/CONSOLIDATED=True`, `SUBSIDIARY/ENTITY/STANDALONE/COMPANY=False`, unknown은 True + warning.
+- trace: `updatedSignal.scoringPayloadJson.financialExposureTrace`에 저장, channelScores에 `previousMagnitude`, `overrideYn` 포함.
+- Climate transition: `capexMagnitude` 산정, dominant `capexMagnitude`.
+- Regulation legal risk: `legalRegulatoryMagnitude` 산정, regulation +1 보정 적용.
+- Low confidence: confidence 0.3에서 magnitude max 2 cap과 warning 확인.
+- Asset liability cap: `assetLiabilityMagnitude` 3점 상한 확인.
+- No basis: `basisType=NONE`일 때 예외 없이 adapter fallback 유지 및 warning 반환.
+
+다음 작업 제안:
+
+- media adapter 연결 위치: `convertMediaToDmaSignals()` 이후, `scoreDmaSignals()` 이전.
+- benchmark adapter 연결 위치: `convertToDmaSignals()` 이후, `scoreDmaSignals()` 이전.
+- `scoring_payload_json` 저장 위치: `DMASignal.scoringPayloadJson.financialExposureTrace`가 `saveDmaSignals()`를 통해 `ESG_DMA_SIGNAL_DETAIL.scoring_payload_json`에 저장되는지 controlled DB smoke로 확인.

@@ -812,3 +812,93 @@ Context:
 - 적용은 `POST /materiality/context/{runId}/apply`.
 - 재조회는 `GET /materiality/context/{runId}`.
 - context가 없으면 404가 아니라 `200 + implementationStatus="NO_CONTEXT_PROFILE"`이다.
+
+## 13. Backend Utility: getG0FinancialBasis()
+
+`getG0FinancialBasis()`는 프론트 직접 호출 API가 아니라 DMA financial scoring redesign을 위한 backend repository utility다.
+
+위치:
+
+```text
+backend/src/utils/dmafinancialrepository.py
+```
+
+목적:
+
+- G0-02 재무 기준값을 companyId/reportingYear 기준으로 안정 조회한다.
+- G0 입력, KPI fact, group rollup 결과 중 우선순위에 따라 하나의 basis source를 선택한다.
+- 이후 financial scoring redesign에서 adapter가 사용할 재무 기준값 contract를 고정한다.
+
+금지 원칙:
+
+- `metric_id='G0-02'`만 사용한다.
+- AP-E-06 등 selected subIssue 이후 본 온보딩 지표를 사용하지 않는다.
+- G atomic과 Q atomic을 동시에 합산하지 않는다.
+- 현재 단계에서는 `dmascoring.py`, `dmaaggregator.py`, media/benchmark adapter를 수정하지 않는다.
+
+Source priority:
+
+```text
+preferConsolidated=true
+1. GROUP_ROLLUP_RESULT_G
+2. KPI_FACT_G
+3. KPI_FACT_Q
+4. ONBOARDING_INPUT_Q
+
+preferConsolidated=false
+1. KPI_FACT_Q
+2. ONBOARDING_INPUT_Q
+3. GROUP_ROLLUP_RESULT_G
+4. KPI_FACT_G
+```
+
+Return contract 요약:
+
+```json
+{
+  "companyId": 6,
+  "reportingYear": 2025,
+  "basisType": "CONSOLIDATED",
+  "basisSource": "ESG_GROUP_ROLLUP_RESULT",
+  "fallbackUsedYn": false,
+  "unit": "KRW",
+  "revenue": 12300000000000,
+  "operatingProfit": 800000000000,
+  "netIncome": 500000000000,
+  "capex": 900000000000,
+  "depreciation": 300000000000,
+  "missingFields": [],
+  "sourceRows": [
+    {
+      "sourceTable": "ESG_GROUP_ROLLUP_RESULT",
+      "sourcePriority": "GROUP_ROLLUP_RESULT_G",
+      "atomicMetricId": "G0-02__G0001",
+      "fieldName": "revenue",
+      "valueNumeric": 12300000000000,
+      "unit": "KRW",
+      "updatedAt": "2026-05-29T00:00:00"
+    }
+  ],
+  "trace": {
+    "selectedPriority": "GROUP_ROLLUP_RESULT_G",
+    "partialBasisYn": false,
+    "reason": "preferConsolidated=true and consolidated G values exist"
+  }
+}
+```
+
+Empty/no data:
+
+```json
+{
+  "basisType": "NONE",
+  "basisSource": null,
+  "fallbackUsedYn": true,
+  "missingFields": ["revenue", "operatingProfit", "netIncome", "capex", "depreciation"],
+  "sourceRows": [],
+  "trace": {
+    "selectedPriority": "NONE",
+    "reason": "No G0-02 financial basis rows found"
+  }
+}
+```

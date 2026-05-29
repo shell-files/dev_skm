@@ -679,3 +679,180 @@ G0-02__Q0004 CAPEX
 G0-02__Q0005 감가상각비
 ```
 
+## 15. getG0FinancialBasis() 구현 기준
+
+`backend/src/utils/dmafinancialrepository.py`에 `getG0FinancialBasis(companyId, reportingYear, preferConsolidated=True)`를 추가한다.
+
+목적은 DMA financial scoring redesign의 1단계로, 산식 변경 전에 회사/연도별 G0-02 재무 기준값을 안정적으로 조회하는 것이다. 이번 단계에서는 `dmascoring.py`, `dmaaggregator.py`, benchmark/media adapter를 수정하지 않는다.
+
+```text
+file: backend/src/utils/dmafinancialrepository.py
+function: getG0FinancialBasis(companyId, reportingYear, preferConsolidated=True)
+purpose: G0-02 financial basis 조회
+```
+
+### 15.1 사용 범위
+
+- financial basis는 오직 `metric_id = 'G0-02'`만 사용한다.
+- AP-E-06, E/S/G 본 온보딩 지표, selected subIssue 이후 할당되는 metric/atomic metric은 사용하지 않는다.
+- G값과 Q값을 동시에 합산하지 않는다.
+- 한 priority level에서 선택한 값만 basis로 사용한다.
+- unit은 KRW로 normalize한다.
+- revenue-only minimal basis를 허용하되 `trace.partialBasisYn=true`를 남긴다.
+
+### 15.2 Atomic mapping
+
+```text
+revenue         : Q=G0-02__Q0001, G=G0-02__G0001
+operatingProfit : Q=G0-02__Q0002, G=G0-02__G0002
+netIncome       : Q=G0-02__Q0003, G=G0-02__G0003
+capex           : Q=G0-02__Q0004, G=G0-02__G0004
+depreciation    : Q=G0-02__Q0005, G=G0-02__G0005
+```
+
+### 15.3 Source priority
+
+`preferConsolidated=True`:
+
+```text
+1. GROUP_ROLLUP_RESULT_G
+2. KPI_FACT_G
+3. KPI_FACT_Q
+4. ONBOARDING_INPUT_Q
+```
+
+`preferConsolidated=False`:
+
+```text
+1. KPI_FACT_Q
+2. ONBOARDING_INPUT_Q
+3. GROUP_ROLLUP_RESULT_G
+4. KPI_FACT_G
+```
+
+5개 field 중 3개 이상 존재하면 해당 priority를 채택한다. 2개 이하이면 다음 priority로 fallback하되, 모든 priority가 충분하지 않고 revenue가 있는 후보가 있으면 최소 basis로 사용할 수 있으며 `trace.partialBasisYn=true`를 남긴다.
+
+### 15.4 Return contract
+
+반환 field는 camelCase를 사용한다.
+
+```json
+{
+  "companyId": 6,
+  "reportingYear": 2025,
+  "basisType": "CONSOLIDATED",
+  "basisSource": "ESG_GROUP_ROLLUP_RESULT",
+  "fallbackUsedYn": false,
+  "unit": "KRW",
+  "revenue": 12300000000000,
+  "operatingProfit": 800000000000,
+  "netIncome": 500000000000,
+  "capex": 900000000000,
+  "depreciation": 300000000000,
+  "missingFields": [],
+  "sourceRows": [
+    {
+      "sourceTable": "ESG_GROUP_ROLLUP_RESULT",
+      "sourcePriority": "GROUP_ROLLUP_RESULT_G",
+      "atomicMetricId": "G0-02__G0001",
+      "fieldName": "revenue",
+      "valueNumeric": 12300000000000,
+      "unit": "KRW",
+      "updatedAt": "2026-05-29T00:00:00"
+    }
+  ],
+  "trace": {
+    "priority": ["GROUP_ROLLUP_RESULT_G", "KPI_FACT_G", "KPI_FACT_Q", "ONBOARDING_INPUT_Q"],
+    "selectedPriority": "GROUP_ROLLUP_RESULT_G",
+    "partialBasisYn": false,
+    "reason": "preferConsolidated=true and consolidated G values exist"
+  }
+}
+```
+
+데이터가 없으면 예외를 발생시키지 않고 `basisType="NONE"`, `missingFields` 5개, `sourceRows=[]`를 반환한다.
+
+### 15.5 Smoke result
+
+2026-05-29 기준 backend smoke:
+
+- `preferConsolidated=True`, companyId 6, reportingYear 2024: `ESG_GROUP_ROLLUP_RESULT` G values 선택, `basisType=CONSOLIDATED`.
+- `preferConsolidated=False`, companyId 6, reportingYear 2024: `ESG_KPI_FACT` Q values 선택, `basisType=ENTITY`.
+- partial fixture: `missingFields`와 `trace.partialBasisYn=true` 확인.
+- no data fixture: `basisType=NONE`, `sourceRows=[]` 확인.
+- unit normalization: `KRW` 그대로, `백만원` x1,000,000, `억원` x100,000,000, unknown unit warning 확인.
+- `sourceRows` trace에는 `sourcePriority`, `updatedAt`을 포함한다.
+
+## 16. Financial Exposure Rule Design
+
+`getG0FinancialBasis()` 다음 단계는 바로 구현이 아니라 rule design 확정이다.
+
+설계 문서:
+
+```text
+FINANCIAL_EXPOSURE_RULE_DESIGN_v1.md
+```
+
+문서에서 확정할 내용:
+
+- `FinancialFactor` 6개 channel 의미와 denominator.
+- ratio 기반 magnitude 0~5 변환 기준. MVP에서는 channel별 threshold를 나누지 않고 공통 threshold 하나를 사용한다.
+- MVP 주요 subIssue별 financial channel mapping.
+- sourceType/timeHorizon/confidence adjustment.
+- `scoring_payload_json.financialExposureTrace` 구조.
+
+유지 원칙:
+
+- G0-02 financial basis만 사용한다.
+- AP-E-06 등 DMA 이후 본 온보딩 지표는 사용하지 않는다.
+- AI는 financial score를 직접 산정하지 않는다.
+- rule engine이 `FinancialFactor` magnitude를 산정한다.
+- `dmascoring.py`의 `calculateFinancialScore()` 산식은 유지한다.
+- media/benchmark adapter 연결은 rule design 승인 후 별도 작업으로 진행한다.
+- ISSB/IFRS S1, ESRS는 재무영향 범주 rationale로 사용하되, ratio threshold 자체는 SKM MVP 내부 scoring methodology로 명시한다.
+
+### 16.1 financial_exposure.py 1차 구현
+
+2026-05-29 기준 `backend/src/services/materialities/financial_exposure.py`를 pure function 모듈로 추가했다.
+
+구현 함수:
+
+```text
+buildFinancialExposureForSignal()
+applyG0FinancialExposure()
+applyG0FinancialExposureForRun()
+buildFinancialExposureForSignalWithBasis()
+canApplyFinancialExposure()
+ratioToMagnitude()
+calculateChannelScore()
+dominantMagnitude()
+resolvePreferConsolidated()
+```
+
+구현 범위:
+
+- `getG0FinancialBasis()` 결과를 입력으로 사용.
+- subIssue rule mapping 기반 channel별 ratio/magnitude 산정.
+- sourceType adjustment:
+  - regulation: legalRegulatoryMagnitude +1, max 5
+  - agency: confidence >= 0.75이면 산정된 channel +1, max 5
+  - news/benchmark: 중립
+  - survey: MVP 제외
+- confidence cap:
+  - `<0.4`: magnitude max 2, warning
+  - `0.4~0.7`: magnitude max 4
+- dominant magnitude trace 생성.
+- `DMASignal.scoringPayloadJson.financialExposureTrace`에 trace 부착.
+- `sourceRows` 외 signal trace 위치는 `updatedSignal.scoringPayloadJson.financialExposureTrace`.
+- channelScores에는 `previousMagnitude`, `overrideYn`을 포함한다.
+- subIssue allowed IRO guard는 `getScoringAllowedIros()`를 사용한다.
+- runId wrapper는 `getMaterialityRunContext(runId)`에서 companyId/reportingYear/company_scope_type을 조회한다.
+- `company_scope_type=PARENT/GROUP/HOLDING/CONSOLIDATED`이면 consolidated basis를 우선하고, `SUBSIDIARY/ENTITY/STANDALONE/COMPANY`이면 entity basis를 우선한다.
+
+아직 연결하지 않은 항목:
+
+- media/benchmark adapter 호출부.
+- DB 저장 smoke.
+- `dmascoring.py` 산식 변경.
+- `FinancialFactor` DTO 변경.
+

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-
+// import "@styles/survey.css"; 
 import "@styles/sr.css";
 
 import robot from "@assets/images/robot/robot_servey_t.png";
@@ -9,6 +9,14 @@ import {
   showDefaultAlert,
   showConfirmAlert,
 } from "@components/UI/ServiceAlert";
+
+const TOP_ISSUES = [
+  { rank: 1, name: "기후변화 대응",   totalImpact: 88.7, totalFin: 76.3, empImpact: 4.7, empFin: 4.5, execImpact: 4.6, execFin: 4.4, extImpact: 4.4, extFin: 4.2 },
+  { rank: 2, name: "안전보건 관리",   totalImpact: 84.1, totalFin: 73.2, empImpact: 4.5, empFin: 4.3, execImpact: 4.4, execFin: 4.2, extImpact: 4.0, extFin: 3.9 },
+  { rank: 3, name: "인적자본 개발",   totalImpact: 76.8, totalFin: 68.1, empImpact: 4.2, empFin: 4.0, execImpact: 3.9, execFin: 3.8, extImpact: 3.6, extFin: 3.5 },
+  { rank: 4, name: "공급망 ESG 관리", totalImpact: 72.3, totalFin: 65.4, empImpact: 4.0, empFin: 3.9, execImpact: 3.8, execFin: 3.7, extImpact: 3.5, extFin: 3.4 },
+  { rank: 5, name: "윤리·준법 경영",  totalImpact: 70.2, totalFin: 62.8, empImpact: 3.9, empFin: 3.8, execImpact: 3.7, execFin: 3.6, extImpact: 3.3, extFin: 3.2 },
+];
 
 /**
  * 이해관계자 설문 페이지

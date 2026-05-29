@@ -1,3 +1,15 @@
+/* ============================================================================
+ *  [병합 작업 요약]  benchmarking.jsx(소문자) → BenchMarking.jsx(대문자) 통합
+ * ----------------------------------------------------------------------------
+ *  - 베이스: 대문자 BenchMarking.jsx (정상 동작하는 React 컴포넌트) 유지
+ *  - 이식:   소문자 파일의 "통계카드 4개 + 3패널"만 React 문법으로 변환해 추가
+ *  - 숫자:   현재는 더미. 백엔드 연동 시 dashboardData 한 곳만 교체하면 됨
+ *
+ *  ▶ 코드에서 [병합-추가] = 이번에 새로 들어간 부분
+ *             [병합-수정] = 기존 코드를 살짝 손본 부분
+ *             (주석 없는 부분은 대문자 원본 그대로)
+ * ========================================================================== */
+
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import "@styles/benchmarking.css";
@@ -40,6 +52,47 @@ const DUMMY_DB_RESULTS = [
   { domain: "G", selected_issue: "윤리·준법경영 시스템", selected_sub_issue: "부패방지 경영시스템(ISO 37001) 운영, 임직원 윤리강령 준수 서약, 내부고발제도 활성화를 설명하는 문장.", type: "sub" },
 ];
 
+// ════════════════════════════════════════════════════════════════
+// [병합-추가] 결과 대시보드(통계카드 + 3패널)용 더미 데이터.
+//   - 소문자 파일에선 HTML에 하드코딩돼 있던 값을 객체로 구조화한 것.
+//   - 나중에 백엔드 연동 시, 응답을 이 객체와 같은 형태로 받아
+//     setDashboardData(response.data.dashboard) 한 줄로 교체하면 됨.
+// ════════════════════════════════════════════════════════════════
+const DUMMY_RESULT_DASHBOARD = {stats:{
+    reports: 24,
+    leaderCount: 8,
+    peerCount: 8,
+    subcount: 8,
+    commonIssues: 19,
+    blindSpots: 9,
+  }
+,
+// 패널1: 벤치마킹 Top 이슈 점수
+  topIssues: [
+    { rank: 1, name: "기후변화·온실가스", impact: 9.2, financial:8.7 },
+    { rank: 2, name: "수자원·폐수 관리", impact: 8.6, financial: 7.9} ,
+    { rank: 3, name :"폐기물·자원순환", impact: 8.1, financial: 7.6} ,
+    { rank: 4, name :"친환경 제품·Eco-Design", impact: 7.8, financial: 7.3} ,
+    { rank: 5, name :"공급망 ESG 관리", impact: 7.4, financial: 6.8} ,
+  ],
+  // 패널2: 공통 선정 이슈
+  commonIssues: [
+    { name: "기후변화·온실가스", leader: true, peer: true, sub: true },
+    { name: "폐기물·자원순환", leader: true, peer: true, sub: true },
+    { name: "제품안전·품질", leader: true, peer: true, sub: true },
+    { name: "공급망 ESG 관리", leader: true, peer: true, sub: true },
+    { name: "공급망 ESG 관리", leader: true, peer: true, sub: true },
+  ],
+   // 패널3: 자사 Blind Spot
+   blindSpots : [
+    {title: "생물다양성 영향 관리", desc: "생물다양성 리스크·영향 평가 및 관리 체계가 보고서에서 상대적으로 낮게 다뤄지고 있습니다."},
+    { title: "인권 실사 및 관리", desc: "인권 실사 프로세스 및 고충처리 체계에 대한 정보가 상대적으로 부족합니다." },
+     { title: "ESG 데이터 관리 체계", desc: "ESG 데이터 수집·관리·검증 체계의 고도화 및 거버넌스 정보가 미흡합니다." },
+  ],  
+}
+  
+
+
 const Benchmarking = () => {
   const [fileStorage, setFileStorage] = useState({
     leader: [],
@@ -60,6 +113,9 @@ const Benchmarking = () => {
 
   // API 혹은 더미로부터 들어오는 원본 Row 보관 상태
   const [rawRows, setRawRows] = useState([]);
+  // [병합-추가] 결과 대시보드(통계카드 + 3패널) 데이터 상태.
+  //   백엔드 연동 전까지는 더미를 기본값으로 사용.
+  const [dashboardData, setDashobardData] = useState(DUMMY_RESULT_DASHBOARD);
 
   const particleRef = useRef(null);
   const navigate = useNavigate();
@@ -245,6 +301,9 @@ const Benchmarking = () => {
         });
         if (response && response.status !== false) {
           setRawRows(response.data || []);
+          // [병합-추가/백엔드 TODO] 통계카드 + 3패널 데이터도 응답에서 주입.
+          //   응답이 DUMMY_RESULT_DASHBOARD와 같은 형태라면 아래 한 줄이면 됨:
+          // setDashboardData(response.data.dashboard);
         } else {
           showDefaultAlert("데이터 분석 오류", "네트워크 통신 중 에러가 발생했습니다.", "error");
         }
@@ -259,6 +318,7 @@ const Benchmarking = () => {
     const companyName = companyNames[groupKey] || "회사이름";
 
     return (
+
       <div className="upload-group-container" id={`group-${groupKey}`}>
         <div className="upload-group-badge">{label}</div>
 
@@ -356,8 +416,8 @@ const Benchmarking = () => {
             {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인" : "실시간 분석 대기 중"}
           </div>
         </div>
-
-        <div className={`robot-view-container ${isAnalyzing ? "analyzing" : ""}`}>
+          {/* [병합-수정] showResult일 때 showing-result 클래스 부여 → 결과 길어지면 내부 스크롤 (CSS와 연동) */}
+        <div className={`robot-view-container ${isAnalyzing ? "analyzing" : ""} ${showResult ? "showing-result":""}`}>
           <div id="particle-field" className="particle-field" ref={particleRef}></div>
 
           {!showResult ? (
@@ -391,6 +451,112 @@ const Benchmarking = () => {
                   보고서(SR) 교차 파싱 결과 <strong>{processedIssues.length}개</strong>의 핵심 이슈가 식별되었습니다. 자회사의 누락(Gap) 요소를 보완하여 최적의 초안 요건을 빌드하세요.
                 </p>
               </div>
+
+               {/* 통계 카드 4개 */}
+               <div className = "result-stats-row">
+                <div className="result-stat-card">
+                  <div className="stat-icon-wrap">📋</div>
+                  <div>
+                    <div className="stat-label"> 분석보고서</div>
+                    <div className="stat-value">{dashboardData.stats.reports}개</div>
+                    <div className="stat-sub">
+                      리더 {dashboardData.stats.leaderCount} · 피어 {dashboardData.stats.peerCount} · 자회사 {dashboardData.stats.subcount}
+                    </div>
+                    </div>  
+                    </div>
+                
+                <div className="result-stat-card">
+                  <div className="stat-icon-wrap">≡</div>
+                  <div>
+                    <div className="stat-label">식별 이슈</div>
+                    <div className="stat-value">{dashboardData.stats.identifiedIssues}개</div>
+                  </div>
+                </div>
+                <div className="result-stat-card">
+                  <div className="stat-icon-wrap">👥</div>
+                  <div>
+                    <div className="stat-label"> 공통 이슈</div>
+                    <div className="stat-value">{dashboardData.stats.commonIssues}개</div>
+                  </div>
+                </div>
+
+                
+                  <div className="result-stat-card">
+                    <div className="stat-icon-wrap">🎯</div>
+                    <div>
+                      <div className="stat-label">자사 Blind Spot</div>
+                      <div className="stat-value">{dashboardData.stats.blindSpots}개</div>
+                    </div>
+                  </div>
+              </div>
+                {/* 하단 3패널 (Top 이슈 점수 / 공통 선정 이슈 / Blind Spot) */}
+              <div className="result-panels-row">
+                {/* 패널1: 벤치마킹 Top 이슈 점수 */}
+                <div className="result-panel">
+                  <div className="panel-header-row">
+                    <span className="panel-title">벤치마킹 Top 이슈 점수</span>
+                    <span className="panel-info-btn">ⓘ</span>
+                  </div>
+                  <table className="issue-table">
+                    <thead>
+                      <tr><th>순위</th><th>Sub Issue</th><th>Impact</th><th>Financial</th></tr>
+                    </thead>
+                    <tbody>
+                      {dashboardData.topIssues.map((item) => (
+                        <tr key={item.rank}>
+                          <td>{item.rank}</td>
+                          <td>{item.name}</td>
+                          <td>{item.impact}</td>
+                          <td>{item.financial}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 패널2: 공통 선정 이슈 */}
+                <div className="result-panel">
+                  <div className="panel-header-row">
+                    <span className="panel-title">공통 선정 이슈</span>
+                    <span className="panel-info-btn">ⓘ</span>
+                  </div>
+                  <table className="issue-table">
+                    <thead>
+                      <tr><th>Sub Issue</th><th>리더</th><th>피어</th><th>자사</th></tr>
+                    </thead>
+                    <tbody>
+                      {dashboardData.commonIssues.map((item, index) => (
+                        <tr key={index}>
+                          <td>{item.name}</td>
+                          <td>{item.leader && <span className="chk">✓</span>}</td>
+                          <td>{item.peer && <span className="chk">✓</span>}</td>
+                          <td>{item.sub && <span className="chk">✓</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 패널3: 자사 Blind Spot */}
+                <div className="result-panel">
+                  <div className="panel-header-row">
+                    <span className="panel-title">자사 Blind Spot</span>
+                    <span className="panel-info-btn">ⓘ</span>
+                  </div>
+                  <ul className="blind-spot-list">
+                    {dashboardData.blindSpots.map((item, index) => (
+                      <li key={index}>
+                        <div className="blind-spot-title">{item.title}</div>
+                        <p className="blind-spot-desc">{item.desc}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+
+
+
 
               {/* 개선된 1컬럼 스택트 레이아웃 테이블 */}
               <div className="gap-analysis-container">

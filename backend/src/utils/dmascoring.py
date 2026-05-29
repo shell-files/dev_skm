@@ -6,9 +6,14 @@ Responsibility:
 - Calculate deterministic 0-5 financial score from FinancialFactor
 - Score DMASignal objects without AI deciding final score
 Public functions:
+- calcImpact
 - calculateImpactScore
+- calcFinancial
 - calculateFinancialScore
+- scoreSignals
 - scoreDmaSignals
+- mapUrgency
+- timeHorizonToUrgency
 - clamp
 Do not:
 - do not mutate unrelated DB state
@@ -41,13 +46,13 @@ SCORE_UI_MULTIPLIER = 2  # UI display score = score05 * 2
 def clamp(value: float, min_val: float, max_val: float) -> float:
     return max(min_val, min(value, max_val))
 
-def timeHorizonToUrgency(timeHorizon: str) -> float:
+def mapUrgency(timeHorizon: str) -> float:
     if timeHorizon == "short": return 5.0
     if timeHorizon == "mid": return 3.0
     if timeHorizon == "long": return 1.0
     return 0.0
 
-def calculateImpactScore(
+def calcImpact(
     factor: ImpactFactor, 
     sourceType: str = "news", 
     subIssueCode: str = ""
@@ -59,7 +64,7 @@ def calculateImpactScore(
     sourceType별 분기 없이 순수하게 factor의 수치만으로 계산합니다.
     sourceType/subIssueCode별 factor 값 조정은 baseline.py에서 사전에 수행해야 합니다.
     """
-    urgency = timeHorizonToUrgency(factor.timeHorizon)
+    urgency = mapUrgency(factor.timeHorizon)
     likelihood = factor.likelihood if factor.likelihood is not None else 0.0
     irremediability = factor.irremediability if factor.irremediability is not None else 0.0
     scale = factor.scale
@@ -73,7 +78,7 @@ def calculateImpactScore(
         
     return clamp(score, 0.0, 5.0)
 
-def calculateFinancialScore(
+def calcFinancial(
     factor: FinancialFactor, 
     sourceType: str = "news", 
     subIssueCode: str = ""
@@ -96,7 +101,7 @@ def calculateFinancialScore(
     valid_mags = [m for m in magnitudes if m is not None]
     
     base_mag = float(max(valid_mags)) if valid_mags else 0.0
-    urgency = timeHorizonToUrgency(factor.timeHorizon)
+    urgency = mapUrgency(factor.timeHorizon)
     likelihood = factor.likelihood if factor.likelihood is not None else 0.0
     
     if factor.financialIroType == "risk":
@@ -107,14 +112,54 @@ def calculateFinancialScore(
         
     return clamp(score, 0.0, 5.0)
 
-def scoreDmaSignals(signals: list) -> list:
+def scoreSignals(signals: list) -> list:
     """
     DMASignal 리스트의 factor를 기반으로 0~5 점수를 계산하여 채워넣습니다.
     AI가 직접 점수를 주지 않고, 이 함수가 factor → score 변환을 수행합니다.
     """
     for sig in signals:
         if sig.impactFactor:
-            sig.impactScore05 = calculateImpactScore(sig.impactFactor, sig.sourceType, sig.subIssueCode)
+            sig.impactScore05 = calcImpact(sig.impactFactor, sig.sourceType, sig.subIssueCode)
         if sig.financialFactor:
-            sig.financialScore05 = calculateFinancialScore(sig.financialFactor, sig.sourceType, sig.subIssueCode)
+            sig.financialScore05 = calcFinancial(sig.financialFactor, sig.sourceType, sig.subIssueCode)
     return signals
+
+
+# Compatibility wrappers for previous public names
+
+def timeHorizonToUrgency(timeHorizon: str) -> float:
+    return mapUrgency(timeHorizon)
+
+
+def calculateImpactScore(
+    factor: ImpactFactor,
+    sourceType: str = "news",
+    subIssueCode: str = "",
+) -> float:
+    return calcImpact(factor, sourceType, subIssueCode)
+
+
+def calculateFinancialScore(
+    factor: FinancialFactor,
+    sourceType: str = "news",
+    subIssueCode: str = "",
+) -> float:
+    return calcFinancial(factor, sourceType, subIssueCode)
+
+
+def scoreDmaSignals(signals: list) -> list:
+    return scoreSignals(signals)
+
+
+__all__ = [
+    "SCORE_UI_MULTIPLIER",
+    "clamp",
+    "mapUrgency",
+    "timeHorizonToUrgency",
+    "calcImpact",
+    "calculateImpactScore",
+    "calcFinancial",
+    "calculateFinancialScore",
+    "scoreSignals",
+    "scoreDmaSignals",
+]

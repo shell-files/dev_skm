@@ -51,7 +51,7 @@ from src.utils.companycontextrepository import (
     replaceProfile,
     updateModifiers,
 )
-from src.utils.dmaaggregator import calculateFinalMateriality
+from src.utils.dmaaggregator import calcFinal
 from src.utils.dmarepository import recalculateFinalScore
 from src.utils.dmarepository import updateDmaRankings
 from src.utils.dmascoring import clamp
@@ -440,7 +440,7 @@ def _withScorePreview(
     subIssueCode = row.get("sub_issue_code")
     impactModifier = clamp(impactModifier, MVP_MODIFIER_MIN, MVP_MODIFIER_MAX)
     financialModifier = clamp(financialModifier, MVP_MODIFIER_MIN, MVP_MODIFIER_MAX)
-    raw = calculateFinalMateriality(
+    raw = calcFinal(
         subIssueCode=subIssueCode,
         surveyImpact=_floatOrNone(row.get("survey_impact_score")),
         surveyFinancial=_floatOrNone(row.get("survey_financial_score")),
@@ -451,7 +451,7 @@ def _withScorePreview(
         contextImpactModifier=0.0,
         contextFinancialModifier=0.0,
     )
-    final = calculateFinalMateriality(
+    final = calcFinal(
         subIssueCode=subIssueCode,
         surveyImpact=_floatOrNone(row.get("survey_impact_score")),
         surveyFinancial=_floatOrNone(row.get("survey_financial_score")),

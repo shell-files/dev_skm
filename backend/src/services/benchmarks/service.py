@@ -9,7 +9,7 @@ from src.models.model import ResponseModel, UserModel
 from src.models.benchmk import FileModel, FileFindModel
 from src.utils.ocraiv8 import gemini
 from src.utils.dmarepository import saveDmaSignals
-from src.utils.dmascoring import scoreDmaSignals
+from src.utils.dmascoring import scoreSignals
 from src.services.benchmarks.adapter import convertToDmaSignals
 
 def normalizeSourceType(value: str) -> str:
@@ -160,7 +160,7 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
             signalsToSave = convertToDmaSignals(resultList, fileId)
             
             # Rule Engine을 호출하여 점수 산출
-            scoredSignals = scoreDmaSignals(signalsToSave)
+            scoredSignals = scoreSignals(signalsToSave)
                     
             # Repository를 통해 DB에 저장(동적으로 run_id 전달)
             try:

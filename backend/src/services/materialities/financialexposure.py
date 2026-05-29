@@ -40,7 +40,7 @@ from typing import Any, Optional
 
 from src.models.dmaengine import DMASignal, FinancialFactor
 from src.utils.companycontextrepository import getMaterialityRunContext
-from src.utils.dmafinancialrepository import getG0FinancialBasis
+from src.utils.dmafinancialrepository import getBasis
 from src.utils.subissuemaster import getScoringAllowedIros
 
 
@@ -260,7 +260,7 @@ def buildFinancialExposureForSignal(
     reportingYear: int,
     preferConsolidated: bool = True,
 ) -> tuple[DMASignal, dict]:
-    basis = getG0FinancialBasis(companyId, reportingYear, preferConsolidated)
+    basis = getBasis(companyId, reportingYear, preferConsolidated)
     return buildFinancialExposureForSignalWithBasis(signal, basis)
 
 
@@ -270,7 +270,7 @@ def applyG0FinancialExposure(
     reportingYear: int,
     preferConsolidated: bool = True,
 ) -> list[DMASignal]:
-    basis = getG0FinancialBasis(companyId, reportingYear, preferConsolidated)
+    basis = getBasis(companyId, reportingYear, preferConsolidated)
     updatedSignals = []
     for signal in signals:
         updatedSignal, _ = buildFinancialExposureForSignalWithBasis(signal, basis)
@@ -295,7 +295,7 @@ def applyG0FinancialExposureForRun(
     companyId = int(runContext["company_id"])
     reportingYear = int(runContext["reporting_year"])
     preferConsolidated, warnings = resolvePreferConsolidated(runContext)
-    basis = getG0FinancialBasis(companyId, reportingYear, preferConsolidated)
+    basis = getBasis(companyId, reportingYear, preferConsolidated)
     if warnings:
         basis = deepcopy(basis)
         basis.setdefault("trace", {})["runContextWarnings"] = warnings

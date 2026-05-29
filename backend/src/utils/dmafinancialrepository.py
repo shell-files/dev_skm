@@ -6,7 +6,20 @@ Responsibility:
 - Resolve entity vs consolidated financial basis
 - Return normalized financial basis payload for service layer
 Public functions:
+- getBasis
 - getG0FinancialBasis
+- buildPriority
+- buildFinancialBasisPriority
+- fetchRows
+- fetchFinancialBasisRows
+- buildBasis
+- buildBasisFromRows
+- checkUsable
+- isUsableBasis
+- buildEmptyBasis
+- emptyFinancialBasis
+- normalizeValue
+- normalizeFinancialValue
 Do not:
 - do not mutate unrelated DB state
 - do not calculate final financial score
@@ -79,19 +92,19 @@ PRIORITY_CONFIG = {
 }
 
 
-def getG0FinancialBasis(
+def getBasis(
     companyId: int,
     reportingYear: int,
     preferConsolidated: bool = True,
 ) -> dict:
-    priorityList = buildFinancialBasisPriority(preferConsolidated)
+    priorityList = buildPriority(preferConsolidated)
     attempts = []
     minimalRevenueBasis = None
     minimalRevenueIndex = 0
 
     for index, priority in enumerate(priorityList):
-        rows = fetchFinancialBasisRows(companyId, reportingYear, priority)
-        basis = buildBasisFromRows(companyId, reportingYear, rows, priority)
+        rows = fetchRows(companyId, reportingYear, priority)
+        basis = buildBasis(companyId, reportingYear, rows, priority)
         presentFields = _presentFields(basis)
         attempts.append(
             {
@@ -114,7 +127,7 @@ def getG0FinancialBasis(
             )
             return basis
 
-        if minimalRevenueBasis is None and isUsableBasis(basis):
+        if minimalRevenueBasis is None and checkUsable(basis):
             minimalRevenueBasis = basis
             minimalRevenueIndex = index
 
@@ -131,13 +144,13 @@ def getG0FinancialBasis(
         )
         return minimalRevenueBasis
 
-    emptyBasis = emptyFinancialBasis(companyId, reportingYear)
+    emptyBasis = buildEmptyBasis(companyId, reportingYear)
     emptyBasis["trace"]["priority"] = priorityList
     emptyBasis["trace"]["attempts"] = attempts
     return emptyBasis
 
 
-def buildFinancialBasisPriority(preferConsolidated: bool) -> list[str]:
+def buildPriority(preferConsolidated: bool) -> list[str]:
     if preferConsolidated:
         return [
             PRIORITY_GROUP_ROLLUP_G,
@@ -153,7 +166,7 @@ def buildFinancialBasisPriority(preferConsolidated: bool) -> list[str]:
     ]
 
 
-def fetchFinancialBasisRows(
+def fetchRows(
     companyId: int,
     reportingYear: int,
     priority: str,
@@ -235,7 +248,7 @@ def fetchFinancialBasisRows(
     return []
 
 
-def buildBasisFromRows(
+def buildBasis(
     companyId: int,
     reportingYear: int,
     rows: list[dict],
@@ -307,14 +320,14 @@ def buildBasisFromRows(
     return basis
 
 
-def isUsableBasis(basis: dict) -> bool:
+def checkUsable(basis: dict) -> bool:
     presentFieldCount = len(_presentFields(basis))
     if presentFieldCount >= 3:
         return True
     return basis.get("revenue") is not None
 
 
-def emptyFinancialBasis(companyId: int, reportingYear: int) -> dict:
+def buildEmptyBasis(companyId: int, reportingYear: int) -> dict:
     basis = _baseFinancialBasis(
         companyId=companyId,
         reportingYear=reportingYear,
@@ -330,9 +343,52 @@ def emptyFinancialBasis(companyId: int, reportingYear: int) -> dict:
     return basis
 
 
-def normalizeFinancialValue(value: Any, unit: Optional[str]) -> tuple[Optional[float], str]:
+def normalizeValue(value: Any, unit: Optional[str]) -> tuple[Optional[float], str]:
     normalizedValue, normalizedUnit, _ = _normalizeFinancialValueWithWarning(value, unit)
     return normalizedValue, normalizedUnit
+
+
+# Compatibility wrappers for previous public names
+
+def getG0FinancialBasis(
+    companyId: int,
+    reportingYear: int,
+    preferConsolidated: bool = True,
+) -> dict:
+    return getBasis(companyId, reportingYear, preferConsolidated)
+
+
+def buildFinancialBasisPriority(preferConsolidated: bool) -> list[str]:
+    return buildPriority(preferConsolidated)
+
+
+def fetchFinancialBasisRows(
+    companyId: int,
+    reportingYear: int,
+    priority: str,
+) -> list[dict]:
+    return fetchRows(companyId, reportingYear, priority)
+
+
+def buildBasisFromRows(
+    companyId: int,
+    reportingYear: int,
+    rows: list[dict],
+    priority: str,
+) -> dict:
+    return buildBasis(companyId, reportingYear, rows, priority)
+
+
+def isUsableBasis(basis: dict) -> bool:
+    return checkUsable(basis)
+
+
+def emptyFinancialBasis(companyId: int, reportingYear: int) -> dict:
+    return buildEmptyBasis(companyId, reportingYear)
+
+
+def normalizeFinancialValue(value: Any, unit: Optional[str]) -> tuple[Optional[float], str]:
+    return normalizeValue(value, unit)
 
 
 def _baseFinancialBasis(
@@ -453,11 +509,18 @@ def _selectedReason(
 
 __all__ = [
     "FINANCIAL_BASIS_ATOMIC_MAP",
+    "buildBasis",
     "buildBasisFromRows",
+    "buildEmptyBasis",
+    "buildPriority",
     "buildFinancialBasisPriority",
     "emptyFinancialBasis",
+    "fetchRows",
     "fetchFinancialBasisRows",
+    "getBasis",
     "getG0FinancialBasis",
+    "checkUsable",
     "isUsableBasis",
+    "normalizeValue",
     "normalizeFinancialValue",
 ]

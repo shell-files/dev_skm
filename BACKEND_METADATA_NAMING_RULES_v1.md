@@ -84,6 +84,17 @@ reports
 file: lowercase singular, no underscore
 ```
 
+이 규칙은 `backend/src` 아래 Python source file 기준이다.
+
+다음 파일은 별도 산출물/운영 규칙을 따른다.
+
+```text
+문서 파일(.md)
+SQL migration / seed file
+외부 전달 산출물
+legacy file
+```
+
 허용:
 
 ```text
@@ -178,7 +189,7 @@ Scope
 Unit
 Evidence
 Issue
-Subissue
+SubIssue
 Metric
 Profile
 Context

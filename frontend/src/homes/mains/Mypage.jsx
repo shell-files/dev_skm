@@ -31,18 +31,19 @@ const requestApi = {
    * @param {string} name - 변경할 사용자 이름
    * @param {string} uuid - 사용자 식별자
   */
- updateProfile: async (name) => {
-   if (USE_DUMMY_API) {
-     await new Promise(r => setTimeout(r, 600));
-     return { status: true, message: "회원 정보가 수정되었습니다." };
-    }
-    try {
-      const res = await PATCH("/user", {  name });
-      return { status: res.data.status, message: res.data.message };
-    } catch (e) {
-      return { status: false, message: e.response?.data?.message || "정보 수정 중 오류가 발생했습니다." };
-    }
-  },
+  updateProfile: async (name) => {
+      if (USE_DUMMY_API) {
+        await new Promise(r => setTimeout(r, 600));
+        return { status: true, message: "회원 정보가 수정되었습니다." };
+      }
+      try {
+        const res = await PATCH("/user", { name });
+        return { status: res.status, message: res.message };
+      } catch (e) {
+        console.error(e)
+        return { status: false, message: e.response?.data?.message || "정보 수정 중 오류가 발생했습니다." };
+      }
+    },
 
   /** 
    * 2. changePassword: 비밀번호 변경 (PATCH /user)
@@ -90,7 +91,7 @@ const requestApi = {
     }
     try {
       const res = await PATCH("/auth", { password });
-      console.log("=== API 응답 확인 ===", res); // 이걸로 데이터 구조를 먼저 확인하세요!
+      // console.log("=== API 응답 확인 ===", res); // 이걸로 데이터 구조를 먼저 확인하세요!
       
       const status = res.data?.status ?? res.status; 
       
@@ -106,7 +107,13 @@ const requestApi = {
   
   const Mypage = () => {
   const navigate = useNavigate();
-  const { user, userName, selectedCompany, companies, isAuthReady, logout, handleLogout, toggleSidebarMobile, goHome, goMyPage, openAlarmCenter } = useAuth();
+  const { user, userName, 
+    selectedCompany, companies, updateName,
+    isAuthReady, logout, 
+    handleLogout, toggleSidebarMobile, 
+    goHome, goMyPage, openAlarmCenter
+
+   } = useAuth();
 
   // ── States ──
 
@@ -127,10 +134,11 @@ const requestApi = {
   const [loading, setLoading] = useState(false);
   const authData = useAuth();
   useEffect(() => {
-    if (isAuthReady) console.log(userName, selectedCompany, companies);
-    console.log(userData.name)
+    if (isAuthReady) 
+      // console.log(userName, selectedCompany, companies);
+    // console.log(userData.name)
     // --- 여기 추가 ---
-    console.log("=== 지금 보내려는 user 객체 내용 ===", authData);
+    // console.log("=== 지금 보내려는 user 객체 내용 ===", authData);
     setUserData({
       name: userName || '사용자',
       email: user?.email || selectedCompany?.email || '-',
@@ -194,14 +202,17 @@ const requestApi = {
     try {
       setLoading(true);
       const res = await requestApi.updateProfile(editForm.name);
-      if (res.status) {
+      if (res.status) { 
+        updateName(editForm.name);
         setUserData(p => ({ ...p, name: editForm.name }));
         setIsEditMode(false);
         showDefaultAlert('수정 완료', res.message || '회원 정보가 수정되었습니다.', 'success');
       } else {
         showDefaultAlert('수정 실패', res.message || '오류가 발생했습니다.', 'error');
       }
-    } finally { setLoading(false); }
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   /** [액션: 비번 변경] */

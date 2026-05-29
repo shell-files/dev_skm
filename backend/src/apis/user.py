@@ -5,7 +5,7 @@
 # [변경점] schemas/user.py 제거 → models/user.py에서 직접 import
 # ────────────────────────────────────────────────────────────────────────────
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from src.models.model import userUpdateModel, userDeleteModel
 from src.models.user import updateUserProcess, deleteUserProcess
 
@@ -17,9 +17,8 @@ router = APIRouter()
 @router.patch("", 
         summary="회원수정 api", 
         description="회원 정보를 수정합니다.")
-def updateUser(userUpdateModel: userUpdateModel):
-    return updateUserProcess(userUpdateModel)
-
+async def updateUser(request: Request,userUpdateModel: userUpdateModel):
+    return updateUserProcess(request, userUpdateModel)
 # --------------------------
 # 회원 탈퇴 API
 # --------------------------

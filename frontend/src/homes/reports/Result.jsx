@@ -4,8 +4,8 @@ import "@styles/result.css";
 import "@styles/benchmarking.css";
 import "@styles/media.css";
 import robot from "@assets/images/robot/robot_final_t.png";
-import { Chart, registerables } from "chart.js";
-Chart.register(...registerables);
+import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, ReferenceArea, ReferenceLine } from "recharts";
+
 
 
 
@@ -125,19 +125,11 @@ const Result = () => {
   const [rightTab, setRightTab]       = useState(0);
   const [openSections, setOpenSections] = useState({ 1: true, 2: true });
 
-  const chartCanvasRef    = useRef(null);
-  const chartInstanceRef  = useRef(null);
+  
   const particleRef       = useRef(null);
 
   useEffect(() => {
     createParticles();
-    initChart();
-    return () => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.destroy();
-        chartInstanceRef.current = null;
-      }
-    };
   }, []);
 
   const createParticles = () => {
@@ -156,84 +148,26 @@ const Result = () => {
     }
   };
 
-  const initChart = () => {
-    if (!chartCanvasRef.current) return;
-    const ctx = chartCanvasRef.current.getContext("2d");
+  const CustomDot = ({ cx, cy, fill, stroke, payload }) => (
+  <g>
+    <circle cx={cx} cy={cy} r={18} fill={fill} stroke={stroke} strokeWidth={2} />
+    <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+          fill="#fff" fontSize={12} fontWeight="bold">
+      {payload.rank}
+    </text>
+  </g>
+);
 
-    const quadrantPlugin = {
-      id: "quadrantBg",
-      beforeDraw(chart) {
-        const { ctx: c, chartArea: { left, right, top, bottom, width, height } } = chart;
-        const midX = left + width / 2;
-        const midY = top + height / 2;
-        c.save();
-        c.fillStyle = "rgba(239,68,68,0.08)";  c.fillRect(midX, top,  right - midX, midY - top);
-        c.fillStyle = "rgba(148,163,184,0.08)"; c.fillRect(left, midY, midX - left, bottom - midY);
-        c.fillStyle = "rgba(245,158,11,0.08)";  c.fillRect(left, top,  midX - left, midY - top);
-        c.fillStyle = "rgba(59,130,246,0.08)";  c.fillRect(midX, midY, right - midX, bottom - midY);
-        c.beginPath(); c.setLineDash([6, 4]); c.lineWidth = 2; c.strokeStyle = "rgba(100,116,139,0.55)";
-        c.moveTo(midX, top); c.lineTo(midX, bottom); c.stroke();
-        c.beginPath(); c.moveTo(left, midY); c.lineTo(right, midY); c.stroke();
-        c.restore();
-      },
-    };
-
-    const rankLabelPlugin = {
-      id: "rankLabels",
-      afterDatasetsDraw(chart) {
-        const { ctx: c } = chart;
-        chart.data.datasets.forEach((dataset, di) => {
-          const meta = chart.getDatasetMeta(di);
-          dataset.data.forEach((point, i) => {
-            const el = meta.data[i];
-            if (!el) return;
-            const { x, y } = el.getProps(["x", "y"], true);
-            c.save();
-            c.fillStyle = "#fff";
-            c.font = "bold 12px Pretendard, sans-serif";
-            c.textAlign = "center";
-            c.textBaseline = "middle";
-            c.fillText(point.rank, x, y);
-            c.restore();
-          });
-        });
-      },
-    };
-
-    chartInstanceRef.current = new Chart(ctx, {
-      type: "scatter",
-      data: { datasets: CHART_DATASETS },
-      plugins: [quadrantPlugin, rankLabelPlugin],
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: { padding: { top: 8, right: 24, bottom: 8, left: 8 } },
-        plugins: {
-          legend: {
-            position: "top",
-            labels: { usePointStyle: true, pointStyle: "circle", font: { size: 12, family: "Pretendard, sans-serif" }, padding: 16 },
-          },
-          tooltip: {
-            callbacks: {
-              label(c) {
-                const d = c.raw;
-                const lvl = v => v < 1.5 ? "Low" : v < 2.5 ? "Middle" : "High";
-                return ` ${d.rank}위  ${d.label}   재무: ${lvl(d.x)} / 영향: ${lvl(d.y)}`;
-              },
-            },
-            bodyFont: { size: 12, family: "Pretendard, sans-serif" },
-            padding: 10,
-          },
-        },
-        scales: {
-          x: { min: 0.5, max: 3.5, title: { display: true, text: "재무중요성 (Financial Materiality)", font: { size: 11, weight: "700" }, color: "#475569" },
-            ticks: { stepSize: 1, callback: v => ({ 1: "Low", 2: "Middle", 3: "High" }[v] || ""), color: "#64748b" }, grid: { color: "#e2e8f0" } },
-          y: { min: 0.5, max: 3.5, title: { display: true, text: "영향중요성 (Impact Materiality)", font: { size: 11, weight: "700" }, color: "#475569" },
-            ticks: { stepSize: 1, callback: v => ({ 1: "Low", 2: "Middle", 3: "High" }[v] || ""), color: "#64748b" }, grid: { color: "#e2e8f0" } },
-        },
-      },
-    });
-  };
+const CustomTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+  const d = payload[0].payload;
+  const lvl = v => v < 1.5 ? "Low" : v < 2.5 ? "Middle" : "High";
+  return (
+    <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "10px 14px", fontSize: "12px" }}>
+      {d.rank}위 &nbsp;{d.label}&nbsp; 재무: {lvl(d.x)} / 영향: {lvl(d.y)}
+    </div>
+  );
+};
 
   const moveStep = (index) => {
     if (index === activeIndex) return;
@@ -272,7 +206,7 @@ const Result = () => {
     
     <main className="main-content" style={{ display: "flex", flexDirection: "column", gap: "20px", padding: "20px", overflowY: "auto", justifyContent: "flex-start" }}>
       <div>
-        <div style={{ display: "flex", flexDirection: "row", gap: "20px", alignItems: "stretch", flex: 1, minHeight: 0 }}>
+        <div style={{ display: "flex", flexDirection: "row", gap: "20px", alignItems: "stretch", flex: 1, minHeight: 0, height:"(100vh - 200px)",  overflow:"hidden"}}>
                            {/* ── 왼쪽 패널 ── */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
             <div style={{ display: "flex", borderBottom: "2px solid #e2e8f0", marginBottom: "16px" }}>
@@ -345,7 +279,7 @@ const Result = () => {
                 </div>
               </div>
             )}
-            </div>
+            
 
             {/* 탭 1: 후보군 최종 선정 과정 */}
             {leftTab === 1 && (
@@ -364,13 +298,13 @@ const Result = () => {
                           icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>, last: true },
                       ].map((card, i) => (
                         <div key={i}>
-                          {/* <div style={{ display: "flex", alignItems: "center", gap: "16px", background: card.last ? "#f0fdf4" : "#f8fafc", border: `1px solid ${card.last ? "#bbf7d0" : "#e2e8f0"}`, borderRadius: "14px", padding: "18px 20px" }}>
+                           <div style={{ display: "flex", alignItems: "center", gap: "16px", background: card.last ? "#f0fdf4" : "#f8fafc", border: `1px solid ${card.last ? "#bbf7d0" : "#e2e8f0"}`, borderRadius: "14px", padding: "18px 20px" }}>
                             <div style={{ flexShrink: 0, width: "52px", height: "52px", background: "#dcfce7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{card.icon}</div>
                             <div>
                               <div style={{ fontSize: "1.15rem", fontWeight: 850, color: "#03A94D", marginBottom: "4px" }}>{card.count}</div>
                               <div style={{ fontSize: "0.78rem", color: "#64748b", lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: card.desc }} />
                             </div>
-                          </div> */}
+                          </div> 
                           {!card.last && <div style={{ display: "flex", justifyContent: "center", padding: "6px 0", color: "#03A94D", fontSize: "1.3rem" }}>↓</div>}
                         </div>
                       ))}
@@ -645,11 +579,11 @@ const Result = () => {
                 </div> 
             </div>
             )} 
-          
+            </div>
 
               
           {/* ── 오른쪽 패널 ── */}
-          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", overflowY: "auto", height: "100%" }}>
             <div style={{ display: "flex", borderBottom: "2px solid #e2e8f0", marginBottom: "16px" }}>
               <button style={TAB_STYLE(rightTab === 0)} onClick={() => setRightTab(0)}>전체</button>
               <button style={TAB_STYLE(rightTab === 1)} onClick={() => setRightTab(1)}></button>
@@ -659,29 +593,58 @@ const Result = () => {
               <div style={{ display: "flex", flexDirection: "column", gap: "26px" }}>
                 <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "16px 20px" }}>
                   <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#1e293b", marginBottom: "12px" }}>이중 중대성 매트릭스</div>
-                  <div style={{ position: "relative", height: "320px", width: "100%" }}>
-                    <canvas ref={chartCanvasRef}></canvas>
-                  </div>
+                  <ResponsiveContainer width="100%" height={320}>
+  <ScatterChart margin={{ top: 8, right: 24, bottom: 30, left: 20 }}>
+    <ReferenceArea x1={2} x2={3.5} y1={2}   y2={3.5} fill="rgba(239,68,68,0.08)" />
+    <ReferenceArea x1={0.5} x2={2} y1={0.5} y2={2}   fill="rgba(148,163,184,0.08)" />
+    <ReferenceArea x1={0.5} x2={2} y1={2}   y2={3.5} fill="rgba(245,158,11,0.08)" />
+    <ReferenceArea x1={2} x2={3.5} y1={0.5} y2={2}   fill="rgba(59,130,246,0.08)" />
+    <ReferenceLine x={2} stroke="rgba(100,116,139,0.55)" strokeDasharray="6 4" strokeWidth={2} />
+    <ReferenceLine y={2} stroke="rgba(100,116,139,0.55)" strokeDasharray="6 4" strokeWidth={2} />
+    <XAxis type="number" dataKey="x" domain={[0.5, 3.5]} ticks={[1, 2, 3]}
+      tickFormatter={v => ({ 1:"Low", 2:"Middle", 3:"High" }[v] || "")}
+      label={{ value: "재무중요성 (Financial Materiality)", position: "insideBottom", offset: -15, style: { fontSize: 11, fontWeight: 700, fill: "#475569" } }} />
+    <YAxis type="number" dataKey="y" domain={[0.5, 3.5]} ticks={[1, 2, 3]}
+      tickFormatter={v => ({ 1:"Low", 2:"Middle", 3:"High" }[v] || "")}
+      label={{ value: "영향중요성 (Impact Materiality)", angle: -90, position: "insideLeft", offset: 15, style: { fontSize: 11, fontWeight: 700, fill: "#475569" } }} />
+    <Tooltip content={<CustomTooltip />} />
+    <Legend />
+    <Scatter name="환경(E)" data={CHART_DATASETS[0].data}
+      fill="rgba(34,197,94,0.85)" stroke="#16a34a" shape={CustomDot} />
+    <Scatter name="사회(S)" data={CHART_DATASETS[1].data}
+      fill="rgba(59,130,246,0.85)" stroke="#2563eb" shape={CustomDot} />
+  </ScatterChart>
+</ResponsiveContainer>
                 </div>
                 <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px" }}>
                   <p style={{ margin: "0 0 8px 0" }}>⚫ x 1 = low, ⚫ x 2 = middle, ⚫ x 3 = high</p>
-                  <table border="1" style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr><th>순위</th><th>구분</th><th>탑 이슈</th><th>Type</th><th>Period</th><th>재무중요성</th><th>영향중요성</th></tr>
-                    </thead>
-                    <tbody>
-                      {SCATTER_TABLE_ROWS.map((row) => (
-                        <tr key={row.rank}>
-                          <td>{row.rank}.</td><td>{row.cat}</td><td>{row.name}</td>
-                          <td>{row.type}</td><td>{row.period}</td><td>{row.fin}</td><td>{row.impact}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <table className="result-table">
+  <thead>
+    <tr>
+      <th>순위</th><th>구분</th><th>탑 이슈</th>
+      <th>Type</th><th>Period</th><th>재무중요성</th><th>영향중요성</th>
+    </tr>
+  </thead>
+  <tbody>
+    {SCATTER_TABLE_ROWS.map((row) => (
+      <tr key={row.rank}>
+        <td style={{ textAlign: "center", fontWeight: 800, color: "#03A94D" }}>{row.rank}</td>
+        <td style={{ textAlign: "center" }}>
+          <span className={`badge badge-${row.cat.toLowerCase()}`}>{row.cat}</span>
+        </td>
+        <td className="issue-name">{row.name}</td>
+        <td>{row.type}</td>
+        <td>{row.period}</td>
+        <td className="score-main">{row.fin}</td>
+        <td className="score-main">{row.impact}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
                 </div>
               </div>
             )}
-
+            
             {rightTab === 1 && (
               <div className="sr-result-dashboard" style={{ display: "block" }}>
                 <div className="robot-view-container">

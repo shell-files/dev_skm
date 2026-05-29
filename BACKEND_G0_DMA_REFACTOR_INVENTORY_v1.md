@@ -90,8 +90,8 @@ File naming rule for backend Python source: lowercase singular, no underscore.
 | `backend/src/utils/dmafinancialrepository.py` | `backend/src/utils/dmafinancial.py` | Candidate | G0-02 financial basis utility. Needs compatibility module or import migration. |
 | `backend/src/utils/dmaaggregator.py` | `backend/src/utils/dmaaggregation.py` | Candidate | More noun-like than aggregator; do not change weights. |
 | `backend/src/services/materialities/financialexposure.py` | keep | Keep | Already conforms after Step 2 rename. |
-| `backend/src/services/materialities/contextgraph.py` | keep or `contextprofilegraph.py` | Review | Current name conforms. `contextprofilegraph.py` is clearer but longer. Keep unless clarity issue persists. |
-| `backend/src/services/materialities/context.py` | `contextmodifier.py` or `dmacontextservice.py` | Review | `contextmodifier.py` is compact and specific. `dmacontextservice.py` is explicit but less compact. |
+| `backend/src/services/materialities/contextgraph.py` | keep | Decision: Keep | Already conforms to no-underscore rule. `contextprofilegraph.py` is clearer but too long for this phase. |
+| `backend/src/services/materialities/context.py` | keep for this phase | Decision: Keep for this phase | Function canonicalization first. File rename to `contextmodifier.py` is optional after function migration stabilizes. |
 | `backend/src/utils/dmascoring.py` | keep | Keep | Clear domain file. |
 | `backend/src/utils/dmarepository.py` | keep | Keep for now | Large file, but high import risk. Prefer function canonicalization first. |
 | `backend/src/utils/subissuemaster.py` | keep | Keep | Single Source of Truth. Do not rename in this phase. |
@@ -375,7 +375,8 @@ API handler names in `backend/src/apis/materiality.py` are a special case:
 ```text
 Route paths are protected.
 Handler function names may affect generated OpenAPI operation IDs.
-Therefore handler renames should be delayed unless Antigravity/frontend is confirmed not to rely on operation IDs.
+Decision: keep API handler names in this phase.
+Reason: route paths are protected and handler names may affect generated OpenAPI operation IDs.
 ```
 
 ## 10. Smoke Checklist
@@ -535,6 +536,8 @@ context.py -> contextmodifier.py or keep
 Rules:
 
 ```text
+Keep this as a later optional pass.
+Do not perform additional file renames during Commit 2 through Commit 6.
 use git mv
 update imports only
 consider compatibility re-export modules for old paths

@@ -114,7 +114,6 @@
 /* =========================================================
    Main Layout
 ========================================================= */
-
 .main-container,
 .Bench-container {
     display: flex;
@@ -125,7 +124,7 @@
     min-height: 0;
 }
 
-.main-content {
+.Bench-main-content {
     flex: 1;
 
     min-height: 0;
@@ -133,14 +132,14 @@
     overflow-y: auto;
     overflow-x: hidden;
 
-    padding: 24px 0;
+    padding: 24px 130px;
     padding-bottom: 180px;
 
     display: flex;
     justify-content: center;
 }
 
-.input-card {
+.Bench-input-card {
     width: 100%;
     min-width: 0;
 
@@ -148,24 +147,27 @@
     flex-direction: column;
     justify-content: flex-start;
 
-    padding: 32px 48px 120px;
+    padding: 32px 0 120px;
 
     background: #fff;
 
     text-align: center;
     overflow: visible;
+    
 }
 
 /* =========================================================
    Upload Grid
 ========================================================= */
 
-.upload-section-grid {
+.Bench-upload-section-grid {
+    
     display: grid;
+
     grid-template-columns: repeat(3, minmax(0, 1fr));
 
     gap: 20px;
-    padding: 10px 130px;
+    padding: 10px 0;
     width: 100%;
 
     margin: 25px 0 20px;
@@ -175,50 +177,44 @@
 
 .upload-group-container {
     position: relative;
-
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    height: auto;
+    padding: 24px;
+    background: #fff;
+    transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-
-    width: 100%;
-    min-width: 0;
-    min-height: 220px;
-
-    padding: 24px 16px 16px;
-
-    border: 2px solid #03A94D;
-    border-radius: 14px;
-
-    background: #fff;
-
-    /* overflow: hidden; */
+    gap: 18px;
+}
+.upload-group-container:hover {
+    border-color: #03A94D;
+    box-shadow: 0 10px 25px rgba(3, 169, 77, 0.05);
 }
 
 .upload-group-badge {
     position: absolute;
-    top: -15px;
-    left: 14px;
-    z-index: 5;
-
-    padding: 1px 14px;
-
-    border: 2px solid #03A94D;
-    border-bottom: none;
-    border-radius: 6px 6px 0 0;
-
+    top: -12px;
+    left: 20px;
     background: #fff;
-
-    color: #334155;
-
-    font-size: 0.85rem;
+    border: 2px solid #e2e8f0;
+    padding: 2px 14px;
+    border-radius: 20px;
     font-weight: 800;
+    font-size: 0.8rem;
+    color: #475569;
+    transition: all 0.3s;
+}
+.upload-group-badge:hover .upload-group-badge {
+    border-color: #03A94D;
+    color: #03A94D;
 }
 
 /* =========================================================
    Input Row
 ========================================================= */
 
-.company-top-input-row {
+.company-top-Bench-input-row {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -637,7 +633,7 @@
 
 .Bench-btn {
     align-self: center;
-    margin-bottom: auto;
+    margin-bottom: 45px;
     padding: 12px 50px;
 
     border: none;
@@ -678,11 +674,11 @@
 
 @media (max-width: 1200px) {
 
-    .input-card {
+    .Bench-input-card {
         padding: 28px 28px 120px;
     }
 
-    .upload-section-grid {
+    .Bench-upload-section-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
@@ -693,16 +689,16 @@
 
 @media (max-width: 992px) {
 
-    .main-content {
+    .Bench-main-content {
         padding: 18px;
         padding-bottom: 220px;
     }
 
-    .input-card {
+    .Bench-input-card {
         padding: 24px 20px 140px;
     }
 
-    .upload-section-grid,
+    .Bench-upload-section-grid,
     .summary-grid {
         grid-template-columns: 1fr;
     }
@@ -745,21 +741,21 @@
         flex-shrink: 0;
     }
 
-    .main-content {
+    .Bench-main-content {
         padding: 14px;
         padding-bottom: 240px;
     }
 
-    .input-card {
+    .Bench-input-card {
         padding: 20px 16px 160px;
     }
 
-    .upload-section-grid {
+    .Bench-upload-section-grid {
         grid-template-columns: 1fr;
         gap: 16px;
     }
 
-    .company-top-input-row {
+    .company-top-Bench-input-row {
         flex-direction: column;
         align-items: stretch;
     }
@@ -784,12 +780,12 @@
 
 @media (max-width: 480px) {
 
-    .main-content {
+    .Bench-main-content {
         padding: 10px;
         padding-bottom: 260px;
     }
 
-    .input-card {
+    .Bench-input-card {
         padding: 18px 12px 180px;
     }
 

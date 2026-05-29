@@ -1,15 +1,15 @@
 :root {
-    --sr-primary: #03A94D;
-    --sr-primary-vibrant: linear-gradient(135deg, #03A94D, #017E3F);
-    --sr-bg: #f4f7f6;
-    --sr-border: #e2e8f0;
-    --sr-text: #334155;
-    --sr-sub: #64748b;
-    --sr-radius: 20px;
+    --media-primary: #03A94D;
+    --media-primary-vibrant: linear-gradient(135deg, #03A94D, #017E3F);
+    --media-bg: #f4f7f6;
+    --media-border: #e2e8f0;
+    --media-text: #334155;
+    --media-sub: #64748b;
+    --media-radius: 20px;
 }
 
 /* 중앙 컨텐츠 스크롤 제어 */
-.main-container {
+.media-main-container {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -18,7 +18,7 @@
     overflow: hidden;
 }
 
-.sr-container {
+.media-container {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -30,24 +30,24 @@
 
 }
 
-.sr-header {
+.media-header {
     background: #fff;
     padding: 20px 40px;
     flex-shrink: 0;
     width: 100%;
 }
 
-.sr-title {
+.media-title {
     font-size: 1.3rem;
     font-weight: 850;
     margin: 0 0 15px 0;
     color: #1e293b;
 }
 
-.input-card {
+.media-input-card {
     background: #fff;
     padding: 35px 130px;
-    border-radius: var(--sr-radius);
+    border-radius: var(--media-radius);
     width: 100%;
     box-shadow: 0 4px 20px rgba(15, 23, 42, 0.02);
     text-align: center;
@@ -77,7 +77,7 @@
 }
 
 .media-card:hover {
-    border-color: var(--sr-primary);
+    border-color: var(--media-primary);
     box-shadow: 0 10px 25px rgba(3, 169, 77, 0.05);
 }
 
@@ -97,8 +97,8 @@
 }
 
 .media-card:hover .media-badge {
-    border-color: var(--sr-primary);
-    color: var(--sr-primary);
+    border-color: var(--media-primary);
+    color: var(--media-primary);
 }
 
 /* 폼 요소 레이아웃 스펙 */
@@ -130,7 +130,7 @@
 
 .media-input:focus,
 .media-select:focus {
-    border-color: var(--sr-primary);
+    border-color: var(--media-primary);
     background-color: #fff;
 }
 
@@ -211,32 +211,32 @@
     margin-top: 15px;
 }
 
-.sr-btn {
+.media-btn {
     padding: 14px 45px;
     border-radius: 10px;
     border: none;
     font-weight: 850;
     font-size: 1rem;
     cursor: pointer;
-    background: var(--sr-primary-vibrant);
+    background: var(--media-primary-vibrant);
     color: #fff;
     transition: 0.3s;
     box-shadow: 0 4px 12px rgba(3, 169, 77, 0.15);
 }
 
-.sr-btn:hover {
+.media-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 16px rgba(3, 169, 77, 0.25);
 }
 
 /* 바텀 실시간 분석 현황판 연동 */
-.sr-result-dashboard {
+.media-result-dashboard {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
     background: #fff;
-    border-top: 1px solid var(--sr-border);
+    border-top: 1px solid var(--media-border);
     height: 45px;
     transition: height 0.6s cubic-bezier(0.19, 1, 0.22, 1);
     display: flex;
@@ -245,8 +245,8 @@
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.06);
 }
 
-.sr-result-dashboard.open {
-    height: 400px;
+.media-result-dashboard.open {
+    height: 80%;
     
 }
 
@@ -282,7 +282,7 @@
     gap: 0px !important;
 }
 
-.robot-main-img {
+.robot-media-main-img {
     max-height: 130px;
     width: auto;
     object-fit: contain;
@@ -333,7 +333,7 @@
 /* =========================================================
            Stepper
         ========================================================= */
-.sr-stepper-row {
+.media-stepper-row {
     position: relative;
     display: flex;
     align-items: center;
@@ -403,15 +403,15 @@
         gap: 16px;
     }
 
-    .sr-header {
+    .media-header {
         padding: 18px 20px;
     }
 
-    .input-card, .media-card {
+    .media-input-card, .media-card {
         padding: 24px !important;
     }
 
-    .main-content {
+    .media-main-content {
         padding: 16px;
     }
 
@@ -420,11 +420,11 @@
         padding: 20px;
     }
 
-    .sr-result-dashboard.open {
+    .media-result-dashboard.open {
         height: 500px;
     }
 
-    .input-card {
+    .media-input-card {
         padding: 28px 40px;
     }
 
@@ -445,15 +445,15 @@
         grid-template-columns: 1fr;
     }
 
-    .sr-header {
+    .media-header {
         padding: 18px 20px;
     }
 
-    .input-card .media-card{
+    .media-input-card .media-card{
         padding: 24px;
     }
 
-    .main-content {
+    .media-main-content {
         padding: 16px;
     }
 
@@ -462,7 +462,7 @@
         padding: 20px;
     }
 
-    .sr-result-dashboard.open {
+    .media-result-dashboard.open {
         height: 500px;
     }
 }
@@ -477,11 +477,11 @@
         padding-bottom: 180px;
     }
 
-    .sr-title {
+    .media-title {
         font-size: 1.1rem;
     }
 
-    .sr-stepper-row {
+    .media-stepper-row {
         gap: 10px;
         overflow-x: auto;
         padding-bottom: 6px;
@@ -495,7 +495,7 @@
         min-width: 80px;
     }
 
-    .input-card .media-card {
+    .media-input-card .media-card {
         padding: 20px 16px;
         border-radius: 14px;
     }
@@ -521,7 +521,7 @@
         flex-direction: column;
     }
 
-    .sr-btn {
+    .media-btn {
         width: 100%;
     }
 
@@ -529,7 +529,7 @@
         font-size: 1.05rem;
     }
 
-    .robot-main-img {
+    .robot-media-main-img {
         max-height: 110px;
     }
 
@@ -545,13 +545,13 @@
 
 @media (max-width: 480px) {
 
-    .main-content {
+    .media-main-content {
         padding: 10px;
         /* padding-bottom: 10px; */
         padding-bottom: 80px !important;
     }
 
-    .input-card .media-card {
+    .media-input-card .media-card {
         padding: 16px 14px;
     }
 
@@ -572,7 +572,7 @@
         align-items: flex-start;
     }
 
-    .sr-result-dashboard.open {
+    .media-result-dashboard.open {
         height: 85vh;
     }
 }

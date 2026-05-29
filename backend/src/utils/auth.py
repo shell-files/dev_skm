@@ -1,13 +1,27 @@
-from fastapi import Response, Depends, HTTPException, status
+from fastapi import Response, Depends, HTTPException, status, Request
 from fastapi.security import APIKeyCookie
 from src.utils.settings import settings
 from src.utils.validatetok import validateToken
 from src.utils.tokenset import decryptFromJwe
-from src.utils.rediscl import getTokenRedis
+from src.utils.rediscl import getTokenRedis, delTokenRedis
 from src.models.model import UserModel
+from src.utils.db import save
 
 cookie_scheme = APIKeyCookie(name=settings.cookie_key)
 
+def get_domain(request: Request):
+    current_domain = request.url.hostname
+    # 강의장용 DNS
+    # print(f"요청한 Domain : {current_domain}")
+    allowed_domains = ["myapp.com", "main.myapp.com"]
+    if current_domain.endswith(settings.domain):
+        cookie_domain = f".{settings.domain}"
+    elif current_domain in allowed_domains:
+        cookie_domain = ".myapp.com"
+    else:
+        cookie_domain = None
+    print(f"Cookie Domain : {cookie_domain}")
+    return cookie_domain
 
 def get_token(response: Response, token: str = Depends(cookie_scheme)) -> UserModel:
     """
@@ -70,3 +84,30 @@ def get_token(response: Response, token: str = Depends(cookie_scheme)) -> UserMo
             status_code=status.HTTP_403_FORBIDDEN,
             detail="접근 권한이 없거나 오류가 발생했습니다.",
         )
+        
+def delete_cookie(response: Response, request: Request, uuid: str):
+    try:
+        # 1. db에서 refresh token delete_yn 1으로 변경
+        logoutSql="""
+            UPDATE `with`.TOKEN
+                SET `delete_yn` = 1
+                WHERE uuid = ?;
+        """
+        logoutParams = (uuid,)
+        save(logoutSql, logoutParams)
+
+        # 2. redis에서 uuid 삭제
+        delTokenRedis(uuid)
+
+        # 3. cookie 삭제
+        response.delete_cookie(
+            key=settings.cookie_key,
+            domain=get_domain(request),
+            # secure=True,
+            httponly=True, samesite="lax"
+        )
+        return True
+    except Exception as e:
+        print(f"delete_cookie Error: {e}")
+    return False
+

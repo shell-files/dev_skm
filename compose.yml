@@ -14,9 +14,9 @@ services:
       - VITE_API_URL=${VITE_API_URL}
       - VITE_API_URL_MAIN=${VITE_API_URL_MAIN}
       - VITE_API_URL_SKM=${VITE_API_URL_SKM}
-      - VITE_API_URL_SKM_BACK=${secrets.VITE_API_URL_SKM_BACK}
-      - VITE_API_URL_HG=${secrets.VITE_API_URL_HG}
-      - VITE_API_URL_TV=${secrets.VITE_API_URL_TV}
+      - VITE_API_URL_SKM_BACK=${VITE_API_URL_SKM_BACK}
+      - VITE_API_URL_HG=${VITE_API_URL_HG}
+      - VITE_API_URL_TV=${VITE_API_URL_TV}
   backend:
     container_name: backend
     image: uv:1

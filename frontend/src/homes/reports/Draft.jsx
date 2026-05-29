@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import "@styles/draft.css";
 
+// (paragraphData, paragraphTexts, TrendChart 등 상단 데이터 정의는 기존과 동일합니다)
 const paragraphData = {
   p1: {
     tag: "전략 및 방향", tagType: "blue", id: "P-03-01",
@@ -12,7 +13,7 @@ const paragraphData = {
       { key: "G0-03__G0001", val: "22개 사업장" },
       { key: "보고기간", val: "2024.01.01~12.31" },
     ],
-    preview: "SKM은 과학기반 감축목표 이니셔티브(SBTi)의 1.5°C 시나리오에 부합하는 넷제로 목표를 수립하고...",
+    preview: "SKM은 과학기반 감축목표 이니셔티브(SBTi)의 1.5°C 시나리오에 부합하는 넷제로 목표를 수립하고",
     metricCount: 1,
     metrics: [{
       name: "연결 Scope 1-2 총배출량", badge: "그룹 통합 지표", badgeType: "green",
@@ -141,47 +142,12 @@ const paragraphData = {
 };
 
 const paragraphTexts = {
-  p1: (
-    <>
-      A_GROUP의 자동차 부품과 전동화 부품 사업을 총괄하는 지주회사로, 국내외 자회사와 함께 모빌리티 부품 사업을 이룬다.
-      보고기간은 2024.01.01~2024.12.31이며, 연결 공시 범위는 A_GROUP 본인 사업장과 B_SUB_KR, C_SUB_EU, D_SUB_US를 포함한다.
-      연결 매출액은 17,800,000,000,000 KRW, 연결 사업장 수는 22개이다.
-    </>
-  ),
-  p2: (
-    <>
-      A_GROUP의 2045년 넷제로립과 2040년 재생에너지 100% 전환을 목표로 Scope 1·2 배출 감축과 전환계획을 관리한다.
-      기준연도는 2019이며 기준연도 연결 Scope 1·2 배출량은 130,890 tCO₂eq이다.
-      보고연도 연결 Scope 1·2 배출량은 112,500 tCO₂eq, 전년 대비 감축량은 4,402 tCO₂eq, 감축률은 3.91%이다.
-      재생에너지 전환율은 9.49%이다.
-    </>
-  ),
-  p3: (
-    <>
-      A_GROUP의 주요 협력사의 환경·인권·윤리 리스크가 조달 안정성과 브랜드 신뢰에 미치는 영향을 고려해
-      공급망 지속가능성 리스크를 관리한다. 연결 기준 공급업체 감사 이행률은 71.90%, 고위험 공급업체 수는
-      64개사이다. 공급망 CAP 완료율은 68.09%이다.
-    </>
-  ),
-  p4: (
-    <>
-      전동화·자율주행·디지털화 전환에 대응하기 위해 미래 모빌리티 기술 인재 확보와 내부 역량 강화가 중요하다.
-      연결 임직원 수는 8,367명이며, 1인당 교육시간은 33.42시간/명, 핵심직무 교육 달성률은 72.01%이다.
-    </>
-  ),
-  p5: (
-    <>
-      전동화 부품과 경량화·고효율 부품은 제품 사용 단계의 온실가스 감축과 환경영향 저감에 기여한다.
-      연결 친환경 제품 매출액은 4,298,000,000,000 KRW이며, 연결 매출 대비 비중은 24.15%이다.
-      회피 배출량은 1,245,000 tCO₂eq, 재화적 비용 절감 효과는 68,973,000,000 KRW로 추산된다.
-    </>
-  ),
-  p6: (
-    <>
-      제품 품질과 안전은 고객 신뢰 확보와 규제 대응, 리콜 리스크 관리와 직접 연결되는 핵심 주제다.
-      연결 기준 리콜 건수는 10건, 리콜 건수는 3건이며, 제품안전 CAP 완료율은 70.37%이다.
-    </>
-  ),
+  p1: "A_GROUP의 자동차 부품과 전동화 부품 사업을 총괄하는 지주회사로, 국내외 자회사와 함께 모빌리티 부품 사업을 이룬다. 보고기간은 2024.01.01~2024.12.31이며, 연결 공시 범위는 A_GROUP 본인 사업장과 B_SUB_KR, C_SUB_EU, D_SUB_US를 포함한다. 연결 매출액은 17,800,000,000,000 KRW, 연결 사업장 수는 22개이다.",
+  p2: "A_GROUP의 2045년 넷제로립과 2040년 재생에너지 100% 전환을 목표로 Scope 1·2 배출 감축과 전환계획을 관리한다. 기준연도는 2019이며 기준연도 연결 Scope 1·2 배출량은 130,890 tCO₂eq이다. 보고연도 연결 Scope 1·2 배출량은 112,500 tCO₂eq, 전년 대비 감축량은 4,402 tCO₂eq, 감축률은 3.91%이다. 재생에너지 전환율은 9.49%이다.",
+  p3: "A_GROUP의 주요 협력사의 환경·인권·윤리 리스크가 조달 안정성과 브랜드 신뢰에 미치는 영향을 고려해 공급망 지속가능성 리스크를 관리한다. 연결 기준 공급업체 감사 이행률은 71.90%, 고위험 공급업체 수는 64개사이다. 공급망 CAP 완료율은 68.09%이다.",
+  p4: "전동화·자율주행·디지털화 전환에 대응하기 위해 미래 모빌리티 기술 인재 확보와 내부 역량 강화가 중요하다. 연결 임직원 수는 8,367명이며, 1인당 교육시간은 33.42시간/명, 핵심직무 교육 달성률은 72.01%이다.",
+  p5: "전동화 부품과 경량화·고효율 부품은 제품 사용 단계의 온실가스 감축과 환경영향 저감에 기여한다. 연결 친환경 제품 매출액은 4,298,000,000,000 KRW이며, 연결 매출 대비 비중은 24.15%이다. 회피 배출량은 1,245,000 tCO₂eq, 재화적 비용 절감 효과는 68,973,000,000 KRW로 추산된다.",
+  p6: "제품 품질과 안전은 고객 신뢰 확보와 규제 대응, 리콜 리스크 관리와 직접 연결되는 핵심 주제다. 연결 기준 리콜 건수는 10건, 리콜 건수는 3건이며, 제품안전 CAP 완료율은 70.37%이다.",
 };
 
 const TrendChart = ({ trend }) => {
@@ -219,7 +185,13 @@ const TrendChart = ({ trend }) => {
 const Draft = () => {
   const [currentPid, setCurrentPid] = useState(null);
   const [metricOpen, setMetricOpen] = useState(true);
-  const particleRef = useRef(null);
+  
+  // ── 상태 정의 ──
+  const [isEditing, setIsEditing] = useState(false); // 본문 수정 모드 상태
+  const [texts, setTexts] = useState(paragraphTexts); // 실시간 수정 가능한 텍스트 데이터 상태
+  const [exportMenuOpen, setExportMenuOpen] = useState(false); // 내보내기 드롭다운 상태
+  
+  const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
   const steps = [
@@ -231,33 +203,50 @@ const Draft = () => {
   ];
   const activeIndex = 4;
 
+  // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
-    createParticles();
+    const handleOutsideClick = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setExportMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  const createParticles = () => {
-    if (!particleRef.current) return;
-    particleRef.current.innerHTML = "";
-    for (let i = 0; i < 12; i++) {
-      const p = document.createElement("div");
-      p.className = "particle";
-      const size = Math.random() * 5 + 3;
-      p.style.width = `${size}px`;
-      p.style.height = `${size}px`;
-      p.style.left = `${Math.random() * 100}%`;
-      p.style.top = `${Math.random() * 100}%`;
-      p.style.animationDelay = `${Math.random() * 2}s`;
-      particleRef.current.appendChild(p);
+  // 파일 다운로드 처리 함수
+  const handleExport = (type) => {
+    setExportMenuOpen(false);
+    alert(`${type} 형식으로 다운로드를 시작합니다.`);
+    if (type === "JSON") {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ info: paragraphData, contents: texts }, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "sustainability_draft.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
     }
+    // PDF, Word, Excel 백엔드/라이브러리 연동 인터페이스 배치 공간
   };
 
+  // 문단 선택 핸들러
   const selectParagraph = (pid) => {
+    if (isEditing) return; // 수정 모드일 때는 클릭 패널 전환 차단
     if (currentPid === pid) {
       setCurrentPid(null);
       return;
     }
     setCurrentPid(pid);
     setMetricOpen(true);
+  };
+
+  // 텍스트 실시간 변경 핸들러
+  const handleTextChange = (pid, val) => {
+    setTexts(prev => ({
+      ...prev,
+      [pid]: val
+    }));
   };
 
   const data = currentPid ? paragraphData[currentPid] : null;
@@ -293,15 +282,40 @@ const Draft = () => {
                 <div className="doc-breadcrumb">
                   <span>🏠</span><span className="bc-sep">›</span>
                   <span className="bc-item">환경경영</span><span className="bc-sep">›</span>
-                  <span className="bc-item">기후변화와 대응</span><span className="bc-sep">›</span>
-                  <span className="bc-item active">기후목표·전환계획</span>
+                  <span className="bc-item active">기후변화와 대응</span>
                 </div>
                 <div className="doc-page-info">페이지 1 / 5</div>
+                
                 <div className="doc-actions">
-                  <button className="doc-btn">✏ 수정</button>
-                  <button className="doc-btn">✓ 저장</button>
-                  <button className="doc-btn">💬 코멘트</button>
-                  <button className="doc-btn-more">···</button>
+                  {/* 1. 독립된 본문 수정 버튼 (Toggle 형태) */}
+                  <button 
+                    className={`doc-btn ${isEditing ? "editing-active" : ""}`} 
+                    onClick={() => setIsEditing(!isEditing)}
+                    style={{ fontWeight: isEditing ? "bold" : "normal" }}
+                  >
+                    {isEditing ? "💾 수정 완료" : "✏️ 본문 수정"}
+                  </button>
+
+                  {/* 2. 분리된 파일 내려받기 드롭다운 버튼 */}
+                  <div className="save-dropdown-container" ref={dropdownRef} style={{ position: "relative", display: "inline-block", flexShrink: 0 }}>
+                    <button className="doc-btn export-toggle-btn" onClick={() => setExportMenuOpen(!exportMenuOpen)}>
+                      📥 파일 내려받기 <span style={{ fontSize: "0.7rem", marginLeft: "4px" }}>▼</span>
+                    </button>
+                    
+                    {exportMenuOpen && (
+                      <ul className="save-dropdown-menu" style={{
+                        position: "absolute", top: "100%", right: 0, marginTop: "6px",
+                        background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px",
+                        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)", padding: "6px 0",
+                        listStyle: "none", zIndex: 50, minWidth: "145px"
+                      }}>
+                        <li onClick={() => handleExport("PDF")} style={dropdownItemStyle}>📄 PDF 다운로드</li>
+                        <li onClick={() => handleExport("Word")} style={dropdownItemStyle}>📝 Word (Docx) 저장</li>
+                        <li onClick={() => handleExport("Excel")} style={dropdownItemStyle}>📊 Excel 데이터 추출</li>
+                        <li onClick={() => handleExport("JSON")} style={dropdownItemStyle}>⚙️ JSON 데이터 추출</li>
+                      </ul>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -316,8 +330,35 @@ const Draft = () => {
                       key={pid}
                       className={`dp-wrap${currentPid === pid ? " selected" : ""}`}
                       onClick={() => selectParagraph(pid)}
+                      style={{ cursor: isEditing ? "default" : "pointer" }}
                     >
-                      <p className="dp-text">{paragraphTexts[pid]}</p>
+                      <span className={`para-chip ${d.tagType}`} style={{ marginBottom: "8px", display: "inline-block" }}>
+                        {d.tag}
+                      </span>
+                      
+                      {/* 수정 모드일 때는 textarea로 렌더링, 평소에는 text형태로 출력 */}
+                      {isEditing ? (
+                      <textarea
+                        className="edit-para-textarea"
+                        value={texts[pid]}
+                        rows={texts[pid].split('\n').length || 3} // 줄바꿈 개수만큼 기본 높이 확보
+                        onChange={(e) => {
+                          handleTextChange(pid, e.target.value);
+                          // 입력할 때마다 입력창 높이를 글 내용 높이(scrollHeight)에 맞게 실시간 자동 확장
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        onFocus={(e) => {
+                          // 처음 포커스 되었을 때도 높이를 본문 크기에 맞게 자동으로 딱 맞춰줌
+                          e.target.style.height = 'auto';
+                          e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        onClick={(e) => e.stopPropagation()} // 클릭 시 부모 문단 클릭 이벤트 방지
+                      />
+                       ) : (
+                      <p className="dp-text">{texts[pid]}</p>
+                       )}
+
                       <div className="dp-tooltip">
                         <div className="dp-tooltip-title">{d.tooltipTitle}</div>
                         {d.tooltipRows.map((row, i) => (
@@ -334,8 +375,8 @@ const Draft = () => {
             </div>
 
             {/* 우측 데이터 추적 패널 */}
-            <div className={`draft-panel${currentPid ? " open" : ""}`} id="draftPanel">
-              {data && metric && (
+            <div className={`draft-panel ${currentPid && !isEditing ? "open" : ""}`} id="draftPanel">
+              {data && metric ? (
                 <div className="panel-inner">
                   <div className="panel-hd">
                     <span className="panel-hd-title">데이터 추적</span>
@@ -345,7 +386,7 @@ const Draft = () => {
                   <div className="panel-section">
                     <div className="panel-section-title">선택 문단</div>
                     <span className={`para-chip ${data.tagType}`}>{data.tag}</span>
-                    <p className="para-preview-text">{data.preview}</p>
+                    <p className="para-preview-text">{texts[currentPid]}</p>
                     <span className="para-id-link">문단 ID: {data.id}</span>
                   </div>
 
@@ -353,7 +394,7 @@ const Draft = () => {
                     <div className="panel-section-title">참조 지표 ({data.metricCount})</div>
                     <div className="metric-accordion">
                       <div
-                        className={`metric-acc-header${metricOpen ? " open" : ""}`}
+                        className={`metric-acc-header ${metricOpen ? "open" : ""}`}
                         onClick={() => setMetricOpen((v) => !v)}
                       >
                         <div className="metric-acc-header-left">
@@ -396,33 +437,35 @@ const Draft = () => {
                           </div>
 
                           <div className="trend-section">
-                            <div className="trend-section-title">감추이</div>
+                            <div className="trend-section-title">추이</div>
                             <div className="trend-chart-wrap">
                               <TrendChart trend={metric.trend} />
                             </div>
                           </div>
 
-                          <div className="panel-subsection">
-                            <div className="trend-section-title">
-                              데이터 구성 ({metric.trend[metric.trend.length - 1].y})
-                            </div>
-                            <table className="breakdown-table">
-                              <thead>
-                                <tr>
-                                  <th>구분</th>
-                                  <th className="breakdown-val">값 ({metric.unit})</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {metric.breakdown.map((b, i) => (
-                                  <tr key={i}>
-                                    <td>{b.l}</td>
-                                    <td className="breakdown-val">{b.v}</td>
+                          {metric.breakdown && (
+                            <div className="panel-subsection">
+                              <div className="trend-section-title">
+                                데이터 구성 ({metric.trend[metric.trend.length - 1].y})
+                              </div>
+                              <table className="breakdown-table">
+                                <thead>
+                                  <tr>
+                                    <th>구분</th>
+                                    <th className="breakdown-val">값 ({metric.unit})</th>
                                   </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
+                                </thead>
+                                <tbody>
+                                  {metric.breakdown.map((b, i) => (
+                                    <tr key={i}>
+                                      <td>{b.l}</td>
+                                      <td className="breakdown-val">{b.v}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
 
                           <div className="panel-subsection">
                             <div className="trend-section-title">계산식/산출 방식</div>
@@ -450,20 +493,27 @@ const Draft = () => {
                     </div>
                   </div>
                 </div>
+              ) : (
+                <div className="panel-empty-text" style={{ padding: "40px", color: "#64748b", textAlign: "center" }}>
+                  문단을 선택하면 데이터 추적 정보가 표시됩니다.
+                </div>
               )}
             </div>
 
           </div>
         </div>
       </main>
-
-      <div className="sr-result-dashboard" id="dashboard">
-        <div className="robot-view-container">
-          <div id="particle-field" className="particle-field" ref={particleRef}></div>
-        </div>
-      </div>
     </div>
   );
+};
+
+const dropdownItemStyle = {
+  padding: "10px 16px",
+  fontSize: "0.85rem",
+  color: "#334155",
+  cursor: "pointer",
+  transition: "background 0.2s",
+  textAlign: "left"
 };
 
 export default Draft;

@@ -10,13 +10,7 @@ services:
     volumes:
       - ./frontend/dist:/usr/share/nginx/html:ro
       - ./frontend/default.conf:/etc/nginx/conf.d/default.conf:ro
-    environment:
-      - VITE_API_URL=${VITE_API_URL}
-      - VITE_API_URL_MAIN=${VITE_API_URL_MAIN}
-      - VITE_API_URL_SKM=${VITE_API_URL_SKM}
-      - VITE_API_URL_SKM_BACK=${VITE_API_URL_SKM_BACK}
-      - VITE_API_URL_HG=${VITE_API_URL_HG}
-      - VITE_API_URL_TV=${VITE_API_URL_TV}
+
   backend:
     container_name: backend
     image: uv:1

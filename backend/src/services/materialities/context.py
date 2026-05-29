@@ -44,12 +44,12 @@ from src.models.materialitycontext import (
 )
 from src.services.materialities.contextgraph import buildCompanyContextProfileWithOptionalGraph
 from src.utils.companycontextrepository import (
-    getCompanyG0Facts,
-    getDmaScoreSummaryRowsForContext,
-    getLatestCompanyContextProfile,
-    getMaterialityRunContext,
-    replaceCompanyContextProfile,
-    updateContextModifiers,
+    getLatestProfile,
+    getRun,
+    listG0Facts,
+    listScoreRows,
+    replaceProfile,
+    updateModifiers,
 )
 from src.utils.dmaaggregator import calculateFinalMateriality
 from src.utils.dmarepository import recalculateFinalScore
@@ -69,7 +69,7 @@ MODIFIER_RULE_VERSION = "company-context-modifier-v1"
 
 
 def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
-    runContext = getMaterialityRunContext(runId)
+    runContext = getRun(runId)
     if not runContext:
         return CompanyContextModifierResponseDto(
             runId=runId,
@@ -79,7 +79,7 @@ def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
 
     companyId = int(runContext["company_id"])
     reportingYear = int(runContext["reporting_year"])
-    facts = _toFactDtos(getCompanyG0Facts(companyId, reportingYear))
+    facts = _toFactDtos(listG0Facts(companyId, reportingYear))
     profile, graphTrace = buildCompanyContextProfileWithOptionalGraph(
         runId=runId,
         runContext=runContext,
@@ -87,7 +87,7 @@ def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
         deterministicBuilder=buildProfile,
     )
     profileConfidence = _profileConfidence(profile)
-    summaryRows = getDmaScoreSummaryRowsForContext(runId)
+    summaryRows = listScoreRows(runId)
 
     modifiers = [
         calcModifier(profile, row, profileConfidence)
@@ -103,7 +103,7 @@ def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
         "profileConfidence": profileConfidence,
         "graphTrace": graphTrace,
     }
-    contextProfileId = replaceCompanyContextProfile(
+    contextProfileId = replaceProfile(
         runId=runId,
         companyId=companyId,
         reportingYear=reportingYear,
@@ -114,7 +114,7 @@ def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
         confidenceScore=profileConfidence,
     )
 
-    updatedCount = updateContextModifiers(
+    updatedCount = updateModifiers(
         runId,
         [
             {
@@ -163,7 +163,7 @@ def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
 
 
 def getProfile(runId: int) -> CompanyContextProfileResponseDto:
-    row = getLatestCompanyContextProfile(runId)
+    row = getLatestProfile(runId)
     if not row:
         return CompanyContextProfileResponseDto(
             runId=runId,

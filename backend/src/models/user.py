@@ -68,7 +68,7 @@ def updateUserProcess(request, userUpdateModel):
             SET {', '.join(updateFields)} 
             WHERE id = ? AND delete_yn = 0;
         """
-        print(updateSql)
+        # print(updateSql)
         updateParams.append(userId)
         save(updateSql, tuple(updateParams))
 

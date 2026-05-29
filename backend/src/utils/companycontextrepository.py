@@ -6,12 +6,21 @@ Responsibility:
 - Persist latest company context profile and modifier payload
 - Update context modifier columns for DMA score summary
 Public functions:
+- getRun
 - getMaterialityRunContext
+- listG0Facts
 - getCompanyG0Facts
+- listScoreRows
 - getDmaScoreSummaryRowsForContext
+- replaceProfile
 - replaceCompanyContextProfile
+- updateModifiers
 - updateContextModifiers
+- getLatestProfile
 - getLatestCompanyContextProfile
+- clampModifier
+- clampSystemModifier
+- decimalToFloat
 Do not:
 - do not mutate unrelated DB state
 - do not calculate modifier rules
@@ -32,7 +41,7 @@ SYSTEM_MODIFIER_MIN = -0.5
 SYSTEM_MODIFIER_MAX = 0.5
 
 
-def getMaterialityRunContext(runId: int) -> dict:
+def getRun(runId: int) -> dict:
     sql = """
         SELECT
             r.id,
@@ -51,7 +60,7 @@ def getMaterialityRunContext(runId: int) -> dict:
     return findOne(sql, (runId,)) or {}
 
 
-def getCompanyG0Facts(companyId: int, reportingYear: int) -> list[dict]:
+def listG0Facts(companyId: int, reportingYear: int) -> list[dict]:
     params = (companyId, reportingYear, companyId, reportingYear, companyId, reportingYear)
     sql = """
         SELECT
@@ -113,7 +122,7 @@ def getCompanyG0Facts(companyId: int, reportingYear: int) -> list[dict]:
     return findAll(sql, params) or []
 
 
-def getDmaScoreSummaryRowsForContext(runId: int) -> list[dict]:
+def listScoreRows(runId: int) -> list[dict]:
     sql = """
         SELECT
             id,
@@ -141,7 +150,7 @@ def getDmaScoreSummaryRowsForContext(runId: int) -> list[dict]:
     return findAll(sql, (runId,)) or []
 
 
-def replaceCompanyContextProfile(
+def replaceProfile(
     runId: int,
     companyId: int,
     reportingYear: int,
@@ -189,11 +198,11 @@ def replaceCompanyContextProfile(
     return int(result[1]) if result and result[0] else None
 
 
-def updateContextModifiers(runId: int, modifiers: list[dict]) -> int:
+def updateModifiers(runId: int, modifiers: list[dict]) -> int:
     updated = 0
     for modifier in modifiers:
-        impactModifier = clampSystemModifier(modifier.get("impactModifier", 0.0))
-        financialModifier = clampSystemModifier(modifier.get("financialModifier", 0.0))
+        impactModifier = clampModifier(modifier.get("impactModifier", 0.0))
+        financialModifier = clampModifier(modifier.get("financialModifier", 0.0))
         ok = save(
             """
             UPDATE ESG_DMA_SCORE_SUMMARY
@@ -215,7 +224,7 @@ def updateContextModifiers(runId: int, modifiers: list[dict]) -> int:
     return updated
 
 
-def getLatestCompanyContextProfile(runId: int) -> dict:
+def getLatestProfile(runId: int) -> dict:
     sql = """
         SELECT
             id,
@@ -244,7 +253,7 @@ def decimalToFloat(value: Any) -> Any:
     return value
 
 
-def clampSystemModifier(value: Any) -> float:
+def clampModifier(value: Any) -> float:
     try:
         parsed = float(value)
     except (TypeError, ValueError):
@@ -254,3 +263,70 @@ def clampSystemModifier(value: Any) -> float:
     if parsed > SYSTEM_MODIFIER_MAX:
         return SYSTEM_MODIFIER_MAX
     return parsed
+
+
+# Compatibility wrappers for previous public names
+
+def getMaterialityRunContext(runId: int) -> dict:
+    return getRun(runId)
+
+
+def getCompanyG0Facts(companyId: int, reportingYear: int) -> list[dict]:
+    return listG0Facts(companyId, reportingYear)
+
+
+def getDmaScoreSummaryRowsForContext(runId: int) -> list[dict]:
+    return listScoreRows(runId)
+
+
+def replaceCompanyContextProfile(
+    runId: int,
+    companyId: int,
+    reportingYear: int,
+    industryProfile: Optional[str],
+    businessModel: Optional[str],
+    contextPayload: dict,
+    modifierPayload: dict,
+    confidenceScore: float,
+) -> Optional[int]:
+    return replaceProfile(
+        runId,
+        companyId,
+        reportingYear,
+        industryProfile,
+        businessModel,
+        contextPayload,
+        modifierPayload,
+        confidenceScore,
+    )
+
+
+def updateContextModifiers(runId: int, modifiers: list[dict]) -> int:
+    return updateModifiers(runId, modifiers)
+
+
+def getLatestCompanyContextProfile(runId: int) -> dict:
+    return getLatestProfile(runId)
+
+
+def clampSystemModifier(value: Any) -> float:
+    return clampModifier(value)
+
+
+__all__ = [
+    "getRun",
+    "getMaterialityRunContext",
+    "listG0Facts",
+    "getCompanyG0Facts",
+    "listScoreRows",
+    "getDmaScoreSummaryRowsForContext",
+    "replaceProfile",
+    "replaceCompanyContextProfile",
+    "updateModifiers",
+    "updateContextModifiers",
+    "getLatestProfile",
+    "getLatestCompanyContextProfile",
+    "clampModifier",
+    "clampSystemModifier",
+    "decimalToFloat",
+]

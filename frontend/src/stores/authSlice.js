@@ -54,11 +54,15 @@ export const checkUser = createAsyncThunk(
 const authSlice = createSlice({
   name: 'auth',
   initialState,
-  reducers: {},
+  reducers: {updateUserName: (state, action) => {
+      state.userName = action.payload;
+    }
+  },
   extraReducers: (builder) => {  
     builder
       .addCase(checkUser.fulfilled, (state, action) => {
         const res = action.payload;
+        // console.log(res);
         if(res.status === true) {
           const data = res.data;
           const storedCompanies = data.companys; //safeJsonParse(localStorage.getItem("companies"), []);
@@ -122,4 +126,5 @@ const authSlice = createSlice({
   },
 });
 
+export const { updateUserName } = authSlice.actions;
 export default authSlice.reducer;

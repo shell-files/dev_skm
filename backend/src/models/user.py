@@ -3,6 +3,7 @@ from src.models.model import logoutModel, ResponseModel
 from src.utils.validatetok import validateToken
 from src.utils.tokenset import decryptFromJwe
 from src.utils.rediscl import delTokenRedis, getTokenRedis
+from src.utils.settings import settings
 
 
 # models/user.py
@@ -22,17 +23,18 @@ from src.utils.rediscl import delTokenRedis, getTokenRedis
 # --------------------------
 # 회원 정보 수정 로직 처리 함수
 # --------------------------
-def updateUserProcess(userUpdateModel):
-    """ 
-    1. 통합 세션 검증 및 자동 갱신 (UUID 활용)
-    2. 유저 ID 추출
-    3. 이름/비밀번호 변경 필드 구성
-    4. DB 업데이트 및 최신 UUID 반환
-    """
+def updateUserProcess(request, userUpdateModel):
+    # 1. 쿠키에서 UUID 가져오기
+    current_uuid = request.cookies.get("yakgwa")
+    
+    # 2. 쿠키가 없는 경우 처리
+    if not current_uuid:
+         return ResponseModel(False, "로그인 정보가 만료되었습니다.")
+
     try:
         # 1. 통합 인증 모듈 호출 (UUID 검증 및 만료 시 자동 갱신)
         # 이 한 줄로 Redis 확인, 토큰 만료 체크, 필요 시 UUID/액세스토큰 재발급이 수행됩니다.
-        authResponse = validateToken(userUpdateModel.uuid)
+        authResponse = validateToken(current_uuid)
         
         # 인증 실패 시 (세션 만료 등) 에러 응답 즉시 반환
         if not authResponse["status"]:
@@ -53,16 +55,16 @@ def updateUserProcess(userUpdateModel):
             updateParams.append(userUpdateModel.name)
 
         if userUpdateModel.newPassword:
-            updateFields.append("password = ?")
+            # [수정] AES_ENCRYPT 함수를 사용하여 암호화 저장
+            updateFields.append(f"password = aes_e(?, '{settings.maria_db_key}')")
             updateParams.append(userUpdateModel.newPassword) 
 
         if not updateFields:
-            # 변경사항은 없지만 세션은 유효하므로 현재 UUID를 담아 반환
             return ResponseModel(False, "변경할 내용이 없습니다.", {"uuid": activeUuid})
 
-        # 4. DB 업데이트 수행
+        # DB 업데이트 수행
         updateSql = f"""
-            UPDATE `USER` 
+            UPDATE `with`.`USER` 
             SET {', '.join(updateFields)} 
             WHERE id = ? AND delete_yn = 0;
         """

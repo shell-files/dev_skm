@@ -39,12 +39,23 @@ def checkUser(userModel: UserModel):
     companyParams = (userModel.id, )
     companyResult = findAll(companySql, companyParams)
 
+    userSql = f"""
+        SELECT aes_d(u.`name`, '{settings.maria_db_key}') AS `name`
+        FROM `with`.`USER` AS u
+        WHERE `u`.`email` = aes_e(?, '{settings.maria_db_key}')
+    """
+    userParams = (userModel.email, )
+    userResult = findOne(userSql, userParams)
+
+    if userResult is not None:
+        userName = userResult["name"]
+
     for com in companyResult:
         if com["company_id"] == int(company["companyId"]):
             selectedCompany = com
             break
 
-    return ResponseModel(True, "사용자 정보가 유효합니다.", {"user": userModel.email, "userName": userModel.name, "companys": companyResult, "selectedCompany": selectedCompany})
+    return ResponseModel(True, "사용자 정보가 유효합니다.", {"user": userModel.email, "userName": userName, "companys": companyResult, "selectedCompany": selectedCompany})
 
 # --------------------------
 # 비밀번호 찾기 로직 처리 함수

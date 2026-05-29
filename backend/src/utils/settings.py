@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+﻿from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
   host_ip: str
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
   mail_ssl_tls: bool = False
   use_credentials: bool = True
   validate_certs: bool = True
-  # tokenset.py
+  # token.py
   # --------------------------
   # secret_key: str
   private_key: str = "secrets/authpr.pem"

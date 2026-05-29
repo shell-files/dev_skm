@@ -9,6 +9,14 @@ import {
   showDefaultAlert,
 } from "@components/UI/ServiceAlert";
 
+import { POST } from "@utils/Network";
+
+const MEDIA_SOURCE_OPTIONS = [
+  { value: "all", label: "전체 (임팩트온 + ESG경제)" },
+  { value: "impacton", label: "임팩트온" },
+  { value: "esgeconomy", label: "ESG경제" },
+];
+
 const Media = () => {
   const particleRef = useRef(null);
 
@@ -27,8 +35,18 @@ const Media = () => {
     expert: "ready",
   });
 
+  const [analysisResult, setAnalysisResult] = useState({
+    articleCount: 0,
+    collectedArticleCount: 0,
+    filteredArticleCount: 0,
+    observedSubIssueCount: 0,
+    savedSignalCount: 0,
+    sourceBreakdown: [],
+    topIssues: []
+  });
+
   const [formData, setFormData] = useState({
-    pressKeyword: "",
+    pressSource: "all",
 
     regOrg: "",
 
@@ -139,40 +157,34 @@ const Media = () => {
     }));
   };
 
-  const startMediaCollection = () => {
+  const startMediaCollection = async () => {
     if (isAnalyzing) return;
 
-    if (!formData.pressKeyword.trim()) {
+    if (!formData.pressSource) {
       showDefaultAlert(
         "입력 오류",
-        "언론사명 또는 키워드를 입력해주세요.",
+        "수집 언론사를 선택해주세요.",
         "warning"
       );
       return;
     }
 
-    if (!formData.regOrg) {
+    if (!formData.pressStartDate || !formData.pressEndDate) {
       showDefaultAlert(
         "입력 오류",
-        "규제 기관을 선택해주세요.",
+        "수집 희망 기간을 선택해주세요.",
         "warning"
       );
       return;
     }
 
-    if (!formData.expertOrg) {
-      showDefaultAlert(
-        "입력 오류",
-        "평가 기관을 선택해주세요.",
-        "warning"
-      );
-      return;
-    }
+    const selectedSources =
+      formData.pressSource === "all"
+        ? ["impacton", "esgeconomy"]
+        : [formData.pressSource];
 
     setIsAnalyzing(true);
-
     setDashboardOpen(true);
-
     setShowResult(false);
 
     setStatus({
@@ -187,17 +199,33 @@ const Media = () => {
       "success"
     );
 
+    try {
+      const response = await POST("/api/v1/media/news/crawl-and-analyze", {
+        runId: 1, // 테스트용 하드코딩된 runId
+        sources: selectedSources,
+        dateFrom: formData.pressStartDate,
+        dateTo: formData.pressEndDate,
+      });
+
+      if (response && response.status !== false) {
+        setAnalysisResult(response.data || response);
+      }
+    } catch (e) {
+      console.error(e);
+      showDefaultAlert("통신 오류", "미디어 분석 중 서버 에러가 발생했습니다.", "error");
+    }
+
+    // UX용 딜레이
     setTimeout(() => {
       setStatus({
         press: "complete",
-        reg: "complete",
-        expert: "complete",
+        reg: "ready",
+        expert: "ready",
       });
 
       setShowResult(true);
-
       setIsAnalyzing(false);
-    }, 2500);
+    }, 1000);
   };
 
   const getStatusText = (type) => {
@@ -293,19 +321,41 @@ const Media = () => {
                 style={{ marginTop: "8px" }}
               >
                 <label>
-                  수집 언론사명 / 키워드
+                  수집 언론사
                 </label>
 
-                <input
-                  type="text"
-                  className="media-input"
-                  placeholder="예: 매일경제, ESG 규제, 탄소배출"
-                  name="pressKeyword"
+                <select
+                  className="media-select"
+                  name="pressSource"
                   value={
-                    formData.pressKeyword
+                    formData.pressSource
                   }
                   onChange={handleChange}
-                />
+                >
+                  {MEDIA_SOURCE_OPTIONS.map((source) => (
+                    <option
+                      key={source.value}
+                      value={source.value}
+                    >
+                      {source.label}
+                    </option>
+                  ))}
+                </select>
+
+                <div
+                  style={{
+                    marginTop: "6px",
+                    padding: "6px 10px",
+                    borderRadius: "8px",
+                    background: "#f0fdf4",
+                    color: "#15803d",
+                    fontSize: "0.76rem",
+                    fontWeight: 700,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  자동 적용 필터: 현대자동차 · 자동차부품산업
+                </div>
               </div>
 
               <div className="form-group">
@@ -619,8 +669,7 @@ const Media = () => {
                   color: "#03A94D",
                 }}
               >
-                ✓ 실시간 데이터 파이프라인 분석
-                완료
+                ✓ 실시간 데이터 파이프라인 분석 완료 (언론 분석)
               </h3>
 
               <p
@@ -638,12 +687,23 @@ const Media = () => {
                     color: "#ef4444",
                   }}
                 >
-                  14건
+                  {analysisResult.collectedArticleCount || analysisResult.articleCount || 0}건
                 </span>
-                의 리스크 시그널(언론 8건,
-                규제 4건, 리서치 2건)이
-                식별되었습니다.
+                의 수집 기사 중{" "}
+                <span
+                  style={{
+                    fontWeight: 700,
+                    color: "#03A94D",
+                  }}
+                >
+                  {analysisResult.filteredArticleCount || 0}건
+                </span>
+                이 자동 필터를 통과했고, {analysisResult.savedSignalCount || 0}건의 관련 시그널이 식별되었습니다. (관측된 서브이슈: {analysisResult.observedSubIssueCount || 0}개)
                 <br />
+                <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
+                  * 규제·전문기관 분석은 현재 준비 중입니다.
+                </span>
+                <br /><br />
                 다음 스텝인{" "}
                 <span
                   style={{

@@ -1,3 +1,25 @@
+"""
+Domain: DMA Materiality
+Layer: utils/repository
+Responsibility:
+- Persist DMA evidence and signal rows
+- Recalculate stage/final score summaries
+- Update DMA rankings
+- Query persisted DMA scoring state
+Public functions:
+- saveDmaSignals
+- recalculateStageScore
+- recalculateFinalScore
+- updateDmaRankings
+Do not:
+- do not mutate unrelated DB state
+- do not change scoring formula unless explicitly requested
+- do not change scoring formula directly
+- do not change aggregation weights directly
+- do not call FastAPI router directly
+- do not modify auth/token/common code
+"""
+
 import json
 from typing import List, Dict, Any, Optional
 from collections import defaultdict

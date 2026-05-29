@@ -1,3 +1,27 @@
+"""
+Domain: DMA Materiality
+Layer: service/workflow
+Responsibility:
+- Build company context profile from G0 facts
+- Calculate deterministic context modifiers
+- Apply context modifiers to final DMA score only
+- Preserve stage score immutability
+Public functions:
+- applyCompanyContextModifiers
+- getCompanyContextProfile
+- buildCompanyContextProfile
+- calculateContextModifier
+- applyRankMovementGuards
+Do not:
+- do not mutate unrelated DB state
+- do not change scoring formula unless explicitly requested
+- do not change benchmark/media/survey stage scores
+- do not change API routes
+- do not call FastAPI router directly
+- do not fix flow integrity in this metadata-only step
+- do not modify auth/token/common code
+"""
+
 from __future__ import annotations
 
 import json

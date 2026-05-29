@@ -1,4 +1,24 @@
 """
+Domain: DMA Materiality
+Layer: utils/scoring
+Responsibility:
+- Calculate deterministic 0-5 impact score from ImpactFactor
+- Calculate deterministic 0-5 financial score from FinancialFactor
+- Score DMASignal objects without AI deciding final score
+Public functions:
+- calculateImpactScore
+- calculateFinancialScore
+- scoreDmaSignals
+- clamp
+Do not:
+- do not mutate unrelated DB state
+- do not change scoring formula unless explicitly requested
+- do not change score formula in this step
+- do not change score scale
+- do not perform DB mutation
+- do not call FastAPI router directly
+- do not modify auth/token/common code
+
 DMA Scoring Engine v1 (Freeze)
 
 이 모듈은 ImpactFactor / FinancialFactor를 입력받아 0~5 스케일의 점수를 반환합니다.

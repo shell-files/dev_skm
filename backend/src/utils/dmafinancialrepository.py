@@ -1,3 +1,22 @@
+"""
+Domain: DMA Materiality
+Layer: utils/repository
+Responsibility:
+- Read G0-02 financial basis for DMA financial exposure
+- Resolve entity vs consolidated financial basis
+- Return normalized financial basis payload for service layer
+Public functions:
+- getG0FinancialBasis
+Do not:
+- do not mutate unrelated DB state
+- do not calculate final financial score
+- do not mutate DB
+- do not change scoring formula unless explicitly requested
+- do not use selected-subIssue onboarding metrics as DMA pre-selection basis
+- do not call FastAPI router directly
+- do not modify auth/token/common code
+"""
+
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation

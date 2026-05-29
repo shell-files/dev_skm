@@ -1,3 +1,28 @@
+"""
+Domain: DMA Materiality
+Layer: service/workflow
+Responsibility:
+- Apply G0 financial basis to DMASignal.financialFactor
+- Build financial exposure trace
+- Guard financial IRO compatibility
+Public functions:
+- applyG0FinancialExposure
+- applyG0FinancialExposureForRun
+- buildFinancialExposureForSignal
+- buildFinancialExposureForSignalWithBasis
+- calculateChannelScore
+- canApplyFinancialExposure
+- resolvePreferConsolidated
+Do not:
+- do not mutate unrelated DB state
+- do not mutate DB
+- do not change scoring formula unless explicitly requested
+- do not change dmascoring.py formula
+- do not call FastAPI router directly
+- do not connect media/benchmark adapters in this file during this step
+- do not modify auth/token/common code
+"""
+
 from __future__ import annotations
 
 from copy import deepcopy

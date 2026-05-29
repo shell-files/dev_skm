@@ -1,4 +1,25 @@
 """
+Domain: DMA Materiality
+Layer: utils/aggregation
+Responsibility:
+- Aggregate media/benchmark/survey stage scores
+- Calculate final materiality score from stage scores
+- Apply additive context modifier only at final aggregation
+- Preserve None-as-unobserved behavior
+Public functions:
+- aggregateMediaSignals
+- aggregateBenchmarkSignals
+- aggregateSurveyScores
+- calculateFinalMateriality
+Do not:
+- do not mutate unrelated DB state
+- do not change scoring formula unless explicitly requested
+- do not change final/stage weights in this step
+- do not treat unobserved score as zero
+- do not call DB directly unless already existing behavior
+- do not call FastAPI router directly
+- do not modify auth/token/common code
+
 DMA Aggregator v1 (Freeze)
 
 Stage별 시그널 집계 및 Final Materiality Score 산출 모듈.

@@ -1,3 +1,26 @@
+"""
+Domain: DMA Materiality
+Layer: utils/repository
+Responsibility:
+- Read G0 facts and materiality run context
+- Persist latest company context profile and modifier payload
+- Update context modifier columns for DMA score summary
+Public functions:
+- getMaterialityRunContext
+- getCompanyG0Facts
+- getDmaScoreSummaryRowsForContext
+- replaceCompanyContextProfile
+- updateContextModifiers
+- getLatestCompanyContextProfile
+Do not:
+- do not mutate unrelated DB state
+- do not calculate modifier rules
+- do not change scoring formula unless explicitly requested
+- do not change score formula
+- do not call FastAPI router directly
+- do not modify auth/token/common code
+"""
+
 import json
 from decimal import Decimal
 from typing import Any, Optional

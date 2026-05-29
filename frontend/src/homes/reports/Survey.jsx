@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import "@styles/survey.css"; 
+// import "@styles/survey.css"; 
 import "@styles/sr.css";
 
 import robot from "@assets/images/robot/robot_servey_t.png";

@@ -7,11 +7,18 @@ Responsibility:
 - Apply context modifiers to final DMA score only
 - Preserve stage score immutability
 Public functions:
+- applyModifiers
 - applyCompanyContextModifiers
+- getProfile
 - getCompanyContextProfile
+- buildProfile
 - buildCompanyContextProfile
+- calcModifier
 - calculateContextModifier
+- applyRankGuards
 - applyRankMovementGuards
+- checkObservedStage
+- hasObservedStage
 Do not:
 - do not mutate unrelated DB state
 - do not change scoring formula unless explicitly requested
@@ -61,7 +68,7 @@ TOP5_ENTRY_RAW_RANK_LIMIT = 8
 MODIFIER_RULE_VERSION = "company-context-modifier-v1"
 
 
-def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDto:
+def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
     runContext = getMaterialityRunContext(runId)
     if not runContext:
         return CompanyContextModifierResponseDto(
@@ -77,17 +84,17 @@ def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDt
         runId=runId,
         runContext=runContext,
         facts=facts,
-        deterministicBuilder=buildCompanyContextProfile,
+        deterministicBuilder=buildProfile,
     )
     profileConfidence = _profileConfidence(profile)
     summaryRows = getDmaScoreSummaryRowsForContext(runId)
 
     modifiers = [
-        calculateContextModifier(profile, row, profileConfidence)
+        calcModifier(profile, row, profileConfidence)
         for row in summaryRows
         if row.get("sub_issue_code") in subissueMaster
     ]
-    modifiers = applyRankMovementGuards(modifiers)
+    modifiers = applyRankGuards(modifiers)
     modifierPayload = _buildModifierPayload(modifiers)
     contextPayload = {
         "profile": profile.model_dump(),
@@ -155,7 +162,7 @@ def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDt
     )
 
 
-def getCompanyContextProfile(runId: int) -> CompanyContextProfileResponseDto:
+def getProfile(runId: int) -> CompanyContextProfileResponseDto:
     row = getLatestCompanyContextProfile(runId)
     if not row:
         return CompanyContextProfileResponseDto(
@@ -201,7 +208,7 @@ def getCompanyContextProfile(runId: int) -> CompanyContextProfileResponseDto:
     )
 
 
-def buildCompanyContextProfile(
+def buildProfile(
     runId: int,
     runContext: dict,
     facts: list[CompanyContextFactDto],
@@ -286,7 +293,7 @@ def buildCompanyContextProfile(
     )
 
 
-def calculateContextModifier(
+def calcModifier(
     profile: CompanyContextProfileDto,
     row: dict,
     profileConfidence: Optional[float] = None,
@@ -319,7 +326,7 @@ def calculateContextModifier(
     financialModifier = clamp(sum(item.financialModifier for item in rules), MVP_MODIFIER_MIN, MVP_MODIFIER_MAX)
     guardReason = None
 
-    if not hasObservedStage(row):
+    if not checkObservedStage(row):
         impactModifier = 0.0
         financialModifier = 0.0
         guardReason = "NO_STAGE_OBSERVATION"
@@ -340,7 +347,7 @@ def calculateContextModifier(
     )
 
 
-def hasObservedStage(row: dict) -> bool:
+def checkObservedStage(row: dict) -> bool:
     return any([
         row.get("benchmark_impact_score") is not None,
         row.get("benchmark_financial_score") is not None,
@@ -351,7 +358,7 @@ def hasObservedStage(row: dict) -> bool:
     ])
 
 
-def applyRankMovementGuards(
+def applyRankGuards(
     modifiers: list[SubIssueContextModifierDto],
 ) -> list[SubIssueContextModifierDto]:
     _assignRawRanks(modifiers)
@@ -382,6 +389,42 @@ def applyRankMovementGuards(
         _assignAdjustedRanks(modifiers)
 
     return modifiers
+
+
+# Compatibility wrappers for previous public names
+
+def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDto:
+    return applyModifiers(runId)
+
+
+def getCompanyContextProfile(runId: int) -> CompanyContextProfileResponseDto:
+    return getProfile(runId)
+
+
+def buildCompanyContextProfile(
+    runId: int,
+    runContext: dict,
+    facts: list[CompanyContextFactDto],
+) -> CompanyContextProfileDto:
+    return buildProfile(runId, runContext, facts)
+
+
+def calculateContextModifier(
+    profile: CompanyContextProfileDto,
+    row: dict,
+    profileConfidence: Optional[float] = None,
+) -> SubIssueContextModifierDto:
+    return calcModifier(profile, row, profileConfidence)
+
+
+def applyRankMovementGuards(
+    modifiers: list[SubIssueContextModifierDto],
+) -> list[SubIssueContextModifierDto]:
+    return applyRankGuards(modifiers)
+
+
+def hasObservedStage(row: dict) -> bool:
+    return checkObservedStage(row)
 
 
 def _withScorePreview(
@@ -654,3 +697,19 @@ def _parseJsonDict(value) -> dict:
         return json.loads(value)
     except Exception:
         return {}
+
+
+__all__ = [
+    "applyModifiers",
+    "applyCompanyContextModifiers",
+    "getProfile",
+    "getCompanyContextProfile",
+    "buildProfile",
+    "buildCompanyContextProfile",
+    "calcModifier",
+    "calculateContextModifier",
+    "applyRankGuards",
+    "applyRankMovementGuards",
+    "checkObservedStage",
+    "hasObservedStage",
+]

@@ -76,7 +76,7 @@ const requestApi = {
       return { status: true, message: "탈퇴 완료" };
     }
     try {
-      const res = await api.delete("/user", { data: {  } });
+      const res = await DELETE("/user"); 
       return { status: true, message: "탈퇴 처리 완료" };
     } catch (e) {
       return { status: false, message: e.response?.data?.message || "탈퇴 처리 중 오류가 발생했습니다." };

@@ -51,7 +51,7 @@ def updateUserProcess(request, userUpdateModel):
         updateParams = []
 
         if userUpdateModel.name:
-            updateFields.append("name = ?")
+            updateFields.append(f"name = aes_e(?, '{settings.maria_db_key}')")
             updateParams.append(userUpdateModel.name)
 
         if userUpdateModel.newPassword:
@@ -82,107 +82,89 @@ def updateUserProcess(request, userUpdateModel):
 # --------------------------
 # 회원 탈퇴 로직 처리 함수
 # --------------------------
-def deleteUserProcess(userDeleteModel):
-    """ 
-     1. 통합 인증 모듈 호출 (UUID 검증 및 만료 시 자동 갱신)
-     2. 최신 UUID를 통해 내부 user_id 추출
-     3. 회원이 ESG담당자인지 그 외 회원인지 확인
-     4. roles 리스트의 모든 항목은 동일한 user_id를 가지므로 첫 번째 항목에서 추출
-        [A] 사용자 공통 삭제 로직 (반복문 밖에서 1회만 추가)
-        (USER,USER_ROLE,INVITE,ISSUE_DETAIL 삭제에 사용)
-        [B] 역할 및 회사별 개별 삭제 로직 (반복문 순회)
-        (COMPANY,LICENSE_FILE,INDUSTRY_DETAIL 삭제에 사용)
-     5. 트랜잭션 실행
-     6. 트랜잭션 성공 시 → 탈퇴 후 세션 파기 로직 수행
-        - DB 토큰 delete_yn 1로 변경
-        - Redis uuid 삭제
+def deleteUserProcess(request):
     """
+    1. 쿠키(yakgwa)로 세션 검증
+    2. 트랜잭션 기반 데이터 삭제 (Soft Delete)
+    """
+    # 1. 쿠키에서 UUID 추출
+    current_uuid = request.cookies.get("yakgwa")
+    if not current_uuid:
+         return ResponseModel(False, "로그인 정보가 만료되었습니다.")
+
     try:
-          # 1. 통합 인증 모듈 호출 (UUID 검증 및 만료 시 자동 갱신)
-          authResponse = validateToken(userDeleteModel.uuid)
-
-          # 인증 실패 시 (세션 만료 등) 에러 응답 즉시 반환
-          if not authResponse["status"]:
-              return authResponse
-          
-          # 2. 최신 UUID를 통해 내부 user_id 추출
-          activeUuid = authResponse["data"]["uuid"]
-          tokenResponse = getTokenRedis(activeUuid)
-          payload = decryptFromJwe(tokenResponse["accessToken"])
-          userId = payload.get("sub")
-
-          # 3. 회원이 ESG담당자인지 그 외 회원인지 확인
-          roleCheckSql = """
-              SELECT ur.role_id, ur.company_id, ur.user_id
-              FROM `USER_ROLE` ur 
-              JOIN `USER` u ON ur.user_id = u.id 
-              WHERE user_id = ? AND ur.delete_yn = 0;
-          """
-          roles = findAll(roleCheckSql, (userId,))
-          
-          if not roles:
-            return ResponseModel(False, "회원 정보가 존재하지 않습니다.")
-          queries = []
-          # 4. roles 리스트의 모든 항목은 동일한 user_id를 가지므로 첫 번째 항목에서 추출
-          targetUserId = roles[0]['user_id']
-
-          # --- [A] 사용자 공통 삭제 로직 (반복문 밖에서 1회만 추가) ---
-          queries.append(("UPDATE `USER` SET delete_yn = 1 WHERE id = ?", (targetUserId,)))
-          queries.append(("UPDATE `USER_ROLE` SET delete_yn = 1 WHERE user_id = ?", (targetUserId,)))
-          queries.append(("UPDATE `INVITE` SET delete_yn = 1 WHERE user_id = ?", (targetUserId,)))
+        # 2. 통합 인증 (세션이 살아있는지 확인)
+        authResponse = validateToken(current_uuid)
+        if not authResponse["status"]:
+            return authResponse
         
-          # 사용자가 생성한 모든 초대(INVITE)와 연결된 ISSUE_DETAIL 일괄 삭제
-          deleteIssueDetailSql = """
-            UPDATE `ISSUE_DETAIL` 
-            SET delete_yn = 1 
-            WHERE invite_id IN (SELECT id FROM `INVITE` WHERE user_id = ?);
-          """
-          queries.append((deleteIssueDetailSql, (targetUserId,)))
-         
-          # --- [B] 역할 및 회사별 개별 삭제 로직 (반복문 순회) ---
-          for role in roles:
+        activeUuid = authResponse["data"]["uuid"]
+        tokenResponse = getTokenRedis(activeUuid)
+        payload = decryptFromJwe(tokenResponse["accessToken"])
+        userId = payload.get("sub")
+
+        # 3. 사용자 역할 및 데이터 조회
+        roleCheckSql = """
+            SELECT ur.role_id, ur.company_id, ur.user_id
+            FROM `with`.`USER_ROLE` ur 
+            JOIN `with`.`USER` u ON ur.user_id = u.id 
+            WHERE user_id = ? AND ur.delete_yn = 0;
+        """
+        roles = findAll(roleCheckSql, (userId,))
+        if not roles:
+            return ResponseModel(False, "회원 정보가 존재하지 않습니다.")
+
+        # 4. 삭제 쿼리 구성 (트랜잭션)
+        queries = []
+        targetUserId = roles[0]['user_id']
+        
+        # 공통 삭제
+        queries.append(("UPDATE `with`.`USER` SET delete_yn = 1 WHERE id = ?", (targetUserId,)))
+        queries.append(("UPDATE `with`.`USER_ROLE` SET delete_yn = 1 WHERE user_id = ?", (targetUserId,)))
+        queries.append(("UPDATE `skm`.`INVITE` SET delete_yn = 1 WHERE user_id = ?", (targetUserId,)))
+        
+        deleteIssueDetailSql = """
+        UPDATE skm.`ISSUE_DETAIL` 
+        SET delete_yn = 1 
+        WHERE invite_id IN (SELECT id FROM `INVITE` WHERE user_id = ?);
+        """
+        queries.append((deleteIssueDetailSql, (targetUserId,)))
+        
+        # --- [B] 역할 및 회사별 개별 삭제 로직 (반복문 내부로 이동 완료) ---
+        for role in roles:
             rId = role.get('role_id')
             cId = role.get('company_id')
 
-          # ESG 담당자(role_id=2)인 경우 해당 회사 관련 정보 삭제
+            # ESG 담당자(role_id=2)인 경우 해당 회사 관련 정보 삭제
             if rId == 2 and cId:
                 ## 1. 해당 COMPANY 삭제
-                queries.append(("UPDATE `COMPANY` SET delete_yn = 1 WHERE id = ?", (cId,)))
+                queries.append(("UPDATE `skm`.`COMPANY` SET delete_yn = 1 WHERE id = ?", (cId,)))
                 
                 ## 2. 해당 COMPANY의 LICENSE_FILE 삭제
                 deleteLicenseSql = """
-                    UPDATE `LICENSE_FILE` 
+                    UPDATE `skm`.`LICENSE_FILE` 
                     SET delete_yn = 1 
-                    WHERE id = (SELECT license_file_id FROM `COMPANY` WHERE id = ?);
+                    WHERE id = (SELECT license_file_id FROM `skm`.`COMPANY` WHERE id = ?);
                 """
                 queries.append((deleteLicenseSql, (cId,)))
 
                 ## 3. 해당 COMPANY의 INDUSTRY_DETAIL 삭제
-                queries.append(("UPDATE `INDUSTRY_DETAIL` SET delete_yn = 1 WHERE company_id = ?", (cId,)))
+                queries.append(("UPDATE `skm`.`INDUSTRY_DETAIL` SET delete_yn = 1 WHERE company_id = ?", (cId,)))
 
-          # 5. 트랜잭션 실행
-          success = executeTransaction(queries)    
-          # 6. 트랜잭션 성공 시 → 탈퇴 후 세션 파기 로직 수행
-          if success:
+        # 5. 트랜잭션 실행
+        success = executeTransaction(queries)
+        
+        if success:
+            # 세션 파기
             try:
-                ## 1. db에서 refresh token delete_yn 1으로 변경
-                logoutSql="""
-                UPDATE TOKEN
-                    SET `delete_yn` = 1
-                    WHERE uuid = ?;
-                """
-                logoutParams = (activeUuid,)
-                save(logoutSql, logoutParams)
-
-                ## 2. redis에서 uuid 삭제
-                delTokenRedis(activeUuid)   
-
+                logoutSql = "UPDATE `with`.TOKEN SET `delete_yn` = 1 WHERE uuid = ?;"
+                save(logoutSql, (activeUuid,))
+                delTokenRedis(activeUuid)
             except Exception as redis_e:
-                print(f"탈퇴 후 세션 파기 실패: {redis_e}")
-                # DB는 이미 지워졌으므로 사용자에게 실패를 알릴 필요는 없으나 로그는 남깁니다.
+                print(f"세션 파기 실패: {redis_e}")
 
             return ResponseModel(True, "회원 탈퇴가 성공적으로 완료되었습니다.", {"uuid": None}) 
-          else:
+        else:
             return ResponseModel(False, "데이터베이스 업데이트 중 오류가 발생했습니다.")
 
     except Exception as e:

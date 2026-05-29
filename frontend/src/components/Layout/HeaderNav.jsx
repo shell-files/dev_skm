@@ -7,7 +7,7 @@ import logo from "@assets/images/logos/SKMlogo.png";
 
 const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
     const navigate = useNavigate();
-    const { user, userName, selectedCompany, companies, isAuthReady, logout, handleLogout, toggleSidebarMobile, goHome, goMyPage, openAlarmCenter } = useAuth();
+    const { user, userName, selectedCompany, companies, isAuthReady, logout, handleLogout, toggleSidebarMobile, goHome, goMyPage } = useAuth();
     // const { toggleAlarm, unreadCount } = useAlarm();
 
     // if (isAuthReady) console.log(userName, selectedCompany, companies);
@@ -24,10 +24,6 @@ const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
                     {userName} <span id="current-company-badge">({selectedCompany?.company_name})</span>
                 </div>
                 <button className="header-action" onClick={handleLogout}>로그아웃</button>
-                <div className="header-action" onClick={openAlarmCenter}>
-                    알림
-                    <div className="noti-dot" id="header-noti-dot"></div>
-                </div>
             </div>
         </header>
     );

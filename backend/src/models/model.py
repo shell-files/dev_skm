@@ -99,11 +99,10 @@ class pwdCheckModel(BaseModel):
 class logoutModel(BaseModel):
    """ auth.py delete 로그아웃 모델"""
    uuid: str = Field(..., description="로그아웃에서 사용되는 uuid 모델")
-
+   
 #회원 정보 확인 모델
 class userUpdateModel(BaseModel):
     """ user.py patch 회원 수정 페이지 전용 모델 (화면 항목: 새 비밀번호, 확인, 이름) """
-    uuid: str = Field(..., description="회원정보 수정시 사용되는 uuid 모델")
     name: Optional[str] = Field(None, description="변경할 이름")
     newPassword: Optional[str] = Field(None, description="변경할 비밀번호")
     newPasswordConfirm: Optional[str] = Field(None, description="변경할 비밀번호 확인")
@@ -121,4 +120,3 @@ class userUpdateModel(BaseModel):
 class userDeleteModel(BaseModel):
     """ user.py delete 회원 탈퇴 페이지 전용 모델 (uuid 이용) """
     uuid: str = Field(..., description="회원탈퇴시 사용되는 uuid 모델")
-    

@@ -13,10 +13,10 @@ from src.services.medias.baseline import applyMediaBaseline
 from src.services.medias.crawler import applySavedSignalCounts, crawlNewsArticles
 from src.services.medias.pipeline import processMediaPipeline
 from src.utils.dmarepository import (
-    getMediaCoverageFromSummary,
-    getMediaObservedSubIssueCount,
-    getTopIssuesByMediaScore,
-    saveDmaSignals,
+    getMediaCoverage,
+    countMediaSubIssues,
+    listTopMediaIssues,
+    saveSignals,
 )
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
 from src.utils.subissuemaster import getSubIssueDisplayName
@@ -51,7 +51,7 @@ def runMediaAnalysis(
     scoredSignals = scoreSignals(baselinedSignals)
 
     if scoredSignals:
-        saveDmaSignals(runId=runId, signals=scoredSignals, fileId=None, sourceTitle="Media Analysis")
+        saveSignals(runId=runId, signals=scoredSignals, fileId=None, sourceTitle="Media Analysis")
 
     return scoredSignals
 
@@ -61,10 +61,10 @@ def buildMediaAnalyzeResponse(
     articleCount: int,
     savedSignalCount: int,
 ) -> MediaAnalyzeResponse:
-    coverageInfo = getMediaCoverageFromSummary(runId)
+    coverageInfo = getMediaCoverage(runId)
     return MediaAnalyzeResponse(
         articleCount=articleCount,
-        observedSubIssueCount=getMediaObservedSubIssueCount(runId),
+        observedSubIssueCount=countMediaSubIssues(runId),
         savedSignalCount=savedSignalCount,
         topIssues=_buildMediaTopIssues(runId),
         coverageStatus=coverageInfo["coverageStatus"],
@@ -103,7 +103,7 @@ def runMediaCrawlAndAnalyze(
         crawlResult.sourceBreakdown,
         savedSignalCountsBySource,
     )
-    coverageInfo = getMediaCoverageFromSummary(request.runId)
+    coverageInfo = getMediaCoverage(request.runId)
     savedSignalCount = len(scoredSignals) if scoredSignals else 0
 
     return MediaNewsCrawlAnalyzeResponse(
@@ -117,7 +117,7 @@ def runMediaCrawlAndAnalyze(
         filteredArticleCount=crawlResult.filteredArticleCount,
         articleCount=crawlResult.filteredArticleCount,
         savedSignalCount=savedSignalCount,
-        observedSubIssueCount=getMediaObservedSubIssueCount(request.runId),
+        observedSubIssueCount=countMediaSubIssues(request.runId),
         sourceBreakdown=sourceBreakdown,
         topIssues=_buildMediaTopIssues(request.runId),
         coverage=coverageInfo,
@@ -128,7 +128,7 @@ def runMediaCrawlAndAnalyze(
 
 def _buildMediaTopIssues(runId: int) -> list[MediaTopIssue]:
     topIssues = []
-    for row in getTopIssuesByMediaScore(runId, limit=5):
+    for row in listTopMediaIssues(runId, limit=5):
         code = row.get("sub_issue_code", "")
         mediaImp = _safeFloatOrNone(row.get("media_external_impact_score"))
         mediaFin = _safeFloatOrNone(row.get("media_external_financial_score"))

@@ -27,20 +27,20 @@ from src.models.materiality import (
 )
 from src.utils.dmaaggregator import getCoverageStatus
 from src.utils.dmarepository import (
-    getDistinctObservedSubIssueCount,
-    getDmaResults,
-    getEvidenceCountsBySource,
-    getEvidenceSamples,
-    getLatestReportRunByMaterialityRun,
-    getMediaCoverageFromSummary,
-    getMediaObservedSubIssueCount,
-    getMissingRequiredMetricCount,
-    getRequiredMetricCountForSubIssues,
-    getSelectedSubIssues,
-    getSignalObservationCounts,
-    getSurveyGroupCounts,
-    getSurveyGroupScores,
-    getTopIssuesByStageScore,
+    countObservedSubIssues,
+    listResults,
+    listEvidenceCounts,
+    listEvidenceSamples,
+    getLatestReportRun,
+    getMediaCoverage,
+    countMediaSubIssues,
+    countMissingMetrics,
+    countRequiredMetrics,
+    listSelectedSubIssues,
+    listSignalCounts,
+    listSurveyCounts,
+    listSurveyScores,
+    listTopStageIssues,
 )
 from src.utils.subissuemaster import getSubIssueMeta, subissueMaster
 
@@ -73,7 +73,7 @@ MEDIA_SOURCE_TYPES = ["news", "agency", "regulation"]
 
 
 def getMaterialityResults(runId: int) -> MaterialityResultsResponseDto:
-    rows = getDmaResults(runId)
+    rows = listResults(runId)
     selectedContext = _resolveSelectedContext(runId, rows)
     selectedCodes = selectedContext["selectedCodes"]
 
@@ -84,9 +84,9 @@ def getMaterialityResults(runId: int) -> MaterialityResultsResponseDto:
     highPriorityCount = sum(1 for item in matrixItems if item.quadrant == "HIGH_IMPACT_HIGH_FINANCIAL")
     selectionReasons = _buildSelectionReasons(selectedContext, items)
 
-    requiredMetricCount = getRequiredMetricCountForSubIssues(selectedCodes)
-    onboardingMissingCount = getMissingRequiredMetricCount(runId, selectedCodes)
-    reportRun = getLatestReportRunByMaterialityRun(runId)
+    requiredMetricCount = countRequiredMetrics(selectedCodes)
+    onboardingMissingCount = countMissingMetrics(runId, selectedCodes)
+    reportRun = getLatestReportRun(runId)
     reportRunId = int(reportRun["id"]) if reportRun.get("id") is not None else None
     reportDraftReadyYn = bool(selectedCodes) and onboardingMissingCount == 0
 
@@ -120,8 +120,8 @@ def getMaterialityResults(runId: int) -> MaterialityResultsResponseDto:
 
 
 def getBenchmarkResult(runId: int) -> BenchmarkResponseDto:
-    evidenceCounts = getEvidenceCountsBySource(runId, "benchmark")
-    observationRows = getSignalObservationCounts(runId, "benchmark")
+    evidenceCounts = listEvidenceCounts(runId, "benchmark")
+    observationRows = listSignalCounts(runId, "benchmark")
     observations = _buildObservationMap(observationRows)
     sourceCounts = _buildEvidenceSourceCounts(evidenceCounts)
 
@@ -144,7 +144,7 @@ def getBenchmarkResult(runId: int) -> BenchmarkResponseDto:
             blindSpotIssues.append(issue)
 
     topIssues = []
-    for index, row in enumerate(getTopIssuesByStageScore(runId, "benchmark", limit=SELECTED_TOP_N), start=1):
+    for index, row in enumerate(listTopStageIssues(runId, "benchmark", limit=SELECTED_TOP_N), start=1):
         code = row.get("sub_issue_code", "")
         obs = observations.get(code, {})
         topIssues.append(
@@ -168,7 +168,7 @@ def getBenchmarkResult(runId: int) -> BenchmarkResponseDto:
         leaderReportCount=leaderReportCount,
         peerReportCount=peerReportCount,
         ownReportCount=ownReportCount,
-        identifiedIssueCount=getDistinctObservedSubIssueCount(runId, "benchmark"),
+        identifiedIssueCount=countObservedSubIssues(runId, "benchmark"),
         commonIssueCount=len(commonIssues),
         blindSpotCount=len(blindSpotIssues),
     )
@@ -188,8 +188,8 @@ def getBenchmarkResult(runId: int) -> BenchmarkResponseDto:
 
 
 def getMediaResult(runId: int) -> MediaStageResponseDto:
-    evidenceCounts = getEvidenceCountsBySource(runId, "media_external")
-    observationRows = getSignalObservationCounts(runId, "media_external")
+    evidenceCounts = listEvidenceCounts(runId, "media_external")
+    observationRows = listSignalCounts(runId, "media_external")
     observations = _buildObservationMap(observationRows)
     sourceCounts = _buildEvidenceSourceCounts(evidenceCounts)
 
@@ -207,7 +207,7 @@ def getMediaResult(runId: int) -> MediaStageResponseDto:
         )
 
     topIssues = []
-    for index, row in enumerate(getTopIssuesByStageScore(runId, "media_external", limit=SELECTED_TOP_N), start=1):
+    for index, row in enumerate(listTopStageIssues(runId, "media_external", limit=SELECTED_TOP_N), start=1):
         code = row.get("sub_issue_code", "")
         obs = observations.get(code, {})
         sourceTypes = [sourceType for sourceType in MEDIA_SOURCE_TYPES if _isObserved(obs, sourceType)]
@@ -234,7 +234,7 @@ def getMediaResult(runId: int) -> MediaStageResponseDto:
             publishedAt=str(row.get("source_published_at")) if row.get("source_published_at") is not None else None,
             textSpan=row.get("text_span") or row.get("summary_text"),
         )
-        for row in getEvidenceSamples(runId, "media_external", limit=10)
+        for row in listEvidenceSamples(runId, "media_external", limit=10)
         if row.get("id") is not None
     ]
 
@@ -244,17 +244,17 @@ def getMediaResult(runId: int) -> MediaStageResponseDto:
             articleCount=sourceCounts.get("news", {}).get("evidenceCount", 0),
             agencyCount=sourceCounts.get("agency", {}).get("evidenceCount", 0),
             regulationFrameCount=sourceCounts.get("regulation", {}).get("evidenceCount", 0),
-            observedSubIssueCount=getMediaObservedSubIssueCount(runId),
+            observedSubIssueCount=countMediaSubIssues(runId),
         ),
         sourceBreakdown=sourceBreakdown,
         topIssues=topIssues,
         evidenceSamples=evidenceSamples,
-        coverage=getMediaCoverageFromSummary(runId),
+        coverage=getMediaCoverage(runId),
     )
 
 
 def getSurveyResult(runId: int) -> SurveyResponseDto:
-    groupRows = getSurveyGroupCounts(runId)
+    groupRows = listSurveyCounts(runId)
     groupCounts = {}
     for row in groupRows:
         group = row.get("respondent_group")
@@ -277,8 +277,8 @@ def getSurveyResult(runId: int) -> SurveyResponseDto:
             )
         )
 
-    topIssueRows = getTopIssuesByStageScore(runId, "survey", limit=SELECTED_TOP_N)
-    groupScoreMap = _buildSurveyGroupScoreMap(getSurveyGroupScores(runId))
+    topIssueRows = listTopStageIssues(runId, "survey", limit=SELECTED_TOP_N)
+    groupScoreMap = _buildSurveyGroupScoreMap(listSurveyScores(runId))
     topIssues = []
     for index, row in enumerate(topIssueRows, start=1):
         code = row.get("sub_issue_code", "")
@@ -339,7 +339,7 @@ def getSurveyResult(runId: int) -> SurveyResponseDto:
 
 
 def getSelectionProcess(runId: int) -> SelectionProcessResponseDto:
-    rows = getDmaResults(runId)
+    rows = listResults(runId)
     selectedContext = _resolveSelectedContext(runId, rows)
     items = [_buildResultItem(row, selectedContext["selectedCodes"]) for row in rows]
     selectedIssues = _buildSelectionReasons(selectedContext, items)
@@ -520,7 +520,7 @@ def _buildCoverageSummary(items: list[MaterialityResultItemDto]) -> CoverageSumm
 
 
 def _resolveSelectedContext(runId: int, rows: list[dict]) -> dict:
-    selectedRows = getSelectedSubIssues(runId)
+    selectedRows = listSelectedSubIssues(runId)
     if selectedRows:
         selectedCodes = [row["sub_issue_code"] for row in selectedRows if row.get("sub_issue_code")][:SELECTED_TOP_N]
         return {

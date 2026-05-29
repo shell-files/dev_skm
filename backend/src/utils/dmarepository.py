@@ -27,9 +27,9 @@ from datetime import datetime
 from src.utils.db import save, addKey, findAll, findOne, getConn
 from src.models.dmaengine import DMASignal, FinalMaterialityScore
 from src.utils.dmaaggregator import (
-    aggregateMediaSignals, 
-    aggregateBenchmarkSignals, 
-    calculateFinalMateriality
+    aggregateMedia,
+    aggregateBenchmark,
+    calcFinal,
 )
 
 def saveDmaSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] = None, sourceTitle: str = ""):
@@ -253,7 +253,7 @@ def recalculateStageScore(runId: int, subIssueCode: str, sourceStep: str):
         baselineImp = signals[0].impactScore05 if signals[0].impactScore05 else 3.0
         baselineFin = signals[0].financialScore05 if signals[0].financialScore05 else 3.0
         
-        stageScore = aggregateBenchmarkSignals(
+        stageScore = aggregateBenchmark(
             leaderRatio=leaderRatio,
             peerRatio=peerRatio,
             ownRatio=ownRatio,
@@ -267,7 +267,7 @@ def recalculateStageScore(runId: int, subIssueCode: str, sourceStep: str):
         financialScore = stageScore.financialScore05
         
     elif sourceStep == "media_external":
-        stageScore = aggregateMediaSignals(signals)
+        stageScore = aggregateMedia(signals)
         impactScore = stageScore.impactScore05
         financialScore = stageScore.financialScore05
         
@@ -300,8 +300,8 @@ def recalculateSurveyScore(runId: int, subIssueCode: str):
     executiveScore = groupScores.get("management", None)
     externalScore = groupScores.get("external", None)
     
-    from src.utils.dmaaggregator import aggregateSurveyScores
-    finalSurveyScore = aggregateSurveyScores(
+    from src.utils.dmaaggregator import aggregateSurvey
+    finalSurveyScore = aggregateSurvey(
         employeeScore=float(employeeScore) if employeeScore else None,
         executiveScore=float(executiveScore) if executiveScore else None,
         externalScore=float(externalScore) if externalScore else None
@@ -372,7 +372,7 @@ def recalculateFinalScore(runId: int, subIssueCode: str, updateRankingsYn: bool 
     if not row:
         return
         
-    finalScoreObj = calculateFinalMateriality(
+    finalScoreObj = calcFinal(
         subIssueCode=subIssueCode,
         surveyImpact=safeFloatOrNone(row.get("survey_impact_score")),
         surveyFinancial=safeFloatOrNone(row.get("survey_financial_score")),

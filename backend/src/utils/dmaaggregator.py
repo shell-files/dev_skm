@@ -7,9 +7,15 @@ Responsibility:
 - Apply additive context modifier only at final aggregation
 - Preserve None-as-unobserved behavior
 Public functions:
+- aggregateMedia
 - aggregateMediaSignals
+- aggregateBenchmark
 - aggregateBenchmarkSignals
+- aggregateSurvey
 - aggregateSurveyScores
+- calcWeightedAvg
+- weightedAvgAvailable
+- calcFinal
 - calculateFinalMateriality
 Do not:
 - do not mutate unrelated DB state
@@ -61,7 +67,7 @@ SURVEY_GROUP_WEIGHTS = {
 # Benchmark Aggregation (v1 provisional)
 # ──────────────────────────────────────────────
 
-def aggregateBenchmarkSignals(
+def aggregateBenchmark(
     leaderRatio: float,
     peerRatio: float,
     ownRatio: float,
@@ -106,7 +112,7 @@ def aggregateBenchmarkSignals(
 # Survey Aggregation
 # ──────────────────────────────────────────────
 
-def aggregateSurveyScores(
+def aggregateSurvey(
     employeeScore: Optional[float],
     executiveScore: Optional[float],
     externalScore: Optional[float]
@@ -116,7 +122,7 @@ def aggregateSurveyScores(
     weight: employee=0.30, management=0.40, external=0.30 (v1 확정)
     axis 분리 설문 도입 시 재검토 예정.
     """
-    return weightedAvgAvailable([
+    return calcWeightedAvg([
         (employeeScore, SURVEY_GROUP_WEIGHTS["employee"]),
         (executiveScore, SURVEY_GROUP_WEIGHTS["management"]),
         (externalScore, SURVEY_GROUP_WEIGHTS["external"])
@@ -126,7 +132,7 @@ def aggregateSurveyScores(
 # Media Aggregation
 # ──────────────────────────────────────────────
 
-def aggregateMediaSignals(signals: List[DMASignal]) -> StageScore:
+def aggregateMedia(signals: List[DMASignal]) -> StageScore:
     """
     미디어 시그널들을 집계하여 하나의 StageScore로 반환합니다.
     Impact와 Financial의 분모를 철저히 분리하여 미관측 축이 점수를 깎지 않도록 합니다.
@@ -155,7 +161,7 @@ def aggregateMediaSignals(signals: List[DMASignal]) -> StageScore:
 # 공통 유틸
 # ──────────────────────────────────────────────
 
-def weightedAvgAvailable(items: List[Tuple[Optional[float], float]]) -> Optional[float]:
+def calcWeightedAvg(items: List[Tuple[Optional[float], float]]) -> Optional[float]:
     """
     NULL을 제외하고 관측치들의 가중 평균을 계산합니다.
     미관측 stage는 0점 처리하지 않고 분모에서 제외합니다.
@@ -185,7 +191,7 @@ def getCoverageStatus(count: int) -> str:
 # Final Materiality Score
 # ──────────────────────────────────────────────
 
-def calculateFinalMateriality(
+def calcFinal(
     subIssueCode: str,
     surveyImpact: Optional[float], surveyFinancial: Optional[float],
     benchmarkImpact: Optional[float], benchmarkFinancial: Optional[float],
@@ -202,13 +208,13 @@ def calculateFinalMateriality(
     """
     
     # 1. Raw Final Aggregation (NULL 제외 가중평균)
-    rawFinalImpact = weightedAvgAvailable([
+    rawFinalImpact = calcWeightedAvg([
         (surveyImpact, FINAL_STAGE_WEIGHTS["survey"]),
         (benchmarkImpact, FINAL_STAGE_WEIGHTS["benchmark"]),
         (mediaImpact, FINAL_STAGE_WEIGHTS["media_external"])
     ])
     
-    rawFinalFinancial = weightedAvgAvailable([
+    rawFinalFinancial = calcWeightedAvg([
         (surveyFinancial, FINAL_STAGE_WEIGHTS["survey"]),
         (benchmarkFinancial, FINAL_STAGE_WEIGHTS["benchmark"]),
         (mediaFinancial, FINAL_STAGE_WEIGHTS["media_external"])
@@ -263,3 +269,82 @@ def calculateFinalMateriality(
         finalScore=finalScore,
         coverage=coverage
     )
+
+
+# Compatibility wrappers for previous public names
+
+def aggregateBenchmarkSignals(
+    leaderRatio: float,
+    peerRatio: float,
+    ownRatio: float,
+    commonSelection: bool,
+    blindSpot: bool,
+    evidenceCount: int,
+    baselineImpactScore: float,
+    baselineFinancialScore: float,
+) -> StageScore:
+    return aggregateBenchmark(
+        leaderRatio,
+        peerRatio,
+        ownRatio,
+        commonSelection,
+        blindSpot,
+        evidenceCount,
+        baselineImpactScore,
+        baselineFinancialScore,
+    )
+
+
+def aggregateSurveyScores(
+    employeeScore: Optional[float],
+    executiveScore: Optional[float],
+    externalScore: Optional[float],
+) -> Optional[float]:
+    return aggregateSurvey(employeeScore, executiveScore, externalScore)
+
+
+def aggregateMediaSignals(signals: List[DMASignal]) -> StageScore:
+    return aggregateMedia(signals)
+
+
+def weightedAvgAvailable(items: List[Tuple[Optional[float], float]]) -> Optional[float]:
+    return calcWeightedAvg(items)
+
+
+def calculateFinalMateriality(
+    subIssueCode: str,
+    surveyImpact: Optional[float], surveyFinancial: Optional[float],
+    benchmarkImpact: Optional[float], benchmarkFinancial: Optional[float],
+    mediaImpact: Optional[float], mediaFinancial: Optional[float],
+    contextImpactModifier: float = 0.0,
+    contextFinancialModifier: float = 0.0,
+) -> FinalMaterialityScore:
+    return calcFinal(
+        subIssueCode,
+        surveyImpact,
+        surveyFinancial,
+        benchmarkImpact,
+        benchmarkFinancial,
+        mediaImpact,
+        mediaFinancial,
+        contextImpactModifier,
+        contextFinancialModifier,
+    )
+
+
+__all__ = [
+    "MEDIA_SOURCE_TYPE_WEIGHTS",
+    "FINAL_STAGE_WEIGHTS",
+    "SURVEY_GROUP_WEIGHTS",
+    "aggregateBenchmark",
+    "aggregateBenchmarkSignals",
+    "aggregateSurvey",
+    "aggregateSurveyScores",
+    "aggregateMedia",
+    "aggregateMediaSignals",
+    "calcWeightedAvg",
+    "weightedAvgAvailable",
+    "getCoverageStatus",
+    "calcFinal",
+    "calculateFinalMateriality",
+]

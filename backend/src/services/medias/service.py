@@ -18,7 +18,7 @@ from src.utils.dmarepository import (
     getTopIssuesByMediaScore,
     saveDmaSignals,
 )
-from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreDmaSignals
+from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
 from src.utils.subissuemaster import getSubIssueDisplayName
 
 
@@ -48,7 +48,7 @@ def runMediaAnalysis(
     )
     signals = convertMediaToDmaSignals(pipelineResults)
     baselinedSignals = applyMediaBaseline(signals)
-    scoredSignals = scoreDmaSignals(baselinedSignals)
+    scoredSignals = scoreSignals(baselinedSignals)
 
     if scoredSignals:
         saveDmaSignals(runId=runId, signals=scoredSignals, fileId=None, sourceTitle="Media Analysis")

@@ -1,11 +1,12 @@
 from src.models.model import UserModel, EmailModel, ResponseModel
+from src.utils.auth import delete_cookie, get_domain
 from src.utils.rediscl import getCompanyRedis, delTokenRedis, getTokenRedis
 from src.utils.settings import settings
 from src.utils.db import findOne, save, findAll
 from src.utils.kafkasv import sendToKafka
 from src.utils.tokenset import decryptFromJwe
 from src.utils.validatetok import validateToken
-from fastapi import Request
+from fastapi import Request, Response
 
 import string
 import random
@@ -39,12 +40,23 @@ def checkUser(userModel: UserModel):
     companyParams = (userModel.id, )
     companyResult = findAll(companySql, companyParams)
 
+    userSql = f"""
+        SELECT aes_d(u.`name`, '{settings.maria_db_key}') AS `name`
+        FROM `with`.`USER` AS u
+        WHERE `u`.`email` = aes_e(?, '{settings.maria_db_key}')
+    """
+    userParams = (userModel.email, )
+    userResult = findOne(userSql, userParams)
+
+    if userResult is not None:
+        userName = userResult["name"]
+
     for com in companyResult:
         if com["company_id"] == int(company["companyId"]):
             selectedCompany = com
             break
 
-    return ResponseModel(True, "사용자 정보가 유효합니다.", {"user": userModel.email, "userName": userModel.name, "companys": companyResult, "selectedCompany": selectedCompany})
+    return ResponseModel(True, "사용자 정보가 유효합니다.", {"user": userModel.email, "userName": userName, "companys": companyResult, "selectedCompany": selectedCompany})
 
 # --------------------------
 # 비밀번호 찾기 로직 처리 함수
@@ -103,30 +115,17 @@ def findPwdProcess(emailModel: EmailModel):
 # --------------------------
 # 로그아웃 로직 처리 함수
 # --------------------------
-def logoutProcess(logoutModel):
+def logoutProcess(response: Response, request: Request, userModel: UserModel):
     """
     1. db에서 refresh token delete_yn 1으로 변경
     2. redis에서 uuid 삭제
     """
-    uuidKey = logoutModel.uuid
-
     try:
-        # 1. db에서 refresh token delete_yn 1으로 변경
-        logoutSql = """
-                UPDATE TOKEN
-                    SET `delete_yn` = 1
-                    WHERE uuid = ?;
-                """
-        logoutParams = (uuidKey,)
-        save(logoutSql, logoutParams)
-
-        # 2. redis에서 uuid 삭제
-        delTokenRedis(uuidKey)
-
-        return ResponseModel(True, "로그아웃 완료")
+        if(delete_cookie(response, request, userModel.uuid)):
+            return ResponseModel(True, "로그아웃 완료")
+        return ResponseModel(False, "로그아웃 실패")
     except Exception as e:
         return ResponseModel(False, f"오류 발생 : {e}")
-
 # --------------------------
 # 비밀번호 확인 로직 처리 함수
 # --------------------------

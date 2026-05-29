@@ -271,7 +271,8 @@ Do not:
 | `dmafinancialrepository.py` | candidate | `dmafinancial.py` | not now |
 | `companycontextrepository.py` | candidate | `dmacontext.py` | not now |
 | `subissuemaster.py` | keep | 유지 | rename 없음 |
-| `financial_exposure.py` | candidate | `financialexposure.py` | not now |
+| `financial_exposure.py` | done | `financialexposure.py` | done in `fixed/backend_refactoring_ljb` |
+| `context_graph.py` | done | `contextgraph.py` | done in `fixed/backend_refactoring_ljb` |
 
 ## 13. 현재 DMA 함수 Rename / Alias 후보표
 
@@ -302,9 +303,9 @@ Do not:
 대상:
 
 ```text
-backend/src/services/materialities/financial_exposure.py
+backend/src/services/materialities/financialexposure.py
 backend/src/services/materialities/context.py
-backend/src/services/materialities/context_graph.py
+backend/src/services/materialities/contextgraph.py
 backend/src/utils/dmarepository.py
 backend/src/utils/dmafinancialrepository.py
 backend/src/utils/dmaaggregator.py
@@ -316,7 +317,7 @@ backend/src/utils/companycontextrepository.py
 
 ### Step 3. 안전 alias 추가
 
-`financial_exposure.py`에 짧은 alias wrapper를 추가한다.
+`financialexposure.py`에 짧은 alias wrapper를 추가한다.
 
 - 기존 함수 삭제 금지.
 - 기존 호출부 변경 금지.
@@ -364,7 +365,7 @@ import 경로 대량 수정
 ```text
 python -m compileall backend/src
 
-financial_exposure.py import smoke
+financialexposure.py import smoke
 기존 함수명 import smoke
 새 alias import smoke
 

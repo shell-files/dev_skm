@@ -35,7 +35,7 @@ from src.models.materialitycontext import (
     ContextRuleHitDto,
     SubIssueContextModifierDto,
 )
-from src.services.materialities.context_graph import buildCompanyContextProfileWithOptionalGraph
+from src.services.materialities.contextgraph import buildCompanyContextProfileWithOptionalGraph
 from src.utils.companycontextrepository import (
     getCompanyG0Facts,
     getDmaScoreSummaryRowsForContext,

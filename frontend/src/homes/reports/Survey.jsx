@@ -818,9 +818,11 @@ const Survey = () => {
             Robot View
         ====================================================== */}
         <div
-          className={`survey-view-container ${isAnalyzing ? "analyzing" : ""
-            }`}
-        >
+            className={`survey-view-container
+              ${isAnalyzing ? "analyzing" : ""}
+              ${showResult ? "showing-result" : ""}
+            `}
+          >
           {/* Particle */}
           <div
             className="particle-field"
@@ -906,7 +908,7 @@ const Survey = () => {
              * 최종 결과 영역
              * ===================================================
              */
-            <div className="result-layout">
+            <div className="survey-result-layout">
 
               {/* KPI 카드 영역 */}
               <div className="survey-kpi-grid">

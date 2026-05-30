@@ -1,0 +1,878 @@
+:root { /* Color */ 
+    --survey-primary: #03A94D; 
+    --survey-primary-dark: #017E3F; 
+    --survey-primary-light: #e8f8ef; 
+    --survey-bg: #f4f7f6; 
+    --survey-surface: #ffffff; 
+    --survey-text: #1e293b; 
+    --survey-sub: #64748b; 
+    --survey-border: #e2e8f0; 
+    --survey-border-soft: #f1f5f9; 
+    --survey-danger: #ef4444; 
+    --survey-warning: #ffb300; 
+    /* Radius */ 
+    --survey-radius-lg: 20px; 
+    --survey-radius-md: 14px; 
+    --survey-radius-sm: 10px; 
+    /* Shadow */ 
+    --survey-shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04); 
+    --survey-shadow-md: 0 6px 20px rgba(15, 23, 42, 0.08); 
+    --survey-shadow-lg: 0 -10px 40px rgba(0, 0, 0, 0.06); 
+    /* Gradient */ 
+    --survey-gradient: linear-gradient(135deg, #03A94D, #017E3F);
+    /* Transition */ 
+    --survey-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+    /* Layout */ 
+    --survey-header-height: 60px; 
+    --survey-dashboard-collapsed: 45px; 
+}
+.input-card {
+    flex: 1;
+    min-height: 0;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    padding-right: 6px;
+
+    display: flex;
+    flex-direction: column;
+}
+.survey-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+
+    min-width: 0;
+    min-height: 0;
+
+    height: calc(100vh - 60px);
+
+    overflow: hidden;
+}
+.survey-header {
+    flex-shrink: 0;
+
+    width: 100%;
+
+    padding: 20px 40px;
+
+    background: #fff;
+    border-bottom: 1px solid var(--survey-border);
+}
+.survey-title {
+    margin: 0 0 15px;
+
+    color: #1e293b;
+
+    font-size: 1.3rem;
+    font-weight: 850;
+}
+.survey-stepper-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.step-box {
+    position: relative;
+    z-index: 2;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+
+    opacity: 0.35;
+    cursor: pointer;
+
+    transition: var(--survey-transition);
+}
+
+.step-box.active {
+    opacity: 1;
+    transform: translateY(-1px);
+}
+
+.step-icon-circle {
+    width: 38px;
+    height: 38px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 50%;
+    border: 2px solid var(--survey-border);
+
+    background: #fff;
+
+    font-size: 0.95rem;
+
+    transition: var(--survey-transition);
+}
+
+.step-box.active .step-icon-circle {
+    border: none;
+    color: #fff;
+    background: var(--survey-gradient);
+    box-shadow: 0 4px 10px rgba(3, 169, 77, 0.2);
+}
+
+.step-line {
+    flex: 1;
+    height: 2px;
+    margin: -20px 15px 0;
+    background: var(--survey-border);
+}
+
+/* ─── 결과 통계 카드 행 ─── */
+.survey-stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.survey-stat-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 14px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+}
+
+/* ─── KPI 카드 추가 스타일 ─── */
+.survey-kpi-card {
+    display: flex;
+    flex-direction: column;
+
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+
+    padding: 16px;
+
+    box-shadow: 0 2px 8px rgba(15,23,42,.04);
+}
+.survey-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.stat-icon-wrap {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0fdf4;
+    border-radius: 10px;
+}
+
+.stat-label {
+    font-size: 0.72rem;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.stat-value {
+    font-size: 1.2rem;
+    font-weight: 850;
+    color: #1e293b;
+    line-height: 1.15;
+}
+
+.stat-target {
+    font-size: 0.68rem;
+    color: #94a3b8;
+    font-weight: 400;
+    margin-left: 4px;
+}
+
+/* ─── KPI 바 (카드 내 진행률 바) ─── */
+.kpi-bar-wrap {
+    position: relative;
+    height: 6px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    margin-top: 6px;
+    margin-right: 36px;
+}
+
+.kpi-bar-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #03A94D, #017E3F);
+    border-radius: 4px;
+}
+
+.kpi-bar-pct {
+    position: absolute;
+    right: -36px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #03A94D;
+    white-space: nowrap;
+}
+
+/* ─── 결과 패널 행 (하단 2패널 그리드) ─── */
+.survey-panels-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 12px;
+}
+
+.survey-panels {
+    display: grid;
+
+    grid-template-columns: 3fr 2fr;
+
+    gap: 16px;
+
+    flex: 1;
+}
+
+.survey-panel {
+    flex: 1;
+    min-height: 0;
+
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.survey-section-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+
+    height: 100%;
+    min-height: 0;
+}
+
+.survey-row-box {
+    padding: 12px;
+}
+.survey-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.url-input-line {
+    display: flex;
+    gap: 10px;
+}
+
+.url-input-line input {
+    flex: 1;
+    min-width: 0;
+}
+.panel-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.panel-title {
+    font-size: 0.88rem;
+    font-weight: 850;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* ─── 복합 헤더 테이블 (rowspan/colspan 사용) ─── */
+.survey-complex-table {
+    width: 100%;
+    min-width: 480px;       /* 좁은 영역에서 최소 너비 보장 */
+    border-collapse: collapse;
+    font-size: 0.7rem;
+}
+
+.survey-complex-table th,
+.survey-complex-table td {
+    padding: 5px 6px;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+    white-space: nowrap;
+    color: #334155;
+    font-size: 0.7rem;
+}
+
+.survey-complex-table th {
+    background: #f8fafc;
+    font-weight: 700;
+    color: #475569;
+}
+
+.survey-complex-table tbody td:nth-child(2) {
+    text-align: left;
+    white-space: normal;
+    min-width: 70px;
+    word-break: keep-all;
+}
+
+.survey-complex-table tr:last-child td {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+/* 그룹 헤더 (임직원/경영진/외부) */
+.group-th {
+    background: #f0fdf4 !important;
+    color: #03A94D !important;
+    font-weight: 800 !important;
+    border-bottom: 2px solid #bbf7d0 !important;
+}
+
+/* ─── 이해관계자 그룹 패널 ─── */
+.stakeholder-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.stakeholder-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 14px;
+}
+
+.stakeholder-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.stakeholder-name {
+    display: block;
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.stakeholder-topics {
+    display: block;
+    font-size: 0.73rem;
+    color: #03A94D;
+    font-weight: 600;
+    margin-top: 2px;
+}
+
+.stakeholder-desc {
+    font-size: 0.74rem;
+    color: #64748b;
+    line-height: 1.55;
+    margin: 0;
+    padding-left: 42px;
+}
+.dashboard-handle {
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    height: 45px;
+
+    border-bottom: 1px solid #f1f5f9;
+
+    cursor: pointer;
+}
+
+.handle-pill {
+    padding: 6px 20px;
+
+    border-radius: 30px;
+
+    background: #f1f5f9;
+    color: #64748b;
+
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+
+/* ─── showing-result: survey-view-container 스크롤 허용 ─── */
+.survey-view-container.showing-result {
+    overflow-y: auto;
+    overflow-x: hidden;
+    align-items: flex-start;
+    justify-content: flex-start;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 30px;
+    gap: 0;
+}
+
+/* ─── survey-layout 내부 여백 조정 ─── */
+.survey-view-container.showing-result .survey-layout {
+    padding: 0;
+    gap: 12px;
+}
+.survey-layout {
+    min-height: fit-content;
+}
+.survey-result-dashboard {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+
+    display: flex;
+    flex-direction: column;
+
+    height: 45px;
+
+    background: #fff;
+
+    border-top: 1px solid var(--survey-border);
+
+    overflow: hidden;
+
+    transition: height 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.06);
+}
+.survey-result-dashboard.open {
+    height: 80%;   
+}
+
+
+
+.btn-url-copy { 
+    padding: 5px 12px; 
+    border-radius: 999px; 
+    background: var(--survey-primary); 
+    color: #fff; 
+    font-size: 0.75rem; 
+    font-weight: 700; 
+    white-space: nowrap; 
+}
+.btn-url-copy, .survey-btn {
+    margin-bottom: 50px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* min-width: 140px; */
+    padding: 12px 28px;
+    background-color: var(--survey-primary);
+    color: #ffffff;
+    border: 1px solid transparent;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border-radius: var(--survey-radius-sm);
+    cursor: pointer;
+    box-shadow: var(--survey-shadow-sm);
+    transition: var(--survey-transition);
+    text-decoration: none;
+}
+.action-btn-group { 
+    display: flex; 
+    justify-content: center; 
+    flex-wrap: wrap; 
+    gap: 14px; 
+    margin-top: 16px; 
+    
+}
+.survey-btn{ 
+    border-radius: 10px; 
+    background: var(--survey-gradient); 
+    color: #fff; 
+    font-weight: 850; 
+    box-shadow: 0 4px 12px rgba(3, 169, 77, 0.15);
+}
+.survey-btn:hover {
+    background-color: var(--survey-primary-dark);
+    box-shadow: 0 4px 12px rgba(51, 65, 85, 0.15); 
+    transform: translateY(-1px);
+}
+.survey-btn.secondary { 
+    background: #334155; 
+    box-shadow: 0 4px 12px rgba(51, 65, 85, 0.15); 
+}
+.survey-view-container {
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: auto !important;
+    position: relative;
+}
+.survey-view-container.showing-result {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+/* ─── responsive ─── */
+@media (max-width: 1100px) {
+    .survey-stats-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .survey-panels {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .survey-stats-row {
+        grid-template-columns: 1fr 1fr;
+    }
+    .survey-banner-robot {
+        display: none;
+    }
+}
+
+
+/* survey-content, survey-layout 개별 스크롤 제거 */
+#survey-content,
+#survey-layout {
+    overflow: visible;
+}
+
+/* ==========================================
+   결과 필터 영역
+========================================== */
+
+.filter-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  min-width: 220px;
+  padding: 10px 14px;
+  border: 1px solid #dbe4ee;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--survey-primary);
+}
+
+/* ==========================================
+   Impact / Financial Summary
+========================================== */
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.summary-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.summary-card .label {
+  display: block;
+  font-size: 0.82rem;
+  color: #64748b;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.score-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.score-flex .value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--survey-primary);
+}
+
+.score-flex .value span {
+  font-size: 0.9rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* ==========================================
+   ESG 유형별 결과
+========================================== */
+
+.type-result-box {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.type-title {
+  font-size: 1rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.type-title span {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.type-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.type-mini-card {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 18px;
+  text-align: center;
+}
+
+.type-mini-card span {
+  display: block;
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.type-mini-card strong {
+  display: block;
+  font-size: 1.3rem;
+  color: var(--survey-primary);
+}
+
+/* ==========================================
+   이슈 리스트
+========================================== */
+
+.issue-list-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.issue-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+
+  padding: 14px 18px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.issue-item span:first-child {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.badge-risk {
+  background: #fff1f2;
+  color: #dc2626;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+/* ==========================================
+   결과 배너
+========================================== */
+
+.result-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  background: linear-gradient(
+    135deg,
+    #03a94d 0%,
+    #028a40 100%
+  );
+
+  border-radius: 18px;
+  padding: 24px;
+  margin-bottom: 24px;
+  color: white;
+}
+
+.result-banner-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.result-banner-desc {
+  line-height: 1.7;
+  opacity: 0.95;
+}
+
+.result-banner-robot {
+  width: 120px;
+  height: auto;
+  object-fit: contain;
+}
+
+/* ==========================================
+   KPI 카드 아이콘
+========================================== */
+
+.result-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.result-stat-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.stat-icon-wrap {
+  width: 46px;
+  height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(3, 169, 77, 0.08);
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+/* ==========================================
+   패널 헤더
+========================================== */
+
+.panel-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.panel-title svg {
+  vertical-align: middle;
+}
+
+/* ==========================================
+   이해관계자 카드 개선
+========================================== */
+
+.stakeholder-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.reflect-icon {
+  width: 36px;
+  height: 36px;
+
+  border-radius: 10px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(3, 169, 77, 0.08);
+
+  flex-shrink: 0;
+}
+
+.stakeholder-name {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.stakeholder-topics {
+  display: block;
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* ==========================================
+   Responsive
+========================================== */
+
+@media (max-width: 1200px) {
+  .result-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .type-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .result-banner {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .result-banner-robot {
+    margin-top: 20px;
+  }
+
+  .result-stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+  }
+
+  .filter-select {
+    width: 100%;
+  }
+}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-// import "@styles/survey.css"; 
-import "@styles/sr.css";
+import "@styles/survey.css";
+// import "@styles/sr.css";
 
 import robot from "@assets/images/robot/robot_servey_t.png";
 
@@ -11,12 +11,95 @@ import {
 } from "@components/UI/ServiceAlert";
 
 const TOP_ISSUES = [
-  { rank: 1, name: "기후변화 대응",   totalImpact: 88.7, totalFin: 76.3, empImpact: 4.7, empFin: 4.5, execImpact: 4.6, execFin: 4.4, extImpact: 4.4, extFin: 4.2 },
-  { rank: 2, name: "안전보건 관리",   totalImpact: 84.1, totalFin: 73.2, empImpact: 4.5, empFin: 4.3, execImpact: 4.4, execFin: 4.2, extImpact: 4.0, extFin: 3.9 },
-  { rank: 3, name: "인적자본 개발",   totalImpact: 76.8, totalFin: 68.1, empImpact: 4.2, empFin: 4.0, execImpact: 3.9, execFin: 3.8, extImpact: 3.6, extFin: 3.5 },
-  { rank: 4, name: "공급망 ESG 관리", totalImpact: 72.3, totalFin: 65.4, empImpact: 4.0, empFin: 3.9, execImpact: 3.8, execFin: 3.7, extImpact: 3.5, extFin: 3.4 },
-  { rank: 5, name: "윤리·준법 경영",  totalImpact: 70.2, totalFin: 62.8, empImpact: 3.9, empFin: 3.8, execImpact: 3.7, execFin: 3.6, extImpact: 3.3, extFin: 3.2 },
+  {
+    rank: 1,
+    name: "기후변화 대응",
+    totalImpact: 4.82,
+    totalFin: 4.51,
+
+    empImpact: 4.91,
+    empFin: 4.43,
+
+    execImpact: 4.77,
+    execFin: 4.88,
+
+    extImpact: 4.69,
+    extFin: 4.21,
+  },
+
+  {
+    rank: 2,
+    name: "공급망 ESG 관리",
+    totalImpact: 4.63,
+    totalFin: 4.72,
+
+    empImpact: 4.34,
+    empFin: 4.51,
+
+    execImpact: 4.71,
+    execFin: 4.83,
+
+    extImpact: 4.84,
+    extFin: 4.82,
+  },
+
+  {
+    rank: 3,
+    name: "안전보건 관리",
+    totalImpact: 4.55,
+    totalFin: 4.12,
+
+    empImpact: 4.87,
+    empFin: 4.01,
+
+    execImpact: 4.32,
+    execFin: 4.28,
+
+    extImpact: 4.21,
+    extFin: 4.05,
+  },
 ];
+const SURVEY_RESULT = {
+  kpi: {
+    emp: 124,
+    exec: 18,
+    ext: 45,
+  },
+
+  stakeholder: {
+    emp: {
+      top3: [
+        "기후변화 대응",
+        "안전보건 관리",
+        "인적자본 개발",
+      ],
+      desc:
+        "임직원은 환경 대응과 안전, 인적 성장에 높은 관심을 보였습니다.",
+    },
+
+    exec: {
+      top3: [
+        "기후변화 대응",
+        "기업가치 제고",
+        "리스크 관리",
+      ],
+      desc:
+        "경영진은 중장기 가치 창출과 리스크 관리에 집중하고 있습니다.",
+    },
+
+    ext: {
+      top3: [
+        "기후변화 대응",
+        "공급망 ESG 관리",
+        "투명한 정보 공개",
+      ],
+      desc:
+        "외부 이해관계자는 공급망 ESG와 투명성에 높은 관심을 보였습니다.",
+    },
+  },
+
+  issues: TOP_ISSUES,
+};
 
 /**
  * 이해관계자 설문 페이지
@@ -187,17 +270,14 @@ const Survey = () => {
       particle.style.width = `${size}px`;
       particle.style.height = `${size}px`;
 
-      particle.style.left = `${
-        Math.random() * 100
-      }%`;
+      particle.style.left = `${Math.random() * 100
+        }%`;
 
-      particle.style.top = `${
-        Math.random() * 100
-      }%`;
+      particle.style.top = `${Math.random() * 100
+        }%`;
 
-      particle.style.animationDelay = `${
-        Math.random() * 2
-      }s`;
+      particle.style.animationDelay = `${Math.random() * 2
+        }s`;
 
       particleRef.current.appendChild(particle);
     }
@@ -326,19 +406,19 @@ const Survey = () => {
   };
 
   return (
-    <div className="sr-container">
+    <div className="survey-container">
       {/* =========================================================
           Header
       ========================================================== */}
-      <header className="sr-header">
-        <h1 className="sr-title">
+      <header className="survey-header">
+        <h1 className="survey-title">
           지속가능경영보고서 AI 자동 생성
         </h1>
 
         {/* =====================================================
             Stepper 영역
         ====================================================== */}
-        <div className="sr-stepper-row">
+        <div className="survey-stepper-row">
           {steps.map((step, index) => (
             <div
               key={step.id}
@@ -348,11 +428,10 @@ const Survey = () => {
               }}
             >
               <div
-                className={`step-box ${
-                  index === activeIndex
+                className={`step-box ${index === activeIndex
                     ? "active"
                     : ""
-                }`}
+                  }`}
                 onClick={() => moveStep(index)}
               >
                 <div className="step-icon-circle">
@@ -673,7 +752,7 @@ const Survey = () => {
                   <strong
                     style={{
                       color:
-                        "var(--sr-primary)",
+                        "var(--survey-primary)",
                     }}
                   >
                     [AI 응답 데이터 분석 결과]
@@ -697,16 +776,16 @@ const Survey = () => {
           ====================================================== */}
           <div className="action-btn-group">
             <button
-              className="sr-btn"
+              className="survey-btn"
               onClick={runLiveKpiAggregation}
             >
               실시간 통계 집계
             </button>
 
             <button
-              className="sr-btn secondary"
+              className="survey-btn secondary"
               onClick={runSurveyAnalysis}
-              style={{marginBottom: "50px"}}
+              style={{ marginBottom: "50px" }}
             >
               설문 결과 분석
             </button>
@@ -718,9 +797,8 @@ const Survey = () => {
           Result Dashboard
       ========================================================== */}
       <div
-        className={`sr-result-dashboard ${
-          dashboardOpen ? "open" : ""
-        }`}
+        className={`survey-result-dashboard ${dashboardOpen ? "open" : ""
+          }`}
       >
         {/* Dashboard Handle */}
         <div
@@ -731,8 +809,8 @@ const Survey = () => {
             {isAnalyzing
               ? "AI 분석 진행 중..."
               : showResult
-              ? "분석 완료 - 결과 요약 확인"
-              : "실시간 분석 대기 중"}
+                ? "분석 완료 - 결과 요약 확인"
+                : "실시간 분석 대기 중"}
           </div>
         </div>
 
@@ -740,9 +818,8 @@ const Survey = () => {
             Robot View
         ====================================================== */}
         <div
-          className={`robot-view-container ${
-            isAnalyzing ? "analyzing" : ""
-          }`}
+          className={`survey-view-container ${isAnalyzing ? "analyzing" : ""
+            }`}
         >
           {/* Particle */}
           <div
@@ -763,11 +840,11 @@ const Survey = () => {
                 width: "100%",
               }}
             >
-              <div className="robot-stage">
-                <div className="robot-float-wrap">
+              <div className="survey-stage">
+                <div className="survey-float-wrap">
                   <img
                     src={robot}
-                    className="robot-main-img"
+                    className="survey-main-img"
                     alt="robot"
                   />
                 </div>
@@ -815,7 +892,7 @@ const Survey = () => {
                       fontWeight: 700,
                       fontSize: "0.85rem",
                       color:
-                        "var(--sr-primary)",
+                        "var(--survey-primary)",
                     }}
                   >
                     {progress}% 분석 중
@@ -830,164 +907,295 @@ const Survey = () => {
              * ===================================================
              */
             <div className="result-layout">
-              {/* Filter */}
-              <div className="filter-bar">
-                <select className="filter-select">
-                  <option value="all">
-                    전체 이해관계자 그룹
-                  </option>
 
-                  <option value="emp">
-                    임직원
-                  </option>
+              {/* KPI 카드 영역 */}
+              <div className="survey-kpi-grid">
+                <div className="survey-kpi-card">
+                  <div className="stat-label">임직원 응답</div>
 
-                  <option value="exec">
-                    경영진
-                  </option>
+                  <div className="stat-value">
+                    {liveData.emp}명
+                    <span className="stat-target">
+                      (목표 {kpiData.emp}명)
+                    </span>
+                  </div>
 
-                  <option value="ext">
-                    외부이해관계자
-                  </option>
-                </select>
+                  <div className="kpi-bar-wrap">
+                    <div
+                      className="kpi-bar-fill"
+                      style={{
+                        width: `${getPercent(
+                          liveData.emp,
+                          kpiData.emp
+                        )}%`,
+                      }}
+                    />
+                    <span className="kpi-bar-pct">
+                      {getPercent(
+                        liveData.emp,
+                        kpiData.emp
+                      )}
+                      %
+                    </span>
+                  </div>
+                </div>
 
-                <select className="filter-select">
-                  <option value="score">
-                    점수 높은 순 정렬
-                  </option>
+                <div className="survey-kpi-card">
+                  <div className="stat-label">
+                    경영진 응답
+                  </div>
 
-                  <option value="issue">
-                    핵심 이슈 지표 필터링
-                  </option>
-                </select>
+                  <div className="stat-value">
+                    {liveData.exec}명
+                    <span className="stat-target">
+                      (목표 {kpiData.exec}명)
+                    </span>
+                  </div>
+
+                  <div className="kpi-bar-wrap">
+                    <div
+                      className="kpi-bar-fill"
+                      style={{
+                        width: `${getPercent(
+                          liveData.exec,
+                          kpiData.exec
+                        )}%`,
+                      }}
+                    />
+                    <span className="kpi-bar-pct">
+                      {getPercent(
+                        liveData.exec,
+                        kpiData.exec
+                      )}
+                      %
+                    </span>
+                  </div>
+                </div>
+
+                <div className="survey-kpi-card">
+                  <div className="stat-label">
+                    외부 응답
+                  </div>
+
+                  <div className="stat-value">
+                    {liveData.ext}명
+                    <span className="stat-target">
+                      (목표 {kpiData.ext}명)
+                    </span>
+                  </div>
+
+                  <div className="kpi-bar-wrap">
+                    <div
+                      className="kpi-bar-fill"
+                      style={{
+                        width: `${getPercent(
+                          liveData.ext,
+                          kpiData.ext
+                        )}%`,
+                      }}
+                    />
+                    <span className="kpi-bar-pct">
+                      {getPercent(
+                        liveData.ext,
+                        kpiData.ext
+                      )}
+                      %
+                    </span>
+                  </div>
+                </div>
+
+                <div className="survey-kpi-card">
+                  <div className="stat-label">
+                    전체 응답률
+                  </div>
+
+                  <div className="stat-value">
+                    {(
+                      ((liveData.emp +
+                        liveData.exec +
+                        liveData.ext) /
+                        (kpiData.emp +
+                          kpiData.exec +
+                          kpiData.ext)) *
+                      100
+                    ).toFixed(1)}
+                    %
+
+                    <span className="stat-target">
+                      (
+                      {liveData.emp +
+                        liveData.exec +
+                        liveData.ext}
+                      /
+                      {kpiData.emp +
+                        kpiData.exec +
+                        kpiData.ext}
+                      )
+                    </span>
+                  </div>
+
+                  <div className="kpi-bar-wrap">
+                    <div
+                      className="kpi-bar-fill"
+                      style={{
+                        width: `${((liveData.emp +
+                            liveData.exec +
+                            liveData.ext) /
+                            (kpiData.emp +
+                              kpiData.exec +
+                              kpiData.ext)) *
+                          100
+                          }%`,
+                      }}
+                    />
+                  </div>
+                </div>
               </div>
 
-              {/* Summary */}
-              <div className="summary-grid">
-                <div className="summary-card">
-                  <span className="label">
-                    🌍 Impact Materiality
-                  </span>
+              {/* 하단 2패널 */}
+              <div className="survey-panels">
 
-                  <div className="score-flex">
-                    <span className="value">
-                      87.4
-                      <span> / 100점</span>
-                    </span>
+                {/* Top 이슈 */}
+                <div className="survey-panel">
+                  <div className="panel-title">
+                    설문 Top 이슈 점수
+                  </div>
 
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        color: "#03A94D",
-                        fontWeight: 700,
-                      }}
-                    >
-                      [상위 4.2% 중대이슈]
-                    </span>
+                  <table className="survey-complex-table">
+                    <thead>
+                      <tr>
+                        <th rowSpan="2">순위</th>
+                        <th rowSpan="2">
+                          Sub Issue
+                        </th>
+                        <th rowSpan="2">
+                          Total Impact
+                        </th>
+                        <th rowSpan="2">
+                          Total Financial
+                        </th>
+                        <th colSpan="2">
+                          임직원
+                        </th>
+                        <th colSpan="2">
+                          경영진
+                        </th>
+                        <th colSpan="2">
+                          외부
+                        </th>
+                      </tr>
+
+                      <tr>
+                        <th>Impact</th>
+                        <th>Financial</th>
+                        <th>Impact</th>
+                        <th>Financial</th>
+                        <th>Impact</th>
+                        <th>Financial</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {TOP_ISSUES.map((issue) => (
+                        <tr key={issue.rank}>
+                          <td>{issue.rank}</td>
+                          <td>{issue.name}</td>
+                          <td>
+                            {issue.totalImpact}
+                          </td>
+                          <td>
+                            {issue.totalFin}
+                          </td>
+                          <td>
+                            {issue.empImpact}
+                          </td>
+                          <td>
+                            {issue.empFin}
+                          </td>
+                          <td>
+                            {issue.execImpact}
+                          </td>
+                          <td>
+                            {issue.execFin}
+                          </td>
+                          <td>
+                            {issue.extImpact}
+                          </td>
+                          <td>
+                            {issue.extFin}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 이해관계자별 관점 */}
+                <div className="survey-panel">
+                  <div className="panel-title">
+                    이해관계자 그룹별 관점 차이
+                  </div>
+
+                  <div className="stakeholder-group-list">
+
+                    <div className="stakeholder-item">
+                      <div className="stakeholder-name">
+                        임직원 Top3
+                      </div>
+
+                      <div className="stakeholder-topics">
+                        기후변화 대응,
+                        안전보건 관리,
+                        인적자본 개발
+                      </div>
+
+                      <p className="stakeholder-desc">
+                        임직원은 환경 대응과
+                        안전, 인적 성장에
+                        높은 관심을 보였습니다.
+                      </p>
+                    </div>
+
+                    <div className="stakeholder-item">
+                      <div className="stakeholder-name">
+                        경영진 Top3
+                      </div>
+
+                      <div className="stakeholder-topics">
+                        기후변화 대응,
+                        기업가치 제고,
+                        리스크 관리
+                      </div>
+
+                      <p className="stakeholder-desc">
+                        경영진은 중장기 가치
+                        창출과 리스크 관리에
+                        집중하고 있습니다.
+                      </p>
+                    </div>
+
+                    <div className="stakeholder-item">
+                      <div className="stakeholder-name">
+                        외부 Top3
+                      </div>
+
+                      <div className="stakeholder-topics">
+                        기후변화 대응,
+                        공급망 ESG 관리,
+                        정보공개
+                      </div>
+
+                      <p className="stakeholder-desc">
+                        외부 이해관계자는
+                        공급망 ESG와
+                        투명성에 높은 관심을
+                        보였습니다.
+                      </p>
+                    </div>
+
                   </div>
                 </div>
 
-                <div className="summary-card">
-                  <span className="label">
-                    💰 Financial
-                    Materiality
-                  </span>
-
-                  <div className="score-flex">
-                    <span
-                      className="value"
-                      style={{
-                        color: "#334155",
-                      }}
-                    >
-                      74.2
-                      <span> / 100점</span>
-                    </span>
-
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        color: "#64748b",
-                        fontWeight: 700,
-                      }}
-                    >
-                      [중기 리스크 관리 대상]
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* ESG 유형 결과 */}
-              <div className="type-result-box">
-                <div className="type-title">
-                  📋 설문 유형별 종합 결과
-                  <span>
-                    (5점 만점 환산 산출)
-                  </span>
-                </div>
-
-                <div className="type-grid">
-                  <div className="type-mini-card">
-                    <span>
-                      Environment (환경)
-                    </span>
-
-                    <strong>
-                      4.25 / 5.0
-                    </strong>
-                  </div>
-
-                  <div className="type-mini-card">
-                    <span>Social (사회)</span>
-
-                    <strong>
-                      3.91 / 5.0
-                    </strong>
-                  </div>
-
-                  <div className="type-mini-card">
-                    <span>
-                      Governance (지배구조)
-                    </span>
-
-                    <strong>
-                      4.55 / 5.0
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* 핵심 이슈 */}
-              <div className="issue-list-box">
-                <div className="issue-item">
-                  <span>
-                    탄소 배출 저감 및 기후변화 대응
-                    전략 수립 지표
-                  </span>
-
-                  <span className="badge-risk">
-                    Impact 핵심
-                  </span>
-                </div>
-
-                <div className="issue-item">
-                  <span>
-                    글로벌 공급망 ESG 평가 및
-                    리스크 관리 체계 고도화
-                  </span>
-
-                  <span className="badge-risk">
-                    Financial 위험
-                  </span>
-                </div>
-
-                <div className="issue-item">
-                  <span>
-                    사내 안전 보건 관리 감독 및
-                    직무 환경 만족도 개선
-                  </span>
-
-                  <span>일반 지표</span>
-                </div>
               </div>
             </div>
           )}

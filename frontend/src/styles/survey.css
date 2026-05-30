@@ -25,6 +25,41 @@
     /* Layout */ 
     --survey-header-height: 60px; 
     --survey-dashboard-collapsed: 45px; 
+    /* 전체 스크롤바 */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+/* 스크롤바 배경 */
+::-webkit-scrollbar-track {
+    border-radius: 999px;
+}
+
+/* 스크롤바 핸들 */
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(
+        180deg,
+        #03A94D,
+        #017E3F
+    );
+    border-radius: 999px;
+    border: 2px solid #f1f5f9;
+}
+
+/* 마우스 오버 */
+::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(
+        180deg,
+        #02c259,
+        #016d36
+    );
+}
+
+/* 코너 */
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
 }
 .input-card {
     flex: 1;
@@ -50,6 +85,10 @@
     height: calc(100vh - 60px);
 
     overflow: hidden;
+}
+.survey-view-container.showing-result {
+    align-items: stretch;
+    justify-content: flex-start;
 }
 .survey-header {
     flex-shrink: 0;
@@ -785,7 +824,9 @@
 /* ==========================================
    패널 헤더
 ========================================== */
-
+.survey-result-layout .survey-panel {
+    overflow: visible;
+}
 .panel-header-row {
   display: flex;
   justify-content: space-between;
@@ -835,7 +876,18 @@
   color: #64748b;
   line-height: 1.5;
 }
-
+.survey-result-layout {
+    width: 100%;
+    flex-shrink: 0;
+    
+    display: flex;
+    flex-direction: column;
+}
+.survey-main-img {
+    width: auto;
+    max-height: 140px;
+    object-fit: contain;
+}
 /* ==========================================
    Responsive
 ========================================== */

@@ -1,233 +1,167 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import "@styles/survey.css";
-// import "@styles/sr.css";
 
 import robot from "@assets/images/robot/robot_servey_t.png";
-
 import {
   showDefaultAlert,
   showConfirmAlert,
 } from "@components/UI/ServiceAlert";
 
-const TOP_ISSUES = [
+import { GET, POST } from "@utils/Network";
+
+const IS_DUMMY = true;
+
+/* =========================
+   DUMMY DATA LAYER
+========================= */
+
+const DUMMY_TOP_ISSUES = [
   {
     rank: 1,
     name: "기후변화 대응",
     totalImpact: 4.82,
     totalFin: 4.51,
-
     empImpact: 4.91,
     empFin: 4.43,
-
     execImpact: 4.77,
     execFin: 4.88,
-
     extImpact: 4.69,
     extFin: 4.21,
   },
-
   {
     rank: 2,
     name: "공급망 ESG 관리",
     totalImpact: 4.63,
     totalFin: 4.72,
-
     empImpact: 4.34,
     empFin: 4.51,
-
     execImpact: 4.71,
     execFin: 4.83,
-
     extImpact: 4.84,
     extFin: 4.82,
   },
-
   {
     rank: 3,
     name: "안전보건 관리",
     totalImpact: 4.55,
     totalFin: 4.12,
-
     empImpact: 4.87,
     empFin: 4.01,
-
     execImpact: 4.32,
     execFin: 4.28,
-
     extImpact: 4.21,
     extFin: 4.05,
   },
 ];
-const SURVEY_RESULT = {
-  kpi: {
-    emp: 124,
-    exec: 18,
-    ext: 45,
-  },
 
+const DUMMY_SURVEY_RESULT = {
+  kpi: { emp: 124, exec: 18, ext: 45 },
   stakeholder: {
     emp: {
-      top3: [
-        "기후변화 대응",
-        "안전보건 관리",
-        "인적자본 개발",
-      ],
-      desc:
-        "임직원은 환경 대응과 안전, 인적 성장에 높은 관심을 보였습니다.",
+      top3: ["기후변화 대응", "안전보건 관리", "인적자본 개발"],
+      desc: "임직원은 환경 대응과 안전, 인적 성장에 높은 관심을 보였습니다.",
     },
-
     exec: {
-      top3: [
-        "기후변화 대응",
-        "기업가치 제고",
-        "리스크 관리",
-      ],
-      desc:
-        "경영진은 중장기 가치 창출과 리스크 관리에 집중하고 있습니다.",
+      top3: ["기후변화 대응", "기업가치 제고", "리스크 관리"],
+      desc: "경영진은 중장기 가치 창출과 리스크 관리에 집중하고 있습니다.",
     },
-
     ext: {
-      top3: [
-        "기후변화 대응",
-        "공급망 ESG 관리",
-        "투명한 정보 공개",
-      ],
-      desc:
-        "외부 이해관계자는 공급망 ESG와 투명성에 높은 관심을 보였습니다.",
+      top3: ["기후변화 대응", "공급망 ESG 관리", "투명한 정보 공개"],
+      desc: "외부 이해관계자는 공급망 ESG와 투명성에 높은 관심을 보였습니다.",
     },
   },
-
-  issues: TOP_ISSUES,
+  issues: DUMMY_TOP_ISSUES,
 };
 
-/**
- * 이해관계자 설문 페이지
- *
- * 주요 기능
- * 1. 설문 URL 복사
- * 2. KPI 목표 인원 입력
- * 3. 실시간 통계 집계 시뮬레이션
- * 4. AI 설문 분석 진행
- * 5. 단계별(step) 페이지 이동
- */
+const DUMMY_URLS = {
+  emp: "https://forms.gle/emp_sample_skm",
+  exec: "https://forms.gle/exec_sample_skm",
+  ext: "https://forms.gle/ext_sample_skm",
+};
+
+const DUMMY_SUMMARY =
+  "AI 응답 데이터 동기화가 완료되었습니다. 외부이해관계자 그룹의 참여율이 상대적으로 낮아 추가 독려가 필요합니다.";
+
+/* =========================
+   MAIN COMPONENT
+========================= */
+
 const Survey = () => {
   const navigate = useNavigate();
+  const particleRef = useRef(null);
 
-  /**
-   * 현재 페이지 Step Index
-   * benchmarking: 0
-   * media: 1
-   * survey: 2
-   */
   const activeIndex = 2;
 
-  /**
-   * ESG 보고서 생성 프로세스 Step 정의
-   */
   const steps = [
-    {
-      id: 1,
-      title: "벤치마킹 분석",
-      icon: "🎯",
-      path: "/benchmk",
-    },
-    {
-      id: 2,
-      title: "미디어 분석",
-      icon: "📺",
-      path: "/media",
-    },
-    {
-      id: 3,
-      title: "이해관계자 설문",
-      icon: "👥",
-      path: "/survey",
-    },
-    {
-      id: 4,
-      title: "전체 결과",
-      icon: "📊",
-      path: "/result",
-    },
-    {
-      id: 5,
-      title: "보고서 초안",
-      icon: "📄",
-      path: "/draft",
-    },
+    { id: 1, title: "벤치마킹 분석", icon: "🎯", path: "/benchmk" },
+    { id: 2, title: "미디어 분석", icon: "📺", path: "/media" },
+    { id: 3, title: "이해관계자 설문", icon: "👥", path: "/survey" },
+    { id: 4, title: "전체 결과", icon: "📊", path: "/result" },
+    { id: 5, title: "보고서 초안", icon: "📄", path: "/draft" },
   ];
 
-  /**
-   * KPI 입력값 상태
-   */
+  /* =========================
+     STATE
+  ========================= */
+
   const [kpiData, setKpiData] = useState({
     emp: 150,
     exec: 20,
     ext: 80,
   });
 
-  /**
-   * 실시간 집계 결과 상태
-   */
-  const [liveData, setLiveData] = useState({
-    emp: 0,
-    exec: 0,
-    ext: 0,
-  });
+  const [surveyUrls, setSurveyUrls] = useState(DUMMY_URLS);
+  const [liveData, setLiveData] = useState({ emp: 0, exec: 0, ext: 0 });
+  const [topIssues, setTopIssues] = useState([]);
+  const [surveyResult, setSurveyResult] = useState(null);
 
-  /**
-   * 진행률 상태
-   */
   const [progress, setProgress] = useState(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [dashboardOpen, setDashboardOpen] = useState(false);
+  const [showResult, setShowResult] = useState(false);
+  const [aggregationDone, setAggregationDone] = useState(false);
+  const [summaryText, setSummaryText] = useState(DUMMY_SUMMARY);
 
-  /**
-   * AI 분석 진행 상태
-   */
-  const [isAnalyzing, setIsAnalyzing] =
-    useState(false);
+  /* =========================
+     API LAYER
+  ========================= */
 
-  /**
-   * 대시보드 열림 상태
-   */
-  const [dashboardOpen, setDashboardOpen] =
-    useState(false);
+  const api = {
+    getLiveKpi: async () => {
+      if (IS_DUMMY) return { emp: 124, exec: 18, ext: 45 };
+      return await GET("/survey/kpi/live");
+    },
 
-  /**
-   * 결과 표시 상태
-   */
-  const [showResult, setShowResult] =
-    useState(false);
+    getSurveyUrls: async () => {
+      if (IS_DUMMY) return DUMMY_URLS;
+      return await GET("/survey/urls");
+    },
 
-  /**
-   * KPI 집계 완료 여부
-   */
-  const [aggregationDone, setAggregationDone] =
-    useState(false);
+    getTopIssues: async () => {
+      if (IS_DUMMY) return DUMMY_TOP_ISSUES;
+      return await GET("/survey/issues");
+    },
 
-  /**
-   * 실시간 요약 메시지
-   */
-  const [summaryText, setSummaryText] =
-    useState(
-      "하단의 '실시간 통계 집계' 버튼을 누르면 연동 데이터 파싱 결과 요약이 표시됩니다."
-    );
+    getSurveyResult: async () => {
+      if (IS_DUMMY) return DUMMY_SURVEY_RESULT;
+      return await GET("/survey/result");
+    },
 
-  /**
-   * 파티클 DOM Ref
-   */
-  const particleRef = useRef(null);
+    runSurveyAnalysis: async () => {
+      if (IS_DUMMY) return { success: true };
+      return await POST("/survey/analyze");
+    },
+  };
 
-  /**
-   * 최초 마운트 시 파티클 생성
-   */
+  /* =========================
+     EFFECTS
+  ========================= */
+
   useEffect(() => {
     createParticles();
   }, []);
 
-  /**
-   * AI 분석 진행 시 Progress 증가
-   */
   useEffect(() => {
     let interval;
 
@@ -236,13 +170,10 @@ const Survey = () => {
         setProgress((prev) => {
           if (prev >= 100) {
             clearInterval(interval);
-
             setIsAnalyzing(false);
             setShowResult(true);
-
             return 100;
           }
-
           return prev + 2;
         });
       }, 30);
@@ -251,52 +182,32 @@ const Survey = () => {
     return () => clearInterval(interval);
   }, [isAnalyzing]);
 
-  /**
-   * 배경 파티클 생성 함수
-   */
+  /* =========================
+     FUNCTIONS
+  ========================= */
+
   const createParticles = () => {
     if (!particleRef.current) return;
 
     particleRef.current.innerHTML = "";
 
     for (let i = 0; i < 12; i++) {
-      const particle =
-        document.createElement("div");
-
-      particle.className = "particle";
+      const p = document.createElement("div");
+      p.className = "particle";
 
       const size = Math.random() * 5 + 3;
+      p.style.width = `${size}px`;
+      p.style.height = `${size}px`;
+      p.style.left = `${Math.random() * 100}%`;
+      p.style.top = `${Math.random() * 100}%`;
+      p.style.animationDelay = `${Math.random() * 2}s`;
 
-      particle.style.width = `${size}px`;
-      particle.style.height = `${size}px`;
-
-      particle.style.left = `${Math.random() * 100
-        }%`;
-
-      particle.style.top = `${Math.random() * 100
-        }%`;
-
-      particle.style.animationDelay = `${Math.random() * 2
-        }s`;
-
-      particleRef.current.appendChild(particle);
+      particleRef.current.appendChild(p);
     }
   };
-
-  /**
-   * Step 클릭 이동 함수
-   */
-  const moveStep = (index) => {
-    if (isAnalyzing) return;
-
-    if (index === activeIndex) return;
-
-    navigate(steps[index].path);
+  const toggleDashboard = () => {
+    setDashboardOpen((prev) => !prev);
   };
-
-  /**
-   * KPI 값 변경 함수
-   */
   const handleKpiChange = (type, value) => {
     setKpiData((prev) => ({
       ...prev,
@@ -304,107 +215,76 @@ const Survey = () => {
     }));
   };
 
-  /**
-   * URL 복사 함수
-   */
   const copyUrl = async (url) => {
     try {
       await navigator.clipboard.writeText(url);
-
-      showDefaultAlert(
-        "복사 완료",
-        "설문 주소가 클립보드에 복사되었습니다.",
-        "success"
-      );
-    } catch (error) {
-      showDefaultAlert(
-        "복사 실패",
-        "클립보드 복사 중 문제가 발생했습니다.",
-        "error"
-      );
+      showDefaultAlert("복사 완료", "클립보드 복사 완료", "success");
+    } catch {
+      showDefaultAlert("복사 실패", "오류 발생", "error");
     }
   };
 
-  /**
-   * 실시간 KPI 집계 실행
-   *
-   * 실제 서비스에서는
-   * Google Sheet / DB / API 응답값 등을
-   * 기반으로 실시간 집계 가능
-   */
   const runLiveKpiAggregation = async () => {
-    setLiveData({
-      emp: 124,
-      exec: 18,
-      ext: 45,
-    });
-
+    const data = await api.getLiveKpi();
+    setLiveData(data);
     setAggregationDone(true);
 
     setSummaryText(
-      "AI 응답 데이터 동기화가 완료되었습니다. 외부이해관계자 그룹의 참여율이 상대적으로 낮아 추가 독려가 필요합니다."
+      IS_DUMMY
+        ? DUMMY_SUMMARY
+        : "AI 분석 결과 업데이트 완료"
     );
 
     await showDefaultAlert(
-      "실시간 집계 완료",
-      "우측 KPI 패널 데이터가 최신 상태로 업데이트되었습니다.",
+      "완료",
+      "KPI 업데이트 완료",
       "success"
     );
   };
 
-  /**
-   * AI 설문 분석 실행
-   */
   const runSurveyAnalysis = async () => {
     if (isAnalyzing) return;
-
-    /**
-     * KPI 집계 미실행 상태 방지
-     */
     if (!aggregationDone) {
-      showDefaultAlert(
-        "집계 필요",
-        "실시간 통계 집계를 먼저 실행해주세요.",
-        "warning"
-      );
-
+      showDefaultAlert("필요", "집계 먼저 실행", "warning");
       return;
     }
 
-    const confirmed =
-      await showConfirmAlert(
-        "설문 결과 분석",
-        "AI 기반 이중 중대성 분석을 시작하시겠습니까?",
-        "question"
-      );
+    const confirmed = await showConfirmAlert(
+      "분석 실행",
+      "AI 분석을 시작할까요?",
+      "question"
+    );
 
     if (!confirmed) return;
 
     setDashboardOpen(true);
-
     setShowResult(false);
-
     setProgress(0);
-
     setIsAnalyzing(true);
+
+    const [result, issues, urls] = await Promise.all([
+      api.getSurveyResult(),
+      api.getTopIssues(),
+      api.getSurveyUrls(),
+    ]);
+
+    setSurveyResult(result);
+    setTopIssues(issues);
+    setSurveyUrls(urls);
+
+    await api.runSurveyAnalysis();
   };
 
-  /**
-   * 대시보드 토글
-   */
-  const toggleDashboard = () => {
-    setDashboardOpen((prev) => !prev);
+  const moveStep = (index) => {
+    if (isAnalyzing) return;
+    if (index === activeIndex) return;
+    navigate(steps[index].path);
   };
 
-  /**
-   * 퍼센트 계산 함수
-   */
   const getPercent = (current, total) => {
     if (!total) return 0;
-
     return ((current / total) * 100).toFixed(1);
   };
-
   return (
     <div className="survey-container">
       {/* =========================================================
@@ -429,8 +309,8 @@ const Survey = () => {
             >
               <div
                 className={`step-box ${index === activeIndex
-                    ? "active"
-                    : ""
+                  ? "active"
+                  : ""
                   }`}
                 onClick={() => moveStep(index)}
               >
@@ -498,12 +378,13 @@ const Survey = () => {
                 <div className="survey-group-list">
                   {/* 임직원 */}
                   <div className="survey-row-box">
+
                     <label>임직원</label>
 
                     <div className="url-input-line">
                       <input
                         type="text"
-                        value="https://forms.gle/emp_sample_skm"
+                        value={surveyUrls.emp || ""}
                         readOnly
                       />
 
@@ -546,7 +427,7 @@ const Survey = () => {
                     <div className="url-input-line">
                       <input
                         type="text"
-                        value="https://forms.gle/exec_sample_skm"
+                        value={surveyUrls.exec || ""}
                         readOnly
                       />
 
@@ -589,7 +470,7 @@ const Survey = () => {
                     <div className="url-input-line">
                       <input
                         type="text"
-                        value="https://forms.gle/ext_sample_skm"
+                        value={surveyUrls.ext || ""}
                         readOnly
                       />
 
@@ -818,17 +699,11 @@ const Survey = () => {
             Robot View
         ====================================================== */}
         <div
-            className={`survey-view-container
+          className={`survey-view-container
               ${isAnalyzing ? "analyzing" : ""}
               ${showResult ? "showing-result" : ""}
             `}
-          >
-          {/* Particle */}
-          <div
-            className="particle-field"
-            ref={particleRef}
-          ></div>
-
+        >
           {/* =================================================
               Loading Content
           ================================================== */}
@@ -913,7 +788,14 @@ const Survey = () => {
               {/* KPI 카드 영역 */}
               <div className="survey-kpi-grid">
                 <div className="survey-kpi-card">
-                  <div className="stat-label">임직원 응답</div>
+                  <div className="stat-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22"
+                      height="22" viewBox="0 0 24 24" fill="none" stroke="#03A94D"
+                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                    </svg>
+                    임직원 응답</div>
 
                   <div className="stat-value">
                     {liveData.emp}명
@@ -944,6 +826,14 @@ const Survey = () => {
 
                 <div className="survey-kpi-card">
                   <div className="stat-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+                      viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2"
+                      strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="2" y="7" width="20" height="14" rx="2" />
+                      <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                      <line x1="12" y1="12" x2="12" y2="16" />
+                      <line x1="10" y1="14" x2="14" y2="14" />
+                    </svg>
                     경영진 응답
                   </div>
 
@@ -976,6 +866,15 @@ const Survey = () => {
 
                 <div className="survey-kpi-card">
                   <div className="stat-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22"
+                      height="22" viewBox="0 0 24 24" fill="none" stroke="#03A94D"
+                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="2" y1="12" x2="22" y2="12" />
+                      <path
+                        d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                    </svg>
+
                     외부 응답
                   </div>
 
@@ -1008,6 +907,12 @@ const Survey = () => {
 
                 <div className="survey-kpi-card">
                   <div className="stat-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"
+                      viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2"
+                      strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
+                      <path d="M22 12A10 10 0 0 0 12 2v10z" />
+                    </svg>
                     전체 응답률
                   </div>
 
@@ -1041,11 +946,11 @@ const Survey = () => {
                       className="kpi-bar-fill"
                       style={{
                         width: `${((liveData.emp +
-                            liveData.exec +
-                            liveData.ext) /
-                            (kpiData.emp +
-                              kpiData.exec +
-                              kpiData.ext)) *
+                          liveData.exec +
+                          liveData.ext) /
+                          (kpiData.emp +
+                            kpiData.exec +
+                            kpiData.ext)) *
                           100
                           }%`,
                       }}
@@ -1059,7 +964,18 @@ const Survey = () => {
 
                 {/* Top 이슈 */}
                 <div className="survey-panel">
+
                   <div className="panel-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                      viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2"
+                      style={{
+                        verticalAlign: "middle",
+                        marginRight: "4px"
+                      }}>
+                      <line x1="18" y1="20" x2="18" y2="10" />
+                      <line x1="12" y1="20" x2="12" y2="4" />
+                      <line x1="6" y1="20" x2="6" y2="14" />
+                    </svg>
                     설문 Top 이슈 점수
                   </div>
 
@@ -1098,7 +1014,7 @@ const Survey = () => {
                     </thead>
 
                     <tbody>
-                      {TOP_ISSUES.map((issue) => (
+                      {(surveyResult?.issues || []).map((issue) => (
                         <tr key={issue.rank}>
                           <td>{issue.rank}</td>
                           <td>{issue.name}</td>
@@ -1135,64 +1051,77 @@ const Survey = () => {
                 {/* 이해관계자별 관점 */}
                 <div className="survey-panel">
                   <div className="panel-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                      viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2"
+                      style={{
+                        verticalAlign: "middle",
+                        marginRight: "4px"
+                      }}>
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
                     이해관계자 그룹별 관점 차이
                   </div>
 
                   <div className="stakeholder-group-list">
 
                     <div className="stakeholder-item">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                        viewBox="0 0 24 24" fill="none" stroke="#03A94D"
+                        strokeWidth="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                      </svg>
                       <div className="stakeholder-name">
+
                         임직원 Top3
                       </div>
 
                       <div className="stakeholder-topics">
-                        기후변화 대응,
-                        안전보건 관리,
-                        인적자본 개발
+                        {surveyResult?.stakeholder?.emp?.top3?.join(", ")}
                       </div>
 
-                      <p className="stakeholder-desc">
-                        임직원은 환경 대응과
-                        안전, 인적 성장에
-                        높은 관심을 보였습니다.
-                      </p>
+                      <p>{surveyResult?.stakeholder?.emp?.desc}</p>
                     </div>
 
                     <div className="stakeholder-item">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                        viewBox="0 0 24 24" fill="none" stroke="#03A94D"
+                        strokeWidth="2">
+                        <rect x="2" y="7" width="20" height="14" rx="2" />
+                        <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2" />
+                      </svg>
                       <div className="stakeholder-name">
                         경영진 Top3
                       </div>
 
                       <div className="stakeholder-topics">
-                        기후변화 대응,
-                        기업가치 제고,
-                        리스크 관리
+                        {surveyResult?.stakeholder?.exec?.top3?.join(", ")}
                       </div>
 
-                      <p className="stakeholder-desc">
-                        경영진은 중장기 가치
-                        창출과 리스크 관리에
-                        집중하고 있습니다.
-                      </p>
+                      <p>{surveyResult?.stakeholder?.exec?.desc}</p>
                     </div>
 
                     <div className="stakeholder-item">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                        viewBox="0 0 24 24" fill="none" stroke="#03A94D"
+                        strokeWidth="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="2" y1="12" x2="22" y2="12" />
+                        <path
+                          d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                      </svg>
                       <div className="stakeholder-name">
                         외부 Top3
                       </div>
 
                       <div className="stakeholder-topics">
-                        기후변화 대응,
-                        공급망 ESG 관리,
-                        정보공개
+                        {surveyResult?.stakeholder?.ext?.top3?.join(", ")}
                       </div>
 
-                      <p className="stakeholder-desc">
-                        외부 이해관계자는
-                        공급망 ESG와
-                        투명성에 높은 관심을
-                        보였습니다.
-                      </p>
+                      <p>{surveyResult?.stakeholder?.ext?.desc}</p>
                     </div>
 
                   </div>

@@ -51,7 +51,7 @@ async def startWorkflowRoute(
 ):
     try:
         checkScope(request.companyId, userModel)
-        return startWorkflow(request)
+        return startWorkflow(request, _userId(userModel))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except HTTPException:
@@ -83,3 +83,9 @@ async def getG0StatusRoute(runId: int, userModel=Depends(requireUser)):
 
 
 __all__ = ["reportWorkflowRouter"]
+
+
+def _userId(userModel):
+    if isinstance(userModel, dict):
+        return userModel.get("id")
+    return getattr(userModel, "id", None)

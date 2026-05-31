@@ -1120,3 +1120,22 @@
     grid-template-columns: 1fr;
   }
 } 
+
+
+#table-card:focus,
+#table-card:focus-visible,
+#table-card table:focus,
+#table-card table:focus-visible,
+.result-table:focus,
+.result-table:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.matrix-card:focus,
+.matrix-card:focus-visible,
+.matrix-card .recharts-wrapper:focus,
+.matrix-card .recharts-surface:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}

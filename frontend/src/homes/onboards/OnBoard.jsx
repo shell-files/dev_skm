@@ -19,7 +19,68 @@ const isApiFailed = (res) =>
   res?.status === false || res?.success === false || !res?.data;
 
 /* ─── inputFormat → 유형 badge (G0 DTO에 inputFormat이 있을 때만 표시) ─── */
+const STRUCTURED_LOOKUP_IDS = new Set(["G0-05__QL0002", "G0-06__QL0001"]);
+const EDITABLE_INPUT_MODES = new Set(["MANUAL_NUMBER", "MANUAL_TEXTAREA", "YEAR_RANGE"]);
+
+const resolveG0InputMode = (item = {}) => {
+  if (item.inputMode) return item.inputMode;
+
+  const atomicMetricId = item.atomicMetricId || "";
+  const dataValueType = String(item.dataValueType || "").trim().toUpperCase();
+
+  if (
+    item.editableYn === false ||
+    item.atomicDataRole === "DERIVED" ||
+    item.rollupRole === "consolidated_result" ||
+    /^G0-02__G\d+/.test(atomicMetricId) ||
+    atomicMetricId === "G0-03__G0001"
+  ) {
+    return "ROLLUP_READONLY";
+  }
+
+  if (STRUCTURED_LOOKUP_IDS.has(atomicMetricId)) {
+    return "STRUCTURED_LOOKUP";
+  }
+
+  if (atomicMetricId === "G0-05__QL0001") {
+    return "YEAR_RANGE";
+  }
+
+  if (
+    /^G0-02__Q\d+/.test(atomicMetricId) ||
+    /^G0-03__Q\d+/.test(atomicMetricId) ||
+    dataValueType === "QUANT" ||
+    dataValueType === "NUMBER" ||
+    dataValueType === "NUMERIC" ||
+    item.dataValueType === "정량"
+  ) {
+    return "MANUAL_NUMBER";
+  }
+
+  return "MANUAL_TEXTAREA";
+};
+
+const isEditableItem = (item) => EDITABLE_INPUT_MODES.has(resolveG0InputMode(item));
+
 const getInputTypeBadge = (item) => {
+  const mode = resolveG0InputMode(item);
+  if (mode) {
+    switch (mode) {
+      case "MANUAL_NUMBER":
+        return { label: "숫자 입력", cls: "direct" };
+      case "MANUAL_TEXTAREA":
+        return { label: "서술 입력", cls: "narrative" };
+      case "YEAR_RANGE":
+        return { label: "기간 입력", cls: "direct" };
+      case "STRUCTURED_LOOKUP":
+        return { label: "범위 설정", cls: "reference" };
+      case "ROLLUP_READONLY":
+        return { label: "자동 집계", cls: "reference" };
+      default:
+        return { label: mode, cls: "" };
+    }
+  }
+
   const fmt = item.inputFormat;
   if (!fmt) return { label: "-", cls: "" };
 
@@ -172,6 +233,7 @@ const OnBoard = () => {
   let notStartedCount = 0;
 
   g0Items.forEach((item) => {
+    if (!isEditableItem(item)) return;
     const hasValue =
       (item.valueText !== null && item.valueText !== undefined && item.valueText !== "") ||
       (item.valueNumeric !== null && item.valueNumeric !== undefined);
@@ -205,21 +267,24 @@ const OnBoard = () => {
     try {
       const payload = {
         reportingYear: DEFAULT_REPORTING_YEAR,
-        items: selectedItem.metrics.map((item) => {
-          const rawValue = values[item.atomicMetricId] ?? "";
-          const trimmed = String(rawValue).trim();
-          const numericYn =
-            trimmed !== "" &&
-            /^-?\d+(\.\d+)?$/.test(trimmed);
+        items: selectedItem.metrics
+          .filter((item) => isEditableItem(item))
+          .map((item) => {
+            const rawValue = values[item.atomicMetricId] ?? "";
+            const trimmed = String(rawValue).trim();
+            const numericYn =
+              resolveG0InputMode(item) === "MANUAL_NUMBER" &&
+              trimmed !== "" &&
+              /^-?\d+(\.\d+)?$/.test(trimmed);
 
-          return {
-            metricId: item.metricId,
-            atomicMetricId: item.atomicMetricId,
-            valueText: numericYn ? null : trimmed || null,
-            valueNumeric: numericYn ? Number(trimmed) : null,
-            unit: item.unit || null,
-          };
-        }),
+            return {
+              metricId: item.metricId,
+              atomicMetricId: item.atomicMetricId,
+              valueText: numericYn ? null : trimmed || null,
+              valueNumeric: numericYn ? Number(trimmed) : null,
+              unit: item.unit || null,
+            };
+          }),
       };
 
       const res = await saveG0Profile(companyId, payload);
@@ -411,22 +476,27 @@ const OnBoard = () => {
                     // Determine status based on subMetrics
                     let allCompleted = true;
                     let anyCompleted = false;
+                    const statusTargets = subMetrics.filter((sub) => isEditableItem(sub));
                     
-                    subMetrics.forEach(sub => {
+                    statusTargets.forEach(sub => {
                       const hasValue = (sub.valueText !== null && sub.valueText !== undefined && sub.valueText !== "") ||
                                        (sub.valueNumeric !== null && sub.valueNumeric !== undefined);
                       if (hasValue) anyCompleted = true;
                       else allCompleted = false;
                     });
                     
-                    const statusInfo = allCompleted && subMetrics.length > 0
+                    const statusInfo = statusTargets.length === 0
+                      ? { label: "조회/설정", cls: "draft" }
+                      : allCompleted && statusTargets.length > 0
                       ? { label: "입력 완료", cls: "approved" }
                       : anyCompleted 
                         ? { label: "진행중", cls: "draft" }
                         : { label: "미입력", cls: "not-started" };
 
                     // Find if any sub metric has a distinct input format
-                    const typeBadge = getInputTypeBadge(subMetrics[0] || item);
+                    const typeBadge = getInputTypeBadge(
+                      subMetrics.find((sub) => isEditableItem(sub)) || subMetrics[0] || item
+                    );
 
                     return (
                       <tr key={item.metricId}>

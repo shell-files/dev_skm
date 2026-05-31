@@ -41,9 +41,7 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
       const items = res.data.items || res.data || [];
       setSubsidiaries(items);
       setSelectedIds(
-        items
-          .filter((item) => item.status !== "COMPLETED")
-          .map((item) => item.companyId)
+        items.map((item) => item.companyId)
       );
     } catch (err) {
       console.error(err);
@@ -168,7 +166,6 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
                       type="checkbox"
                       checked={selectedIds.includes(sub.companyId)}
                       onChange={() => handleToggle(sub.companyId)}
-                      disabled={sub.status === "COMPLETED"}
                     />
                     <span style={{ fontWeight: 500 }}>
                       {sub.companyName}
@@ -180,21 +177,8 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
                     )}
                   </label>
                   <div style={{ textAlign: "right", fontSize: "0.8rem" }}>
-                    <span
-                      style={{
-                        color:
-                          sub.status === "COMPLETED"
-                            ? "#16a34a"
-                            : sub.status === "IN_PROGRESS"
-                              ? "#2563eb"
-                              : "#64748b",
-                      }}
-                    >
-                      {sub.status === "COMPLETED"
-                        ? "완료"
-                        : sub.status === "IN_PROGRESS"
-                          ? "수집중"
-                          : "대기"}
+                    <span style={{ color: "#2563eb" }}>
+                      요청 대상
                     </span>
                   </div>
                 </li>

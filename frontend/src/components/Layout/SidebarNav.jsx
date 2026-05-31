@@ -173,7 +173,8 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
         try {
             const res = await getCurrent(companyId, DEFAULT_REPORTING_YEAR);
-            if (res?.status === false) {
+            const isFailed = res?.status === false || res?.success === false || !res?.data;
+            if (isFailed) {
                 showDefaultAlert("오류", res.error?.message || "보고서 워크플로우 조회에 실패했습니다.", "error");
                 return;
             }

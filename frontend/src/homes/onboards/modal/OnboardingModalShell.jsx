@@ -18,7 +18,6 @@ export default function OnboardingModalShell({
 }) {
   const [atomicValues, setAtomicValues] = useState({});
   const [atomicFiles, setAtomicFiles] = useState({});
-  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!metricItem || !subMetrics) return;
@@ -74,18 +73,6 @@ export default function OnboardingModalShell({
 
   const handleFileChange = (atomicMetricId, file) => {
     setAtomicFiles((prev) => ({ ...prev, [atomicMetricId]: file }));
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleEvidenceFileChange = (event) => {
-    const file = event.target.files[0];
-    if (file && subMetrics && subMetrics.length > 0 && subMetrics[0].atomicMetricId) {
-      handleFileChange(subMetrics[0].atomicMetricId, file);
-    }
-    event.target.value = null;
   };
 
   const handleSaveDraft = () => {
@@ -201,14 +188,8 @@ export default function OnboardingModalShell({
     return (
       <div className="ob-side-card">
         <h4>증빙 자료 (Evidence)</h4>
-        <input
-          type="file"
-          style={{ display: 'none' }}
-          ref={fileInputRef}
-          onChange={handleEvidenceFileChange}
-        />
-        <div className="ob-file-upload-btn" onClick={handleUploadClick}>
-          + 파일 업로드 또는 링크 추가
+        <div className="ob-file-upload-btn" onClick={() => {}} style={{ opacity: 0.5, cursor: "not-allowed" }} title="증빙 API 연결 후 활성화">
+          + 파일 업로드 또는 링크 추가 (준비중)
         </div>
 
         {uploadedFiles.length > 0 && (
@@ -290,10 +271,10 @@ export default function OnboardingModalShell({
       <button type="button" className="ob-btn ob-btn-secondary" onClick={onClose}>
         취소
       </button>
-      <button type="button" className="ob-btn ob-btn-secondary" onClick={handleSaveDraft}>
+      <button type="button" className="ob-btn ob-btn-primary" onClick={handleSaveDraft}>
         임시저장
       </button>
-      <button type="button" className="ob-btn ob-btn-primary" onClick={handleSubmit}>
+      <button type="button" className="ob-btn ob-btn-primary" style={{ opacity: 0.5, cursor: "not-allowed" }} disabled title="승인 API 연결 후 활성화">
         데이터 최종 제출
       </button>
     </div>

@@ -33,6 +33,14 @@ def validateToken(currentUuid: str):
             if userRecord is None :
                 return ResponseModel(False, "로그인 정보가 만료되었습니다.")
 
+            companyRedis = getCompanyRedis(currentUuid)
+            if (
+                not companyRedis
+                or companyRedis.get("status") is not True
+                or companyRedis.get("companyId") is None
+            ):
+                return ResponseModel(False, "선택 회사 정보를 찾을 수 없습니다.")
+
             # 새로운 액세스 토큰 및 UUID 생성
             newAccessToken, newUuid, user_id = refreshAccessToken(userRecord['refresh_token'])
             # DB 업데이트: TOKEN 테이블의 uuid 수정
@@ -42,11 +50,8 @@ def validateToken(currentUuid: str):
             # Redis 업데이트: 구 UUID 삭제 후 신규 등록
             delTokenRedis(currentUuid)
             setTokenRedis(newUuid, newAccessToken)
-            companyRedis = getCompanyRedis(currentUuid)
-            if companyRedis is None:
-                return ResponseModel(False, "Redis 오류 발생")
             delCompanyRedis(currentUuid)
-            setCompanyRedis(newUuid, int(companyRedis.get("companyId")))
+            setCompanyRedis(newUuid, int(companyRedis["companyId"]))
 
             return ResponseModel(True, "성공적으로 조회하였습니다.", {"uuid": newUuid} )
 
@@ -56,4 +61,3 @@ def validateToken(currentUuid: str):
     except Exception as e:
         print(f"Auth Module Error: {e}")
         return ResponseModel(False, "오류 발생")
-    

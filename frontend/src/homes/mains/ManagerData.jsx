@@ -6,7 +6,6 @@ import TabButton from '@components/UI/TabButton';
 import { showDefaultAlert, showConfirmAlert } from '@components/UI/ServiceAlert';
 import { useAuth } from '@hooks/AuthContext'
 import INITIAL_METRICS from '@assets/data/onboardingData';
-import ServiceTabs from '@components/UI/ServiceTabs';
 
 /**
  * [CONFIG]
@@ -378,7 +377,16 @@ const ManagerData = () => {
     <div id="manager_page">
       <div className="manager-content-container">
 
-        {/* 1. KPI 영역 */}
+        
+
+        {/* 2. 헤더 및 탭 */}
+        <div className="page-header">
+          <div className="page-title-area">
+            <h2 className="page-title">ESG 통합 관리 시스템</h2>
+            
+          </div>
+        </div>
+      {/* 1. KPI 영역 */}
         <div className='kpi-container'>
           {[
             { key: 'APPROVED', label: '승인 완료', count: kpi.approved },
@@ -396,34 +404,6 @@ const ManagerData = () => {
             </div>
           ))}
         </div>
-
-        {/* 2. 헤더 및 탭 */}
-        <div className="page-header">
-          <div className="page-title-area">
-            <h2 className="page-title">ESG 통합 관리 시스템</h2>
-            
-            <ServiceTabs 
-              activeService={activeService} 
-              onServiceChange={(service) => {
-                setActiveService(service);
-                setDataPage(1);
-                setUserPage(1);
-                setActiveDataCategory('all');
-                setActiveSubCategory('all');
-              }} 
-            />
-          </div>
-
-          <TabButton.Category
-            tabs={[
-              { label: '데이터 승인', value: 'data' },
-            ]}
-            activeTab={activeTab}
-            onTabChange={(val) => !isLoading && setActiveTab(val)}
-            className="manager-main-tabs"
-          />
-        </div>
-
 
         {/* ============================================================ */}
         {/* 데이터 승인 탭 */}

@@ -22,6 +22,7 @@ Do not:
 from __future__ import annotations
 
 from typing import Optional
+from uuid import uuid4
 
 from src.utils.db import addKey, findOne, save
 from src.utils.dmafinancialrepository import checkBasisReady
@@ -86,19 +87,29 @@ def getRun(runId: int) -> dict:
 
 
 def createRun(companyId: int, reportingYear: int, reportBasisType: str) -> dict:
+    runName = (
+        f"REPORT_WORKFLOW_"
+        f"{companyId}_"
+        f"{reportingYear}_"
+        f"{reportBasisType}_"
+        f"{uuid4().hex[:8]}"
+    )
+
     result = addKey(
         """
         INSERT INTO ESG_MATERIALITY_RUN (
             company_id,
             reporting_year,
+            run_name,
             report_basis_type,
             financial_basis_status,
             run_status
-        ) VALUES (?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?)
         """,
         (
             companyId,
             reportingYear,
+            runName,
             reportBasisType,
             BASIS_SELECTED_STATUS,
             ACTIVE_RUN_STATUS,

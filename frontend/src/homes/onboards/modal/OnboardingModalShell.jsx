@@ -1,13 +1,59 @@
 import React, { useEffect, useRef, useState } from 'react';
 import '@styles/onboardingModal.css';
 
+const STRUCTURED_LOOKUP_IDS = new Set(['G0-05__QL0002', 'G0-06__QL0001']);
+const EDITABLE_INPUT_MODES = new Set(['MANUAL_NUMBER', 'MANUAL_TEXTAREA', 'YEAR_RANGE']);
+
+const resolveG0InputMode = (item = {}) => {
+  const atomicMetricId = item.atomicMetricId || '';
+  const dataValueType = String(item.dataValueType || '').trim().toUpperCase();
+
+  if (
+    item.atomicDataRole === 'DERIVED' ||
+    item.rollupRole === 'consolidated_result' ||
+    /^G0-02__G\d+/.test(atomicMetricId) ||
+    atomicMetricId === 'G0-03__G0001'
+  ) {
+    return 'ROLLUP_READONLY';
+  }
+
+  if (STRUCTURED_LOOKUP_IDS.has(atomicMetricId) || item.inputMode === 'STRUCTURED_LOOKUP') {
+    return 'STRUCTURED_LOOKUP';
+  }
+
+  if (item.editableYn === false) {
+    return 'ROLLUP_READONLY';
+  }
+
+  if (item.inputMode) return item.inputMode;
+
+  if (atomicMetricId === 'G0-05__QL0001') {
+    return 'YEAR_RANGE';
+  }
+
+  if (
+    /^G0-02__Q\d+/.test(atomicMetricId) ||
+    /^G0-03__Q\d+/.test(atomicMetricId) ||
+    dataValueType === 'QUANT' ||
+    dataValueType === 'NUMBER' ||
+    dataValueType === 'NUMERIC' ||
+    item.dataValueType === '정량'
+  ) {
+    return 'MANUAL_NUMBER';
+  }
+
+  return 'MANUAL_TEXTAREA';
+};
+
+const isEditableItem = (item) => EDITABLE_INPUT_MODES.has(resolveG0InputMode(item));
+
 /**
  * OnboardingModalShell
  *
  * G0 공통 입력 modal shell.
  * - key: atomicMetricId (issueId fallback 제거)
- * - 입력 유형별 renderer binding은 보류 (DTO에 inputFormat / atomicDataRole 미포함)
- * - 현재는 generic G0 input renderer만 사용
+ * - inputMode / editableYn 기준으로 입력, lookup, read-only renderer를 분기
+ * - rollup/derived 값은 수기 입력하지 않음
  */
 export default function OnboardingModalShell({
   isOpen,
@@ -75,12 +121,104 @@ export default function OnboardingModalShell({
     setAtomicFiles((prev) => ({ ...prev, [atomicMetricId]: file }));
   };
 
+  const editableMetrics = (subMetrics || []).filter((sub) => isEditableItem(sub));
+  const saveDisabled = editableMetrics.length === 0;
+
   const handleSaveDraft = () => {
+    if (saveDisabled) return;
     onSaveAndSubmit?.(atomicValues, atomicFiles, 'DRAFT');
   };
 
   const handleSubmit = () => {
     onSaveAndSubmit?.(atomicValues, atomicFiles, 'SUBMITTED');
+  };
+
+  const getDisplayValue = (sub) => {
+    if (sub.valueNumeric !== null && sub.valueNumeric !== undefined) {
+      return `${sub.valueNumeric}${sub.unit ? ` ${sub.unit}` : ''}`;
+    }
+    if (sub.valueText !== null && sub.valueText !== undefined && String(sub.valueText).trim() !== '') {
+      return String(sub.valueText);
+    }
+    return '집계 전';
+  };
+
+  const renderReadOnlyValue = (sub, message) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <strong style={{ color: '#0f172a' }}>{getDisplayValue(sub)}</strong>
+      <span style={{ color: '#64748b', fontSize: '0.78rem', lineHeight: 1.35 }}>
+        {message}
+      </span>
+    </div>
+  );
+
+  const renderInputField = (sub, id) => {
+    const inputMode = resolveG0InputMode(sub);
+    const value = atomicValues[id] || '';
+
+    if (inputMode === 'MANUAL_NUMBER') {
+      return (
+        <input
+          type="number"
+          className="ob-table-input"
+          value={value}
+          onChange={(event) => handleInputChange(id, event.target.value)}
+          placeholder="숫자 입력"
+        />
+      );
+    }
+
+    if (inputMode === 'MANUAL_TEXTAREA') {
+      return (
+        <textarea
+          className="ob-table-input"
+          value={value}
+          onChange={(event) => handleInputChange(id, event.target.value)}
+          placeholder="내용 입력"
+          rows={3}
+          style={{ resize: 'vertical', minHeight: '72px' }}
+        />
+      );
+    }
+
+    if (inputMode === 'YEAR_RANGE') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <input
+            type="text"
+            className="ob-table-input"
+            value={value}
+            onChange={(event) => handleInputChange(id, event.target.value)}
+            placeholder="예: 2025 또는 2025-01-01 ~ 2025-12-31"
+          />
+          <span style={{ color: '#64748b', fontSize: '0.78rem' }}>
+            기간 선택 UI는 후속 단계에서 연결합니다.
+          </span>
+        </div>
+      );
+    }
+
+    if (inputMode === 'STRUCTURED_LOOKUP') {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <span style={{ color: '#475569', fontSize: '0.85rem' }}>
+            연결 범위 설정에서 관리합니다.
+          </span>
+          <button type="button" className="ob-btn ob-btn-secondary" disabled>
+            범위 설정 준비중
+          </button>
+        </div>
+      );
+    }
+
+    if (inputMode === 'ROLLUP_READONLY') {
+      return renderReadOnlyValue(
+        sub,
+        '자회사 데이터 수집 및 롤업 계산 완료 후 자동 반영됩니다.'
+      );
+    }
+
+    return renderReadOnlyValue(sub, '현재 입력 정책을 확인할 수 없습니다.');
   };
 
   /* ─── Render: Header ─── */
@@ -161,13 +299,7 @@ export default function OnboardingModalShell({
                     {sub.atomicName || sub.metricName || '-'}
                   </td>
                   <td>
-                    <input
-                      type="text"
-                      className="ob-table-input"
-                      value={atomicValues[id] || ''}
-                      onChange={(event) => handleInputChange(id, event.target.value)}
-                      placeholder="값 입력"
-                    />
+                    {renderInputField(sub, id)}
                   </td>
                   <td style={{ color: '#475569' }}>{sub.unit || '-'}</td>
                 </tr>
@@ -220,7 +352,7 @@ export default function OnboardingModalShell({
   /* ─── Render: Validation (right panel) ─── */
   const renderValidationSection = () => {
     const validations = subMetrics
-      .filter((sub) => sub.atomicMetricId)
+      .filter((sub) => sub.atomicMetricId && isEditableItem(sub))
       .map((sub) => {
         const id = sub.atomicMetricId;
         const value = atomicValues[id];
@@ -233,6 +365,7 @@ export default function OnboardingModalShell({
       });
     const requiredValidations = validations.filter((v) => v.isRequired);
     const allPass = requiredValidations.length > 0 && requiredValidations.every((item) => item.isPass);
+    const hasValidationTargets = requiredValidations.length > 0;
 
     return (
       <div className="ob-side-card">
@@ -251,15 +384,15 @@ export default function OnboardingModalShell({
         <div
           style={{
             padding: '12px',
-            background: allPass ? '#dcfce7' : '#fee2e2',
+            background: !hasValidationTargets ? '#f1f5f9' : allPass ? '#dcfce7' : '#fee2e2',
             borderRadius: '6px',
             fontSize: '0.85rem',
-            color: allPass ? '#166534' : '#991b1b',
+            color: !hasValidationTargets ? '#475569' : allPass ? '#166534' : '#991b1b',
             fontWeight: '600',
             textAlign: 'center',
           }}
         >
-          {allPass ? '모든 필수 데이터 입력이 완료되었습니다.' : '필수 입력 항목이 누락되었습니다.'}
+          {!hasValidationTargets ? '수기 입력 검증 대상이 없습니다.' : allPass ? '모든 필수 데이터 입력이 완료되었습니다.' : '필수 입력 항목이 누락되었습니다.'}
         </div>
       </div>
     );
@@ -271,7 +404,14 @@ export default function OnboardingModalShell({
       <button type="button" className="ob-btn ob-btn-secondary" onClick={onClose}>
         취소
       </button>
-      <button type="button" className="ob-btn ob-btn-primary" onClick={handleSaveDraft}>
+      <button
+        type="button"
+        className="ob-btn ob-btn-primary"
+        onClick={handleSaveDraft}
+        disabled={saveDisabled}
+        title={saveDisabled ? '수기 입력 가능한 항목이 없습니다.' : undefined}
+        style={saveDisabled ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+      >
         임시저장
       </button>
       <button type="button" className="ob-btn ob-btn-primary" style={{ opacity: 0.5, cursor: "not-allowed" }} disabled title="승인 API 연결 후 활성화">

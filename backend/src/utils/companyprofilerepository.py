@@ -46,6 +46,9 @@ def getG0MasterItems() -> list[dict]:
             atomic_metric_id,
             metric_name_kr,
             atomic_name_kr,
+            data_value_type,
+            atomic_data_role,
+            rollup_role,
             unit,
             onboarding_input_yn
         FROM ESG_ATOMIC_METRIC_MASTER

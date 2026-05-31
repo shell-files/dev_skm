@@ -53,6 +53,8 @@ async def post_g0_profile(
         return saveG0Profile(companyId, request, _userId(userModel))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -72,6 +74,8 @@ async def patch_g0_profile(
         return saveG0Profile(companyId, request, _userId(userModel))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

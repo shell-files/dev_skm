@@ -3,55 +3,342 @@ import { useNavigate } from "react-router";
 import "@styles/result.css";
 import "@styles/benchmarking.css";
 import "@styles/media.css";
-// import robot from "@assets/images/robot/robot_final_t.png";
-import { Chart, registerables } from "chart.js";
-Chart.register(...registerables);
+import {
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ReferenceLine,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
-// ── 스캐터 차트 데이터 ──
-const CHART_DATASETS = [
-  {
-    label: "환경(E)",
-    data: [
-      { x: 3, y: 3, label: "기후목표·전환계획",  rank: 1 },
-      { x: 1, y: 2, label: "저탄소·친환경 제품", rank: 2 },
-    ],
-    backgroundColor: "rgba(34,197,94,0.85)",
-    borderColor: "#16a34a",
-    borderWidth: 2, pointRadius: 18, pointHoverRadius: 22,
-  },
-  {
-    label: "사회(S)",
-    data: [
-      { x: 2,   y: 1,   label: "교육훈련·역량개발",     rank: 3 },
-      { x: 2,   y: 2,   label: "소비자 건강·제품안전",  rank: 4 },
-      { x: 2.9, y: 2.8, label: "공급망 감사·시정조치",  rank: 5 },
-    ],
-    backgroundColor: "rgba(59,130,246,0.85)",
-    borderColor: "#2563eb",
-    borderWidth: 2, pointRadius: 18, pointHoverRadius: 22,
-  },
+// ════════════════════════════════════════════════════════════════
+// 이중 중대성 매트릭스 — 데이터
+// ════════════════════════════════════════════════════════════════
+
+// 카테고리별 색상/라벨 설정 — 새 카테고리 추가 시 여기만 수정
+const CAT_CONFIG = {
+  E: { label: "환경(E)",      bg: "rgba(34,197,94,0.92)",  badge: { bg: "#dcfce7", color: "#16a34a" } },
+  S: { label: "사회(S)",      bg: "rgba(59,130,246,0.92)", badge: { bg: "#dbeafe", color: "#2563eb" } },
+  G: { label: "거버넌스(G)", bg: "rgba(245,43,43,0.88)",  badge: { bg: "#fee2e2", color: "#dc2626" } },
+};
+
+// 선정된 이슈 데이터 (x: 재무중요성, y: 영향중요성, 1~3 스케일)
+const MATRIX_POINTS = [
+  { x: 3,   y: 3,   rank: 1, label: "기후목표·전환계획",  cat: "E" },
+  { x: 1,   y: 2,   rank: 2, label: "저탄소·친환경 제품", cat: "E" },
+  { x: 2,   y: 1,   rank: 3, label: "교육훈련·역량개발",    cat: "S" },
+  { x: 2,   y: 2,   rank: 4, label: "소비자 건강·제품안전", cat: "S" },
+  { x: 2.9, y: 2.8, rank: 5, label: "공급망 감사·시정조치", cat: "S" },
+  { x: 1,   y: 3,   rank: 6, label: "교육훈련·역량개발",    cat: "G" },
+  { x: 1.8, y: 1,   rank: 7, label: "소비자 건강·제품안전", cat: "G" },
+  { x: 3.9, y: 2.8, rank: 8, label: "공급망 감사·시정조치", cat: "G" },
 ];
 
-const SELECTED_ISSUES = [
-  { name: "기후변화 대응",            candRank: 1,  finalRank: 1,  reason: "양측 점수 High, 규제 및 시장 영향 큼, 이해관계자 관심도 높음" },
-  { name: "지배구조 건전성 강화",      candRank: 2,  finalRank: 2,  reason: "재무적 영향 High, 투자자 요구 증가, 거버넌스 핵심 이슈" },
-  { name: "공급망 지속가능성 관리",    candRank: 3,  finalRank: 3,  reason: "공급망 리스크 및 평판 영향 큼, 고객 요구 증가" },
-  { name: "인재 확보 및 육성",         candRank: 4,  finalRank: 4,  reason: "사회적 영향 High, 인력 경쟁 심화" },
-  { name: "그린 제품·서비스 혁신",     candRank: 6,  finalRank: 5,  reason: "기회 요인 크고, 매출 및 시장 확장과 연계" },
-  { name: "에너지 효율 및 온실가스 관리", candRank: 5, finalRank: 6, reason: "온실가스 감축 목표 연계, 비용 절감 효과" },
-  { name: "제품 안전·품질 강화",       candRank: 7,  finalRank: 7,  reason: "고객 신뢰 및 규제 영향 큼" },
-  { name: "정보보안 및 데이터 보호",   candRank: 8,  finalRank: 8,  reason: "디지털 전환 가속, 정보보안 리스크 증가" },
-  { name: "사업장 안전보건",           candRank: 9,  finalRank: 9,  reason: "임직원 안전과 직결, 규제 및 평판 영향" },
-  { name: "생물다양성 보호",           candRank: 12, finalRank: 10, reason: "자연자본 영향 증가, 글로벌 이니셔티브 대응" },
-];
 
-const EXCLUDED_ISSUES = [
-  { name: "수자원 관리",           candRank: 13, reason: "재무적 영향 Medium 이하, 분석축 반복 관측 부족" },
-  { name: "지역사회 투자 및 공헌", candRank: 18, reason: "사회적 영향은 있으나, 전략적 연계성 낮음" },
-  { name: "폐기물 및 순환경제",    candRank: 21, reason: "영향도는 있으나, 우선순위 상대적으로 낮음" },
-  { name: "동물복지",              candRank: 24, reason: "가치사슬 관련성 낮고, 이해관계자 관심도 낮음" },
-  { name: "정치자금 및 로비 활동", candRank: 28, reason: "분석축 반복 관측 부족, 리스크 영향 낮음" },
-];
+
+// ════════════════════════════════════════════════════════════════
+// 이중 중대성 매트릭스 — 서브 컴포넌트
+// ════════════════════════════════════════════════════════════════
+
+// 1. 동심원 배경 오버레이
+//    chartRef로 컨테이너 크기를 직접 측정 → SVG를 absolute로 오버레이
+//    Recharts Customized의 xAxisMap 방식보다 버전 무관하게 안정적
+const ZoneOverlay = ({ containerRef }) => {
+  const [dims, setDims] = useState(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    // 차트 내부 플롯 영역(recharts-plot-surface 또는 .recharts-cartesian-grid rect)을 찾아 좌표 추출
+    const measure = () => {
+      const wrap = containerRef.current;
+      if (!wrap) return;
+      const svg  = wrap.querySelector("svg.recharts-surface");
+      const grid = wrap.querySelector(".recharts-cartesian-grid rect");
+      if (!svg || !grid) return;
+
+      const svgRect  = svg.getBoundingClientRect();
+      const gridRect = grid.getBoundingClientRect();
+
+      setDims({
+        // SVG 전체 크기
+        svgW: svgRect.width,
+        svgH: svgRect.height,
+        // 플롯 영역의 SVG 내 상대 좌표
+        plotLeft:   gridRect.left   - svgRect.left,
+        plotTop:    gridRect.top    - svgRect.top,
+        plotWidth:  gridRect.width,
+        plotHeight: gridRect.height,
+      });
+    };
+
+    // 첫 측정 (약간 지연: 차트 렌더 완료 후)
+    const t = setTimeout(measure, 60);
+
+    // 리사이즈 대응
+    const ro = new ResizeObserver(measure);
+    ro.observe(containerRef.current);
+
+    return () => { clearTimeout(t); ro.disconnect(); };
+  }, [containerRef]);
+
+  if (!dims) return null;
+
+  const { svgW, svgH, plotLeft, plotTop, plotWidth, plotHeight } = dims;
+
+  // 동심원 원점: 플롯 우측 상단 (High-High 코너)
+  const ox   = plotLeft + plotWidth;
+  const oy   = plotTop;
+  const diag = Math.sqrt(plotWidth ** 2 + plotHeight ** 2);
+
+  // 반지름 비율 (핵심/보고/잠재)
+  const r1 = diag * 0.36;
+  const r2 = diag * 0.60;
+  const r3 = diag * 0.86;
+
+  return (
+    // SVG를 차트 컨테이너에 absolute로 오버레이 — pointer-events:none 으로 상호작용 통과
+    <svg
+      style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", overflow: "visible" }}
+      width={svgW}
+      height={svgH}
+    >
+      <defs>
+        {/* 플롯 영역 밖으로 원이 삐져나오지 않게 클리핑 */}
+        <clipPath id="zone-clip">
+          <rect x={plotLeft} y={plotTop} width={plotWidth} height={plotHeight} />
+        </clipPath>
+      </defs>
+      <g clipPath="url(#zone-clip)">
+        {/* 잠재 이슈 — 가장 연함 */}
+        <circle cx={ox} cy={oy} r={r3} fill="rgba(187,247,208,0.35)" />
+        {/* 보고 이슈 */}
+        <circle cx={ox} cy={oy} r={r2} fill="rgba(134,239,172,0.45)" />
+        {/* 핵심 이슈 — 가장 진함 */}
+        <circle cx={ox} cy={oy} r={r1} fill="rgba(74,222,128,0.60)" />
+
+        {/* 구역 텍스트 라벨 */}
+        <text x={ox - r1 * 0.42} y={oy + r1 * 0.38}
+          fontSize="11" fontWeight="700" fill="#15803d"
+          textAnchor="middle" fontFamily="Pretendard, sans-serif">
+          핵심 이슈
+        </text>
+        <text x={ox - r2 * 0.54} y={oy + r2 * 0.42}
+          fontSize="10" fontWeight="600" fill="#166534"
+          textAnchor="middle" opacity="0.85" fontFamily="Pretendard, sans-serif">
+          보고 이슈
+        </text>
+        <text x={ox - r3 * 0.62} y={oy + r3 * 0.50}
+          fontSize="10" fontWeight="600" fill="#166534"
+          textAnchor="middle" opacity="0.55" fontFamily="Pretendard, sans-serif">
+          잠재적 이슈
+        </text>
+      </g>
+    </svg>
+  );
+};
+
+// 2. 선정 이슈 번호 도트 — CAT_CONFIG에서 색상 조회
+const RankedDot = (props) => {
+  const { cx, cy, payload } = props;
+  if (cx == null || cy == null) return null;
+  const bg = CAT_CONFIG[payload.cat]?.bg ?? "rgba(148,163,184,0.9)";
+  return (
+    <g style={{ filter: "drop-shadow(0 2px 5px rgba(0,0,0,0.22))" }}>
+      <circle cx={cx} cy={cy} r={16} fill={bg} opacity={0.18} />
+      <circle cx={cx} cy={cy} r={13} fill={bg} stroke="#fff" strokeWidth={2.5} />
+      <text x={cx} y={cy}
+        textAnchor="middle" dominantBaseline="central"
+        fontSize="11" fontWeight="800" fill="#fff"
+        fontFamily="Pretendard, sans-serif">
+        {payload.rank}
+      </text>
+    </g>
+  );
+};
+
+
+
+
+// 3. 커스텀 툴팁 — 회색 점(label 없음)은 미표시
+const MatrixTooltip = ({ active, payload }) => {
+  if (!active || !payload?.length) return null;
+  const d = payload[0]?.payload;
+  if (!d?.label) return null;
+
+  const lvl = (v) => (v < 1.5 ? "Low" : v < 2.5 ? "Middle" : "High");
+  const cfg = CAT_CONFIG[d.cat] ?? { bg: "rgba(148,163,184,0.9)", badge: { bg: "#f1f5f9", color: "#475569" } };
+
+  return (
+    <div style={{
+      background: "#fff", border: "1px solid #e2e8f0", borderRadius: "10px",
+      padding: "10px 14px", fontSize: "12px", fontFamily: "Pretendard, sans-serif",
+      boxShadow: "0 4px 16px rgba(0,0,0,0.10)", minWidth: "190px",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+        <span style={{
+          width: "24px", height: "24px", borderRadius: "50%", background: cfg.bg,
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          color: "#fff", fontWeight: 800, fontSize: "11px", flexShrink: 0,
+        }}>
+          {d.rank}
+        </span>
+        <span style={{ fontWeight: 700, color: "#1e293b" }}>{d.label}</span>
+        <span style={{
+          padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 700,
+          background: cfg.badge.bg, color: cfg.badge.color, marginLeft: "auto",
+        }}>
+          {d.cat}
+        </span>
+      </div>
+      <div style={{ display: "flex", gap: "14px", color: "#64748b", fontSize: "11px" }}>
+        <div>재무중요성: <strong style={{ color: "#1e293b" }}>{lvl(d.x)}</strong></div>
+        <div>영향중요성: <strong style={{ color: "#1e293b" }}>{lvl(d.y)}</strong></div>
+      </div>
+    </div>
+  );
+};
+
+// ════════════════════════════════════════════════════════════════
+// 이중 중대성 매트릭스 — 메인 컴포넌트
+// ════════════════════════════════════════════════════════════════
+const DoubleMaterialityMatrix = () => {
+  const [hoveredKey, setHoveredKey] = useState(null);
+  const chartWrapRef = useRef(null); // 배경 오버레이용 컨테이너 ref
+
+  // 실제 데이터에 있는 카테고리만 렌더링 (CAT_CONFIG 선언 순서 유지)
+  const activeCats = Object.keys(CAT_CONFIG).filter((cat) =>
+    MATRIX_POINTS.some((p) => p.cat === cat)
+  );
+
+  return (
+    <div style={{ fontFamily: "Pretendard, sans-serif" }}>
+
+      {/* 차트 래퍼 — position:relative 필수 (ZoneOverlay absolute 기준점) */}
+      <div ref={chartWrapRef} style={{ position: "relative" }}>
+        {/* 동심원 배경 SVG 오버레이 */}
+        <ZoneOverlay containerRef={chartWrapRef} />
+
+        <ResponsiveContainer width="100%" height={340}>
+          <ScatterChart margin={{ top: 16, right: 28, bottom: 44, left: 20 }}>
+            <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" />
+            <ReferenceLine
+              x={2.5}
+              stroke="#94a3b8"
+              strokeDasharray="6 5"
+              strokeWidth={1.5}
+              ifOverflow="extendDomain"
+            />
+            <ReferenceLine
+              y={2}
+              stroke="#94a3b8"
+              strokeDasharray="6 5"
+              strokeWidth={1.5}
+              ifOverflow="extendDomain"
+            />
+
+            {/* X축: 재무중요성 */}
+            <XAxis
+              type="number"
+              dataKey="x"
+              domain={[0.5, 4.2]}
+              ticks={[1, 2, 3, 4]}
+              tickFormatter={(v) => ({ 1: "Low", 2: "Middle", 3: "High", 4: "" }[v] ?? "")}
+              label={{
+                value: "Financial Materiality (재무중요성)",
+                position: "insideBottom", offset: -30,
+                fontSize: 11, fontWeight: 700,
+                fill: "#475569", fontFamily: "Pretendard, sans-serif",
+              }}
+              tick={{ fontSize: 11, fill: "#64748b", fontFamily: "Pretendard, sans-serif" }}
+              axisLine={{ stroke: "#cbd5e1" }}
+              tickLine={false}
+            />
+
+            {/* Y축: 영향중요성 */}
+            <YAxis
+              type="number"
+              dataKey="y"
+              domain={[0.5, 3.5]}
+              ticks={[1, 2, 3]}
+              tickFormatter={(v) => ({ 1: "Low", 2: "Middle", 3: "High" }[v] ?? "")}
+              label={{
+                value: "Environmental & Social Materiality (영향중요성)",
+                angle: -90, position: "insideLeft", offset: 14,
+                fontSize: 11, fontWeight: 700,
+                fill: "#475569", fontFamily: "Pretendard, sans-serif",
+              }}
+              tick={{ fontSize: 11, fill: "#64748b", fontFamily: "Pretendard, sans-serif" }}
+              axisLine={{ stroke: "#cbd5e1" }}
+              tickLine={false}
+            />
+
+            <Tooltip content={<MatrixTooltip />} cursor={false} />
+
+          
+            {activeCats.map((cat) => (
+              <Scatter
+                key={cat}
+                name={CAT_CONFIG[cat].label}
+                data={MATRIX_POINTS.filter((p) => p.cat === cat)}
+                shape={<RankedDot />}
+                fill={CAT_CONFIG[cat].bg}
+              />
+            ))}
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* 하단 범례 */}
+      <div style={{ display: "flex", gap: "20px", justifyContent: "center", marginTop: "4px", flexWrap: "wrap" }}>
+        
+        {activeCats.map((cat) => (
+          <div key={cat} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#475569" }}>
+            <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: CAT_CONFIG[cat].bg, display: "inline-block" }} />
+            {CAT_CONFIG[cat].label} 선정 이슈
+          </div>
+        ))}
+      </div>
+
+      {/* 선정 이슈 목록 */}
+      <div style={{ marginTop: "14px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "4px 14px" }}>
+        {MATRIX_POINTS.map((p) => {
+          const cfg = CAT_CONFIG[p.cat] ?? { bg: "rgba(148,163,184,0.9)", badge: { bg: "#f1f5f9", color: "#475569" } };
+          const key = `${p.cat}-${p.rank}`;
+          return (
+            <div
+              key={key}
+              onMouseEnter={() => setHoveredKey(key)}
+              onMouseLeave={() => setHoveredKey(null)}
+              style={{
+                display: "flex", alignItems: "center", gap: "8px",
+                fontSize: "12px", color: "#334155", padding: "5px 7px", borderRadius: "7px",
+                background: hoveredKey === key ? "#f1f5f9" : "transparent",
+                transition: "background 0.15s", cursor: "default",
+              }}
+            >
+              <span style={{
+                width: "22px", height: "22px", borderRadius: "50%", background: cfg.bg,
+                color: "#fff", fontSize: "10px", fontWeight: 800,
+                display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>
+                {p.rank}
+              </span>
+              <span style={{ fontWeight: 600, flex: 1 }}>{p.label}</span>
+              <span style={{ padding: "1px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, background: cfg.badge.bg, color: cfg.badge.color }}>
+                {p.cat}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+    </div>
+  );
+};
 
 const CONTRIBUTION_DATA = [
   { rank: 1, rankColor: "#22c55e", name: "기후변화 대응",     bench: 45, media: 30, survey: 25 },
@@ -163,19 +450,11 @@ const Result = () => {
   const [rightTab, setRightTab]         = useState(0);
   const [openSections, setOpenSections] = useState({ 1: true, 2: true });
 
-  const chartCanvasRef   = useRef(null);
-  const chartInstanceRef = useRef(null);
+ 
   const particleRef      = useRef(null);
 
   useEffect(() => {
     createParticles();
-    initChart();
-    return () => {
-      if (chartInstanceRef.current) {
-        chartInstanceRef.current.destroy();
-        chartInstanceRef.current = null;
-      }
-    };
   }, []);
 
   const createParticles = () => {
@@ -194,92 +473,6 @@ const Result = () => {
     }
   };
 
-  const initChart = () => {
-    if (!chartCanvasRef.current) return;
-    const ctx = chartCanvasRef.current.getContext("2d");
-
-    const quadrantPlugin = {
-      id: "quadrantBg",
-      beforeDraw(chart) {
-        const { ctx: c, chartArea: { left, right, top, bottom, width, height } } = chart;
-        const midX = left + width / 2;
-        const midY = top + height / 2;
-        c.save();
-        c.fillStyle = "rgba(239,68,68,0.08)";   c.fillRect(midX, top,  right - midX, midY - top);
-        c.fillStyle = "rgba(148,163,184,0.08)"; c.fillRect(left, midY, midX - left, bottom - midY);
-        c.fillStyle = "rgba(245,158,11,0.08)";  c.fillRect(left, top,  midX - left, midY - top);
-        c.fillStyle = "rgba(59,130,246,0.08)";  c.fillRect(midX, midY, right - midX, bottom - midY);
-        c.beginPath(); c.setLineDash([6, 4]); c.lineWidth = 2; c.strokeStyle = "rgba(100,116,139,0.55)";
-        c.moveTo(midX, top); c.lineTo(midX, bottom); c.stroke();
-        c.beginPath(); c.moveTo(left, midY); c.lineTo(right, midY); c.stroke();
-        c.restore();
-      },
-    };
-
-    const rankLabelPlugin = {
-      id: "rankLabels",
-      afterDatasetsDraw(chart) {
-        const { ctx: c } = chart;
-        chart.data.datasets.forEach((dataset, di) => {
-          const meta = chart.getDatasetMeta(di);
-          dataset.data.forEach((point, i) => {
-            const el = meta.data[i];
-            if (!el) return;
-            const { x, y } = el.getProps(["x", "y"], true);
-            c.save();
-            c.fillStyle = "#fff";
-            c.font = "bold 12px Pretendard, sans-serif";
-            c.textAlign = "center";
-            c.textBaseline = "middle";
-            c.fillText(point.rank, x, y);
-            c.restore();
-          });
-        });
-      },
-    };
-
-    chartInstanceRef.current = new Chart(ctx, {
-      type: "scatter",
-      data: { datasets: CHART_DATASETS },
-      plugins: [quadrantPlugin, rankLabelPlugin],
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        layout: { padding: { top: 8, right: 24, bottom: 8, left: 8 } },
-        plugins: {
-          legend: {
-            position: "top",
-            labels: { usePointStyle: true, pointStyle: "circle", font: { size: 12, family: "Pretendard, sans-serif" }, padding: 16 },
-          },
-          tooltip: {
-            callbacks: {
-              label(c) {
-                const d = c.raw;
-                const lvl = v => v < 1.5 ? "Low" : v < 2.5 ? "Middle" : "High";
-                return ` ${d.rank}위  ${d.label}   재무: ${lvl(d.x)} / 영향: ${lvl(d.y)}`;
-              },
-            },
-            bodyFont: { size: 12, family: "Pretendard, sans-serif" },
-            padding: 10,
-          },
-        },
-        scales: {
-          x: {
-            min: 0.5, max: 3.5,
-            title: { display: true, text: "재무중요성 (Financial Materiality)", font: { size: 11, weight: "700" }, color: "#475569" },
-            ticks: { stepSize: 1, callback: v => ({ 1: "Low", 2: "Middle", 3: "High" }[v] || ""), color: "#64748b" },
-            grid: { color: "#e2e8f0" },
-          },
-          y: {
-            min: 0.5, max: 3.5,
-            title: { display: true, text: "영향중요성 (Impact Materiality)", font: { size: 11, weight: "700" }, color: "#475569" },
-            ticks: { stepSize: 1, callback: v => ({ 1: "Low", 2: "Middle", 3: "High" }[v] || ""), color: "#64748b" },
-            grid: { color: "#e2e8f0" },
-          },
-        },
-      },
-    });
-  };
 
   const moveStep = (index) => {
     if (index === activeIndex) return;
@@ -313,7 +506,7 @@ const Result = () => {
           {/* ── 왼쪽 패널 ── */}
           <section id="result-left-panel">
             <div className="result-tab-bar">
-              {["최종선정요약", "후보군 최종 선정 과정", "점수 해석", "다음 단계 연결"].map((label, i) => (
+              {["최종선정요약", "점수 해석", "다음 단계 연결"].map((label, i) => (
                 <button
                   key={i}
                   className={`result-tab-button ${leftTab === i ? "active" : ""}`}
@@ -336,7 +529,6 @@ const Result = () => {
                   <div id="result-summary-grid" className="summary-grid">
                     {[
                       { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, label: "평가 대상", value: "62개", cls: "" },
-                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, label: "후보군", value: "25개", cls: "" },
                       { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>, label: "최종 선정", value: "10개", cls: "success", valueClass: "text-green" },
                       { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>, label: "High 영역", value: "5개", cls: "danger", valueClass: "text-red" },
                     ].map((card, i) => (
@@ -388,113 +580,8 @@ const Result = () => {
               </div>
             )}
 
-            {/* 탭 1: 후보군 최종 선정 과정 */}
+            {/* 탭 1: 점수 해석 */}
             {leftTab === 1 && (
-              <div className="result-tab-pane">
-                <div className="card-container">
-                  <div className="card-title">후보군 최종 선정 과정</div>
-                  <div id="result-candidate-flow">
-                    {/* 플로우 카드 */}
-                    <div id="flow-cards">
-                      {[
-                        { count: "62개 평가 대상",  desc: "벤치마킹, 미디어, 이해관계자 설문을 통해<br>도출된 전체 평가 이슈 수",
-                          icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, last: false },
-                        { count: "25개 후보군",     desc: "양축 점수 기준 충족 및 주요성 기준을<br>충족한 이슈",
-                          icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>, last: false },
-                        { count: "최종 10개 선정", desc: "이사회 및 ESG 실무 협의 기반<br>보고서 핵심 이슈로 최종 선정",
-                          icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>, last: true },
-                      ].map((card, i) => (
-                        <div key={i}>
-                          {/* [TODO-동작] 원본에서 플로우 카드 본문이 통째로 주석 처리돼 있습니다. 살리려면 아래 블록의 주석을 푸세요. */}
-                          <div className={`flow-card ${card.last ? "last" : ""}`}>
-                            <div className="flow-card-icon">{card.icon}</div>
-                            <div>
-                              <div className="flow-card-count">{card.count}</div>
-                              <div className="flow-card-desc" dangerouslySetInnerHTML={{ __html: card.desc }} />
-                            </div>
-                          </div>
-                          {!card.last && <div className="flow-arrow">↓</div>}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* 선정 기준 */}
-                    <div id="criteria-card">
-                      <div id="criteria-title">선정 기준</div>
-                      <div id="criteria-list">
-                        {[
-                          { icon: "🎯", text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
-                          { icon: "📊", text: "2개 이상 분석축에서", sub: "반복 관측" },
-                          { icon: "🔗", text: "가치사슬 관련성 높음" },
-                          { icon: "👥", text: "이해관계자 관심도 높음" },
-                          { icon: "🛡️", text: "리스크/기회 요인으로서의", sub: "중요성 고려" },
-                        ].map((item, i) => (
-                          <div key={i} className="criteria-row">
-                            <div className="criteria-icon">{item.icon}</div>
-                            <div className="criteria-text">
-                              {item.text}{item.sub && <><br /><span className="criteria-sub">{item.sub}</span></>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* 최종 선정 이슈 */}
-                <div className="card-container">
-                  <div className="card-title sm">최종 선정 이슈</div>
-                  <table className="issue-rank-table">
-                    <thead>
-                      <tr>
-                        <th className="col-issue">이슈</th>
-                        <th className="col-rank">후보순위</th>
-                        <th className="col-rank">최종순위</th>
-                        <th className="col-reason">포함 사유</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {SELECTED_ISSUES.map((row, i) => (
-                        <tr key={i}>
-                          <td className="issue-name-cell">{row.name}</td>
-                          <td className="rank-cell">{row.candRank}</td>
-                          <td className="rank-cell final">{row.finalRank}</td>
-                          <td className="reason-cell">{row.reason}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* 제외된 이슈 */}
-                <div className="card-container">
-                  <div className="card-title sm danger">후보있지만 제외된 이슈</div>
-                  <table className="issue-rank-table">
-                    <thead>
-                      <tr>
-                        <th className="col-issue">이슈</th>
-                        <th className="col-rank">후보순위</th>
-                        <th className="col-rank">최종순위</th>
-                        <th className="col-reason">제외 사유</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {EXCLUDED_ISSUES.map((row, i) => (
-                        <tr key={i}>
-                          <td className="issue-name-cell">{row.name}</td>
-                          <td className="rank-cell">{row.candRank}</td>
-                          <td className="rank-cell muted">-</td>
-                          <td className="reason-cell">{row.reason}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* 탭 2: 점수 해석 */}
-            {leftTab === 2 && (
               <div className="card-container result-tab-pane">
                 <div className="card-title-row">
                   <span className="card-title">점수 해석</span>
@@ -569,8 +656,8 @@ const Result = () => {
               </div>
             )}
 
-            {/* 탭 3: 다음 단계 연결 */}
-            {leftTab === 3 && (
+            {/* 탭 2: 다음 단계 연결 */}
+            {leftTab === 2 && (
               <div className="card-container result-tab-pane" id="result-next-steps">
                 <div className="card-title">다음 단계 연결</div>
 
@@ -702,9 +789,7 @@ const Result = () => {
               <div className="result-tab-pane">
                 <div className="matrix-card">
                   <div id="matrix-card-title">이중 중대성 매트릭스</div>
-                  <div id="matrix-canvas-wrap">
-                    <canvas ref={chartCanvasRef}></canvas>
-                  </div>
+                  <DoubleMaterialityMatrix />
                 </div>
                 <div id="table-card">
                   <p id="scatter-note">⚫ x 1 = low, ⚫ x 2 = middle, ⚫ x 3 = high</p>

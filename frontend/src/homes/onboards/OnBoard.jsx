@@ -1,56 +1,60 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import "@styles/onboarding1.css";
-import initialMetrics from "@assets/data/onboardingData.js";
 import { useAuth } from "@hooks/AuthContext.jsx";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 import OnboardingModalShell from "./modal/OnboardingModalShell";
 import SubsidiaryRequestModal from "./modal/SubsidiaryRequestModal";
 import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
 import RollupSummaryPanel from "./RollupSummaryPanel";
-import { DEFAULT_REPORTING_YEAR, getCurrent } from "@/apis/report";
+import {
+  DEFAULT_REPORTING_YEAR,
+  getCurrent,
+  getG0Profile,
+  saveG0Profile,
+  getG0ProfileStatus,
+} from "@/apis/report";
 
-const USE_DUMMY_API = false;
+/* ─── 응답 실패 판정 유틸 ─── */
+const isApiFailed = (res) =>
+  res?.status === false || res?.success === false || !res?.data;
 
-const requestApi = {
-  saveDraft: async (id, payload) => {
-    if (USE_DUMMY_API) {
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      return { status: true };
-    }
-    return { status: true };
-  },
-  submit: async (id) => {
-    if (USE_DUMMY_API) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return { status: true };
-    }
-    return { status: true };
-  },
-  uploadEvidence: async (id, file) => {
-    if (USE_DUMMY_API) {
-      await new Promise((resolve) => setTimeout(resolve, 700));
-      return { status: true };
-    }
-    return { status: true };
+/* ─── inputFormat → 유형 badge (G0 DTO에 inputFormat이 있을 때만 표시) ─── */
+const getInputTypeBadge = (item) => {
+  const fmt = item.inputFormat;
+  if (!fmt) return { label: "-", cls: "" };
+
+  switch (fmt) {
+    case "number":
+    case "int":
+    case "decimal":
+    case "currency":
+    case "%":
+    case "YYYY":
+      return { label: "정량 직접입력", cls: "direct" };
+    case "text":
+    case "string":
+      return { label: "서술형", cls: "narrative" };
+    case "boolean":
+    case "Y/N":
+    case "json/table":
+    case "multi-select":
+      return { label: "참조형", cls: "reference" };
+    default:
+      return { label: fmt, cls: "" };
   }
 };
 
-const getInputTypeInfo = (metric) => {
-  if (metric.category === "E") return { label: "계산형", cls: "calc" };
-  if (metric.category === "S") return { label: "정량 직접입력", cls: "direct" };
-  if (metric.category === "G") return { label: "계산형", cls: "calc" };
-  return { label: "문장형", cls: "narrative" };
-};
-
+/* ─── 상태 badge ─── */
 const getStatusInfo = (status) => {
   switch (status) {
-    case "NOT_STARTED":
-      return { label: "미입력", cls: "not-started" };
     case "DRAFT":
+    case "IN_PROGRESS":
       return { label: "입력 진행중", cls: "draft" };
     case "SUBMITTED":
     case "APPROVED":
+    case "COMPLETED":
       return { label: "입력 완료", cls: "approved" };
+    case "NOT_STARTED":
     default:
       return { label: "미입력", cls: "not-started" };
   }
@@ -59,45 +63,57 @@ const getStatusInfo = (status) => {
 const OnBoard = () => {
   const { selectedCompany } = useAuth();
   const companyId =
-    selectedCompany?.company_id ??
-    selectedCompany?.companyId;
+    selectedCompany?.company_id ?? selectedCompany?.companyId;
 
-  const [metrics, setMetrics] = useState(() => {
-    const cached = JSON.parse(localStorage.getItem("onboarding_metrics_dummy"));
-    return cached || initialMetrics.filter((metric) => metric.issueId.startsWith("G0"));
-  });
-
+  /* ─── workflow state ─── */
   const [workflow, setWorkflow] = useState(null);
   const [loadingWorkflow, setLoadingWorkflow] = useState(true);
+  const [workflowError, setWorkflowError] = useState(null);
 
+  /* ─── G0 profile state ─── */
+  const [g0Items, setG0Items] = useState([]);
+  const [g0ProfileStatus, setG0ProfileStatus] = useState(null);
+  const [loadingG0, setLoadingG0] = useState(true);
+  const [g0Error, setG0Error] = useState(null);
+
+  /* ─── modal state ─── */
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
+  /* ─── rollup modal state ─── */
   const [isSubReqModalOpen, setIsSubReqModalOpen] = useState(false);
   const [isSubTransferModalOpen, setIsSubTransferModalOpen] = useState(false);
   const [activeBatchId, setActiveBatchId] = useState(null);
 
+  /* ─── workflow 조회 ─── */
   useEffect(() => {
-    const fetchWorkflow = async () => {
-      if (!companyId) {
-        setWorkflow(null);
-        setLoadingWorkflow(false);
-        return;
-      }
+    if (!companyId) {
+      setWorkflow(null);
+      setLoadingWorkflow(false);
+      return;
+    }
 
+    const fetchWorkflow = async () => {
       setLoadingWorkflow(true);
+      setWorkflowError(null);
       try {
         const res = await getCurrent(companyId, DEFAULT_REPORTING_YEAR);
-        if (res?.status && res.data) {
-          setWorkflow(res.data);
-        } else {
+        const isFailed =
+          res?.status === false ||
+          res?.success === false ||
+          !res?.data;
+
+        if (isFailed) {
           setWorkflow(null);
-          showDefaultAlert("오류", res?.error?.message || "보고서 워크플로우 조회에 실패했습니다.", "error");
+          setWorkflowError(res?.error?.message || "보고서 워크플로우 조회에 실패했습니다.");
+          return;
         }
+
+        setWorkflow(res.data);
       } catch (error) {
         console.error(error);
         setWorkflow(null);
-        showDefaultAlert("오류", "보고서 워크플로우 조회에 실패했습니다.", "error");
+        setWorkflowError("보고서 워크플로우 조회에 실패했습니다.");
       } finally {
         setLoadingWorkflow(false);
       }
@@ -106,30 +122,68 @@ const OnBoard = () => {
     fetchWorkflow();
   }, [companyId]);
 
-  const totalCount = metrics.length;
+  /* ─── G0 profile 조회 ─── */
+  const fetchG0Profile = useCallback(async () => {
+    if (!companyId) {
+      setG0Items([]);
+      setLoadingG0(false);
+      return;
+    }
+
+    setLoadingG0(true);
+    setG0Error(null);
+    try {
+      const res = await getG0Profile(companyId, DEFAULT_REPORTING_YEAR);
+      if (isApiFailed(res)) {
+        setG0Items([]);
+        setG0Error(res?.error?.message || res?.detail || "G0 프로필 조회에 실패했습니다.");
+        return;
+      }
+      setG0Items(res.data.items || []);
+      setG0ProfileStatus(res.data.g0ProfileStatus || "NOT_STARTED");
+    } catch (error) {
+      console.error(error);
+      setG0Items([]);
+      setG0Error("G0 프로필 조회에 실패했습니다.");
+    } finally {
+      setLoadingG0(false);
+    }
+  }, [companyId]);
+
+  const fetchG0Status = useCallback(async () => {
+    if (!companyId) return;
+    try {
+      const res = await getG0ProfileStatus(companyId, DEFAULT_REPORTING_YEAR);
+      if (!isApiFailed(res)) {
+        setG0ProfileStatus(res.data.g0ProfileStatus || "NOT_STARTED");
+      }
+    } catch (error) {
+      console.error("G0 status fetch failed", error);
+    }
+  }, [companyId]);
+
+  useEffect(() => {
+    fetchG0Profile();
+  }, [fetchG0Profile]);
+
+  /* ─── 통계 계산 ─── */
+  const totalCount = g0Items.length;
   let completedCount = 0;
   let notStartedCount = 0;
 
-  metrics.forEach((metric) => {
-    const statusLabel = getStatusInfo(metric.status).label;
-    if (statusLabel === "입력 완료") completedCount += 1;
-    else if (statusLabel === "미입력") notStartedCount += 1;
+  g0Items.forEach((item) => {
+    const hasValue =
+      (item.valueText !== null && item.valueText !== undefined && item.valueText !== "") ||
+      (item.valueNumeric !== null && item.valueNumeric !== undefined);
+    if (hasValue) completedCount += 1;
+    else notStartedCount += 1;
   });
 
-  const rnrDisplay = (assignees = []) => {
-    const accepted = assignees.filter((assignee) => assignee.status === "ACCEPTED");
-    if (!accepted.length) return { name: "-", team: "" };
-    return { name: accepted[0].name, team: "환경경영팀" };
-  };
-
-  const getSubMetrics = (issueGroup) => {
-    return metrics.filter((metric) => metric.issueGroup === issueGroup);
-  };
-
+  /* ─── CTA 핸들러 ─── */
   const handleCtaClick = () => {
     if (!workflow) return;
 
-    switch (workflow?.nextAction) {
+    switch (workflow.nextAction) {
       case "START_DMA":
         showDefaultAlert("진행", "이중중대성평가를 시작합니다.", "success");
         break;
@@ -140,11 +194,78 @@ const OnBoard = () => {
         showDefaultAlert("대기", "자회사 데이터 수집 및 롤업 완료를 기다리고 있습니다.", "info");
         break;
       default:
-        showDefaultAlert("안내", workflow?.message || "G0 입력 상태를 확인해 주세요.", "info");
+        showDefaultAlert("안내", workflow.message || "G0 입력 상태를 확인해 주세요.", "info");
     }
   };
 
-  const basisLabel = workflow?.reportBasisType === "CONSOLIDATED" ? "연결기준" : "독립기준";
+  /* ─── modal 저장/제출 ─── */
+  const handleSaveAndSubmit = async (values, files, status) => {
+    if (!selectedItem || !companyId) return;
+
+    try {
+      const payload = {};
+      for (const [atomicMetricId, value] of Object.entries(values)) {
+        payload[atomicMetricId] = value;
+      }
+
+      const res = await saveG0Profile(companyId, payload);
+      if (isApiFailed(res)) {
+        showDefaultAlert("오류", res?.error?.message || "저장에 실패했습니다.", "error");
+        return;
+      }
+
+      showDefaultAlert(
+        "완료",
+        status === "DRAFT" ? "임시저장이 완료되었습니다." : "데이터 제출이 완료되었습니다.",
+        "success"
+      );
+      setIsModalOpen(false);
+
+      /* 저장 후 profile/status 재조회 */
+      await fetchG0Profile();
+      await fetchG0Status();
+    } catch (error) {
+      console.error(error);
+      showDefaultAlert("오류", "처리 중 오류가 발생했습니다.", "error");
+    }
+  };
+
+  /* ─── 그룹별 sub metrics ─── */
+  const getSubMetrics = (metricId) => {
+    return g0Items.filter((item) => item.metricId === metricId);
+  };
+
+  const basisLabel =
+    workflow?.reportBasisType === "CONSOLIDATED" ? "연결기준" : "독립기준";
+
+  /* ─── 로딩 상태 ─── */
+  if (loadingWorkflow && loadingG0) {
+    return (
+      <div id="ob1-page">
+        <div className="ob1-state-container">
+          <div className="ob1-spinner" />
+          <p className="ob1-state-text">온보딩 데이터를 불러오고 있습니다...</p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ─── 에러 상태 ─── */
+  if (workflowError && g0Error) {
+    return (
+      <div id="ob1-page">
+        <div className="ob1-state-container">
+          <div className="ob1-error-banner">
+            <span className="ob1-error-icon">⚠</span>
+            <div>
+              <p className="ob1-error-title">데이터 로드 실패</p>
+              <p className="ob1-error-detail">{workflowError || g0Error}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="ob1-page">
@@ -156,6 +277,7 @@ const OnBoard = () => {
         </p>
       </div>
 
+      {/* ─── 상단 통계 카드 ─── */}
       <div className="ob1-cards">
         <div className="ob1-stat-card">
           <div className="ob1-stat-title">필수 G0 지표</div>
@@ -166,15 +288,20 @@ const OnBoard = () => {
           <div className="ob1-stat-value success">{completedCount}</div>
         </div>
         <div className="ob1-stat-card">
-          <div className="ob1-stat-title">승인 완료</div>
-          <div className="ob1-stat-value success">0</div>
+          <div className="ob1-stat-title">미입력</div>
+          <div className="ob1-stat-value warning">{notStartedCount}</div>
         </div>
         <div className="ob1-stat-card">
-          <div className="ob1-stat-title">미승인</div>
-          <div className="ob1-stat-value warning">{totalCount}</div>
+          <div className="ob1-stat-title">프로필 상태</div>
+          <div className="ob1-stat-value">
+            <span className={`ob1-status-pill ${g0ProfileStatus === "COMPLETED" ? "approved" : "not-started"}`}>
+              {g0ProfileStatus === "COMPLETED" ? "완료" : g0ProfileStatus === "IN_PROGRESS" ? "진행중" : "미시작"}
+            </span>
+          </div>
         </div>
       </div>
 
+      {/* ─── 메인 레이아웃 ─── */}
       <div className="ob1-content-layout">
         <div className="ob1-sidebar-panel">
           <div className="ob1-sidebar-title">할당 항목</div>
@@ -189,121 +316,142 @@ const OnBoard = () => {
           {activeBatchId && (
             <RollupSummaryPanel
               batchId={activeBatchId}
-              onCalculated={() => console.log("롤업 계산 완료")}
+              onCalculated={() => {
+                fetchG0Profile();
+                fetchG0Status();
+              }}
             />
           )}
-          <div className="ob1-table-container">
-            <table className="ob1-table">
-              <thead>
-                <tr>
-                  <th style={{ width: "10%" }}>Metrics ID</th>
-                  <th style={{ width: "15%" }}>Atomic ID</th>
-                  <th style={{ width: "30%" }}>지표명</th>
-                  <th style={{ width: "10%" }}>입력 유형</th>
-                  <th style={{ width: "12%" }}>R&R 담당자</th>
-                  <th style={{ width: "10%" }}>마감기한</th>
-                  <th style={{ width: "8%" }}>상태</th>
-                  <th style={{ width: "5%" }}>데이터 입력</th>
-                </tr>
-              </thead>
-              <tbody>
-                {metrics.map((item, index) => {
-                  const typeInfo = getInputTypeInfo(item);
-                  const statusInfo = getStatusInfo(item.status);
-                  const rnr = rnrDisplay(item.assignees);
 
-                  return (
-                    <tr key={`${item.issueId}-${index}`}>
-                      <td>{item.issueId}</td>
-                      <td>{item.issueId}_A</td>
-                      <td className="ob1-td-name">{item.checklistQuestion}</td>
-                      <td><span className={`ob1-type-badge ${typeInfo.cls}`}>{typeInfo.label}</span></td>
-                      <td className="ob1-td-rnr">
-                        <div className="ob1-rnr-info">
-                          <span className="ob1-rnr-name">{rnr.name}</span>
-                          <span className="ob1-rnr-team">{rnr.team}</span>
-                        </div>
-                      </td>
-                      <td>2026-06-30</td>
-                      <td><span className={`ob1-status-pill ${statusInfo.cls}`}>{statusInfo.label}</span></td>
-                      <td>
-                        <button
-                          type="button"
-                          className="ob1-btn-input"
-                          onClick={() => {
-                            setSelectedItem({ parent: item, metrics: getSubMetrics(item.issueGroup) });
-                            setIsModalOpen(true);
-                          }}
-                        >
-                          입력
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          {/* ─── G0 에러 배너 ─── */}
+          {g0Error && (
+            <div className="ob1-inline-error">
+              <span className="ob1-error-icon">⚠</span>
+              <span>{g0Error}</span>
+              <button type="button" className="ob1-btn-retry" onClick={fetchG0Profile}>
+                다시 시도
+              </button>
+            </div>
+          )}
 
+          {/* ─── G0 로딩 ─── */}
+          {loadingG0 && !g0Error && (
+            <div className="ob1-table-loading">
+              <div className="ob1-spinner" />
+              <p>G0 프로필 데이터를 불러오고 있습니다...</p>
+            </div>
+          )}
+
+          {/* ─── G0 빈 상태 ─── */}
+          {!loadingG0 && !g0Error && g0Items.length === 0 && (
+            <div className="ob1-empty-state">
+              <div className="ob1-empty-icon">📋</div>
+              <p className="ob1-empty-title">G0 지표가 없습니다</p>
+              <p className="ob1-empty-desc">
+                아직 G0 프로필 데이터가 등록되지 않았습니다.<br />
+                보고서 워크플로우를 먼저 시작해 주세요.
+              </p>
+            </div>
+          )}
+
+          {/* ─── G0 테이블 ─── */}
+          {!loadingG0 && !g0Error && g0Items.length > 0 && (
+            <div className="ob1-table-container">
+              <table className="ob1-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: "12%" }}>Metric ID</th>
+                    <th style={{ width: "15%" }}>Atomic ID</th>
+                    <th style={{ width: "35%" }}>지표명</th>
+                    <th style={{ width: "10%" }}>입력 유형</th>
+                    <th style={{ width: "10%" }}>단위</th>
+                    <th style={{ width: "10%" }}>상태</th>
+                    <th style={{ width: "8%" }}>데이터 입력</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {g0Items.map((item) => {
+                    const typeBadge = getInputTypeBadge(item);
+                    const hasValue =
+                      (item.valueText !== null && item.valueText !== undefined && item.valueText !== "") ||
+                      (item.valueNumeric !== null && item.valueNumeric !== undefined);
+                    const statusInfo = hasValue
+                      ? { label: "입력 완료", cls: "approved" }
+                      : { label: "미입력", cls: "not-started" };
+
+                    return (
+                      <tr key={item.atomicMetricId || item.metricId}>
+                        <td>{item.metricId}</td>
+                        <td>{item.atomicMetricId || "-"}</td>
+                        <td className="ob1-td-name">
+                          {item.atomicName || item.metricName || "-"}
+                        </td>
+                        <td>
+                          {typeBadge.cls ? (
+                            <span className={`ob1-type-badge ${typeBadge.cls}`}>
+                              {typeBadge.label}
+                            </span>
+                          ) : (
+                            <span className="ob1-type-badge">{typeBadge.label}</span>
+                          )}
+                        </td>
+                        <td>{item.unit || "-"}</td>
+                        <td>
+                          <span className={`ob1-status-pill ${statusInfo.cls}`}>
+                            {statusInfo.label}
+                          </span>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className="ob1-btn-input"
+                            onClick={() => {
+                              setSelectedItem({
+                                parent: item,
+                                metrics: getSubMetrics(item.metricId),
+                              });
+                              setIsModalOpen(true);
+                            }}
+                          >
+                            입력
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* ─── CTA ─── */}
           <div className="ob1-cta-container">
             <button
               className="ob1-btn-cta"
               onClick={handleCtaClick}
-              disabled={loadingWorkflow}
+              disabled={loadingWorkflow || !workflow}
             >
-              {loadingWorkflow ? "로딩중..." :
-                workflow?.nextAction === "REQUEST_ROLLUP" ? "자회사 데이터 요청하기" :
-                workflow?.nextAction === "WAIT_ROLLUP" ? "롤업 대기" :
-                "이중중대성평가 진행하기"
-              }
+              {loadingWorkflow
+                ? "로딩중..."
+                : !workflow
+                  ? "워크플로우 없음"
+                  : workflow.nextAction === "REQUEST_ROLLUP"
+                    ? "자회사 데이터 요청하기"
+                    : workflow.nextAction === "WAIT_ROLLUP"
+                      ? "롤업 대기"
+                      : "이중중대성평가 진행하기"}
             </button>
           </div>
         </div>
       </div>
 
+      {/* ─── Modals ─── */}
       <OnboardingModalShell
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         metricItem={selectedItem?.parent}
         subMetrics={selectedItem?.metrics || []}
-        modalType="MIXED"
-        onSaveAndSubmit={async (values, files, status) => {
-          if (!selectedItem) return;
-
-          try {
-            for (const issueId in files) {
-              if (files[issueId] && files[issueId].name) {
-                await requestApi.uploadEvidence(issueId, files[issueId]);
-              }
-            }
-            const targetIds = selectedItem.metrics.map((metric) => metric.issueId);
-            setMetrics((prev) =>
-              prev.map((metric) => {
-                if (targetIds.includes(metric.issueId)) {
-                  return {
-                    ...metric,
-                    value: values[metric.issueId] || "",
-                    status: status || "SUBMITTED",
-                    evidenceAttached: !!files[metric.issueId],
-                    evidenceFileName: files[metric.issueId]?.name || ""
-                  };
-                }
-                return metric;
-              })
-            );
-
-            for (const issueId in values) {
-              await requestApi.saveDraft(issueId, { value: values[issueId] });
-              if (status === "SUBMITTED") await requestApi.submit(issueId);
-            }
-
-            showDefaultAlert("완료", status === "DRAFT" ? "임시저장이 완료되었습니다." : "데이터 제출이 완료되었습니다.", "success");
-            setIsModalOpen(false);
-          } catch (error) {
-            console.error(error);
-            showDefaultAlert("오류", "처리 중 오류가 발생했습니다.", "error");
-          }
-        }}
+        onSaveAndSubmit={handleSaveAndSubmit}
       />
 
       <SubsidiaryRequestModal

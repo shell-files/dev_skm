@@ -163,6 +163,8 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
     const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
 
+    
+
     const handleReportNav = async () => {
         if (!companyId) {
             showDefaultAlert("오류", "회사를 먼저 선택해 주세요.", "error");

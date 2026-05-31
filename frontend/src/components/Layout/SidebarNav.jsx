@@ -276,7 +276,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                 isOpen={isBasisModalOpen} 
                 onClose={() => setIsBasisModalOpen(false)} 
                 companyId={companyId}
-                reportingYear={DEFAULT_REPORTING_YEAR}
+                reportingYear={selectedCompany?.reportingYear || DEFAULT_REPORTING_YEAR}
             />
         </aside>
     );

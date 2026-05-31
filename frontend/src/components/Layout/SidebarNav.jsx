@@ -176,6 +176,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
     };
 
     const goOnboard = () => { navigate("/onb"); if(window.innerWidth <= 800) setIsOpen(false); };
+    const goManagerdata = () => { navigate("/managerData"); if(window.innerWidth <= 800) setIsOpen(false); };
     const goManager = () => { navigate("/manager"); if(window.innerWidth <= 800) setIsOpen(false); };
     const handleGoHome = () => { goHome(); if(window.innerWidth <= 800) setIsOpen(false); };
 
@@ -218,7 +219,8 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
                         <div className={`nav-accordion-content ${expanded.admin ? "expanded" : ""}`}>
                             <div className="inner-wrapper">
-                                <div className="nav-item sub-item" onClick={goManager}>데이터 승인</div>
+                                <div className="nav-item sub-item" onClick={goManagerdata}>데이터 승인</div>
+                                <div className="nav-item sub-item" onClick={goManager}>인원 관리</div>
                             </div>
                         </div>
                     </div>

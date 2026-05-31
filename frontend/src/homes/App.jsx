@@ -12,6 +12,7 @@ import Result from '@reports/Result.jsx';
 import Draft from '@reports/Draft.jsx';
 import Mypage from '@mains/Mypage.jsx';
 import Manager from '@mains/Manager.jsx';
+import ManagerData from '@mains/ManagerData.jsx';
 import Dashboard from './Dashboard.jsx';
 import Headernav from '@components/Layout/HeaderNav.jsx'
 import Sidebarnav from '@components/Layout/SidebarNav.jsx'
@@ -85,6 +86,7 @@ const App = () => {
             {/* <Route path="/dashboard" element={<Dashboard />} /> */}
             <Route path="/mypage" element={<Mypage />} />
             <Route path="/manager" element={<Manager />} />
+            <Route path="/managerData" element={<ManagerData />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

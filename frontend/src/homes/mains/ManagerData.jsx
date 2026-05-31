@@ -1,8 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 // import { GET } from '@utils/Network';
 import '@styles/Manager.css';
-import Invite from './Invite.jsx'
-import UserTab from './UserTab';
+import DataTab from './DataTab.jsx'
 import TabButton from '@components/UI/TabButton';
 import { showDefaultAlert, showConfirmAlert } from '@components/UI/ServiceAlert';
 import { useAuth } from '@hooks/AuthContext'
@@ -90,11 +89,11 @@ const PAGE_SIZE = 10;
 
 const safeArray = (arr) => Array.isArray(arr) ? arr : [];
 
-const Manager = () => {
+const ManagerData = () => {
 
 
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('user');
+  const [activeTab, setActiveTab] = useState('data');
   const [activeService, setActiveService] = useState('disclosure');
 
   const [inputs, setInputs] = useState([]);
@@ -311,7 +310,27 @@ const Manager = () => {
     canAdmin: role === "관리자",
   }), [role]);
 
-
+  /**
+   * BULK ACTION
+   */
+  const handleBulkAction = async (status) => {
+    if (!selectedIds.length) return;
+    const ok = await showConfirmAlert("일괄 처리", "진행하시겠습니까?", "question");
+    if (!ok) return;
+    setInputs(prev =>
+      prev.map(i =>
+        selectedIds.includes(i.id)
+          ? { ...i, status }
+          : i
+      )
+    );
+    setSelectedIds([]);
+  };
+  const handleMainCategoryChange = (category) => {
+    setActiveDataCategory(category);
+    setActiveSubCategory('all');
+    setDataPage(1);
+  };
   const handleDisconnectClick = async (targetUser, type) => {
     const ok = await showConfirmAlert(
       "연결 해제",
@@ -358,54 +377,61 @@ const Manager = () => {
     <div id="manager_page">
       <div className="manager-content-container">
 
+        
+
         {/* 2. 헤더 및 탭 */}
         <div className="page-header">
           <div className="page-title-area">
             <h2 className="page-title">ESG 통합 관리 시스템</h2>
+            
           </div>
+        </div>
+      {/* 1. KPI 영역 */}
+        <div className='kpi-container'>
+          {[
+            { key: 'APPROVED', label: '승인 완료', count: kpi.approved },
+            { key: 'PENDING', label: '승인 대기', count: kpi.waiting },
+            { key: 'REJECTED', label: '반려됨', count: kpi.rejected }
+          ].map(item => (
+            <div
+              key={item.key}
+              onClick={() => !isLoading && setStatusFilter(item.key === statusFilter ? 'all' : item.key)}
+              className={`kpi-card ${statusFilter === item.key ? 'active' : ''} ${isLoading ? 'disabled' : ''}`}
 
-          <TabButton.Category
-            tabs={[
-              { label: '유저 관리', value: 'user' },
-              { label: '초대 관리', value: 'Invite' }
-            ]}
-            activeTab={activeTab}
-            onTabChange={(val) => !isLoading && setActiveTab(val)}
-            className="manager-main-tabs"
-          />
+            >
+              <div className='kpi-label'>{item.label}</div>
+              <div className='kpi-value'>{item.count}</div>
+            </div>
+          ))}
         </div>
 
         {/* ============================================================ */}
-        {/* 유저 관리 탭 */}
+        {/* 데이터 승인 탭 */}
         {/* ============================================================ */}
-        {activeTab === 'user' && (
-          <UserTab
-            isLoading={isLoading}
-            userSearch={userSearch}
-            setUserSearch={setUserSearch}
-            fetchData={fetchData}
-            pagedUsers={pagedUsers}
-            filteredUsers={filteredUsers}
-            PAGE_SIZE={PAGE_SIZE}
-            userPage={userPage}
-            setUserPage={setUserPage}
-            setCurrentUser={setCurrentUser}
-            setIsModalOpen={setIsModalOpen}
-            setDisconnectTarget={setDisconnectTarget}
-            handleDisconnectClick={handleDisconnectClick}
-            user={user}
-            authRole={user?.role}
-            canDisconnect={canDisconnect}
-            permission={permission}
-            setIsDisconnectModalOpen={setIsDisconnectModalOpen}
-            activeService={activeService}
-          />
-        )}
-
-        {activeTab === 'Invite' && (
-          <section className="fade-in">
-            <Invite activeService={activeService} />
-          </section>
+        {activeTab === 'data' && (
+          <div className="manager-data-tab-container">
+            <DataTab
+              activeService={activeService}
+              isLoading={isLoading}
+              activeDataCategory={activeDataCategory}
+              activeSubCategory={activeSubCategory}
+              selectedIds={selectedIds}
+              setSelectedIds={setSelectedIds}
+              pagedInputs={pagedInputs}
+              totalDataPages={totalDataPages}
+              dataPage={dataPage}
+              userRole={userRole}
+              hasConsultant={hasConsultant}
+              handleMainCategoryChange={handleMainCategoryChange}
+              setActiveSubCategory={setActiveSubCategory}
+              handleBulkAction={handleBulkAction}
+              fetchData={fetchData}
+              setDataPage={setDataPage}
+              handleAction={handleAction}
+              toggleSelect={toggleSelect}
+              toggleSelectAll={toggleSelectAll}
+            />
+          </div>
         )}
 
         {/* ============================================================ */}
@@ -485,11 +511,87 @@ const Manager = () => {
             </div>
           </div>
         )}
-        
+        {isRejectModalOpen && (
+          <div className="modal-overlay">
+            <div className="modal-window">
+              <div className="modal-header">
+                <h3>반려 사유 입력</h3>
+
+                <button
+                  className="close-x"
+                  onClick={() => setIsRejectModalOpen(false)}
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="modal-body">
+                {/* 기존 반려 사유 (있을 경우만) */}
+                {inputs.find(i => i.id === rejectTargetId)?.reason && (
+                  <div style={{ marginBottom: '10px', fontSize: '13px', color: '#888' }}>
+                    기존 사유: {inputs.find(i => i.id === rejectTargetId)?.reason}
+                  </div>
+                )}
+                <textarea
+                  className="reject-textarea"
+                  placeholder="반려 사유를 입력해주세요"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  style={{
+                    width: '100%',
+                    height: '120px',
+                    padding: '10px',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px'
+                  }}
+                />
+              </div>
+
+              <div className="modal-footer">
+                <button
+                  className="btn-confirm"
+                  onClick={async () => {
+                    if (!rejectReason.trim()) {
+                      showDefaultAlert("알림", "반려 사유를 입력해주세요.", "info");
+                      return;
+                    }
+
+                    try {
+                      if (!USE_DUMMY_API) {
+                        await api.patch('/board', {
+                          id: rejectTargetId,
+                          status: 'rejected',
+                          reason: rejectReason,
+                          ...authInfo
+                        });
+                      }
+
+                      setInputs(prev =>
+                        prev.map(i =>
+                          i.id === rejectTargetId
+                            ? { ...i, status: 'rejected', reason: rejectReason }
+                            : i
+                        )
+                      );
+
+                      showDefaultAlert("완료", "반려 처리되었습니다.", "success");
+                      setIsRejectModalOpen(false);
+
+                    } catch (e) {
+                      showDefaultAlert("실패", "처리 중 오류 발생", "error");
+                    }
+                  }}
+                >
+                  반려 확정
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
   );
 };
 
-export default Manager;
+export default ManagerData;

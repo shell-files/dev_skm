@@ -238,13 +238,13 @@ const Media = () => {
   };
 
   return (
-    <div className="sr-container">
-      <header className="sr-header">
-        <h1 className="sr-title">
+    <div className="media-container">
+      <header className="media-header">
+        <h1 className="media-title">
           지속가능경영보고서 AI 자동 생성
         </h1>
 
-        <div className="sr-stepper-row">
+        <div className="media-stepper-row">
           {steps.map((step, index) => (
             <div
               key={step.id}
@@ -283,8 +283,8 @@ const Media = () => {
         </div>
       </header>
 
-      <main className="main-content">
-        <div className="input-card">
+      <main className="media-main-content">
+        <div className="media-input-card">
           <h2
             style={{
               fontSize: "1.4rem",
@@ -581,7 +581,7 @@ const Media = () => {
 
           <div className="action-container">
             <button
-              className="sr-btn"
+              className="media-btn"
               onClick={startMediaCollection}
               style={{marginBottom: "50px"}}
             >
@@ -592,7 +592,7 @@ const Media = () => {
       </main>
 
       <div
-        className={`sr-result-dashboard ${
+        className={`media-result-dashboard ${
           dashboardOpen ? "open" : ""
         }`}
       >
@@ -621,7 +621,7 @@ const Media = () => {
 
           <img
             src={robot}
-            className="robot-main-img"
+            className="robot-media-main-img"
             alt="마스코트"
           />
 

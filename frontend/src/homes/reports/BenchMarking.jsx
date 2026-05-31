@@ -1,4 +1,4 @@
-/* ============================================================================
+﻿/* ============================================================================
  *  [병합 작업 요약]  benchmarking.jsx(소문자) → BenchMarking.jsx(대문자) 통합
  * ----------------------------------------------------------------------------
  *  - 베이스: 대문자 BenchMarking.jsx (정상 동작하는 React 컴포넌트) 유지
@@ -416,84 +416,47 @@ const Benchmarking = () => {
             {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인" : "실시간 분석 대기 중"}
           </div>
         </div>
-          {/* [병합-수정] showResult일 때 showing-result 클래스 부여 → 결과 길어지면 내부 스크롤 (CSS와 연동) */}
-        <div className={`robot-view-container ${isAnalyzing ? "analyzing" : ""} ${showResult ? "showing-result":""}`}>
-          <div id="particle-field" className="particle-field" ref={particleRef}></div>
 
-          {!showResult ? (
-            <div id="loading-content" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <div className="robot-stage">
-                <div className="robot-float-wrap">
-                  <img src={robot} className="robot-main-img mascot-entrance-pop" alt="robot" />
-                </div>
-              </div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: 850, margin: "0 0 4px 0" }}>
-                {isAnalyzing ? "벤치마킹 분석 진행 중..." : "분석 준비가 완료되었습니다"}
-              </h3>
-              {isAnalyzing && (
-                <div className="progress-section">
-                  <div className="progress-bar-wrap">
-                    <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
-                  </div>
-                  <div style={{ marginTop: "6px", fontWeight: 900, fontSize: "0.85rem", color: "var(--sr-primary)" }}>
-                    {progress}% 분석 중
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="result-layout" id="benchmarking-result">
-              <div className="ai-message-box" style={{ marginBottom: "20px" }}>
-                <strong style={{ color: "var(--sr-primary)", fontWeight: 850 }}>
-                  [AI 벤치마킹 이슈 도출 및 Gap Analysis]
-                </strong>
-                <p style={{ margin: "8px 0 0", color: "#334155", fontWeight: 500, lineHeight: 1.5 }}>
-                  보고서(SR) 교차 파싱 결과 <strong>{processedIssues.length}개</strong>의 핵심 이슈가 식별되었습니다. 자회사의 누락(Gap) 요소를 보완하여 최적의 초안 요건을 빌드하세요.
-                </p>
-              </div>
-
-               {/* 통계 카드 4개 */}
-               <div className = "result-stats-row">
+        {showResult && (
+          <div className="result-layout" id="benchmarking-result">
+              {/* 통계 카드 4개 */}
+              <div className="result-stats-row">
                 <div className="result-stat-card">
-                  <div className="stat-icon-wrap">📋</div>
+                  <div className="stat-icon-wrap">R</div>
                   <div>
-                    <div className="stat-label"> 분석보고서</div>
+                    <div className="stat-label">분석보고서</div>
                     <div className="stat-value">{dashboardData.stats.reports}개</div>
                     <div className="stat-sub">
-                      리더 {dashboardData.stats.leaderCount} · 피어 {dashboardData.stats.peerCount} · 자회사 {dashboardData.stats.subcount}
+                      리더 {dashboardData.stats.leaderCount} · 피어 {dashboardData.stats.peerCount} · 자사회 {dashboardData.stats.subcount}
                     </div>
-                    </div>  
-                    </div>
-                
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap">≡</div>
-                  <div>
-                    <div className="stat-label">식별 이슈</div>
-                    <div className="stat-value">{dashboardData.stats.identifiedIssues}개</div>
                   </div>
+                </div>
 
                 <div className="result-stat-card">
-                  <div className="stat-icon-wrap>👥</div>
+                  <div className="stat-icon-wrap">I</div>
+                  <div>
+                    <div className="stat-label">발견 이슈</div>
+                    <div className="stat-value">{dashboardData.stats.identifiedIssues}개</div>
+                  </div>
+                </div>
+
+                <div className="result-stat-card">
+                  <div className="stat-icon-wrap">C</div>
                   <div>
                     <div className="stat-label">공통 이슈</div>
                     <div className="stat-value">{dashboardData.stats.commonIssues}개</div>
                   </div>
                 </div>
 
-                <div>
-                  <div className="result-stat-card">
-                    <div className="stat-icon-wrap">🎯</div>
-                    <div>
-                      <div className="stat-label">자사 Blind Spot</div>
-                      <div className="stat-value">{dashboardData.stats.blindSpots}개</div>
+                <div className="result-stat-card">
+                  <div className="stat-icon-wrap">B</div>
+                  <div>
+                    <div className="stat-label">자사 Blind Spot</div>
+                    <div className="stat-value">{dashboardData.stats.blindSpots}개</div>
+                  </div>
+                </div>
+              </div>
 
-
-
-
-
-
-
-              {/* 개선된 1컬럼 스택트 레이아웃 테이블 */}
               <div className="gap-analysis-container">
                 <div className="gap-table-header">
                   <div className="col-info-stacked-header">식별된 ESG 이슈그룹 및 세부 분석 문장(Sub Issue)</div>
@@ -546,7 +509,6 @@ const Benchmarking = () => {
           )}
         </div>
       </div>
-    </div>
   );
 }
 

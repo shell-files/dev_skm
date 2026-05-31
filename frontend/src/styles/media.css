@@ -1,11 +1,11 @@
 :root {
-    --sr-primary: #03A94D;
-    --sr-primary-vibrant: linear-gradient(135deg, #03A94D, #017E3F);
-    --sr-bg: #f4f7f6;
-    --sr-border: #e2e8f0;
-    --sr-text: #334155;
-    --sr-sub: #64748b;
-    --sr-radius: 20px;
+    --media-primary: #03A94D;
+    --media-primary-vibrant: linear-gradient(135deg, #03A94D, #017E3F);
+    --media-bg: #f4f7f6;
+    --media-border: #e2e8f0;
+    --media-text: #334155;
+    --media-sub: #64748b;
+    --media-radius: 20px;
 }
 
 /* 중앙 컨텐츠 스크롤 제어 */
@@ -18,7 +18,7 @@
     overflow: hidden;
 }
 
-.sr-container {
+.media-container {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -30,14 +30,14 @@
 
 }
 
-.sr-header {
+.media-header {
     background: #fff;
     padding: 20px 40px;
     flex-shrink: 0;
     width: 100%;
 }
 
-.sr-title {
+.media-title {
     font-size: 1.3rem;
     font-weight: 850;
     margin: 0 0 15px 0;
@@ -47,7 +47,7 @@
 .input-card {
     background: #fff;
     padding: 35px 130px;
-    border-radius: var(--sr-radius);
+    border-radius: var(--media-radius);
     width: 100%;
     box-shadow: 0 4px 20px rgba(15, 23, 42, 0.02);
     text-align: center;
@@ -66,7 +66,8 @@
 
 .media-card {
     position: relative;
-    border: 2px solid #e2e8f0;
+    /* 기본 테두리 색상을 var(--media-primary) 즉, #03A94D 로 상시 적용 */
+    border: 2px solid var(--media-primary); 
     border-radius: 16px;
     padding: 24px;
     background: #fff;
@@ -77,28 +78,30 @@
 }
 
 .media-card:hover {
-    border-color: var(--sr-primary);
-    box-shadow: 0 10px 25px rgba(3, 169, 77, 0.05);
+    border-color: var(--media-primary);
+    /* 호버 시 네온 느낌의 부드러운 그림자 효과 추가 */
+    box-shadow: 0 10px 25px rgba(3, 169, 77, 0.12); 
 }
 
-/* 상단 유형 배지 */
+/* 상단 유형 배지 (언론 채널, 규제 기관, 전문 평가기관) */
 .media-badge {
     position: absolute;
     top: -12px;
     left: 20px;
     background: #fff;
-    border: 2px solid #e2e8f0;
+    /* 배지 테두리와 텍스트 색상도 카드와 통일감 있게 #03A94D 로 변경 */
+    border: 2px solid var(--media-primary); 
     padding: 2px 14px;
     border-radius: 20px;
     font-weight: 800;
     font-size: 0.8rem;
-    color: #475569;
+    color: var(--media-primary); 
     transition: all 0.3s;
 }
 
 .media-card:hover .media-badge {
-    border-color: var(--sr-primary);
-    color: var(--sr-primary);
+    border-color: var(--media-primary);
+    color: var(--media-primary);
 }
 
 /* 폼 요소 레이아웃 스펙 */
@@ -130,7 +133,7 @@
 
 .media-input:focus,
 .media-select:focus {
-    border-color: var(--sr-primary);
+    border-color: var(--media-primary);
     background-color: #fff;
 }
 
@@ -211,32 +214,32 @@
     margin-top: 15px;
 }
 
-.sr-btn {
+.media-btn {
     padding: 14px 45px;
     border-radius: 10px;
     border: none;
     font-weight: 850;
     font-size: 1rem;
     cursor: pointer;
-    background: var(--sr-primary-vibrant);
+    background: var(--media-primary-vibrant);
     color: #fff;
     transition: 0.3s;
     box-shadow: 0 4px 12px rgba(3, 169, 77, 0.15);
 }
 
-.sr-btn:hover {
+.media-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 16px rgba(3, 169, 77, 0.25);
 }
 
 /* 바텀 실시간 분석 현황판 연동 */
-.sr-result-dashboard {
+.media-result-dashboard {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
     background: #fff;
-    border-top: 1px solid var(--sr-border);
+    border-top: 1px solid var(--media-border);
     height: 45px;
     transition: height 0.6s cubic-bezier(0.19, 1, 0.22, 1);
     display: flex;
@@ -245,7 +248,7 @@
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.06);
 }
 
-.sr-result-dashboard.open {
+.media-result-dashboard.open {
     height: 400px;
 }
 
@@ -332,7 +335,7 @@
 /* =========================================================
            Stepper
         ========================================================= */
-.sr-stepper-row {
+.media-stepper-row {
     position: relative;
     display: flex;
     align-items: center;
@@ -402,7 +405,7 @@
         gap: 16px;
     }
 
-    .sr-header {
+    .media-header {
         padding: 18px 20px;
     }
 
@@ -419,7 +422,7 @@
         padding: 20px;
     }
 
-    .sr-result-dashboard.open {
+    .media-result-dashboard.open {
         height: 500px;
     }
 
@@ -444,7 +447,7 @@
         grid-template-columns: 1fr;
     }
 
-    .sr-header {
+    .media-header {
         padding: 18px 20px;
     }
 
@@ -461,7 +464,7 @@
         padding: 20px;
     }
 
-    .sr-result-dashboard.open {
+    .media-result-dashboard.open {
         height: 500px;
     }
 }
@@ -476,11 +479,11 @@
         padding-bottom: 180px;
     }
 
-    .sr-title {
+    .media-title {
         font-size: 1.1rem;
     }
 
-    .sr-stepper-row {
+    .media-stepper-row {
         gap: 10px;
         overflow-x: auto;
         padding-bottom: 6px;
@@ -520,7 +523,7 @@
         flex-direction: column;
     }
 
-    .sr-btn {
+    .media-btn {
         width: 100%;
     }
 
@@ -571,7 +574,7 @@
         align-items: flex-start;
     }
 
-    .sr-result-dashboard.open {
+    .media-result-dashboard.open {
         height: 85vh;
     }
 }
@@ -591,7 +594,7 @@
         /* =========================================================
            Stepper
         ========================================================= */
-        .sr-stepper-row {
+        .media-stepper-row {
             position: relative;
             display: flex;
             align-items: center;
@@ -653,7 +656,7 @@
    분석결과창px
 ========================================================= */
 
-.sr-result-dashboard.open.result-expanded { height: 78vh; }
+.media-result-dashboard.open.result-expanded { height: 78vh; }
 
 
 .robot-view-container.showing-result {

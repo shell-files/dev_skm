@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import "@styles/reportBasisSelectModal.css";
-import { startWorkflow } from "@/apis/reportworkflow";
+import { DEFAULT_REPORTING_YEAR, startWorkflow } from "@/apis/report";
 
 // ── Illustrations (카드 대표 일러스트 132×132)
 import entityCardImg from "@assets/reportbasis/illustrations/entity-card.png";
@@ -44,7 +44,12 @@ const CONSOLIDATED_STEPS = [
   { img: stepReportImg,             label: "보고서 생성",          sub: "최종 보고서 작성 및 발행" },
 ];
 
-const ReportBasisSelectModal = ({ isOpen, onClose }) => {
+const ReportBasisSelectModal = ({
+  isOpen,
+  onClose,
+  companyId,
+  reportingYear = DEFAULT_REPORTING_YEAR
+}) => {
   const navigate = useNavigate();
   const [selected, setSelected] = useState(null); // null | 'ENTITY' | 'CONSOLIDATED'
   const [loading, setLoading] = useState(false);
@@ -60,11 +65,20 @@ const ReportBasisSelectModal = ({ isOpen, onClose }) => {
 
   const handleConfirm = async () => {
     if (!selected || loading) return;
+    if (!companyId) {
+      setError("회사를 먼저 선택해 주세요.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const res = await startWorkflow({ financialBasis: selected });
+      const res = await startWorkflow({
+        companyId,
+        reportingYear,
+        reportBasisType: selected
+      });
 
       if (res?.status === false) {
         setError(res.error?.message || "워크플로우 시작에 실패했습니다.");

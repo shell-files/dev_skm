@@ -19,7 +19,7 @@ export const checkUser = createAsyncThunk(
   'auth/checkUser',
   async (credentials, { rejectWithValue }) => {
     try {
-      const response = await POST('/auth');
+      const response = await GET('/auth');
       return response;
     } catch (error) {
       return rejectWithValue(error.response?.data);

@@ -5,6 +5,8 @@ import initialMetrics from "@assets/data/onboardingData.js";
 import { useAuth } from '@hooks/AuthContext.jsx';
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 import OnboardingModalShell from "./components/modal/OnboardingModalShell";
+import SubsidiaryRequestModal from "./components/modal/SubsidiaryRequestModal";
+import RollupSummaryPanel from "./components/RollupSummaryPanel";
 import { getCurrent } from "@/apis/reportworkflow";
 
 const USE_DUMMY_API = false;
@@ -64,6 +66,9 @@ const OnBoard1 = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
+  const [isSubReqModalOpen, setIsSubReqModalOpen] = useState(false);
+  const [activeBatchId, setActiveBatchId] = useState(null);
+
   useEffect(() => {
     const fetchWorkflow = async () => {
       try {
@@ -111,8 +116,7 @@ const OnBoard1 = () => {
       // navigate('/dma') 등의 처리
     } else if (workflow.financialBasis === 'CONSOLIDATED') {
       if (workflow.isParent) {
-        // Phase 4에서 구현할 자회사 데이터 요청 모달 오픈
-        showDefaultAlert("알림", "자회사 데이터 요청 모달 오픈 (Phase 4)", "info");
+        setIsSubReqModalOpen(true);
       } else {
         // Phase 5에서 구현할 지주사 전송 모달 오픈
         showDefaultAlert("알림", "지주사에 데이터 전송 모달 오픈 (Phase 5)", "info");
@@ -166,6 +170,12 @@ const OnBoard1 = () => {
 
         {/* 우측 데이터 테이블 */}
         <div className="ob1-main-area">
+          {activeBatchId && (
+            <RollupSummaryPanel 
+              batchId={activeBatchId} 
+              onCalculated={() => console.log('롤업 계산 완료')} 
+            />
+          )}
           <div className="ob1-table-container">
             <table className="ob1-table">
               <thead>
@@ -273,6 +283,16 @@ const OnBoard1 = () => {
             console.error(err);
             showDefaultAlert("오류", "처리 중 오류가 발생했습니다.", "error");
           }
+        }}
+      />
+
+      <SubsidiaryRequestModal 
+        isOpen={isSubReqModalOpen} 
+        onClose={() => setIsSubReqModalOpen(false)} 
+        runId={workflow?.runId} 
+        onRequested={(batch) => {
+          setActiveBatchId(batch.batchId);
+          setIsSubReqModalOpen(false);
         }}
       />
     </div>

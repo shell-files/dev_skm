@@ -80,8 +80,9 @@ const ReportBasisSelectModal = ({
         reportBasisType: selected
       });
 
-      if (res?.status === false) {
-        setError(res.error?.message || "워크플로우 시작에 실패했습니다.");
+      const isFailed = res?.status === false || res?.success === false || !res?.data;
+      if (isFailed) {
+        setError(res?.error?.message || "워크플로우 시작에 실패했습니다.");
         setLoading(false);
         return;
       }

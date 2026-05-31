@@ -86,41 +86,41 @@ const OnBoard = () => {
   const [activeBatchId, setActiveBatchId] = useState(null);
 
   /* ─── workflow 조회 ─── */
-  useEffect(() => {
+  const fetchWorkflow = useCallback(async () => {
     if (!companyId) {
       setWorkflow(null);
       setLoadingWorkflow(false);
       return;
     }
 
-    const fetchWorkflow = async () => {
-      setLoadingWorkflow(true);
-      setWorkflowError(null);
-      try {
-        const res = await getCurrent(companyId, DEFAULT_REPORTING_YEAR);
-        const isFailed =
-          res?.status === false ||
-          res?.success === false ||
-          !res?.data;
+    setLoadingWorkflow(true);
+    setWorkflowError(null);
+    try {
+      const res = await getCurrent(companyId, DEFAULT_REPORTING_YEAR);
+      const isFailed =
+        res?.status === false ||
+        res?.success === false ||
+        !res?.data;
 
-        if (isFailed) {
-          setWorkflow(null);
-          setWorkflowError(res?.error?.message || "보고서 워크플로우 조회에 실패했습니다.");
-          return;
-        }
-
-        setWorkflow(res.data);
-      } catch (error) {
-        console.error(error);
+      if (isFailed) {
         setWorkflow(null);
-        setWorkflowError("보고서 워크플로우 조회에 실패했습니다.");
-      } finally {
-        setLoadingWorkflow(false);
+        setWorkflowError(res?.error?.message || "보고서 워크플로우 조회에 실패했습니다.");
+        return;
       }
-    };
 
-    fetchWorkflow();
+      setWorkflow(res.data);
+    } catch (error) {
+      console.error(error);
+      setWorkflow(null);
+      setWorkflowError("보고서 워크플로우 조회에 실패했습니다.");
+    } finally {
+      setLoadingWorkflow(false);
+    }
   }, [companyId]);
+
+  useEffect(() => {
+    fetchWorkflow();
+  }, [fetchWorkflow]);
 
   /* ─── G0 profile 조회 ─── */
   const fetchG0Profile = useCallback(async () => {
@@ -203,10 +203,24 @@ const OnBoard = () => {
     if (!selectedItem || !companyId) return;
 
     try {
-      const payload = {};
-      for (const [atomicMetricId, value] of Object.entries(values)) {
-        payload[atomicMetricId] = value;
-      }
+      const payload = {
+        reportingYear: DEFAULT_REPORTING_YEAR,
+        items: selectedItem.metrics.map((item) => {
+          const rawValue = values[item.atomicMetricId] ?? "";
+          const trimmed = String(rawValue).trim();
+          const numericYn =
+            trimmed !== "" &&
+            /^-?\d+(\.\d+)?$/.test(trimmed);
+
+          return {
+            metricId: item.metricId,
+            atomicMetricId: item.atomicMetricId,
+            valueText: numericYn ? null : trimmed || null,
+            valueNumeric: numericYn ? Number(trimmed) : null,
+            unit: item.unit || null,
+          };
+        }),
+      };
 
       const res = await saveG0Profile(companyId, payload);
       if (isApiFailed(res)) {
@@ -235,8 +249,18 @@ const OnBoard = () => {
     return g0Items.filter((item) => item.metricId === metricId);
   };
 
+  // Group items by metricId for the main table display
+  const groupedG0Items = [];
+  const metricIdSet = new Set();
+  g0Items.forEach(item => {
+    if (!metricIdSet.has(item.metricId)) {
+      metricIdSet.add(item.metricId);
+      groupedG0Items.push(item);
+    }
+  });
+
   const basisLabel =
-    workflow?.reportBasisType === "CONSOLIDATED" ? "연결기준" : "독립기준";
+    workflow?.reportBasisType === "CONSOLIDATED" ? "연결기준" : workflow?.reportBasisType === "ENTITY" ? "독립기준" : "미확정";
 
   /* ─── 로딩 상태 ─── */
   if (loadingWorkflow && loadingG0) {
@@ -280,7 +304,7 @@ const OnBoard = () => {
       {/* ─── 상단 통계 카드 ─── */}
       <div className="ob1-cards">
         <div className="ob1-stat-card">
-          <div className="ob1-stat-title">필수 G0 지표</div>
+          <div className="ob1-stat-title">전체 G0 입력 항목</div>
           <div className="ob1-stat-value">{totalCount}</div>
         </div>
         <div className="ob1-stat-card">
@@ -313,12 +337,23 @@ const OnBoard = () => {
         </div>
 
         <div className="ob1-main-area">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '16px 24px 0 24px' }}>
+            <button
+              className="ob1-btn-input"
+              onClick={() => setIsSubTransferModalOpen(true)}
+              style={{ padding: '8px 16px', background: '#f8fafc', color: '#1e293b', border: '1px solid #cbd5e1' }}
+            >
+              지주사 요청 확인 및 전송
+            </button>
+          </div>
+
           {activeBatchId && (
             <RollupSummaryPanel
               batchId={activeBatchId}
               onCalculated={() => {
                 fetchG0Profile();
                 fetchG0Status();
+                fetchWorkflow();
               }}
             />
           )}
@@ -370,21 +405,35 @@ const OnBoard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {g0Items.map((item) => {
-                    const typeBadge = getInputTypeBadge(item);
-                    const hasValue =
-                      (item.valueText !== null && item.valueText !== undefined && item.valueText !== "") ||
-                      (item.valueNumeric !== null && item.valueNumeric !== undefined);
-                    const statusInfo = hasValue
+                  {groupedG0Items.map((item) => {
+                    const subMetrics = getSubMetrics(item.metricId);
+                    
+                    // Determine status based on subMetrics
+                    let allCompleted = true;
+                    let anyCompleted = false;
+                    
+                    subMetrics.forEach(sub => {
+                      const hasValue = (sub.valueText !== null && sub.valueText !== undefined && sub.valueText !== "") ||
+                                       (sub.valueNumeric !== null && sub.valueNumeric !== undefined);
+                      if (hasValue) anyCompleted = true;
+                      else allCompleted = false;
+                    });
+                    
+                    const statusInfo = allCompleted && subMetrics.length > 0
                       ? { label: "입력 완료", cls: "approved" }
-                      : { label: "미입력", cls: "not-started" };
+                      : anyCompleted 
+                        ? { label: "진행중", cls: "draft" }
+                        : { label: "미입력", cls: "not-started" };
+
+                    // Find if any sub metric has a distinct input format
+                    const typeBadge = getInputTypeBadge(subMetrics[0] || item);
 
                     return (
-                      <tr key={item.atomicMetricId || item.metricId}>
+                      <tr key={item.metricId}>
                         <td>{item.metricId}</td>
-                        <td>{item.atomicMetricId || "-"}</td>
+                        <td>{subMetrics.length > 1 ? `(${subMetrics.length}개 항목)` : (item.atomicMetricId || "-")}</td>
                         <td className="ob1-td-name">
-                          {item.atomicName || item.metricName || "-"}
+                          {item.metricName || item.atomicName || "-"}
                         </td>
                         <td>
                           {typeBadge.cls ? (
@@ -408,7 +457,7 @@ const OnBoard = () => {
                             onClick={() => {
                               setSelectedItem({
                                 parent: item,
-                                metrics: getSubMetrics(item.metricId),
+                                metrics: subMetrics,
                               });
                               setIsModalOpen(true);
                             }}
@@ -434,12 +483,14 @@ const OnBoard = () => {
               {loadingWorkflow
                 ? "로딩중..."
                 : !workflow
-                  ? "워크플로우 없음"
-                  : workflow.nextAction === "REQUEST_ROLLUP"
-                    ? "자회사 데이터 요청하기"
-                    : workflow.nextAction === "WAIT_ROLLUP"
-                      ? "롤업 대기"
-                      : "이중중대성평가 진행하기"}
+                  ? "워크플로우 상태 확인 필요"
+                  : workflow.nextAction === "START_DMA"
+                    ? "이중중대성평가 진행하기"
+                    : workflow.nextAction === "REQUEST_ROLLUP"
+                      ? "자회사 데이터 요청하기"
+                      : workflow.nextAction === "WAIT_ROLLUP"
+                        ? "롤업 대기"
+                        : "G0 입력 상태 확인"}
             </button>
           </div>
         </div>

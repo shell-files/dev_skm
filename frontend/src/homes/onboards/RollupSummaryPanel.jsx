@@ -108,7 +108,7 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
 
   const { requestedCount = 0, sentCount = 0, pendingCount = 0, calculateReadyYn, dmaReadyYn, batchStatus } = statusInfo;
   const progressPercent = requestedCount > 0 ? Math.round((sentCount / requestedCount) * 100) : 0;
-  const isCalculated = batchStatus === "CALCULATED";
+  const isCalculated = String(batchStatus || "").toLowerCase() === "completed";
 
   return (
     <div className="ob1-rollup-panel">
@@ -137,7 +137,7 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
         <button
           className={`ob1-rollup-btn ${isCalculated ? "calculated" : ""}`}
           onClick={handleCalc}
-          disabled={calculating || !calculateReadyYn}
+          disabled={calculating || !calculateReadyYn || isCalculated}
           title={!calculateReadyYn ? "모든 자회사 데이터가 수집되어야 계산 가능합니다" : ""}
         >
           {calculating

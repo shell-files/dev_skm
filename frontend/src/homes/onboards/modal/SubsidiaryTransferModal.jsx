@@ -155,7 +155,7 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
                       padding: "16px",
                       border: `1px solid ${selectedBatchId === req.batchId ? "#3b82f6" : "#e2e8f0"}`,
                       borderRadius: "8px",
-                      cursor: "pointer",
+                      cursor: isNotReady ? "not-allowed" : "pointer",
                       background: selectedBatchId === req.batchId
                         ? "#eff6ff"
                         : isNotReady
@@ -170,6 +170,7 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
                       value={req.batchId}
                       checked={selectedBatchId === req.batchId}
                       onChange={() => setSelectedBatchId(req.batchId)}
+                      disabled={isNotReady}
                       style={{ marginTop: "4px" }}
                     />
                     <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>

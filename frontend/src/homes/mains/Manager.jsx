@@ -7,7 +7,7 @@ import DataTab from './DataTab.jsx'
 import TabButton from '@components/UI/TabButton';
 import { showDefaultAlert, showConfirmAlert } from '@components/UI/ServiceAlert';
 import { useAuth } from '@hooks/AuthContext'
-import INITIAL_METRICS from '@assets/data/onboardingData';
+const INITIAL_METRICS = [];
 import ServiceTabs from '@components/UI/ServiceTabs';
 
 /**

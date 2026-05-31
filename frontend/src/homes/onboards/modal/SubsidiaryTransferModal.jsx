@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { listRequests, sendSource } from "@/apis/rollup";
+import { listRequests, sendSource } from "@/apis/report";
 import { showDefaultAlert, showConfirmAlert } from "@components/UI/ServiceAlert";
 
 const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
@@ -21,14 +21,12 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
     try {
       const res = await listRequests();
       if (res?.data) {
-        setRequests(res.data);
+        const items = res?.data?.items || [];
+        setRequests(items);
       }
     } catch (e) {
       console.error(e);
-      // mock fallback
-      setRequests([
-        { batchId: 'mock-batch-1', requestName: '2025년 ESG 데이터 정기 요청', targetGroup: 'G0', dueDate: '2026-06-15' }
-      ]);
+      showDefaultAlert("오류", "요청 목록을 불러오지 못했습니다.", "error");
     } finally {
       setLoading(false);
     }
@@ -39,7 +37,7 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
 
     const confirm = await showConfirmAlert(
       "데이터 전송", 
-      "현재까지 입력/승인된 G0 데이터를 지주사로 전송하시겠습니까?\n전송 후에도 마감 기한 전까지 수정 후 재전송이 가능합니다.", 
+      "현재까지 입력/승인된 G0 데이터를 지주사로 전송하시겠습니까?", 
       "question"
     );
     if (!confirm) return;
@@ -56,10 +54,7 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
       }
     } catch (e) {
       console.error(e);
-      // mock success
-      showDefaultAlert("전송 완료", "지주사로 데이터 전송을 완료했습니다.", "success");
-      onTransferred?.(selectedBatchId);
-      onClose();
+      showDefaultAlert("오류", "데이터 전송 중 오류가 발생했습니다.", "error");
     } finally {
       setSending(false);
     }
@@ -76,7 +71,8 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
         </div>
         <div className="ob1-modal-body">
           <p style={{ marginBottom: 16, fontSize: '0.9rem', color: '#475569' }}>
-            지주사에서 접수된 데이터 요청 목록입니다. 전송할 요청을 선택해 주세요.
+            지주사에서 접수된 데이터 요청 목록입니다. 전송할 요청을 선택해 주세요.<br/>
+            <span style={{ fontSize: '0.8rem', color: '#64748b' }}>* 데이터 입력 및 승인이 완료된 후 전송이 가능합니다.</span>
           </p>
 
           {loading ? (
@@ -85,41 +81,55 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
             <div style={{ padding: '24px', textAlign: 'center', color: '#64748b' }}>대기 중인 요청이 없습니다.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {requests.map(req => (
-                <label 
-                  key={req.batchId} 
-                  style={{ 
-                    display: 'flex', 
-                    alignItems: 'flex-start', 
-                    gap: '12px', 
-                    padding: '16px', 
-                    border: `1px solid ${selectedBatchId === req.batchId ? '#3b82f6' : '#e2e8f0'}`, 
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    background: selectedBatchId === req.batchId ? '#eff6ff' : '#fff'
-                  }}
-                >
-                  <input 
-                    type="radio" 
-                    name="requestBatch"
-                    value={req.batchId}
-                    checked={selectedBatchId === req.batchId}
-                    onChange={() => setSelectedBatchId(req.batchId)}
-                    style={{ marginTop: '4px' }}
-                  />
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <div style={{ fontWeight: 600, color: '#1e293b' }}>{req.requestName || "데이터 요청"}</div>
-                    <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                      요청 항목: {req.targetGroup}
-                    </div>
-                    {req.dueDate && (
-                      <div style={{ fontSize: '0.8rem', color: '#ef4444', marginTop: '4px' }}>
-                        제출 기한: {req.dueDate}
+              {requests.map(req => {
+                const canSelect = req.sendReadyYn === true;
+                return (
+                  <label 
+                    key={req.batchId} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'flex-start', 
+                      gap: '12px', 
+                      padding: '16px', 
+                      border: `1px solid ${selectedBatchId === req.batchId ? '#3b82f6' : '#e2e8f0'}`, 
+                      borderRadius: '8px',
+                      cursor: canSelect ? 'pointer' : 'not-allowed',
+                      background: selectedBatchId === req.batchId ? '#eff6ff' : (canSelect ? '#fff' : '#f8fafc'),
+                      opacity: canSelect ? 1 : 0.6
+                    }}
+                  >
+                    <input 
+                      type="radio" 
+                      name="requestBatch"
+                      value={req.batchId}
+                      checked={selectedBatchId === req.batchId}
+                      onChange={() => {
+                        if (canSelect) setSelectedBatchId(req.batchId);
+                      }}
+                      disabled={!canSelect}
+                      style={{ marginTop: '4px' }}
+                    />
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ fontWeight: 600, color: '#1e293b' }}>
+                        {req.parentCompanyName} ({req.parentCompanyCode})
                       </div>
-                    )}
-                  </div>
-                </label>
-              ))}
+                      <div style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                        보고 연도: {req.reportingYear}
+                      </div>
+                      {!canSelect && (
+                        <div style={{ fontSize: '0.8rem', color: '#ea580c', marginTop: '4px' }}>
+                          승인 미완료
+                          {req.missingAtomicMetricIds?.length > 0 && (
+                            <div style={{ color: '#ef4444', marginTop: '2px' }}>
+                              누락 항목: {req.missingAtomicMetricIds.join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           )}
         </div>

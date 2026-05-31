@@ -4,15 +4,23 @@ import axios from 'axios'
  * 설정 초기화 함수
  * 토큰이 존재할 경우 Authorization 헤더를 자동으로 추가합니다.
  */
-const initConfig = dns => {
-	let baseURL = import.meta.env.VITE_API_URL_SKM_BACK || baseURL;
+const initConfig = () => {
+	let baseURL = import.meta.env.VITE_API_URL_SKM_BACK || '/api';
 	const headers = {
 		"Content-Type": "application/json",
 	}
-	// const token = localStorage.getItem('token');
-  // if (token) {
-  //   headers["Authorization"] = `Bearer ${token}`;
-  // }
+	return { 
+		baseURL,
+		withCredentials: true,
+		headers,
+	}
+}
+
+const initAuthConfig = () => {
+	let baseURL = '';
+	const headers = {
+		"Content-Type": "application/json",
+	}
 	return { 
 		baseURL,
 		withCredentials: true,
@@ -49,3 +57,9 @@ export const PATCH = (url, data) =>
 
 export const DELETE = (url) => 
   request({ ...initConfig(), method: 'DELETE', url });
+
+export const AUTH_POST = (url, data) => 
+  request({ ...initAuthConfig(), method: 'POST', url, data });
+
+export const AUTH_DELETE = (url) => 
+  request({ ...initAuthConfig(), method: 'DELETE', url });

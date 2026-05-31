@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { listSubsidiaries, saveBatch } from "@/apis/rollup";
+import { listSubsidiaries, saveBatch } from "@/apis/report";
+import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
 const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
   const [subsidiaries, setSubsidiaries] = useState([]);
@@ -20,18 +21,14 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
     try {
       const res = await listSubsidiaries(runId);
       if (res?.data) {
-        setSubsidiaries(res.data);
-        // By default select all that are not completed
-        setSelectedIds(res.data.filter(s => s.status !== 'COMPLETED').map(s => s.id));
+        const items = res?.data?.items || [];
+        setSubsidiaries(items);
+        setSelectedIds(items.map(item => item.companyId));
       }
     } catch (e) {
       console.error(e);
-      // fallback mock data
-      setSubsidiaries([
-        { id: 'sub1', name: '자회사 A', status: 'PENDING', date: null },
-        { id: 'sub2', name: '자회사 B', status: 'COMPLETED', date: '2026-06-01' }
-      ]);
-      setSelectedIds(['sub1']);
+      // Fallback mock data 제거
+      showDefaultAlert("오류", "자회사 목록을 불러오지 못했습니다.", "error");
     } finally {
       setLoading(false);
     }
@@ -47,20 +44,18 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
     try {
       const res = await saveBatch({
         runId,
-        subsidiaryIds: selectedIds,
-        targetMetricGroups: ["G0"]
+        sourceCompanyIds: selectedIds
       });
       if (res?.status) {
-        onRequested?.(res.data); // pass batch info
+        onRequested?.(res.data);
         onClose();
       } else {
-        alert("요청에 실패했습니다.");
+        showDefaultAlert("오류", "요청에 실패했습니다.", "error");
       }
     } catch (e) {
       console.error(e);
-      // mock success
-      onRequested?.({ batchId: 'mock-batch-1', status: 'IN_PROGRESS' });
-      onClose();
+      // mock success 제거
+      showDefaultAlert("오류", "데이터 요청 중 오류가 발생했습니다.", "error");
     } finally {
       setRequesting(false);
     }
@@ -85,24 +80,15 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
           ) : (
             <ul className="sub-list" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {subsidiaries.map(sub => (
-                <li key={sub.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+                <li key={sub.companyId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', flex: 1 }}>
                     <input 
                       type="checkbox" 
-                      checked={selectedIds.includes(sub.id)}
-                      onChange={() => handleToggle(sub.id)}
-                      disabled={sub.status === 'COMPLETED'}
+                      checked={selectedIds.includes(sub.companyId)}
+                      onChange={() => handleToggle(sub.companyId)}
                     />
-                    <span style={{ fontWeight: 500 }}>{sub.name}</span>
+                    <span style={{ fontWeight: 500 }}>{sub.companyName} ({sub.companyCode})</span>
                   </label>
-                  <div style={{ textAlign: 'right', fontSize: '0.8rem' }}>
-                    <span style={{ 
-                      color: sub.status === 'COMPLETED' ? '#16a34a' : sub.status === 'IN_PROGRESS' ? '#2563eb' : '#64748b'
-                    }}>
-                      {sub.status === 'COMPLETED' ? '완료' : sub.status === 'IN_PROGRESS' ? '수집중' : '대기'}
-                    </span>
-                    {sub.date && <div style={{ color: '#94a3b8', fontSize: '0.75rem' }}>{sub.date}</div>}
-                  </div>
                 </li>
               ))}
             </ul>

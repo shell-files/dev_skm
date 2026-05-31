@@ -10,12 +10,12 @@ from src.models.companyprofile import (
 )
 from src.services.company_profiles.service import getG0Profile, getG0ProfileStatus, saveG0Profile
 from src.utils.auth import get_token
+from src.utils.companyscope import checkScope
+
+companyProfileRouter = APIRouter(prefix="/v1/company-profile", tags=["company-profile"])
 
 
-router = APIRouter(tags=["company-profile"])
-
-
-@router.get(
+@companyProfileRouter.get(
     "/g0/{companyId}",
     response_model=G0ProfileResponseDto,
     summary="Get G0 company profile inputs",
@@ -26,12 +26,15 @@ async def get_g0_profile(
     userModel=Depends(get_token),
 ):
     try:
+        checkScope(companyId, userModel)
         return getG0Profile(companyId, reportingYear)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post(
+@companyProfileRouter.post(
     "/g0/{companyId}",
     response_model=G0ProfileUpsertResponseDto,
     summary="Create G0 company profile inputs",
@@ -42,12 +45,15 @@ async def post_g0_profile(
     userModel=Depends(get_token),
 ):
     try:
+        checkScope(companyId, userModel)
         return saveG0Profile(companyId, request, _userId(userModel))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.patch(
+@companyProfileRouter.patch(
     "/g0/{companyId}",
     response_model=G0ProfileUpsertResponseDto,
     summary="Update G0 company profile inputs",
@@ -58,12 +64,15 @@ async def patch_g0_profile(
     userModel=Depends(get_token),
 ):
     try:
+        checkScope(companyId, userModel)
         return saveG0Profile(companyId, request, _userId(userModel))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get(
+@companyProfileRouter.get(
     "/g0/{companyId}/status",
     response_model=G0ProfileStatusResponseDto,
     summary="Get G0 company profile input status",
@@ -74,7 +83,10 @@ async def get_g0_profile_status(
     userModel=Depends(get_token),
 ):
     try:
+        checkScope(companyId, userModel)
         return getG0ProfileStatus(companyId, reportingYear)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

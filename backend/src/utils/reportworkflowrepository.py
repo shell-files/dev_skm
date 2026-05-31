@@ -279,6 +279,39 @@ def normalizeReportBasisType(value) -> Optional[str]:
     return None
 
 
+def resolveCompanyRole(companyId: int, reportingYear: int) -> str:
+    from src.utils.rolluprepository import getScopeCompanyColumn
+    companyColumn = getScopeCompanyColumn()
+
+    sqlParent = """
+        SELECT 1
+        FROM ESG_COMPANY_ROLLUP_SCOPE
+        WHERE parent_company_id = ?
+          AND rollup_include_yn = 1
+          AND delete_yn = 0
+          AND (effective_from_year IS NULL OR effective_from_year <= ?)
+          AND (effective_to_year IS NULL OR effective_to_year >= ?)
+        LIMIT 1
+    """
+    if findOne(sqlParent, (companyId, reportingYear, reportingYear)):
+        return "PARENT"
+
+    sqlSubsidiary = f"""
+        SELECT 1
+        FROM ESG_COMPANY_ROLLUP_SCOPE
+        WHERE {companyColumn} = ?
+          AND rollup_include_yn = 1
+          AND delete_yn = 0
+          AND (effective_from_year IS NULL OR effective_from_year <= ?)
+          AND (effective_to_year IS NULL OR effective_to_year >= ?)
+        LIMIT 1
+    """
+    if findOne(sqlSubsidiary, (companyId, reportingYear, reportingYear)):
+        return "SUBSIDIARY"
+
+    return "STANDALONE"
+
+
 __all__ = [
     "getCurrent",
     "getRun",
@@ -287,4 +320,5 @@ __all__ = [
     "getBasisStatus",
     "getRollupBatch",
     "checkBasisReady",
+    "resolveCompanyRole",
 ]

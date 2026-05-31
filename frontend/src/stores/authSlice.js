@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { GET, POST, PUT, PATCH, DELETE } from "@utils/Network";
+import { GET, POST, PUT, PATCH, DELETE, AUTH_POST, AUTH_DELETE } from "@utils/Network";
 import { encodeJson, safeJsonParse } from "@utils/Base64";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
@@ -18,8 +18,18 @@ const initialState = {
 export const checkUser = createAsyncThunk(
   'auth/checkUser',
   async (credentials, { rejectWithValue }) => {
+    if (import.meta.env.VITE_DEMO_MODE === 'true') {
+      return {
+        status: true,
+        data: {
+          userName: "데모 유저",
+          selectedCompany: { companyId: 999, company_name: "데모회사", role: "ESG담당자", reportingYear: 2025 },
+          companys: [{ companyId: 999, company_name: "데모회사", role: "ESG담당자", reportingYear: 2025 }]
+        }
+      };
+    }
     try {
-      const response = await POST('/auth');
+      const response = await AUTH_POST('/auth');
       return response;
     } catch (error) {
       return rejectWithValue(error.response?.data);
@@ -32,7 +42,7 @@ export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async (credentials, { rejectWithValue }) => {
     try {
-      const response = await DELETE('/auth');
+      const response = await AUTH_DELETE('/auth');
       return response;
     } catch (error) {
       return rejectWithValue(error.response?.data);

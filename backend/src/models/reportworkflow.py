@@ -17,6 +17,8 @@ class ReportWorkflowStatusDto(BaseModel):
     companyId: int
     reportingYear: int
     reportBasisType: Optional[ReportBasisType] = None
+    companyRole: Optional[str] = None
+    requiredRollupBatchId: Optional[int] = None
     workflowStep: str
     readyYn: bool = False
     basisStatus: str

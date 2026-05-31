@@ -47,6 +47,8 @@ def getCurrent(companyId: int, reportingYear: int) -> ReportWorkflowResponseDto:
                 companyId=companyId,
                 reportingYear=reportingYear,
                 reportBasisType=None,
+                companyRole=reportWorkflowRepository.resolveCompanyRole(companyId, reportingYear),
+                requiredRollupBatchId=None,
                 workflowStep="NO_RUN",
                 readyYn=False,
                 basisStatus="NO_RUN",
@@ -109,11 +111,21 @@ def buildStatusResponse(run: dict) -> ReportWorkflowResponseDto:
 
 def buildStatusDto(run: dict, basisStatus: dict) -> ReportWorkflowStatusDto:
     reportBasisType = normalizeReportBasisType(run.get("report_basis_type"))
+    reportWorkflowRepository = loadRepository()
     return ReportWorkflowStatusDto(
         runId=int(run["id"]) if run.get("id") is not None else None,
         companyId=int(run["company_id"]),
         reportingYear=int(run["reporting_year"]),
         reportBasisType=reportBasisType,
+        companyRole=reportWorkflowRepository.resolveCompanyRole(
+            int(run["company_id"]),
+            int(run["reporting_year"]),
+        ),
+        requiredRollupBatchId=(
+            int(run["required_rollup_batch_id"])
+            if run.get("required_rollup_batch_id") is not None
+            else None
+        ),
         workflowStep=resolveWorkflow(basisStatus.get("basisStatus")),
         readyYn=bool(basisStatus.get("readyYn")),
         basisStatus=basisStatus.get("basisStatus") or "BASIS_SELECTED",

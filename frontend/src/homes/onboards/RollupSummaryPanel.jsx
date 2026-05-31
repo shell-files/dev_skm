@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getStatus, calcBatch } from "@/apis/rollup";
+import { getStatus, calcBatch } from "@/apis/report";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
 const RollupSummaryPanel = ({ batchId, onCalculated }) => {
@@ -9,9 +9,6 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
   useEffect(() => {
     if (!batchId) return;
     fetchStatus();
-    // In a real scenario, this might poll the status.
-    // const timer = setInterval(fetchStatus, 10000);
-    // return () => clearInterval(timer);
   }, [batchId]);
 
   const fetchStatus = async () => {
@@ -21,15 +18,8 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
         setStatusInfo(res.data);
       }
     } catch (e) {
-      console.error(e);
-      // Fallback mock
-      setStatusInfo({
-        batchId,
-        status: 'PENDING',
-        totalSubsidiaries: 2,
-        completedSubsidiaries: 1,
-        progressPercent: 50
-      });
+      console.error("Failed to fetch rollup status", e);
+      // Fallback 제거
     }
   };
 
@@ -38,7 +28,7 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
     try {
       const res = await calcBatch(batchId);
       if (res?.status) {
-        showDefaultAlert("성공", "롤업 계산이 완료되었습니다.", "success");
+        showDefaultAlert("성공", "연결 집계가 완료되었습니다.", "success");
         fetchStatus();
         onCalculated?.();
       } else {
@@ -46,17 +36,20 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
       }
     } catch (e) {
       console.error(e);
-      // mock success
-      setTimeout(() => {
-        setStatusInfo(prev => ({ ...prev, status: 'CALCULATED', progressPercent: 100, completedSubsidiaries: prev.totalSubsidiaries }));
-        showDefaultAlert("성공", "롤업 계산이 완료되었습니다.", "success");
-        onCalculated?.();
-        setCalculating(false);
-      }, 1000);
+      showDefaultAlert("오류", "연결 집계 중 오류가 발생했습니다.", "error");
+    } finally {
+      setCalculating(false);
     }
   };
 
   if (!statusInfo) return null;
+
+  const total = statusInfo.requestedCount || 0;
+  const completed = statusInfo.sentCount || 0;
+  const pending = statusInfo.pendingCount || 0;
+  const progressPercent = total === 0 ? 0 : Math.round((completed / total) * 100);
+  const canCalculate = statusInfo.calculateReadyYn === true;
+  const isCompleted = String(statusInfo.batchStatus || '').toLowerCase() === 'completed';
 
   return (
     <div style={{
@@ -72,32 +65,31 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
     }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         <h3 style={{ margin: 0, fontSize: '0.95rem', color: '#1e293b' }}>
-          자회사 G0 데이터 롤업 현황
+          자회사 G0 데이터 연결 집계 현황
         </h3>
         <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-          수집 완료: {statusInfo.completedSubsidiaries} / {statusInfo.totalSubsidiaries} 개사 
-          ({statusInfo.progressPercent}%)
+          요청 대상 {total}개 / 수신 완료 {completed}개 / 대기 {pending}개 ({progressPercent}%)
         </span>
       </div>
       
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div style={{ width: '150px', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-          <div style={{ width: `${statusInfo.progressPercent}%`, height: '100%', background: '#3b82f6', transition: 'width 0.3s' }}></div>
+          <div style={{ width: `${progressPercent}%`, height: '100%', background: '#3b82f6', transition: 'width 0.3s' }}></div>
         </div>
         <button 
           style={{ 
             padding: '8px 16px', 
-            background: statusInfo.status === 'CALCULATED' ? '#10b981' : '#1d4ed8', 
+            background: isCompleted ? '#10b981' : (canCalculate && !calculating ? '#1d4ed8' : '#94a3b8'), 
             color: '#fff', 
             border: 'none', 
             borderRadius: '4px',
-            cursor: calculating ? 'not-allowed' : 'pointer',
-            opacity: calculating ? 0.7 : 1
+            cursor: (isCompleted || !canCalculate || calculating) ? 'not-allowed' : 'pointer',
+            opacity: (isCompleted || !canCalculate || calculating) ? 0.7 : 1
           }}
           onClick={handleCalc}
-          disabled={calculating}
+          disabled={isCompleted || !canCalculate || calculating}
         >
-          {calculating ? "계산 중..." : statusInfo.status === 'CALCULATED' ? "계산 완료" : "롤업 계산 실행"}
+          {calculating ? "계산 중..." : isCompleted ? "계산 완료" : "연결 집계 실행"}
         </button>
       </div>
     </div>

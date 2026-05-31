@@ -3,7 +3,7 @@ import { Routes, Route } from "react-router";
 import '@styles/App.css'
 import "@styles/mains.css";
 import NotFound from '@errors/NotFound.jsx';
-import OnBoard from '@onboards/OnBoard.jsx';
+
 import OnBoard1 from '@onboards/OnBoard1.jsx';
 import Benchmarking from '@reports/Benchmarking.jsx';
 import Media from '@reports/Media.jsx';
@@ -15,7 +15,6 @@ import Manager from '@mains/Manager.jsx';
 import Dashboard from './Dashboard.jsx';
 import Headernav from '@components/Layout/HeaderNav.jsx'
 import Sidebarnav from '@components/Layout/SidebarNav.jsx'
-
 
 
 const Main = () => {
@@ -31,6 +30,7 @@ const App = () => {
     }
     return true;
   });
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth <= 800) {

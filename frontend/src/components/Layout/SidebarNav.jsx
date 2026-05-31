@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
-import { useAuth } from '@hooks/AuthContext.jsx';
+import { useAuth } from "@hooks/AuthContext";
 import ReportBasisSelectModal from "@components/reports/ReportBasisSelectModal.jsx";
-import { getCurrent } from "@/apis/reportworkflow";
+import { getCurrent, DEFAULT_REPORTING_YEAR } from "@/apis/report";
+import { useDispatch, useSelector } from "react-redux";
+import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
 const Sidebarnav = ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
@@ -160,8 +162,13 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
     const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
 
     const handleReportNav = async () => {
+        if (!selectedCompany?.companyId) {
+            showDefaultAlert("알림", "회사를 먼저 선택해 주세요.", "info");
+            return;
+        }
         try {
-            const res = await getCurrent();
+            const reportingYear = selectedCompany.reportingYear || DEFAULT_REPORTING_YEAR;
+            const res = await getCurrent(selectedCompany.companyId, reportingYear);
             if (res?.data?.workflowStep === 'NO_RUN') {
                 setIsBasisModalOpen(true);
             } else {
@@ -169,9 +176,12 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                 if (window.innerWidth <= 800) setIsOpen(false);
             }
         } catch (err) {
-            console.error("Failed to get current report workflow", err);
-            // 에러 시 기본 동작 (NO_RUN이라 가정하거나 onb로 보냄)
-            setIsBasisModalOpen(true);
+            console.error(err);
+            showDefaultAlert(
+              "오류",
+              "보고서 진행 상태를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+              "error"
+            );
         }
     };
 

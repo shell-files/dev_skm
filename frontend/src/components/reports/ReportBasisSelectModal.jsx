@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import "@styles/reportBasisSelectModal.css";
-import { startWorkflow } from "@/apis/reportworkflow";
+import { startWorkflow } from "@/apis/report";
 
 // ── Illustrations (카드 대표 일러스트 132×132)
 import entityCardImg from "@assets/reportbasis/illustrations/entity-card.png";

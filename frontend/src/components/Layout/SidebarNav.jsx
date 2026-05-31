@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useAuth } from '@hooks/AuthContext.jsx';
+import ReportBasisSelectModal from "@components/reports/ReportBasisSelectModal.jsx";
+import { getCurrent } from "@/apis/reportworkflow";
 
 const Sidebarnav = ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
@@ -155,7 +157,24 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
         }
     }
 
-    const goBenchMk = () => { navigate("/benchmk"); if(window.innerWidth <= 800) setIsOpen(false); };
+    const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
+
+    const handleReportNav = async () => {
+        try {
+            const res = await getCurrent();
+            if (res?.data?.workflowStep === 'NO_RUN') {
+                setIsBasisModalOpen(true);
+            } else {
+                navigate("/onb");
+                if (window.innerWidth <= 800) setIsOpen(false);
+            }
+        } catch (err) {
+            console.error("Failed to get current report workflow", err);
+            // 에러 시 기본 동작 (NO_RUN이라 가정하거나 onb로 보냄)
+            setIsBasisModalOpen(true);
+        }
+    };
+
     const goOnboard = () => { navigate("/onb"); if(window.innerWidth <= 800) setIsOpen(false); };
     const goManager = () => { navigate("/manager"); if(window.innerWidth <= 800) setIsOpen(false); };
     const handleGoHome = () => { goHome(); if(window.innerWidth <= 800) setIsOpen(false); };
@@ -173,7 +192,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                         </div>
                     </div>
                     <div className="nav-group">
-                        <div className="nav-item" onClick={goBenchMk}>
+                        <div className="nav-item" onClick={handleReportNav}>
                             <div className="nav-accordion-header">
                                 <span>지속가능경영보고서</span>
                             </div>
@@ -234,6 +253,11 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                     <option value="TV">TV</option>
                 </select>
             </div>
+
+            <ReportBasisSelectModal 
+                isOpen={isBasisModalOpen} 
+                onClose={() => setIsBasisModalOpen(false)} 
+            />
         </aside>
     );
 }

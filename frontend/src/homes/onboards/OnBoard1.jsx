@@ -6,6 +6,7 @@ import { useAuth } from '@hooks/AuthContext.jsx';
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 import OnboardingModalShell from "./components/modal/OnboardingModalShell";
 import SubsidiaryRequestModal from "./components/modal/SubsidiaryRequestModal";
+import SubsidiaryTransferModal from "./components/modal/SubsidiaryTransferModal";
 import RollupSummaryPanel from "./components/RollupSummaryPanel";
 import { getCurrent } from "@/apis/reportworkflow";
 
@@ -67,6 +68,7 @@ const OnBoard1 = () => {
   const [selectedItem, setSelectedItem] = useState(null);
 
   const [isSubReqModalOpen, setIsSubReqModalOpen] = useState(false);
+  const [isSubTransferModalOpen, setIsSubTransferModalOpen] = useState(false);
   const [activeBatchId, setActiveBatchId] = useState(null);
 
   useEffect(() => {
@@ -118,8 +120,7 @@ const OnBoard1 = () => {
       if (workflow.isParent) {
         setIsSubReqModalOpen(true);
       } else {
-        // Phase 5에서 구현할 지주사 전송 모달 오픈
-        showDefaultAlert("알림", "지주사에 데이터 전송 모달 오픈 (Phase 5)", "info");
+        setIsSubTransferModalOpen(true);
       }
     }
   };
@@ -293,6 +294,15 @@ const OnBoard1 = () => {
         onRequested={(batch) => {
           setActiveBatchId(batch.batchId);
           setIsSubReqModalOpen(false);
+        }}
+      />
+
+      <SubsidiaryTransferModal 
+        isOpen={isSubTransferModalOpen}
+        onClose={() => setIsSubTransferModalOpen(false)}
+        onTransferred={(batchId) => {
+          // 전송 완료 시 추가 처리 (예: CTA 상태 변경 등)
+          console.log('전송 완료된 배치', batchId);
         }}
       />
     </div>

@@ -136,10 +136,10 @@ const Invite = ({ activeService = 'disclosure' }) => {
         await new Promise(r => setTimeout(r, 800));
       } else {
         await POST("/inviteConsultant", {
-          uuid: String(user?.uuid),
           email: [...emails1],
-          role: Number(3)
+          role: Number(3),
         });
+        
       }
       showDefaultAlert("성공", "컨설턴트 초대장이 발송되었습니다.", "success");
       console.log("email:", typeof(emails1))

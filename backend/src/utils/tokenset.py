@@ -148,22 +148,22 @@ def generateInviteTokenWithUuid(issueGroup:List[str], companyName: str, email:st
 # --------------------------
 # inviteConsultant 토큰과 UUID 생성 함수 (공통 모듈)
 # --------------------------
-def generateConsultantInviteToken(companyName: str, email:str, roleId: int, projectId: int, inviteId: int, companyId: int):
+def generateConsultantInviteToken(companyName: str, email:str, roleId: int, inviteId: int, companyId: int):
     """ inviteConsultant 토큰과 UUID 생성 함수 (공통 모듈)"""
     tokenUuid = str(uuid.uuid4().hex)
+
     now = datetime.now(timezone.utc)
+
     payload = {
         "iss": "withProject",
         "sub": companyName,
         "email": email,
         "roleId": roleId,
-        "projectId": projectId,
         "inviteId": inviteId,
         "companyId": companyId,
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(minutes=settings.access_token_expire_minutes)).timestamp())
-        
     }
-    # JWE로 암호화하여 반환
-    inviteToken = encryptToJwe(payload)
+
+    inviteToken = encryptToJwe(payload)  # <- 여기 99%
     return inviteToken, tokenUuid

@@ -5,8 +5,13 @@ from src.utils.rediscl import getInviteRedis
 from src.utils.tokenset import decryptFromJwe
 from src.utils.invite import inviteProcess, inviteSignUp
 
+from src.utils.kafkasv import startConsumer
+
 
 router = APIRouter()
+@router.on_event("startup")
+def startup_event():
+    startConsumer()
 
 @router.get("/{inviteId}",
             summary="초대 링크 접속",

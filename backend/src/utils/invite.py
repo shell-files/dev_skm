@@ -1,16 +1,16 @@
-from src.models.model import responseModel
+from src.models.model import ResponseModel
 from src.utils.db import findOne, findAll, save, exists
 from src.utils.validatetok import validateToken
 from src.utils.tokenset import decryptFromJwe, generateConsultantInviteToken
 from src.utils.rediscl import getTokenRedis, setInviteRedis, getInviteRedis
 from fastapi.responses import HTMLResponse
-from src.models.model import responseModel, inviteSignUpUserInfo, inviteConsultantModel
+from src.models.model import ResponseModel, inviteSignUpUserInfo, inviteConsultantModel
 from src.utils.db import save, addKey
 from src.utils.kafkasv import sendToKafka
 from src.utils.auth import get_token
 from src.utils.settings import settings
 from src.utils.tokenset import generateInviteTokenWithUuid
-from src.models.model import inviteMemberModel, responseModel
+from src.models.model import inviteMemberModel, ResponseModel
 from fastapi import Depends
 
 
@@ -70,7 +70,7 @@ def inviteSignUp(inviteId: str, inviteSignUpUserInfo: inviteSignUpUserInfo):
   result = addKey(inviteUserSql, inviteUserSqlParam)
 
   if not result[0]:  # DB 저장 실패 시
-      return responseModel(False, "회원가입에 실패했습니다.")
+      return ResponseModel(False, "회원가입에 실패했습니다.")
 
   userId = result[1]
   inviteData = getInviteRedis(inviteId)
@@ -93,7 +93,7 @@ def inviteSignUp(inviteId: str, inviteSignUpUserInfo: inviteSignUpUserInfo):
       issueDetailSqlParam = (inviteId, userId, issueId)
       save(issueDetailSql, issueDetailSqlParam)
       
-  return responseModel(True, "회원가입이 완료되었습니다.")
+  return ResponseModel(True, "회원가입이 완료되었습니다.")
 
 def inviteConsultantProcess(inviteConsultantModel, userModel):
     try:
@@ -109,7 +109,7 @@ def inviteConsultantProcess(inviteConsultantModel, userModel):
         company = findOne(companySql, (settings.maria_db_key, userId))
 
         if not company:
-            return responseModel(False, "회사 정보를 찾을 수 없습니다.")
+            return ResponseModel(False, "회사 정보를 찾을 수 없습니다.")
 
         # 3. 초대 처리
         for email in inviteConsultantModel.email:
@@ -129,7 +129,7 @@ def inviteConsultantProcess(inviteConsultantModel, userModel):
             ))
 
             if not result[0]:
-                return responseModel(False, "초대 정보 저장 실패")
+                return ResponseModel(False, "초대 정보 저장 실패")
 
             inviteId = result[1]
 
@@ -154,10 +154,10 @@ def inviteConsultantProcess(inviteConsultantModel, userModel):
                 "uuid": inviteUuid
             })
 
-        return responseModel(True, "초대장이 성공적으로 발송되었습니다.")
+        return ResponseModel(True, "초대장이 성공적으로 발송되었습니다.")
 
     except Exception as e:
-        return responseModel(False, f"오류 발생: {str(e)}")
+        return ResponseModel(False, f"오류 발생: {str(e)}")
     
 def inviteMember(inviteMemberModel: inviteMemberModel, userModel = Depends(get_token)):
     try:
@@ -174,7 +174,7 @@ def inviteMember(inviteMemberModel: inviteMemberModel, userModel = Depends(get_t
                     """
         company = findOne(selectSql, (userModel,id, ))
         if not company:
-            return responseModel(False, "회사 정보를 찾을 수 없습니다.")
+            return ResponseModel(False, "회사 정보를 찾을 수 없습니다.")
         
         for email in inviteMemberModel.email:
             # DB에 초대 정보 저장
@@ -195,7 +195,7 @@ def inviteMember(inviteMemberModel: inviteMemberModel, userModel = Depends(get_t
             )
 
             if not result[0]:  # DB 저장 실패 시
-                return responseModel(False, "초대 정보 저장에 실패했습니다.")
+                return ResponseModel(False, "초대 정보 저장에 실패했습니다.")
 
             inviteId = result[1]
 
@@ -216,6 +216,6 @@ def inviteMember(inviteMemberModel: inviteMemberModel, userModel = Depends(get_t
             mailData = {"type": 1, "uuid": uuid}
             sendToKafka(mailData)
             
-        return responseModel(True, "초대장이 성공적으로 발송되었습니다.")
+        return ResponseModel(True, "초대장이 성공적으로 발송되었습니다.")
     except Exception as e:
-        return responseModel(False, f"인증 오류 발생 : {e}")
+        return ResponseModel(False, f"인증 오류 발생 : {e}")

@@ -241,10 +241,10 @@ const DoubleMaterialityMatrix = () => {
       <div ref={chartWrapRef} style={{ position: "relative" }}>
         {/* 동심원 배경 SVG 오버레이 */}
         <ZoneOverlay containerRef={chartWrapRef} />
-
+        <div style={{ position: "relative" }}>
         <ResponsiveContainer width="100%" height={340}>
           <ScatterChart margin={{ top: 16, right: 28, bottom: 44, left: 20 }}>
-            <CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" />
+               
             <ReferenceLine
               x={2.5}
               stroke="#94a3b8"
@@ -260,13 +260,30 @@ const DoubleMaterialityMatrix = () => {
               ifOverflow="extendDomain"
             />
 
+              
+
+            {/* 좌하단 모서리 Low 라벨 */}
+              <ReferenceLine
+                x={0.5}
+                stroke="transparent"
+                label={{
+                  value: "Low",
+                  position: "insideBottomLeft",
+                  fontSize: 12,
+                  fill: "#64748b",
+                  fontFamily: "Pretendard, sans-serif",
+                }}
+              />
+
+
+
             {/* X축: 재무중요성 */}
             <XAxis
               type="number"
               dataKey="x"
               domain={[0.5, 4.2]}
               ticks={[1, 2, 3, 4]}
-              tickFormatter={(v) => ({ 1: "Low", 2: "Middle", 3: "High", 4: "" }[v] ?? "")}
+              tickFormatter={(v) => ({ 2: "Middle", 3: "High", 4: "" }[v] ?? "")}
               label={{
                 value: "Financial Materiality (재무중요성)",
                 position: "insideBottom", offset: -30,
@@ -284,7 +301,7 @@ const DoubleMaterialityMatrix = () => {
               dataKey="y"
               domain={[0.5, 3.5]}
               ticks={[1, 2, 3]}
-              tickFormatter={(v) => ({ 1: "Low", 2: "Middle", 3: "High" }[v] ?? "")}
+              tickFormatter={(v) => ({ 2: "Middle", 3: "High" }[v] ?? "")}
               label={{
                 value: "Environmental & Social Materiality (영향중요성)",
                 angle: -90, position: "insideLeft", offset: -5,
@@ -311,6 +328,7 @@ const DoubleMaterialityMatrix = () => {
             ))}
           </ScatterChart>
         </ResponsiveContainer>
+        </div>
       </div>
 
       {/* 하단 범례 */}

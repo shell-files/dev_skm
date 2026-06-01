@@ -12,7 +12,7 @@ cookie_scheme = APIKeyCookie(name=settings.cookie_key)
 def get_domain(request: Request):
     current_domain = request.url.hostname
     # 강의장용 DNS
-    # print(f"요청한 Domain : {current_domain}")
+    print(f"요청한 Domain : {current_domain}")
     allowed_domains = ["myapp.com", "main.myapp.com"]
     if current_domain.endswith(settings.domain):
         cookie_domain = f".{settings.domain}"
@@ -25,7 +25,7 @@ def get_domain(request: Request):
     print(f"Cookie Domain : {cookie_domain}")
     return cookie_domain
 
-def get_token(response: Response, token: str = Depends(cookie_scheme)) -> UserModel:
+def get_token(response: Response, request: Request, token: str = Depends(cookie_scheme)) -> UserModel:
     """
     쿠키에서 토큰을 추출하고 검증하며, 필요 시 쿠키를 갱신합니다.
     """
@@ -54,7 +54,7 @@ def get_token(response: Response, token: str = Depends(cookie_scheme)) -> UserMo
             response.set_cookie(
                 key=settings.cookie_key,
                 value=activeUuid,
-                domain=settings.domain,
+                domain=get_domain(request),
                 httponly=True,
                 samesite="lax",
                 # secure=True, # 프로덕션 환경 권장

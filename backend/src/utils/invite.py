@@ -148,6 +148,7 @@ def inviteConsultantProcess(inviteConsultantModel, userModel):
             )
             sendToKafka({
                 "type": 3 if userExists else 2,
+                "email":email,
                 "uuid": inviteUuid
             })
 

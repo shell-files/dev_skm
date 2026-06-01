@@ -253,13 +253,29 @@ def html3(tempPwd):
   </html>
   """
 
+# def getHtml(data):
+#   subject = None
+#   body = None
+#   tempPwd = data.get("tempPwd")
+#   type = data.get("type")
+#   email = data.get("email")
+#   if type == 4:
+#     subject = "임시 비밀번호 발송"
+#     body = html3(tempPwd)
+#   return subject, body, email
+
 def getHtml(data):
-  subject = None
-  body = None
-  tempPwd = data.get("tempPwd")
-  type = data.get("type")
-  email = data.get("email")
-  if type == 4:
-    subject = "임시 비밀번호 발송"
-    body = html3(tempPwd)
-  return subject, body, email
+    type = data.get("type")
+    email = data.get("email")
+    uuid = data.get("uuid")
+
+    if type == 2:
+        return "컨설턴트 초대", html2(2, "A_GROUP", uuid), email
+
+    if type == 3:
+        return "기존 사용자 초대", html2(3, "A_GROUP", uuid), email
+
+    if type == 4:
+        return "임시 비밀번호 발송", html3(data.get("tempPwd")), email
+
+    return None, None, email

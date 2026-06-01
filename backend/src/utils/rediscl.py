@@ -53,7 +53,7 @@ def getTokenRedis(uuid: str):
     except Exception as e:
         print(f"Error getting Redis value: {e}")
         return {"status": False}
-    
+
 # --------------------------
 # getInviteRedis: invite Redis(client3)에서 저장된 값을 가져오는 함수
 # --------------------------
@@ -157,4 +157,18 @@ def delCompanyRedis(uuid: str):
         return {"status": True}
     except Exception as e:
         print(f"Error deleting Redis key: {e}")
+        return {"status": False}
+
+
+# --------------------------
+# setRedis: invite Redis(client3)에 값을 저장하는 함수
+# --------------------------
+def setInviteRedis(uuid: str, token: str):
+    """Redis에 uuid를 키로, token 값을 저장"""
+    try:
+        client3.set(uuid, token)
+        print(f"Success: Set Redis - uuid: {uuid}")
+        return {"status": True}
+    except Exception as e:
+        print(f"Error setting Redis keys: {e}")
         return {"status": False}

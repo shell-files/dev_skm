@@ -253,6 +253,49 @@ def html3(tempPwd):
   </html>
   """
 
+def onboardingAssignmentInviteHtml(companyName, inviteLink, metricCount, dueDate):
+  dueDateText = dueDate or "별도 지정 없음"
+  return f"""
+  <!DOCTYPE html>
+  <html>
+  <head>
+      <meta charset="UTF-8">
+      <title>WITH ESG 온보딩 담당자 지정 안내</title>
+  </head>
+  <body style="margin:0; padding:40px 0; background-color:#ffffff;">
+    <table width="100%" border="0" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center">
+          <table width="600" border="0" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px; overflow:hidden;">
+            <tr><td height="5" style="background-color:#03a94d;"></td></tr>
+            <tr>
+              <td style="padding:40px; font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
+                <h1 style="font-size:22px; color:#333333; margin-bottom:24px; text-align:center;">
+                  ESG 온보딩 담당자 지정 안내
+                </h1>
+                <p style="font-size:15px; color:#333333; line-height:1.7;">
+                  <strong>{companyName}</strong>의 ESG 온보딩 입력 담당자로 지정되었습니다.<br>
+                  지정된 항목 수는 <strong>{metricCount}</strong>개이며, 입력 기한은 <strong>{dueDateText}</strong>입니다.
+                </p>
+                <div style="text-align:center; margin-top:28px;">
+                  <a href="{inviteLink}" style="background-color:#03a94d; color:#ffffff; padding:14px 32px; text-decoration:none; border-radius:6px; font-weight:bold; display:inline-block;">
+                    온보딩 입력 시작하기
+                  </a>
+                </div>
+                <p style="font-size:12px; color:#777777; line-height:1.5; margin-top:32px;">
+                  * 본 메일은 ESG 온보딩 업무 목적으로 발송되었습니다.<br>
+                  * 링크가 만료된 경우 ESG 담당자에게 재발송을 요청해 주세요.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+  """
+
 def getHtml(data):
   subject = None
   body = None
@@ -262,4 +305,12 @@ def getHtml(data):
   if type == 4:
     subject = "임시 비밀번호 발송"
     body = html3(tempPwd)
+  if type == 5:
+    subject = "[WITH ESG] 온보딩 입력 담당자 지정 안내"
+    body = onboardingAssignmentInviteHtml(
+      data.get("companyName"),
+      data.get("inviteLink"),
+      data.get("metricCount"),
+      data.get("dueDate"),
+    )
   return subject, body, email

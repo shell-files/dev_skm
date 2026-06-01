@@ -9,6 +9,7 @@ from src.utils.db import findAll, findOne, getConn
 
 CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
 METRIC_ID_G0_02 = "G0-02"
+METRIC_SCOPE_PRE_DMA_G0_PROFILE = "PRE_DMA_G0_PROFILE"
 METRIC_SCOPE_G0_02_FINANCIAL_BASIS = "G0_02_FINANCIAL_BASIS"
 REQUIRED_ATOMIC_IDS = [
     "G0-02__Q0001",
@@ -33,7 +34,14 @@ def ensurePreDmaG0Cycle(
         with conn.cursor(dictionary=True) as cur:
             cycle = resolveCycle(cur, companyId, reportingYear)
             if cycle:
-                return cycle
+                normalizeCycleTx(
+                    cur,
+                    cycle,
+                    reportBasisType=reportBasisType,
+                    sourceMaterialityRunId=sourceMaterialityRunId,
+                )
+                conn.commit()
+                return resolveCycle(cur, companyId, reportingYear)
             try:
                 insertCycle(
                     cur,
@@ -81,6 +89,18 @@ def listG002KpiFacts(companyId: int, reportingYear: int) -> list[dict]:
           AND LOWER(COALESCE(approval_status, '')) = 'approved'
           AND value_numeric IS NOT NULL
           AND delete_yn = 0
+          AND source_input_value_id IS NOT NULL
+          AND EXISTS (
+              SELECT 1
+              FROM ESG_ONBOARDING_INPUT_VALUE iv
+              WHERE iv.id = ESG_KPI_FACT.source_input_value_id
+                AND iv.company_id = ESG_KPI_FACT.company_id
+                AND iv.reporting_year = ESG_KPI_FACT.reporting_year
+                AND iv.metric_id = ESG_KPI_FACT.metric_id
+                AND iv.atomic_metric_id = ESG_KPI_FACT.atomic_metric_id
+                AND LOWER(COALESCE(iv.input_status, '')) = 'approved'
+                AND iv.delete_yn = 0
+          )
         ORDER BY atomic_metric_id
         """,
         (companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
@@ -182,7 +202,10 @@ def submitG002Approval(
             )
             assignment = resolveAssignment(cur, int(cycle["id"]), companyId, METRIC_ID_G0_02)
             rows = selectInputRowsForUpdate(cur, companyId, reportingYear)
-            validateCompleteRows(rows, allowedStatuses={"draft", "rejected", "submitted"})
+            if checkAlreadyApprovedTx(cur, rows, companyId, reportingYear):
+                conn.commit()
+                return buildApprovalSummary(companyId, reportingYear, METRIC_ID_G0_02)
+            validateCompleteRows(rows, allowedStatuses={"draft", "rejected", "submitted", "approved"})
             assignmentId = int(assignment["id"]) if assignment else None
             cur.execute(
                 f"""
@@ -237,7 +260,10 @@ def approveG002Approval(
                 raise ValueError("PRE_DMA_G0 cycle was not found")
             assignment = resolveAssignment(cur, int(cycle["id"]), companyId, METRIC_ID_G0_02)
             rows = selectInputRowsForUpdate(cur, companyId, reportingYear)
-            validateCompleteRows(rows, allowedStatuses={"submitted", "reviewed", "approved"})
+            if checkAlreadyApprovedTx(cur, rows, companyId, reportingYear):
+                conn.commit()
+                return buildApprovalSummary(companyId, reportingYear, METRIC_ID_G0_02)
+            validateCompleteRows(rows, allowedStatuses={"submitted", "reviewed"})
             assignmentId = int(assignment["id"]) if assignment else None
             for row in rows:
                 if row["atomic_metric_id"] not in REQUIRED_ATOMIC_IDS:
@@ -443,9 +469,48 @@ def ensureCycleTx(
 ) -> dict:
     cycle = resolveCycle(cur, companyId, reportingYear)
     if cycle:
-        return cycle
+        normalizeCycleTx(
+            cur,
+            cycle,
+            reportBasisType=reportBasisType,
+            sourceMaterialityRunId=sourceMaterialityRunId,
+        )
+        return resolveCycle(cur, companyId, reportingYear)
     insertCycle(cur, companyId, reportingYear, reportBasisType, sourceMaterialityRunId, actorUserId)
     return resolveCycle(cur, companyId, reportingYear)
+
+
+def normalizeCycleTx(
+    cur,
+    cycle: dict,
+    reportBasisType: Optional[str],
+    sourceMaterialityRunId: Optional[int],
+) -> None:
+    updates = []
+    params = []
+    metricScopeCode = cycle.get("metric_scope_code")
+    if metricScopeCode in (None, "", METRIC_SCOPE_G0_02_FINANCIAL_BASIS):
+        updates.append("metric_scope_code = ?")
+        params.append(METRIC_SCOPE_PRE_DMA_G0_PROFILE)
+    if cycle.get("report_basis_type") is None and reportBasisType is not None:
+        updates.append("report_basis_type = ?")
+        params.append(reportBasisType)
+    if cycle.get("source_materiality_run_id") is None and sourceMaterialityRunId is not None:
+        updates.append("source_materiality_run_id = ?")
+        params.append(sourceMaterialityRunId)
+    if not updates:
+        return
+    updates.append("updated_at = CURRENT_TIMESTAMP")
+    params.append(int(cycle["id"]))
+    cur.execute(
+        f"""
+        UPDATE ESG_ONBOARDING_CYCLE
+        SET {", ".join(updates)}
+        WHERE id = ?
+          AND delete_yn = 0
+        """,
+        tuple(params),
+    )
 
 
 def insertCycle(
@@ -478,7 +543,7 @@ def insertCycle(
             CYCLE_TYPE_PRE_DMA_G0,
             reportBasisType,
             sourceMaterialityRunId,
-            METRIC_SCOPE_G0_02_FINANCIAL_BASIS,
+            METRIC_SCOPE_PRE_DMA_G0_PROFILE,
             actorUserId,
         ),
     )
@@ -538,6 +603,42 @@ def validateCompleteRows(rows: list[dict], allowedStatuses: set[str]) -> None:
     ]
     if invalidStatuses:
         raise ValueError(f"Invalid input status: {', '.join(invalidStatuses)}")
+
+
+def checkAlreadyApprovedTx(cur, rows: list[dict], companyId: int, reportingYear: int) -> bool:
+    rowByAtomic = {row["atomic_metric_id"]: row for row in rows}
+    if any(atomicId not in rowByAtomic for atomicId in REQUIRED_ATOMIC_IDS):
+        return False
+    if any(
+        str(rowByAtomic[atomicId].get("input_status") or "").lower() != "approved"
+        for atomicId in REQUIRED_ATOMIC_IDS
+    ):
+        return False
+    placeholders = ", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))
+    cur.execute(
+        f"""
+        SELECT COUNT(*) AS approved_count
+        FROM ESG_KPI_FACT k
+        JOIN ESG_ONBOARDING_INPUT_VALUE iv
+          ON iv.id = k.source_input_value_id
+         AND iv.company_id = k.company_id
+         AND iv.reporting_year = k.reporting_year
+         AND iv.metric_id = k.metric_id
+         AND iv.atomic_metric_id = k.atomic_metric_id
+         AND iv.delete_yn = 0
+         AND LOWER(COALESCE(iv.input_status, '')) = 'approved'
+        WHERE k.company_id = ?
+          AND k.reporting_year = ?
+          AND k.metric_id = ?
+          AND k.atomic_metric_id IN ({placeholders})
+          AND LOWER(COALESCE(k.approval_status, '')) = 'approved'
+          AND k.value_numeric IS NOT NULL
+          AND k.delete_yn = 0
+        """,
+        (companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+    )
+    row = cur.fetchone() or {}
+    return int(row.get("approved_count") or 0) >= len(REQUIRED_ATOMIC_IDS)
 
 
 def upsertKpiFact(cur, inputRow: dict, actorUserId: Optional[int]) -> None:
@@ -680,6 +781,7 @@ def formatDatetime(value) -> Optional[str]:
 __all__ = [
     "CYCLE_TYPE_PRE_DMA_G0",
     "METRIC_ID_G0_02",
+    "METRIC_SCOPE_PRE_DMA_G0_PROFILE",
     "METRIC_SCOPE_G0_02_FINANCIAL_BASIS",
     "REQUIRED_ATOMIC_IDS",
     "ensurePreDmaG0Cycle",

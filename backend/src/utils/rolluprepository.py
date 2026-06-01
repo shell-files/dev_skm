@@ -350,6 +350,14 @@ def listApprovedFacts(companyIds: list[int], reportingYear: int) -> list[dict]:
                         k.id DESC
                 ) AS row_num
             FROM ESG_KPI_FACT k
+            JOIN ESG_ONBOARDING_INPUT_VALUE iv
+              ON iv.id = k.source_input_value_id
+             AND iv.company_id = k.company_id
+             AND iv.reporting_year = k.reporting_year
+             AND iv.metric_id = k.metric_id
+             AND iv.atomic_metric_id = k.atomic_metric_id
+             AND iv.delete_yn = 0
+             AND LOWER(COALESCE(iv.input_status, '')) = 'approved'
             WHERE k.company_id IN ({companyPlaceholders})
               AND k.reporting_year = ?
               AND k.metric_id = 'G0-02'

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router";
 import "@styles/onboarding1.css";
 import { useAuth } from "@hooks/AuthContext.jsx";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
@@ -122,6 +123,7 @@ const getStatusInfo = (status) => {
 };
 
 const OnBoard = () => {
+  const navigate = useNavigate(); 
   const { selectedCompany } = useAuth();
   const companyId =
     selectedCompany?.company_id ?? selectedCompany?.companyId;
@@ -158,6 +160,7 @@ const OnBoard = () => {
     setWorkflowError(null);
     try {
       const res = await getCurrent(companyId, DEFAULT_REPORTING_YEAR);
+      console.log(res)
       const isFailed =
         res?.status === false ||
         res?.success === false ||
@@ -179,9 +182,6 @@ const OnBoard = () => {
     }
   }, [companyId]);
 
-  useEffect(() => {
-    fetchWorkflow();
-  }, [fetchWorkflow]);
 
   /* ─── G0 profile 조회 ─── */
   const fetchG0Profile = useCallback(async () => {
@@ -224,8 +224,10 @@ const OnBoard = () => {
   }, [companyId]);
 
   useEffect(() => {
+    fetchWorkflow();
     fetchG0Profile();
-  }, [fetchG0Profile]);
+    console.log("run()");
+  }, [fetchWorkflow, fetchG0Profile]);
 
   /* ─── 통계 계산 ─── */
   const totalCount = g0Items.length;
@@ -248,6 +250,7 @@ const OnBoard = () => {
     switch (workflow.nextAction) {
       case "START_DMA":
         showDefaultAlert("진행", "이중중대성평가를 시작합니다.", "success");
+        navigate("/benchmk");
         break;
       case "REQUEST_ROLLUP":
         setIsSubReqModalOpen(true);

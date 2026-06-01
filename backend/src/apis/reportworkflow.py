@@ -6,18 +6,26 @@ from src.models.reportworkflow import (
 )
 from src.services.reportworkflows.service import getCurrent, getG0Status, getRun, startWorkflow
 from src.utils.companyscope import checkScope
-
+from src.utils.settings import settings
+from src.utils.validatetok import validateToken
+from src.utils.auth import get_domain, get_token
 
 reportWorkflowRouter = APIRouter(prefix="/v1/report-workflow", tags=["report-workflow"])
 
+# def requireUser(request: Request, response: Response):
+#     token = request.cookies.get(settings.cookie_key)
+#     result = validateToken(token)
 
-def requireUser(response: Response, request: Request):
-    from src.utils.auth import get_token
-    from src.utils.settings import settings
+#     if result.success and result.data.get("uuid"):
+#         response.set_cookie(
+#             key=settings.cookie_key,
+#             value=result.data["uuid"],
+#             domain=get_domain(request),
+#             httponly=True,
+#             samesite="lax"
+#         )
 
-    token = request.cookies.get(settings.cookie_key)
-    return get_token(response, token)
-
+#     return result
 
 @reportWorkflowRouter.get(
     "/current",
@@ -27,10 +35,11 @@ def requireUser(response: Response, request: Request):
 async def getCurrentRoute(
     companyId: int = Query(...),
     reportingYear: int = Query(...),
-    userModel=Depends(requireUser),
+    userModel = Depends(get_token)
 ):
     try:
         checkScope(companyId, userModel)
+        
         return getCurrent(companyId, reportingYear)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -47,7 +56,7 @@ async def getCurrentRoute(
 )
 async def startWorkflowRoute(
     request: ReportWorkflowStartRequestDto,
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         checkScope(request.companyId, userModel)
@@ -65,7 +74,7 @@ async def startWorkflowRoute(
     response_model=ReportWorkflowResponseDto,
     summary="Get G0 readiness for report workflow",
 )
-async def getG0StatusRoute(runId: int, userModel=Depends(requireUser)):
+async def getG0StatusRoute(runId: int, userModel=Depends(get_token)):
     try:
         run = getRun(runId)
         if not run:

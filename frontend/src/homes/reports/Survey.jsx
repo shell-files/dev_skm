@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 // import "@styles/survey.css"; 
 import "@styles/sr.css";
+import "@styles/survey.css";
 
 import robot from "@assets/images/robot/robot_servey_t.png";
 
@@ -326,19 +327,19 @@ const Survey = () => {
   };
 
   return (
-    <div className="sr-container">
+    <div className="survey-container">
       {/* =========================================================
           Header
       ========================================================== */}
-      <header className="sr-header">
-        <h1 className="sr-title">
+      <header className="survey-header">
+        <h1 className="survey-title">
           지속가능경영보고서 AI 자동 생성
         </h1>
 
         {/* =====================================================
             Stepper 영역
         ====================================================== */}
-        <div className="sr-stepper-row">
+        <div className="survey-stepper-row">
           {steps.map((step, index) => (
             <div
               key={step.id}
@@ -673,7 +674,7 @@ const Survey = () => {
                   <strong
                     style={{
                       color:
-                        "var(--sr-primary)",
+                        "var(--survey-primary)",
                     }}
                   >
                     [AI 응답 데이터 분석 결과]
@@ -697,14 +698,14 @@ const Survey = () => {
           ====================================================== */}
           <div className="action-btn-group">
             <button
-              className="sr-btn"
+              className="survey-btn"
               onClick={runLiveKpiAggregation}
             >
               실시간 통계 집계
             </button>
 
             <button
-              className="sr-btn secondary"
+              className="survey-btn secondary"
               onClick={runSurveyAnalysis}
               style={{marginBottom: "50px"}}
             >
@@ -718,7 +719,7 @@ const Survey = () => {
           Result Dashboard
       ========================================================== */}
       <div
-        className={`sr-result-dashboard ${
+        className={`survey-result-dashboard ${
           dashboardOpen ? "open" : ""
         }`}
       >
@@ -766,7 +767,7 @@ const Survey = () => {
               <div className="robot-stage">
                 <div className="robot-float-wrap">
                   <img
-                    src={robot}
+                    surveyc={robot}
                     className="robot-main-img"
                     alt="robot"
                   />
@@ -815,7 +816,7 @@ const Survey = () => {
                       fontWeight: 700,
                       fontSize: "0.85rem",
                       color:
-                        "var(--sr-primary)",
+                        "var(--survey-primary)",
                     }}
                   >
                     {progress}% 분석 중

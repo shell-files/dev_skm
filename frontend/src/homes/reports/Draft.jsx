@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import "@styles/draft.css";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+
+
+
 
 // (paragraphData, paragraphTexts, TrendChart 등 상단 데이터 정의는 기존과 동일합니다)
 const paragraphData = {
@@ -214,21 +219,71 @@ const Draft = () => {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  // 파일 다운로드 처리 함수
-  const handleExport = (type) => {
-    setExportMenuOpen(false);
-    alert(`${type} 형식으로 다운로드를 시작합니다.`);
-    if (type === "JSON") {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ info: paragraphData, contents: texts }, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", "sustainability_draft.json");
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
+  const handleExport = async (type) => {
+  setExportMenuOpen(false);
+
+  if (type === "PDF") {
+    const target = document.getElementById("draftDoc");
+
+    // overflow 문제 해결: 요소를 body에 복제해서 캡처
+    const clone = target.cloneNode(true);
+    clone.style.position  = "fixed";
+    clone.style.top       = "-99999px";
+    clone.style.left      = "0";
+    clone.style.width     = target.offsetWidth + "px";
+    clone.style.height    = "auto";
+    clone.style.overflow  = "visible";
+    clone.style.background = "#fff";
+    document.body.appendChild(clone);
+
+    const canvas = await html2canvas(clone, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      scrollX: 0,
+      scrollY: 0,
+      width:  clone.offsetWidth,
+      height: clone.scrollHeight,
+      backgroundColor: "#ffffff",
+    });
+
+    document.body.removeChild(clone);
+
+    const pdf        = new jsPDF("p", "mm", "a4");
+    const pageWidth  = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgData    = canvas.toDataURL("image/png");
+    const imgWidth   = pageWidth;
+    const imgHeight  = (canvas.height * imgWidth) / canvas.width;
+
+    let position = 0;
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+
+    let remaining = imgHeight - pageHeight;
+    while (remaining > 0) {
+      position -= pageHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      remaining -= pageHeight;
     }
-    // PDF, Word, Excel 백엔드/라이브러리 연동 인터페이스 배치 공간
+
+    pdf.save("sustainability_report.pdf");
+    return;
+  }
+
+  if (type === "JSON") {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(
+      JSON.stringify({ info: paragraphData, contents: texts }, null, 2)
+    );
+    const a = document.createElement("a");
+    a.setAttribute("href", dataStr);
+    a.setAttribute("download", "sustainability_draft.json");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
+};
+
 
   // 문단 선택 핸들러
   const selectParagraph = (pid) => {
@@ -504,8 +559,10 @@ const Draft = () => {
         </div>
       </main>
     </div>
-  );
+);
 };
+
+
 
 const dropdownItemStyle = {
   padding: "10px 16px",
@@ -515,5 +572,4 @@ const dropdownItemStyle = {
   transition: "background 0.2s",
   textAlign: "left"
 };
-
 export default Draft;

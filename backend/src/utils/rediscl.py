@@ -53,6 +53,21 @@ def getTokenRedis(uuid: str):
     except Exception as e:
         print(f"Error getting Redis value: {e}")
         return {"status": False}
+    
+# --------------------------
+# getInviteRedis: invite Redis(client3)에서 저장된 값을 가져오는 함수
+# --------------------------
+def getInviteRedis(uuid: str):
+    """ uuid로 간편 회원가입 정보 담은 Token 조회"""
+    try:
+        result = client3.get(uuid)
+        if result:
+            return {"status": True, "uuid": uuid, "token": result}
+        return {"status": False, "message": "Key not found"}
+    except Exception as e:
+        print(f"Error getting Redis value: {e}")
+        return {"status": False}
+
 
 # --------------------------
 # delTokenRedis: Token Redis(client1)에 저장된 값을 삭제하는 함수

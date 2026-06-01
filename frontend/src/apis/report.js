@@ -6,7 +6,7 @@
  */
 import { GET, POST, PATCH } from "@utils/Network";
 
-export const DEFAULT_REPORTING_YEAR = 2025;
+export const DEFAULT_REPORTING_YEAR = new Date().getFullYear();
 
 const normalizeDirectDtoResponse = (res) => {
   if (!res || res?.status === false || res?.success === false) {

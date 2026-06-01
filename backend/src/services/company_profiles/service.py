@@ -15,6 +15,7 @@ from src.utils.companyprofilerepository import (
     resolveG0ReportingYear,
     upsertG0InputValue,
 )
+from src.utils.onboardingapprovalrepository import resolvePreDmaG0Cycle
 
 STRUCTURED_LOOKUP_IDS = {
     "G0-05__QL0002",
@@ -26,10 +27,12 @@ GENERIC_EDITABLE_INPUT_MODES = {
     "MANUAL_TEXTAREA",
     "YEAR_RANGE",
 }
+PRE_DMA_G0_CYCLE_NOT_READY = "PRE_DMA_G0_CYCLE_NOT_READY: 보고서 발행 기준을 먼저 선택해 주세요."
 
 
 def getG0Profile(companyId: int, reportingYear: Optional[int] = None) -> G0ProfileResponseDto:
     year = resolveG0ReportingYear(companyId, reportingYear)
+    _requirePreDmaG0Cycle(companyId, year)
     items = _buildG0Items(companyId, year)
     status = _statusFromItems(items)
     missing = [item for item in items if item.requiredYn and item.editableYn and not _hasValue(item)]
@@ -45,6 +48,7 @@ def getG0Profile(companyId: int, reportingYear: Optional[int] = None) -> G0Profi
 
 def getG0ProfileStatus(companyId: int, reportingYear: Optional[int] = None) -> G0ProfileStatusResponseDto:
     year = resolveG0ReportingYear(companyId, reportingYear)
+    _requirePreDmaG0Cycle(companyId, year)
     items = _buildG0Items(companyId, year)
     required = [item for item in items if item.requiredYn and item.editableYn]
     completed = [item for item in required if _hasValue(item)]
@@ -65,6 +69,7 @@ def saveG0Profile(
     request: G0ProfileUpsertRequestDto,
     userId: Optional[int] = None,
 ) -> G0ProfileUpsertResponseDto:
+    _requirePreDmaG0Cycle(companyId, request.reportingYear)
     savedCount = 0
     masterByAtomic = {
         row.get("atomic_metric_id"): row
@@ -129,6 +134,13 @@ def _buildG0Items(companyId: int, reportingYear: int) -> list[G0ProfileItemDto]:
             )
         )
     return items
+
+
+def _requirePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:
+    cycle = resolvePreDmaG0Cycle(companyId, reportingYear)
+    if not cycle or str(cycle.get("cycle_status") or "").strip().lower() != "active":
+        raise ValueError(PRE_DMA_G0_CYCLE_NOT_READY)
+    return cycle
 
 
 def _resolveInputMode(row: dict) -> str:

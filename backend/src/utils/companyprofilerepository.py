@@ -3,7 +3,17 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from src.utils.db import findAll, findOne, save
+from src.utils.db import findAll, findOne, getConn
+
+
+METRIC_ID_G0_02 = "G0-02"
+G0_02_ENTITY_ATOMIC_IDS = {
+    "G0-02__Q0001",
+    "G0-02__Q0002",
+    "G0-02__Q0003",
+    "G0-02__Q0004",
+    "G0-02__Q0005",
+}
 
 
 def resolveG0ReportingYear(companyId: int, reportingYear: Optional[int] = None) -> int:
@@ -123,52 +133,95 @@ def upsertG0InputValue(
     unit: Optional[str],
     userId: Optional[int] = None,
 ) -> bool:
-    existing = findOne(
+    conn = getConn()
+    if not conn:
+        return False
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                """
+                SELECT id, input_status
+                FROM ESG_ONBOARDING_INPUT_VALUE
+                WHERE company_id = ?
+                  AND reporting_year = ?
+                  AND metric_id = ?
+                  AND atomic_metric_id = ?
+                  AND delete_yn = 0
+                ORDER BY id DESC
+                LIMIT 1
+                FOR UPDATE
+                """,
+                (companyId, reportingYear, metricId, atomicMetricId),
+            )
+            existing = cur.fetchone()
+            if existing:
+                cur.execute(
+                    """
+                    UPDATE ESG_ONBOARDING_INPUT_VALUE
+                    SET value_text = ?,
+                        value_numeric = ?,
+                        unit = ?,
+                        value_source_type = 'manual_input',
+                        input_status = 'draft',
+                        input_user_id = ?,
+                        approved_by_user_id = NULL,
+                        approved_at = NULL,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                    """,
+                    (valueText, valueNumeric, unit, userId, existing["id"]),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO ESG_ONBOARDING_INPUT_VALUE (
+                        company_id,
+                        reporting_year,
+                        company_scope_type,
+                        metric_id,
+                        atomic_metric_id,
+                        value_numeric,
+                        value_text,
+                        unit,
+                        value_source_type,
+                        input_status,
+                        input_user_id
+                    ) VALUES (?, ?, 'ENTITY', ?, ?, ?, ?, ?, 'manual_input', 'draft', ?)
+                    """,
+                    (companyId, reportingYear, metricId, atomicMetricId, valueNumeric, valueText, unit, userId),
+                )
+            invalidateG002KpiFactTx(cur, companyId, reportingYear, metricId, atomicMetricId)
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"G0 input transaction error: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
+def invalidateG002KpiFactTx(
+    cur,
+    companyId: int,
+    reportingYear: int,
+    metricId: str,
+    atomicMetricId: str,
+) -> None:
+    if metricId != METRIC_ID_G0_02 or atomicMetricId not in G0_02_ENTITY_ATOMIC_IDS:
+        return
+    cur.execute(
         """
-        SELECT id
-        FROM ESG_ONBOARDING_INPUT_VALUE
+        UPDATE ESG_KPI_FACT
+        SET approval_status = 'invalidated',
+            delete_yn = 1,
+            updated_at = CURRENT_TIMESTAMP
         WHERE company_id = ?
           AND reporting_year = ?
           AND metric_id = ?
           AND atomic_metric_id = ?
+          AND LOWER(COALESCE(approval_status, '')) = 'approved'
           AND delete_yn = 0
-        ORDER BY id DESC
-        LIMIT 1
         """,
         (companyId, reportingYear, metricId, atomicMetricId),
-    )
-
-    if existing:
-        return save(
-            """
-            UPDATE ESG_ONBOARDING_INPUT_VALUE
-            SET value_text = ?,
-                value_numeric = ?,
-                unit = ?,
-                value_source_type = 'manual_input',
-                input_status = 'draft',
-                input_user_id = ?,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-            """,
-            (valueText, valueNumeric, unit, userId, existing["id"]),
-        )
-
-    return save(
-        """
-        INSERT INTO ESG_ONBOARDING_INPUT_VALUE (
-            company_id,
-            reporting_year,
-            company_scope_type,
-            metric_id,
-            atomic_metric_id,
-            value_numeric,
-            value_text,
-            unit,
-            value_source_type,
-            input_status,
-            input_user_id
-        ) VALUES (?, ?, 'ENTITY', ?, ?, ?, ?, ?, 'manual_input', 'draft', ?)
-        """,
-        (companyId, reportingYear, metricId, atomicMetricId, valueNumeric, valueText, unit, userId),
     )

@@ -37,6 +37,26 @@ const MATRIX_POINTS = [
   { x: 3.9, y: 2.8, rank: 8, label: "공급망 감사·시정조치", cat: "G" },
 ];
 
+const SELECTED_ISSUES = [
+  { name: "기후변화 대응",              candRank: 1,  finalRank: 1,  reason: "양측 점수 High, 규제 및 시장 영향 큼, 이해관계자 관심도 높음" },
+  { name: "지배구조 건전성 강화",        candRank: 2,  finalRank: 2,  reason: "재무적 영향 High, 투자자 요구 증가, 거버넌스 핵심 이슈" },
+  { name: "공급망 지속가능성 관리",      candRank: 3,  finalRank: 3,  reason: "공급망 리스크 및 평판 영향 큼, 고객 요구 증가" },
+  { name: "인재 확보 및 육성",           candRank: 4,  finalRank: 4,  reason: "사회적 영향 High, 인력 경쟁 심화" },
+  { name: "그린 제품·서비스 혁신",       candRank: 6,  finalRank: 5,  reason: "기회 요인 크고, 매출 및 시장 확장과 연계" },
+  { name: "에너지 효율 및 온실가스 관리", candRank: 5,  finalRank: 6,  reason: "온실가스 감축 목표 연계, 비용 절감 효과" },
+  { name: "제품 안전·품질 강화",         candRank: 7,  finalRank: 7,  reason: "고객 신뢰 및 규제 영향 큼" },
+  { name: "정보보안 및 데이터 보호",     candRank: 8,  finalRank: 8,  reason: "디지털 전환 가속, 정보보안 리스크 증가" },
+  { name: "사업장 안전보건",             candRank: 9,  finalRank: 9,  reason: "임직원 안전과 직결, 규제 및 평판 영향" },
+  { name: "생물다양성 보호",             candRank: 12, finalRank: 10, reason: "자연자본 영향 증가, 글로벌 이니셔티브 대응" },
+];
+
+const EXCLUDED_ISSUES = [
+  { name: "수자원 관리",           candRank: 13, reason: "재무적 영향 Medium 이하, 분석축 반복 관측 부족" },
+  { name: "지역사회 투자 및 공헌",  candRank: 18, reason: "사회적 영향은 있으나, 전략적 연계성 낮음" },
+  { name: "폐기물 및 순환경제",    candRank: 21, reason: "영향도는 있으나, 우선순위 상대적으로 낮음" },
+  { name: "동물복지",              candRank: 24, reason: "가치사슬 관련성 낮고, 이해관계자 관심도 낮음" },
+  { name: "정치자금 및 로비 활동", candRank: 28, reason: "분석축 반복 관측 부족, 리스크 영향 낮음" },
+];
 
 
 // ════════════════════════════════════════════════════════════════
@@ -506,7 +526,7 @@ const Result = () => {
           {/* ── 왼쪽 패널 ── */}
           <section id="result-left-panel">
             <div className="result-tab-bar">
-              {["최종선정요약", "점수 해석", "다음 단계 연결"].map((label, i) => (
+              {["최종선정요약","후보군 최종선정 과정", "점수 해석", "다음 단계 연결"].map((label, i) => (
                 <button
                   key={i}
                   className={`result-tab-button ${leftTab === i ? "active" : ""}`}
@@ -531,6 +551,7 @@ const Result = () => {
                       { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, label: "평가 대상", value: "62개", cls: "" },
                       { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2z"/></svg>, label: "최종 선정", value: "10개", cls: "success", valueClass: "text-green" },
                       { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8"><polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/></svg>, label: "High 영역", value: "5개", cls: "danger", valueClass: "text-red" },
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, label: "후보군", value: "25개", cls: "" },
                     ].map((card, i) => (
                       <div key={i} className={`info-card ${card.cls}`}>
                         {card.icon}
@@ -579,9 +600,117 @@ const Result = () => {
                 </div>
               </div>
             )}
+          
+              {leftTab === 1 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
 
+    {/* 후보군 최종 선정 과정 */}
+    <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "24px" }}>
+      <div style={{ fontSize: "1rem", fontWeight: 850, color: "#1e293b", marginBottom: "20px" }}>후보군 최종 선정 과정</div>
+      <div style={{ display: "flex", gap: "24px", alignItems: "flex-start" }}>
+
+        {/* 플로우 카드 */}
+        <div style={{ flex: 1.4, display: "flex", flexDirection: "column", gap: 0, alignItems: "stretch" }}>
+          {[
+            { count: "62개 평가 대상", desc: "벤치마킹, 미디어, 이해관계자 설문을 통해<br>도출된 전체 평가 이슈 수집", last: false,
+              icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> },
+            { count: "25개 후보군", desc: "양축 점수 기준 충족 및 주요성 기준을<br>충족한 이슈", last: false,
+              icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
+            { count: "최종 10개 선정", desc: "이사회 및 ESG 실무 협의 기반<br>보고서 핵심 이슈로 최종 선정", last: true,
+              icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> },
+          ].map((card, i) => (
+            <div key={i}>
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", background: card.last ? "#f0fdf4" : "#f8fafc", border: `1px solid ${card.last ? "#bbf7d0" : "#e2e8f0"}`, borderRadius: "14px", padding: "18px 20px" }}>
+                <div style={{ flexShrink: 0, width: "52px", height: "52px", background: "#dcfce7", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {card.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: "1.15rem", fontWeight: 850, color: "#03A94D", marginBottom: "4px" }}>{card.count}</div>
+                  <div style={{ fontSize: "0.78rem", color: "#64748b", lineHeight: 1.55 }} dangerouslySetInnerHTML={{ __html: card.desc }} />
+                </div>
+              </div>
+              {!card.last && <div style={{ display: "flex", justifyContent: "center", padding: "6px 0", color: "#03A94D", fontSize: "1.3rem" }}>↓</div>}
+            </div>
+          ))}
+        </div>
+
+        {/* 선정 기준 */}
+        <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "14px", padding: "20px 22px", alignSelf: "stretch" }}>
+          <div style={{ fontSize: "1.5em", fontWeight: 850, color: "#03A94D", marginBottom: "16px" }}>선정 기준</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {[
+              { icon: "🎯", text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
+              { icon: "📊", text: "2개 이상 분석축에서", sub: "반복 관측" },
+              { icon: "🔗", text: "가치사슬 관련성 높음" },
+              { icon: "👥", text: "이해관계자 관심도 높음" },
+              { icon: "🛡️", text: "리스크/기회 요인으로서의", sub: "중요성 고려" },
+            ].map((item, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                <div style={{ flexShrink: 0, width: "32px", height: "32px", background: "#dcfce7", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem" }}>{item.icon}</div>
+                <div style={{ fontSize: "0.78rem", color: "#334155", lineHeight: 1.6 }}>
+                  {item.text}{item.sub && <><br /><span style={{ color: "#64748b" }}>{item.sub}</span></>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* 최종 선정 이슈 */}
+    <div className="card-container">
+      <div style={{ fontSize: "0.95rem", fontWeight: 850, color: "#1e293b", marginBottom: "14px" }}>최종 선정 이슈</div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+        <thead>
+          <tr style={{ background: "#f8fafc", borderBottom: "1.5px solid #e2e8f0" }}>
+            <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "#475569", width: "30%" }}>이슈</th>
+            <th style={{ padding: "10px 8px", textAlign: "center", fontWeight: 700, color: "#475569", width: "12%" }}>후보순위</th>
+            <th style={{ padding: "10px 8px", textAlign: "center", fontWeight: 700, color: "#475569", width: "12%" }}>최종순위</th>
+            <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "#475569" }}>포함 사유</th>
+          </tr>
+        </thead>
+        <tbody>
+          {SELECTED_ISSUES.map((row, i) => (
+            <tr key={i} style={{ borderBottom: i < SELECTED_ISSUES.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+              <td style={{ padding: "10px 14px", fontWeight: 700, color: "#1e293b" }}>{row.name}</td>
+              <td style={{ padding: "10px 8px", textAlign: "center", color: "#64748b" }}>{row.candRank}</td>
+              <td style={{ padding: "10px 8px", textAlign: "center", fontWeight: 800, color: "#03A94D" }}>{row.finalRank}</td>
+              <td style={{ padding: "10px 14px", color: "#475569" }}>{row.reason}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    {/* 후보있지만 제외된 이슈 */}
+    <div className="card-container">
+      <div style={{ fontSize: "0.95rem", fontWeight: 850, color: "#ef4444", marginBottom: "14px" }}>후보있지만 제외된 이슈</div>
+      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+        <thead>
+          <tr style={{ background: "#f8fafc", borderBottom: "1.5px solid #e2e8f0" }}>
+            <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "#475569", width: "30%" }}>이슈</th>
+            <th style={{ padding: "10px 8px", textAlign: "center", fontWeight: 700, color: "#475569", width: "12%" }}>후보순위</th>
+            <th style={{ padding: "10px 8px", textAlign: "center", fontWeight: 700, color: "#475569", width: "12%" }}>최종순위</th>
+            <th style={{ padding: "10px 14px", textAlign: "left", fontWeight: 700, color: "#475569" }}>제외 사유</th>
+          </tr>
+        </thead>
+        <tbody>
+          {EXCLUDED_ISSUES.map((row, i) => (
+            <tr key={i} style={{ borderBottom: i < EXCLUDED_ISSUES.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+              <td style={{ padding: "10px 14px", fontWeight: 700, color: "#1e293b" }}>{row.name}</td>
+              <td style={{ padding: "10px 8px", textAlign: "center", color: "#64748b" }}>{row.candRank}</td>
+              <td style={{ padding: "10px 8px", textAlign: "center", color: "#94a3b8" }}>-</td>
+              <td style={{ padding: "10px 14px", color: "#475569" }}>{row.reason}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+)}  
             {/* 탭 1: 점수 해석 */}
-            {leftTab === 1 && (
+            {leftTab === 2 && (
               <div className="card-container result-tab-pane">
                 <div className="card-title-row">
                   <span className="card-title">점수 해석</span>
@@ -657,7 +786,7 @@ const Result = () => {
             )}
 
             {/* 탭 2: 다음 단계 연결 */}
-            {leftTab === 2 && (
+            {leftTab === 3 && (
               <div className="card-container result-tab-pane" id="result-next-steps">
                 <div className="card-title">다음 단계 연결</div>
 

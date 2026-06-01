@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useAuth } from '@hooks/AuthContext.jsx';
-import ReportBasisSelectModal from "@components/reports/ReportBasisSelectModal.jsx";
+import ReportBasisSelectModal from "@components/UI/ReportBasisSelectModal.jsx";
 import { DEFAULT_REPORTING_YEAR, getCurrent } from "@/apis/report";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
@@ -172,26 +172,27 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
         }
 
         try {
-            const res = await getCurrent(companyId, DEFAULT_REPORTING_YEAR);
+            const reportingYear = selectedCompany?.reportingYear || DEFAULT_REPORTING_YEAR;
+            const res = await getCurrent(companyId, reportingYear);
             const isFailed = res?.status === false || res?.success === false || !res?.data;
             if (isFailed) {
-                showDefaultAlert("오류", res.error?.message || "보고서 워크플로우 조회에 실패했습니다.", "error");
+                showDefaultAlert("오류", res?.error?.message || "보고서 워크플로우 조회에 실패했습니다.", "error");
                 return;
             }
 
-            if (res?.data?.workflowStep === 'NO_RUN') {
+            if (res?.data?.workflowStep === "NO_RUN") {
                 setIsBasisModalOpen(true);
-            } else {
-                navigate("/onb");
-                if (window.innerWidth <= 800) setIsOpen(false);
+                return;
             }
+
+            navigate(`/onb?reportingYear=${reportingYear}`);
+            if (window.innerWidth <= 800) setIsOpen(false);
         } catch (err) {
             console.error("Failed to get current report workflow", err);
             showDefaultAlert("오류", "보고서 워크플로우 조회에 실패했습니다.", "error");
         }
     };
 
-    const goOnboard = () => { navigate("/onb"); if(window.innerWidth <= 800) setIsOpen(false); };
     const goManagerdata = () => { navigate("/managerData"); if(window.innerWidth <= 800) setIsOpen(false); };
     const goManager = () => { navigate("/manager"); if(window.innerWidth <= 800) setIsOpen(false); };
     const handleGoHome = () => { goHome(); if(window.innerWidth <= 800) setIsOpen(false); };
@@ -216,7 +217,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                         </div>
                     </div>
                     <div className="nav-group">
-                        <div className="nav-item" onClick={goOnboard}>
+                        <div className="nav-item" onClick={handleReportNav}>
                             <span>데이터 입력</span>
                         </div>
                     </div>

@@ -30,6 +30,10 @@ ASSIGNMENT_MANAGER_ROLE_NAMES = {"관리자", "ESG담당자"}
 PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE = "PRE_DMA_G0_CYCLE_NOT_READY: 보고서 기준 선택 후 온보딩 workflow를 먼저 시작해 주세요."
 
 
+class PreDmaG0CycleNotReadyError(ValueError):
+    pass
+
+
 def bulkAssign(request: OnboardingAssignmentBulkAssignRequestDto, userModel) -> OnboardingAssignmentBulkAssignResponseDto:
     checkScope(request.companyId, userModel)
     checkManager(userModel)
@@ -148,7 +152,7 @@ def publishMailEvent(mailEvent: Optional[dict]) -> tuple[bool, Optional[str]]:
 def requirePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:
     cycle = resolvePreDmaG0Cycle(companyId=companyId, reportingYear=reportingYear)
     if not cycle:
-        raise ValueError(PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE)
+        raise PreDmaG0CycleNotReadyError(PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE)
     return cycle
 
 
@@ -187,4 +191,5 @@ __all__ = [
     "requirePreDmaG0Cycle",
     "checkManager",
     "publishMailEvent",
+    "PreDmaG0CycleNotReadyError",
 ]

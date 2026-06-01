@@ -10,6 +10,7 @@ from src.models.onboardingassignment import (
     OnboardingAssignmentPatchRequestDto,
 )
 from src.services.onboarding_assignments.service import (
+    PreDmaG0CycleNotReadyError,
     bulkAssign,
     bulkUnassign,
     getAssignmentItem,
@@ -43,6 +44,8 @@ async def bulkAssignRoute(
 ):
     try:
         return bulkAssign(request, userModel)
+    except PreDmaG0CycleNotReadyError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
@@ -106,6 +109,8 @@ async def patchAssignmentRoute(
 ):
     try:
         return patchAssignment(metricId, request, userModel)
+    except PreDmaG0CycleNotReadyError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
@@ -125,6 +130,8 @@ async def bulkUnassignRoute(
 ):
     try:
         return bulkUnassign(request, userModel)
+    except PreDmaG0CycleNotReadyError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:

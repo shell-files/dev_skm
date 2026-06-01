@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import "@styles/reportBasisSelectModal.css";
-import { DEFAULT_REPORTING_YEAR, startWorkflow } from "@/apis/report";
+import { DEFAULT_REPORTING_YEAR, startWorkflow, getCurrent } from "@/apis/report";
 
 // ── Illustrations (카드 대표 일러스트 132×132)
 import entityCardImg from "@assets/reportbasis/illustrations/entity-card.png";
@@ -52,8 +52,39 @@ const ReportBasisSelectModal = ({
 }) => {
   const navigate = useNavigate();
   const [selected, setSelected] = useState(null); // null | 'ENTITY' | 'CONSOLIDATED'
+  const [selectedYear, setSelectedYear] = useState(reportingYear);
+  const [workflowStatus, setWorkflowStatus] = useState(null); // 'NO_RUN' | 'EXISTS'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen || !companyId) return;
+
+    let isMounted = true;
+    const fetchCurrent = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await getCurrent(companyId, selectedYear);
+        if (isMounted) {
+          if (res?.status === false || res?.success === false || !res?.data) {
+             setError(res?.error?.message || "워크플로우 조회 실패");
+          } else if (res?.data?.workflowStep === 'NO_RUN') {
+             setWorkflowStatus('NO_RUN');
+          } else {
+             setWorkflowStatus('EXISTS');
+          }
+        }
+      } catch (err) {
+        if (isMounted) setError("워크플로우 조회 중 오류 발생");
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    fetchCurrent();
+    
+    return () => { isMounted = false; };
+  }, [isOpen, companyId, selectedYear]);
 
   if (!isOpen) return null;
 
@@ -64,7 +95,20 @@ const ReportBasisSelectModal = ({
     : [];
 
   const handleConfirm = async () => {
-    if (!selected || loading) return;
+    if (loading) return;
+    
+    if (workflowStatus === 'EXISTS') {
+      onClose?.();
+      navigate(`/onb?reportingYear=${selectedYear}`, {
+        replace: true,
+        state: {
+          workflowStartedAt: Date.now(),
+        },
+      });
+      return;
+    }
+
+    if (!selected) return;
     if (!companyId) {
       setError("회사를 먼저 선택해 주세요.");
       return;
@@ -76,7 +120,7 @@ const ReportBasisSelectModal = ({
     try {
       const res = await startWorkflow({
         companyId,
-        reportingYear,
+        reportingYear: selectedYear,
         reportBasisType: selected
       });
 
@@ -89,7 +133,12 @@ const ReportBasisSelectModal = ({
 
       // 성공 → /onb 이동
       onClose?.();
-      navigate("/onb");
+      navigate(`/onb?reportingYear=${selectedYear}`, {
+        replace: true,
+        state: {
+          workflowStartedAt: Date.now(),
+        },
+      });
     } catch (err) {
       console.error("[ReportBasisSelectModal] startWorkflow error:", err);
       setError("워크플로우 시작 중 오류가 발생했습니다.");
@@ -105,88 +154,113 @@ const ReportBasisSelectModal = ({
           {/* 헤더 */}
           <div className="rbm-header">
             <button className="rbm-close" onClick={onClose} aria-label="닫기">✕</button>
-            <h2 id="rbm-title" className="rbm-title">보고서 발행 기준 선택</h2>
-            <p className="rbm-desc">지속가능경영보고서를 작성할 발행 기준을 선택해 주세요.</p>
-            <div className="rbm-banner">
-              <span className="rbm-banner-icon">💡</span>
-              발행 기준에 따라 보고 범위, 데이터 수집 방식, 보고 절차가 달라집니다.
+            <h2 id="rbm-title" className="rbm-title">보고서 프로젝트 선택</h2>
+            <p className="rbm-desc">지속가능경영보고서를 작성할 연도와 기준을 선택해 주세요.</p>
+            
+            <div className="rbm-year-select-wrapper" style={{ marginTop: '16px', marginBottom: '8px' }}>
+              <label htmlFor="reportingYearSelect" style={{ fontWeight: 'bold', marginRight: '12px' }}>보고연도:</label>
+              <select 
+                id="reportingYearSelect"
+                value={selectedYear} 
+                onChange={(e) => { setSelectedYear(Number(e.target.value)); setSelected(null); }}
+                style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid #ccc' }}
+              >
+                <option value={2024}>2024</option>
+                <option value={2025}>2025</option>
+                <option value={2026}>2026</option>
+                <option value={2027}>2027</option>
+              </select>
             </div>
+
+            {workflowStatus !== 'EXISTS' && (
+              <div className="rbm-banner">
+                <span className="rbm-banner-icon">💡</span>
+                발행 기준에 따라 보고 범위, 데이터 수집 방식, 보고 절차가 달라집니다.
+              </div>
+            )}
           </div>
 
           {/* 카드 선택 영역 */}
-          <div className="rbm-cards">
-            {/* ENTITY 카드 */}
-            <button
-              type="button"
-              className={`rbm-card ${selected === "ENTITY" ? "rbm-card--selected" : ""}`}
-              onClick={() => setSelected("ENTITY")}
-              aria-pressed={selected === "ENTITY"}
-            >
-              <div className="rbm-card-badge">단일 회사</div>
-              <div className="rbm-card-body">
-                <div className="rbm-card-illust">
-                  <img
-                    src={entityCardImg}
-                    alt="독립기준 ENTITY 일러스트"
-                    width={132}
-                    height={132}
-                    style={{ width: 132, height: 132, objectFit: "contain" }}
-                  />
-                </div>
-                <div className="rbm-card-info">
-                  <h3 className="rbm-card-title">독립기준 (ENTITY)</h3>
-                  <p className="rbm-card-text">
-                    본사 단독으로 보고서를 작성합니다.<br />
-                    자회사 데이터를 포함하지 않으며,<br />
-                    해당 회사의 데이터만으로 보고서를 발행합니다.
-                  </p>
-                  <div className="rbm-card-recommend">
-                    <span className="rbm-card-recommend-label">이런 경우 선택하세요</span>
-                    <span className="rbm-card-recommend-item">✓ 본사만 보고서를 작성하는 경우</span>
+          {workflowStatus === 'EXISTS' ? (
+            <div className="rbm-exists-message" style={{ padding: '40px 20px', textAlign: 'center', background: '#f8fafc', borderRadius: '8px', margin: '20px 0' }}>
+              <h3 style={{ fontSize: '18px', marginBottom: '12px', color: '#1e293b' }}>이미 생성된 {selectedYear}년 보고서 프로젝트가 있습니다.</h3>
+              <p style={{ color: '#64748b' }}>아래 [해당 연도로 이동하기] 버튼을 눌러 프로젝트를 계속 진행하세요.</p>
+            </div>
+          ) : (
+            <div className="rbm-cards">
+              {/* ENTITY 카드 */}
+              <button
+                type="button"
+                className={`rbm-card ${selected === "ENTITY" ? "rbm-card--selected" : ""}`}
+                onClick={() => setSelected("ENTITY")}
+                aria-pressed={selected === "ENTITY"}
+              >
+                <div className="rbm-card-badge">단일 회사</div>
+                <div className="rbm-card-body">
+                  <div className="rbm-card-illust">
+                    <img
+                      src={entityCardImg}
+                      alt="독립기준 ENTITY 일러스트"
+                      width={132}
+                      height={132}
+                      style={{ width: 132, height: 132, objectFit: "contain" }}
+                    />
+                  </div>
+                  <div className="rbm-card-info">
+                    <h3 className="rbm-card-title">독립기준 (ENTITY)</h3>
+                    <p className="rbm-card-text">
+                      본사 단독으로 보고서를 작성합니다.<br />
+                      자회사 데이터를 포함하지 않으며,<br />
+                      해당 회사의 데이터만으로 보고서를 발행합니다.
+                    </p>
+                    <div className="rbm-card-recommend">
+                      <span className="rbm-card-recommend-label">이런 경우 선택하세요</span>
+                      <span className="rbm-card-recommend-item">✓ 본사만 보고서를 작성하는 경우</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="rbm-card-radio">
-                <span className={`rbm-radio-circle ${selected === "ENTITY" ? "rbm-radio-circle--on" : ""}`} />
-              </div>
-            </button>
+                <div className="rbm-card-radio">
+                  <span className={`rbm-radio-circle ${selected === "ENTITY" ? "rbm-radio-circle--on" : ""}`} />
+                </div>
+              </button>
 
-            {/* CONSOLIDATED 카드 */}
-            <button
-              type="button"
-              className={`rbm-card ${selected === "CONSOLIDATED" ? "rbm-card--selected" : ""}`}
-              onClick={() => setSelected("CONSOLIDATED")}
-              aria-pressed={selected === "CONSOLIDATED"}
-            >
-              <div className="rbm-card-badge rbm-card-badge--blue">그룹 전체</div>
-              <div className="rbm-card-body">
-                <div className="rbm-card-illust">
-                  <img
-                    src={consolidatedCardImg}
-                    alt="연결기준 CONSOLIDATED 일러스트"
-                    width={132}
-                    height={132}
-                    style={{ width: 132, height: 132, objectFit: "contain" }}
-                  />
-                </div>
-                <div className="rbm-card-info">
-                  <h3 className="rbm-card-title">연결기준 (CONSOLIDATED)</h3>
-                  <p className="rbm-card-text">
-                    본사와 자회사를 연결하여 보고서를 작성합니다.<br />
-                    자회사 데이터를 수집하고, 연결(롤업)하여<br />
-                    그룹 전체의 보고서를 발행합니다.
-                  </p>
-                  <div className="rbm-card-recommend">
-                    <span className="rbm-card-recommend-label">이런 경우 선택하세요</span>
-                    <span className="rbm-card-recommend-item">✓ 본사만 자회사를 포함한 그룹 보고가 필요한 경우</span>
+              {/* CONSOLIDATED 카드 */}
+              <button
+                type="button"
+                className={`rbm-card ${selected === "CONSOLIDATED" ? "rbm-card--selected" : ""}`}
+                onClick={() => setSelected("CONSOLIDATED")}
+                aria-pressed={selected === "CONSOLIDATED"}
+              >
+                <div className="rbm-card-badge rbm-card-badge--blue">그룹 전체</div>
+                <div className="rbm-card-body">
+                  <div className="rbm-card-illust">
+                    <img
+                      src={consolidatedCardImg}
+                      alt="연결기준 CONSOLIDATED 일러스트"
+                      width={132}
+                      height={132}
+                      style={{ width: 132, height: 132, objectFit: "contain" }}
+                    />
+                  </div>
+                  <div className="rbm-card-info">
+                    <h3 className="rbm-card-title">연결기준 (CONSOLIDATED)</h3>
+                    <p className="rbm-card-text">
+                      본사와 자회사를 연결하여 보고서를 작성합니다.<br />
+                      자회사 데이터를 수집하고, 연결(롤업)하여<br />
+                      그룹 전체의 보고서를 발행합니다.
+                    </p>
+                    <div className="rbm-card-recommend">
+                      <span className="rbm-card-recommend-label">이런 경우 선택하세요</span>
+                      <span className="rbm-card-recommend-item">✓ 본사만 자회사를 포함한 그룹 보고가 필요한 경우</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="rbm-card-radio">
-                <span className={`rbm-radio-circle ${selected === "CONSOLIDATED" ? "rbm-radio-circle--on" : ""}`} />
-              </div>
-            </button>
-          </div>
+                <div className="rbm-card-radio">
+                  <span className={`rbm-radio-circle ${selected === "CONSOLIDATED" ? "rbm-radio-circle--on" : ""}`} />
+                </div>
+              </button>
+            </div>
+          )}
 
           {/* 에러 표시 */}
           {error && (
@@ -194,14 +268,16 @@ const ReportBasisSelectModal = ({
           )}
 
           {/* 하단 액션 */}
-          <div className="rbm-footer">
-            <button type="button" className="rbm-btn-cancel" onClick={onClose}>취소</button>
-            <div className="rbm-footer-info">
-              <span className="rbm-info-icon">ⓘ</span>
-              발행 기준 설정은 보고서 작성 시작 전 언제든 변경할 수 있습니다.
-              <button type="button" className="rbm-link">자세히 알아보기 &rsaquo;</button>
+          {workflowStatus !== 'EXISTS' && (
+            <div className="rbm-footer">
+              <button type="button" className="rbm-btn-cancel" onClick={onClose}>취소</button>
+              <div className="rbm-footer-info">
+                <span className="rbm-info-icon">ⓘ</span>
+                발행 기준 설정은 보고서 작성 시작 전 언제든 변경할 수 있습니다.
+                <button type="button" className="rbm-link">자세히 알아보기 &rsaquo;</button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* ── 우측: 발행 기준 설명 패널 ── */}
@@ -265,8 +341,21 @@ const ReportBasisSelectModal = ({
       {/* ── 하단: 선택 후 진행 과정 ── */}
       <div className="rbm-process-bar">
         <div className="rbm-process-inner">
-          <h4 className="rbm-process-title">선택 후 진행 과정</h4>
-          {selected ? (
+          {workflowStatus === 'EXISTS' ? (
+            <div className="rbm-process-actions" style={{ justifyContent: 'center' }}>
+              <button
+                type="button"
+                className={`rbm-btn-confirm ${loading ? "rbm-btn-confirm--loading" : ""}`}
+                onClick={handleConfirm}
+                disabled={loading}
+              >
+                {loading ? "조회 중..." : "해당 연도로 이동하기"}
+              </button>
+            </div>
+          ) : (
+            <>
+              <h4 className="rbm-process-title">선택 후 진행 과정</h4>
+              {selected ? (
             <div className="rbm-steps">
               {steps.map((step, idx) => (
                 <div key={step.label} className="rbm-step-group">
@@ -291,21 +380,23 @@ const ReportBasisSelectModal = ({
             <p className="rbm-process-placeholder">발행 기준을 선택하면 진행 과정이 표시됩니다.</p>
           )}
 
-          {selected && (
-            <div className="rbm-process-actions">
-              <button
-                type="button"
-                className={`rbm-btn-confirm ${loading ? "rbm-btn-confirm--loading" : ""}`}
-                onClick={handleConfirm}
-                disabled={!selected || loading}
-              >
-                {loading
-                  ? "시작하는 중..."
-                  : selected === "ENTITY"
-                  ? "독립기준으로 시작하기"
-                  : "연결기준으로 시작하기"}
-              </button>
-            </div>
+              {selected && (
+                <div className="rbm-process-actions">
+                  <button
+                    type="button"
+                    className={`rbm-btn-confirm ${loading ? "rbm-btn-confirm--loading" : ""}`}
+                    onClick={handleConfirm}
+                    disabled={!selected || loading}
+                  >
+                    {loading
+                      ? "시작하는 중..."
+                      : selected === "ENTITY"
+                      ? "독립기준으로 시작하기"
+                      : "연결기준으로 시작하기"}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

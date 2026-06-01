@@ -1,7 +1,7 @@
 from datetime import date
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class OnboardingAssignmentBulkAssignRequestDto(BaseModel):
@@ -9,7 +9,7 @@ class OnboardingAssignmentBulkAssignRequestDto(BaseModel):
     reportingYear: int
     cycleType: str = "PRE_DMA_G0"
     metricIds: List[str] = Field(..., min_length=1)
-    assigneeEmail: str
+    assigneeEmail: EmailStr
     dueDate: Optional[date] = None
     sendInviteYn: bool = True
 
@@ -25,7 +25,7 @@ class OnboardingAssignmentPatchRequestDto(BaseModel):
     companyId: int
     reportingYear: int
     cycleType: str = "PRE_DMA_G0"
-    assigneeEmail: str
+    assigneeEmail: EmailStr
     dueDate: Optional[date] = None
     sendInviteYn: bool = True
 

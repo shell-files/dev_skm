@@ -13,7 +13,7 @@ from src.models.onboardingassignment import (
     OnboardingAssignmentPatchRequestDto,
 )
 from src.utils.companyscope import checkScope
-from src.utils.onboardingapprovalrepository import CYCLE_TYPE_PRE_DMA_G0, ensurePreDmaG0Cycle
+from src.utils.onboardingapprovalrepository import CYCLE_TYPE_PRE_DMA_G0, resolvePreDmaG0Cycle
 from src.utils.onboardingassignmentrepository import (
     bulkAssignMetrics,
     bulkUnassignMetrics,
@@ -27,6 +27,7 @@ SUPPORTED_TARGET_ROLE = "EMPLOYEE"
 INVITE_EXPIRE_DAYS = 7
 ASSIGNMENT_MANAGER_ROLES = {"ADMIN", "ESG"}
 ASSIGNMENT_MANAGER_ROLE_NAMES = {"관리자", "ESG담당자"}
+PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE = "PRE_DMA_G0_CYCLE_NOT_READY: 보고서 기준 선택 후 온보딩 workflow를 먼저 시작해 주세요."
 
 
 def bulkAssign(request: OnboardingAssignmentBulkAssignRequestDto, userModel) -> OnboardingAssignmentBulkAssignResponseDto:
@@ -34,13 +35,7 @@ def bulkAssign(request: OnboardingAssignmentBulkAssignRequestDto, userModel) -> 
     checkManager(userModel)
     checkCycleType(request.cycleType)
     metricIds = validateG0MetricIds(request.metricIds)
-    cycle = ensurePreDmaG0Cycle(
-        companyId=request.companyId,
-        reportingYear=request.reportingYear,
-        reportBasisType=None,
-        sourceMaterialityRunId=None,
-        actorUserId=getActorUserId(userModel),
-    )
+    cycle = requirePreDmaG0Cycle(request.companyId, request.reportingYear)
     result = bulkAssignMetrics(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
@@ -77,7 +72,7 @@ def listAssignmentItems(
     checkScope(companyId, userModel)
     checkManager(userModel)
     checkCycleType(cycleType)
-    cycle = ensurePreDmaG0Cycle(companyId=companyId, reportingYear=reportingYear)
+    cycle = resolvePreDmaG0Cycle(companyId=companyId, reportingYear=reportingYear)
     items = [OnboardingAssignmentItemDto(**item) for item in listAssignments(companyId, reportingYear, cycle)]
     return OnboardingAssignmentListResponseDto(
         companyId=companyId,
@@ -128,7 +123,7 @@ def bulkUnassign(request: OnboardingAssignmentBulkUnassignRequestDto, userModel)
     checkManager(userModel)
     checkCycleType(request.cycleType)
     metricIds = validateG0MetricIds(request.metricIds)
-    cycle = ensurePreDmaG0Cycle(companyId=request.companyId, reportingYear=request.reportingYear)
+    cycle = requirePreDmaG0Cycle(request.companyId, request.reportingYear)
     result = bulkUnassignMetrics(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
@@ -148,6 +143,13 @@ def publishMailEvent(mailEvent: Optional[dict]) -> tuple[bool, Optional[str]]:
         return True, None
     except Exception as e:
         return False, f"Mail queue failed: {type(e).__name__}"
+
+
+def requirePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:
+    cycle = resolvePreDmaG0Cycle(companyId=companyId, reportingYear=reportingYear)
+    if not cycle:
+        raise ValueError(PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE)
+    return cycle
 
 
 def checkCycleType(cycleType: str) -> None:
@@ -182,6 +184,7 @@ __all__ = [
     "getAssignmentItem",
     "patchAssignment",
     "bulkUnassign",
+    "requirePreDmaG0Cycle",
     "checkManager",
     "publishMailEvent",
 ]

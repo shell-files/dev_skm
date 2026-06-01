@@ -10,6 +10,7 @@ import {
   YAxis,
   CartesianGrid,
   ReferenceLine,
+  ReferenceArea,
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
@@ -244,7 +245,17 @@ const DoubleMaterialityMatrix = () => {
         <div style={{ position: "relative" }}>
         <ResponsiveContainer width="100%" height={340}>
           <ScatterChart margin={{ top: 16, right: 28, bottom: 44, left: 20 }}>
-               
+             {/* 우상단: High Financial + High Impact (빨강) */}
+              <ReferenceArea x1={2.5} x2={4.2} y1={2} y2={3.5} fill="rgba(239,68,68,0.08)" />   
+
+              {/* 좌상단: Low Financial + High Impact (주황) */}
+              <ReferenceArea x1={0.5} x2={2.5} y1={2} y2={3.5} fill="rgba(245,158,11,0.08)" />
+
+              {/* 우하단: High Financial + Low Impact (파랑) */}
+              <ReferenceArea x1={2.5} x2={4.2} y1={0.5} y2={2} fill="rgba(59,130,246,0.08)" />
+
+              {/* 좌하단: Low Financial + Low Impact (회색) */}
+              <ReferenceArea x1={0.5} x2={2.5} y1={0.5} y2={2} fill="rgba(148,163,184,0.08)" />  
             <ReferenceLine
               x={2.5}
               stroke="#94a3b8"

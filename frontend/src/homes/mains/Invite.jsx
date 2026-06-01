@@ -4,10 +4,11 @@ import { GET, POST } from '@utils/Network';
 import { showDefaultAlert } from '@components/UI/ServiceAlert';
 import "@styles/invite.css";
 
-const USE_DUMMY_API = false;
+const USE_DUMMY_API = true;
 
 const Invite = ({ activeService = 'disclosure' }) => {
   const { user } = useAuth();
+
   // --- 기존 상태 ---
   const [selectedRole, setSelectedRole] = useState('Company');
   const [selectedCategories, setSelectedCategories] = useState([]);
@@ -22,11 +23,14 @@ const Invite = ({ activeService = 'disclosure' }) => {
   const [consultantEmails, setConsultantEmails] = useState([]);
   const [employeeEmails, setEmployeeEmails] = useState([]);
 
+  // ❗추가 (누락된 상태)
+  const [emails1, setEmails1] = useState([]);
+  const [emails2, setEmails2] = useState([]);
+  const [email2, setEmail2] = useState("");
+
   // --- 탭 & 페이지네이션 상태 ---
-  const [activeTab, setActiveTab] = useState('company');
   const [historyPage, setHistoryPage] = useState(1);
   const [approvalPage, setApprovalPage] = useState(1);
-  const [memberPage, setMemberPage] = useState(1);
 
   const itemsPerPage = 5;
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -50,6 +54,7 @@ const Invite = ({ activeService = 'disclosure' }) => {
       return "general";
     }
   };
+
   const serviceCategories = {
     disclosure: [
       "Climate", "Energy", "Water", "Pollution", "Circularity", "Biodiversity", "Product_env", "Supply Chain_env", "Sustainable investment",
@@ -61,13 +66,15 @@ const Invite = ({ activeService = 'disclosure' }) => {
   };
 
   const esgCategories = serviceCategories[activeService] || serviceCategories.disclosure;
+
   const [issueMap, setIssueMap] = useState([]);
   const [loadingIssues, setLoadingIssues] = useState(false);
+
   useEffect(() => {
     const fetchIssues = async () => {
       setLoadingIssues(true);
       try {
-        const res = await GET("/issue");
+        const res = await POST("/issue");
         if (res.data.status) {
           setIssueMap(res.data.data);
         }
@@ -78,6 +85,7 @@ const Invite = ({ activeService = 'disclosure' }) => {
 
     fetchIssues();
   }, []);
+
   // --- 최근 초대 내역 ---
   const [invitationHistory] = useState([
     { id: 1, email: "member1@gmail.com", role: "Manager", status: "대기중" },
@@ -91,19 +99,6 @@ const Invite = ({ activeService = 'disclosure' }) => {
     { id: 2, email: "req2@partner.com", currentRole: "Guest", requestedRole: "Company", requestDate: "2026-05-03" }
   ]);
 
-  // --- 구성원 목록 데이터 구조 (협력사 탭에 '관계' 데이터 추가) ---
-  const [members] = useState({
-    company: [
-      { id: 1, companyName: "그린테크", email: "partner1@supply.com", date: "2026-03-20", relation: "원청-협력" }
-    ],
-    consultant: [
-      { id: 1, name: "김컨설", email: "consult1@naver.com", phone: "010-1234-5678", date: "2026-01-15" }
-    ],
-    employee: [
-      { id: 1, name: "이직원", email: "worker1@company.com", position: "ESG팀", date: "2026-02-01" }
-    ]
-  });
-
   const refreshEmail = () => {
     setCompanyEmailInput("");
     setConsultantEmailInput("");
@@ -116,36 +111,36 @@ const Invite = ({ activeService = 'disclosure' }) => {
     setSelectedCategories([]);
   };
 
-  // --- 핸들러 함수들 ---
+  // --- 핸들러 ---
   const inputCompanyEmail = (e) => {
     e.preventDefault();
-
     if (!companyEmailInput.trim() || !emailRegex.test(companyEmailInput.trim())) {
       showDefaultAlert("입력 오류", "이메일 형식을 확인해주세요", "error");
       return;
     }
-
-    setCompanyEmails([
-      ...companyEmails,
-      companyEmailInput.trim()
-    ]);
-
+    setCompanyEmails([...companyEmails, companyEmailInput.trim()]);
     setCompanyEmailInput("");
   };
+
   const inputConsultantEmail = (e) => {
     e.preventDefault();
-
     if (!consultantEmailInput.trim() || !emailRegex.test(consultantEmailInput.trim())) {
       showDefaultAlert("입력 오류", "이메일 형식을 확인해주세요", "error");
       return;
     }
-
-    setConsultantEmails([
-      ...consultantEmails,
-      consultantEmailInput.trim()
-    ]);
-
+    setConsultantEmails([...consultantEmails, consultantEmailInput.trim()]);
     setConsultantEmailInput("");
+  };
+
+  // ❗추가 (누락된 협력 요청 입력)
+  const inputEmail2 = (e) => {
+    e.preventDefault();
+    if (!email2.trim() || !emailRegex.test(email2.trim())) {
+      showDefaultAlert("입력 오류", "이메일 형식을 확인해주세요", "error");
+      return;
+    }
+    setEmails2([...emails2, email2.trim()]);
+    setEmail2("");
   };
 
   const inviteCompany = (e) => {
@@ -154,20 +149,16 @@ const Invite = ({ activeService = 'disclosure' }) => {
       showDefaultAlert("알림", "초대할 이메일을 입력해주세요.", "info");
       return;
     }
-    console.log("Invite Company:", companyEmails);
-    showDefaultAlert("성공", "협력사 초대장이 발송되었습니다.", "success");
     setCompanyEmails([]);
   };
 
   const roleRequest = (e) => {
     e.preventDefault();
-    if (emails2.length === 0) {
+    if (companyEmails.length === 0) {
       showDefaultAlert("알림", "요청할 이메일을 입력해주세요.", "info");
       return;
     }
-    console.log("Role Request:", emails2);
-    showDefaultAlert("성공", "권한 요청이 발송되었습니다.", "success");
-    setEmails2([]);
+    setCompanyEmails([]);
   };
 
   const inviteConsultant = async (e) => {
@@ -178,58 +169,31 @@ const Invite = ({ activeService = 'disclosure' }) => {
     }
 
     try {
-      if (USE_DUMMY_API) {
-        await new Promise(r => setTimeout(r, 800));
-      } else {
-        await POST("/inviteConsultant", {
-          email: [...consultantEmails],
-          role: Number(3),
-        });
+      await POST("/inviteConsultant", {
+        email: [...consultantEmails],
+        role: Number(3),
+      });
 
-      }
-      showDefaultAlert("성공", "컨설턴트 초대장이 발송되었습니다.", "success");
-      console.log("email:", typeof (consultantEmails))
-      console.log("uuid:", String(user?.uuid), "이메일 :", consultantEmails, "룰 : ", Number(3));
       setConsultantEmails([]);
     } catch (err) {
-      showDefaultAlert("실패", err.response?.data?.message || "초대 발송 중 오류가 발생했습니다.", "error");
+      showDefaultAlert("실패", err.response?.data?.message || "오류", "error");
     }
   };
 
   const inviteEmployee = async (e) => {
     e.preventDefault();
-    if (employeeEmails.length === 0) {
-      showDefaultAlert("알림", "초대할 이메일과 이슈를 등록해주세요.", "info");
-      return;
+    if (employeeEmails.length === 0) return;
+
+    for (const item of employeeEmails) {
+      await POST("/inviteMember", {
+        uuid: user?.uuid,
+        email: [item.email],
+        issue: item.issue,
+        role: Number(4)
+      });
     }
 
-    try {
-      if (USE_DUMMY_API) {
-        await new Promise(r => setTimeout(r, 800));
-      } else {
-        // 직원(부서담당자) 초대는 이메일별로 이슈가 다를 수 있으나, 
-        // API 규격이 단일 호출이라면 루프를 돌거나 가장 최근 규격에 맞춥니다.
-        // 여기서는 화면에 쌓인 리스트를 하나씩 처리하거나, 묶어서 보냅니다.
-        // 명세서상 email이 배열이므로, 동일 이슈 그룹에 대해 묶어서 보낼 수 있습니다.
-
-        // 간단한 구현을 위해 각 항목별로 순차적으로 보냅니다.
-        for (const item of employeeEmails) {
-          // console.log("uuid:", user?.uuid, "이메일 :", [item.email], "이슈 : ", item.issue, "룰 : ", Number(4));
-          await POST("/inviteMember", {
-            "uuid": user?.uuid,
-            "email": [item.email],
-            "issue": item.issue,
-            "role": Number(4)
-          });
-        }
-      }
-      // console.log("uuid:", user.uuid, "이메일 :", item.email, "이슈 : ", item.issue, "룰 : ", Number(4));
-      showDefaultAlert("성공", "직원 초대장이 발송되었습니다.", "success");
-      setEmployeeEmails([]);
-    } catch (err) {
-      // console.log("uuid:", user.uuid, "이메일 :", item.email, "이슈 : ", item.issue, "룰 : ", Number(4));
-      showDefaultAlert("실패", err.response?.data?.message || "초대 발송 중 오류가 발생했습니다.", "error");
-    }
+    setEmployeeEmails([]);
   };
 
   const inputEmployeeEmail = (e) => {
@@ -255,15 +219,13 @@ const Invite = ({ activeService = 'disclosure' }) => {
 
     setEmployeeEmailInput("");
     setSelectedCategories([]);
-  }; ``
+  };
 
   const handleApprove = (id) => {
-    alert("권한 요청을 승인했습니다.");
     setApprovalList(approvalList.filter(item => item.id !== id));
   };
 
   const handleReject = (id) => {
-    alert("권한 요청을 거절했습니다.");
     setApprovalList(approvalList.filter(item => item.id !== id));
   };
 
@@ -433,7 +395,7 @@ const Invite = ({ activeService = 'disclosure' }) => {
                     </div>
                   ))}
                 </div>
-                <form onSubmit={inputIssueEmail} className="email-form">
+                <form onSubmit={inputEmployeeEmail} className="email-form">
                   <input type="text" value={employeeEmailInput}
                     onChange={(e) => setEmployeeEmailInput(e.target.value)}
                     className="email-input" placeholder="이메일 입력 후 엔터" />

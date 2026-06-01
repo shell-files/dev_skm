@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import "@styles/reportBasisSelectModal.css";
-import { DEFAULT_REPORTING_YEAR, startWorkflow, getCurrent } from "@/apis/report";
+import { DEFAULT_REPORTING_YEAR, startWorkflow, getCurrent, resumeWorkflow } from "@/apis/report";
 
 // ── Illustrations (카드 대표 일러스트 132×132)
 import entityCardImg from "@assets/reportbasis/illustrations/entity-card.png";
@@ -54,8 +54,18 @@ const ReportBasisSelectModal = ({
   const [selected, setSelected] = useState(null); // null | 'ENTITY' | 'CONSOLIDATED'
   const [selectedYear, setSelectedYear] = useState(reportingYear);
   const [workflowStatus, setWorkflowStatus] = useState(null); // 'NO_RUN' | 'EXISTS'
+  const [currentRunId, setCurrentRunId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedYear(reportingYear);
+    setSelected(null);
+    setWorkflowStatus(null);
+    setCurrentRunId(null);
+    setError(null);
+  }, [isOpen, companyId, reportingYear]);
 
   useEffect(() => {
     if (!isOpen || !companyId) return;
@@ -71,8 +81,10 @@ const ReportBasisSelectModal = ({
              setError(res?.error?.message || "워크플로우 조회 실패");
           } else if (res?.data?.workflowStep === 'NO_RUN') {
              setWorkflowStatus('NO_RUN');
+             setCurrentRunId(null);
           } else {
              setWorkflowStatus('EXISTS');
+             setCurrentRunId(res?.data?.runId ?? null);
           }
         }
       } catch (err) {
@@ -98,6 +110,28 @@ const ReportBasisSelectModal = ({
     if (loading) return;
     
     if (workflowStatus === 'EXISTS') {
+      if (!currentRunId) {
+        setError("현재 선택 연도의 실행 정보를 찾을 수 없습니다.");
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await resumeWorkflow(currentRunId);
+        const isFailed = res?.status === false || res?.success === false || !res?.data;
+        if (isFailed) {
+          setError(res?.error?.message || res?.detail || "기존 프로젝트 재개에 실패했습니다.");
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error("[ReportBasisSelectModal] resumeWorkflow error:", err);
+        setError("기존 프로젝트 재개 중 오류가 발생했습니다.");
+        setLoading(false);
+        return;
+      }
+
       onClose?.();
       navigate(`/onb?reportingYear=${selectedYear}`, {
         replace: true,
@@ -162,7 +196,13 @@ const ReportBasisSelectModal = ({
               <select 
                 id="reportingYearSelect"
                 value={selectedYear} 
-                onChange={(e) => { setSelectedYear(Number(e.target.value)); setSelected(null); }}
+                onChange={(e) => {
+                  setSelectedYear(Number(e.target.value));
+                  setSelected(null);
+                  setWorkflowStatus(null);
+                  setCurrentRunId(null);
+                  setError(null);
+                }}
                 style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid #ccc' }}
               >
                 <option value={2024}>2024</option>

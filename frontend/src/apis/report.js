@@ -29,6 +29,9 @@ export const getCurrent = (companyId, reportingYear = DEFAULT_REPORTING_YEAR) =>
 export const startWorkflow = (payload) =>
   POST("/api/v1/report-workflow/start", payload);
 
+export const resumeWorkflow = (runId) =>
+  POST(`/api/v1/report-workflow/${runId}/resume`);
+
 export const getG0Status = (runId) =>
   GET(`/api/v1/report-workflow/${runId}/g0-status`);
 

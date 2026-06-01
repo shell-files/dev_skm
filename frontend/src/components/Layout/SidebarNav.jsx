@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useAuth } from '@hooks/AuthContext.jsx';
 import ReportBasisSelectModal from "@components/UI/ReportBasisSelectModal.jsx";
-import { DEFAULT_REPORTING_YEAR, getCurrent } from "@/apis/report";
+import { DEFAULT_REPORTING_YEAR } from "@/apis/report";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
 const Sidebarnav = ({ isOpen, setIsOpen }) => {
@@ -165,32 +165,13 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
     
 
-    const handleReportNav = async () => {
+    const handleReportNav = () => {
         if (!companyId) {
             showDefaultAlert("오류", "회사를 먼저 선택해 주세요.", "error");
             return;
         }
 
-        try {
-            const reportingYear = selectedCompany?.reportingYear || DEFAULT_REPORTING_YEAR;
-            const res = await getCurrent(companyId, reportingYear);
-            const isFailed = res?.status === false || res?.success === false || !res?.data;
-            if (isFailed) {
-                showDefaultAlert("오류", res?.error?.message || "보고서 워크플로우 조회에 실패했습니다.", "error");
-                return;
-            }
-
-            if (res?.data?.workflowStep === "NO_RUN") {
-                setIsBasisModalOpen(true);
-                return;
-            }
-
-            navigate(`/onb?reportingYear=${reportingYear}`);
-            if (window.innerWidth <= 800) setIsOpen(false);
-        } catch (err) {
-            console.error("Failed to get current report workflow", err);
-            showDefaultAlert("오류", "보고서 워크플로우 조회에 실패했습니다.", "error");
-        }
+        setIsBasisModalOpen(true);
     };
 
     const goManagerdata = () => { navigate("/managerData"); if(window.innerWidth <= 800) setIsOpen(false); };

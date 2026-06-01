@@ -16,6 +16,7 @@ INVITE_EXPIRE_DAYS = 7
 ASSIGNMENT_STATUS_ASSIGNED = "assigned"
 ASSIGNMENT_STATUS_INVITED = "invited"
 ASSIGNMENT_STATUS_UNASSIGNED = "unassigned"
+ASSIGNABLE_ROLE_CODES = {"EMPLOYEE", "ESG", "ADMIN"}
 
 
 def normalizeEmail(email: str) -> str:
@@ -68,25 +69,36 @@ def validateG0MetricIds(metricIds: list[str]) -> list[str]:
 
 
 def resolveExistingUser(companyId: int, normalizedEmail: str) -> Optional[int]:
-    row = findOne(
+    rows = findAll(
         f"""
-        SELECT u.id AS user_id
+        SELECT
+            u.id AS user_id,
+            aes_d(r.role, '{settings.maria_db_key}') AS role_code
         FROM `with`.`USER` u
         JOIN `with`.`USER_ROLE` ur
           ON ur.user_id = u.id
          AND ur.company_id = ?
          AND ur.delete_yn = 0
+        JOIN `with`.`ROLE` r
+          ON r.id = ur.role_id
+         AND r.delete_yn = 0
         WHERE u.email = aes_e(?, '{settings.maria_db_key}')
           AND u.delete_yn = 0
         ORDER BY u.id
-        LIMIT 1
         """,
         (companyId, normalizedEmail),
-    ) or {}
-    return int(row["user_id"]) if row.get("user_id") is not None else None
+    ) or []
+    for row in rows:
+        roleCode = str(row.get("role_code") or "").strip().upper()
+        if roleCode in ASSIGNABLE_ROLE_CODES and row.get("user_id") is not None:
+            return int(row["user_id"])
+    return None
 
 
 def getCompanyName(companyId: int) -> str:
+    companyName = getCompanyNameFromCompanyTable(companyId)
+    if companyName:
+        return companyName
     row = findOne(
         f"""
         SELECT COALESCE(company_code, CAST(company_id AS CHAR)) AS company_name
@@ -99,6 +111,63 @@ def getCompanyName(companyId: int) -> str:
         (companyId,),
     ) or {}
     return row.get("company_name") or str(companyId)
+
+
+def getCompanyNameFromCompanyTable(companyId: int) -> Optional[str]:
+    for schemaName in [None, "skm", "with"]:
+        tableInfo = getCompanyTableInfo(schemaName)
+        if not tableInfo:
+            continue
+        qualifiedTable = tableInfo["qualifiedTable"]
+        idColumn = tableInfo["idColumn"]
+        nameColumn = tableInfo["nameColumn"]
+        deleteFilter = "AND delete_yn = 0" if tableInfo.get("hasDeleteYn") else ""
+        try:
+            row = findOne(
+                f"""
+                SELECT aes_d({nameColumn}, '{settings.maria_db_key}') AS company_name
+                FROM {qualifiedTable}
+                WHERE {idColumn} = ?
+                  {deleteFilter}
+                ORDER BY {idColumn} DESC
+                LIMIT 1
+                """,
+                (companyId,),
+            ) or {}
+        except Exception:
+            continue
+        companyName = str(row.get("company_name") or "").strip()
+        if companyName:
+            return companyName
+    return None
+
+
+def getCompanyTableInfo(schemaName: Optional[str]) -> Optional[dict]:
+    schemaFilter = "DATABASE()" if schemaName is None else "?"
+    params = [] if schemaName is None else [schemaName]
+    rows = findAll(
+        f"""
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = {schemaFilter}
+          AND table_name = 'COMPANY'
+        """,
+        tuple(params),
+    ) or []
+    columns = {str(row.get("column_name") or "").lower() for row in rows}
+    if not columns:
+        return None
+    idColumn = "company_id" if "company_id" in columns else "id" if "id" in columns else None
+    nameColumn = "company_name" if "company_name" in columns else "name" if "name" in columns else None
+    if not idColumn or not nameColumn:
+        return None
+    qualifiedTable = "COMPANY" if schemaName is None else f"`{schemaName}`.`COMPANY`"
+    return {
+        "qualifiedTable": qualifiedTable,
+        "idColumn": idColumn,
+        "nameColumn": nameColumn,
+        "hasDeleteYn": "delete_yn" in columns,
+    }
 
 
 def bulkAssignMetrics(
@@ -130,6 +199,7 @@ def bulkAssignMetrics(
 
     try:
         with conn.cursor(dictionary=True) as cur:
+            oldInviteIds = listAssignmentInviteIdsTx(cur, cycleId, companyId, metricIds)
             if assigneeUserId is None:
                 invite = getReusableInviteTx(cur, companyId, cycleId, normalizedEmail)
                 if invite:
@@ -166,12 +236,14 @@ def bulkAssignMetrics(
                     companyId=companyId,
                     metricId=metricId,
                     assigneeUserId=assigneeUserId,
-                    assigneeEmail=normalizedEmail,
                     inviteId=inviteId,
                     assignmentStatus=assignmentStatus,
                     dueDate=dueDate,
                     actorUserId=actorUserId,
                 )
+            for oldInviteId in oldInviteIds:
+                if oldInviteId != inviteId:
+                    revokeOrphanInviteTx(cur, oldInviteId)
         conn.commit()
     except Exception:
         conn.rollback()
@@ -283,7 +355,6 @@ def upsertAssignmentTx(
     companyId: int,
     metricId: str,
     assigneeUserId: Optional[int],
-    assigneeEmail: str,
     inviteId: Optional[int],
     assignmentStatus: str,
     dueDate: Optional[date],
@@ -303,11 +374,11 @@ def upsertAssignmentTx(
             due_date,
             created_by_user_id,
             delete_yn
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'manual', ?, ?, 0)
+        ) VALUES (?, ?, ?, ?, ?, NULL, ?, 'manual', ?, ?, 0)
         ON DUPLICATE KEY UPDATE
             invite_id = VALUES(invite_id),
             assignee_user_id = VALUES(assignee_user_id),
-            assignee_email = VALUES(assignee_email),
+            assignee_email = NULL,
             assignment_status = VALUES(assignment_status),
             assignment_source_type = 'manual',
             due_date = VALUES(due_date),
@@ -321,7 +392,6 @@ def upsertAssignmentTx(
             metricId,
             inviteId,
             assigneeUserId,
-            assigneeEmail,
             assignmentStatus,
             dueDate.isoformat() if hasattr(dueDate, "isoformat") else dueDate,
             actorUserId,
@@ -362,11 +432,15 @@ def listAssignments(companyId: int, reportingYear: int, cycle: dict) -> list[dic
                 a.due_date,
                 a.invite_id,
                 i.invite_status,
-                aes_d(i.invite_email_enc, '{settings.maria_db_key}') AS invite_email
+                aes_d(i.invite_email_enc, '{settings.maria_db_key}') AS invite_email,
+                aes_d(u.email, '{settings.maria_db_key}') AS user_email
             FROM ESG_METRIC_ASSIGNMENT a
             LEFT JOIN ESG_ONBOARDING_INVITE i
               ON i.id = a.invite_id
              AND i.delete_yn = 0
+            LEFT JOIN `with`.`USER` u
+              ON u.id = a.assignee_user_id
+             AND u.delete_yn = 0
             WHERE a.esg_onboarding_cycle_id = ?
               AND a.company_id = ?
               AND a.delete_yn = 0
@@ -381,7 +455,7 @@ def listAssignments(companyId: int, reportingYear: int, cycle: dict) -> list[dic
         assignment = assignmentByMetric.get(metricId) or {}
         email = None
         if assignment.get("assignment_status") != ASSIGNMENT_STATUS_UNASSIGNED:
-            email = assignment.get("invite_email") or assignment.get("assignee_email")
+            email = assignment.get("invite_email") or assignment.get("user_email") or assignment.get("assignee_email")
         items.append(
             {
                 "metricId": metricId,
@@ -395,6 +469,25 @@ def listAssignments(companyId: int, reportingYear: int, cycle: dict) -> list[dic
             }
         )
     return items
+
+
+def listAssignmentInviteIdsTx(cur, cycleId: int, companyId: int, metricIds: list[str]) -> list[int]:
+    if not metricIds:
+        return []
+    placeholders = ", ".join(["?"] * len(metricIds))
+    cur.execute(
+        f"""
+        SELECT DISTINCT invite_id
+        FROM ESG_METRIC_ASSIGNMENT
+        WHERE esg_onboarding_cycle_id = ?
+          AND company_id = ?
+          AND metric_id IN ({placeholders})
+          AND invite_id IS NOT NULL
+          AND delete_yn = 0
+        """,
+        (cycleId, companyId, *metricIds),
+    )
+    return [int(row["invite_id"]) for row in cur.fetchall() or []]
 
 
 def bulkUnassignMetrics(companyId: int, reportingYear: int, cycle: dict, metricIds: list[str]) -> dict:
@@ -491,12 +584,14 @@ __all__ = [
     "ASSIGNMENT_STATUS_ASSIGNED",
     "ASSIGNMENT_STATUS_INVITED",
     "ASSIGNMENT_STATUS_UNASSIGNED",
+    "ASSIGNABLE_ROLE_CODES",
     "normalizeEmail",
     "hashText",
     "maskEmail",
     "listG0MetricMaster",
     "validateG0MetricIds",
     "resolveExistingUser",
+    "getCompanyName",
     "bulkAssignMetrics",
     "listAssignments",
     "bulkUnassignMetrics",

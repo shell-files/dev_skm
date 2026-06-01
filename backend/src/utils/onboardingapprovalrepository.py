@@ -59,6 +59,22 @@ def ensurePreDmaG0Cycle(
         conn.close()
 
 
+def resolvePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:
+    return findOne(
+        """
+        SELECT *
+        FROM ESG_ONBOARDING_CYCLE
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND cycle_type = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (companyId, reportingYear, CYCLE_TYPE_PRE_DMA_G0),
+    ) or {}
+
+
 def listG002Inputs(companyId: int, reportingYear: int) -> list[dict]:
     placeholders = ", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))
     return findAll(
@@ -785,6 +801,7 @@ __all__ = [
     "METRIC_SCOPE_G0_02_FINANCIAL_BASIS",
     "REQUIRED_ATOMIC_IDS",
     "ensurePreDmaG0Cycle",
+    "resolvePreDmaG0Cycle",
     "listG002Inputs",
     "listG002KpiFacts",
     "listApprovalSummaries",

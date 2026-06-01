@@ -99,6 +99,8 @@ def resendInvite(inviteId: int, companyId: int) -> dict:
     conn = getConn()
     if not conn:
         raise RuntimeError("DB connection failed")
+    assignedMetricIds = []
+    dueDate = None
     try:
         with conn.cursor(dictionary=True) as cur:
             cur.execute(
@@ -120,6 +122,22 @@ def resendInvite(inviteId: int, companyId: int) -> dict:
                 raise ValueError("Pending invite was not found")
             cur.execute(
                 """
+                SELECT metric_id, due_date
+                FROM ESG_METRIC_ASSIGNMENT
+                WHERE invite_id = ?
+                  AND assignment_status <> ?
+                  AND delete_yn = 0
+                ORDER BY CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date, metric_id
+                """,
+                (inviteId, ASSIGNMENT_STATUS_UNASSIGNED),
+            )
+            assignmentRows = cur.fetchall() or []
+            if not assignmentRows:
+                raise ValueError("Invite has no active metric assignments")
+            assignedMetricIds = [row["metric_id"] for row in assignmentRows]
+            dueDate = next((row.get("due_date") for row in assignmentRows if row.get("due_date") is not None), None)
+            cur.execute(
+                """
                 UPDATE ESG_ONBOARDING_INVITE
                 SET invite_token_hash = ?,
                     expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? DAY),
@@ -137,13 +155,12 @@ def resendInvite(inviteId: int, companyId: int) -> dict:
     finally:
         conn.close()
 
-    assignedMetricIds = listAssignedMetricIds(inviteId)
     mailEvent = buildInviteMailEvent(
         companyName=getCompanyName(companyId),
         email=invite["invite_email"],
         rawToken=rawToken,
         metricCount=len(assignedMetricIds),
-        dueDate=None,
+        dueDate=dueDate,
     )
     return {
         "companyId": companyId,

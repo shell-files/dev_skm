@@ -1,5 +1,6 @@
 import json
 import uuid
+from typing import List
 from jwcrypto import jwk, jwe
 from datetime import datetime, timedelta, timezone
 from src.utils.settings import settings
@@ -118,3 +119,51 @@ def refreshAccessToken(refreshToken: str):
     newAccessToken = generateAccessWithUuid(userClaims)
     
     return newAccessToken, newUuid, userClaims.id
+
+
+# --------------------------
+# inviteMember 토큰과 UUID 생성 함수 (공통 모듈)
+# --------------------------
+def generateInviteTokenWithUuid(issueGroup:List[str], companyName: str, email:str, roleId: int, projectId: int, inviteId: int, companyId: int):
+    """ inviteMember 토큰과 UUID 생성 함수 (공통 모듈)"""
+    tokenUuid = str(uuid.uuid4().hex)
+    now = datetime.now(timezone.utc)
+    payload = {
+        "iss": "withProject",
+        "sub": companyName,
+        "issueGroup": issueGroup,
+        "email": email,
+        "roleId": roleId,
+        "projectId": projectId,
+        "inviteId": inviteId,
+        "companyId": companyId,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(days=settings.invite_token_expire_days)).timestamp())
+        
+    }
+    # JWE로 암호화하여 반환
+    inviteToken = encryptToJwe(payload)
+    return inviteToken, tokenUuid
+
+# --------------------------
+# inviteConsultant 토큰과 UUID 생성 함수 (공통 모듈)
+# --------------------------
+def generateConsultantInviteToken(companyName: str, email:str, roleId: int, projectId: int, inviteId: int, companyId: int):
+    """ inviteConsultant 토큰과 UUID 생성 함수 (공통 모듈)"""
+    tokenUuid = str(uuid.uuid4().hex)
+    now = datetime.now(timezone.utc)
+    payload = {
+        "iss": "withProject",
+        "sub": companyName,
+        "email": email,
+        "roleId": roleId,
+        "projectId": projectId,
+        "inviteId": inviteId,
+        "companyId": companyId,
+        "iat": int(now.timestamp()),
+        "exp": int((now + timedelta(minutes=settings.access_token_expire_minutes)).timestamp())
+        
+    }
+    # JWE로 암호화하여 반환
+    inviteToken = encryptToJwe(payload)
+    return inviteToken, tokenUuid

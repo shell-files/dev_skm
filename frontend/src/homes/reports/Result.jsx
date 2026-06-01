@@ -474,17 +474,32 @@ const normalizeImportance = (value) => {
   return null;
 };
 
+const LEVEL_COLORS = {
+  1: "#1e293b",
+  2: "#1e293b",
+  3: "#1e293b",
+};
+
 const ImportanceBadge = ({ value }) => {
   const key = normalizeImportance(value);
-  const level = (key !== null && IMPORTANCE_LEVELS[key]) || {
-    text: value ?? "-", color: "#64748b", bg: "#f1f5f9",
-  };
+  const filled = typeof key === "number" ? key : 0;
+  const color = LEVEL_COLORS[filled] ?? "#94a3b8";
+
   return (
-    <span
-      className="importance-badge"
-      style={{ color: level.color, backgroundColor: level.bg }}
-    >
-      {level.text}
+    <span style={{ display: "inline-flex", gap: "4px", alignItems: "center" }}>
+      {[1, 2, 3].map((i) => (
+        <span
+          key={i}
+          style={{
+            width: "10px",
+            height: "10px",
+            borderRadius: "50%",
+            display: "inline-block",
+            backgroundColor: i <= filled ? color : "transparent",
+            border: `2px solid ${color}`,
+          }}
+        />
+      ))}
     </span>
   );
 };
@@ -539,10 +554,10 @@ const Result = () => {
   };
 
   return (
-    <div className="sr-container">
-      <header className="sr-header">
-        <h1 className="sr-title">지속가능경영보고서 AI 자동 생성</h1>
-        <div className="sr-stepper-row">
+    <div className="result-container">
+      <header className="result-header">
+        <h1 className="result-title">지속가능경영보고서 AI 자동 생성</h1>
+        <div className="result-stepper-row">
           {steps.map((step, index) => (
             <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
               <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
@@ -956,6 +971,18 @@ const Result = () => {
                   <DoubleMaterialityMatrix />
                 </div>
                 <div id="table-card">
+                  <div style={{ display: "flex", gap: "16px", marginBottom: "10px", fontSize: "0.8rem", color: "#475569", alignItems: "center" }}>
+                    {[["Low,", 1], ["Middle,", 2], ["High,", 3]].map(([label, filled]) => (
+                      <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                        <span style={{ display: "inline-flex", gap: "3px" }}>
+                          {[1, 2, 3].map((i) => (
+                            <span key={i} style={{ width: "9px", height: "9px", borderRadius: "50%", display: "inline-block", backgroundColor: i <= filled ? "#1e293b" : "transparent", border: "2px solid #1e293b" }} />
+                          ))}
+                        </span>
+                        <span style={{ fontWeight: 600 }}>{label}</span>
+                      </span>
+                    ))}
+                  </div>
                   <table className="result-table">
                     <thead>
                       <tr><th>순위</th><th>구분</th><th>탑 이슈</th><th>Type</th><th>Period</th><th>재무중요성</th><th>영향중요성</th></tr>
@@ -979,7 +1006,7 @@ const Result = () => {
             )}
 
             {rightTab === 1 && (
-              <div className="sr-result-dashboard" id="right-tab-empty">
+              <div className="result-result-dashboard" id="right-tab-empty">
                 <div className="robot-view-container">
                   <div className="particle-field" ref={particleRef}></div>
                   <div className="robot-stage">

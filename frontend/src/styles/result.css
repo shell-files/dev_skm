@@ -408,15 +408,18 @@
 
 
 
+/* ───── 헤더 / 컨테이너 ───── */
+.result-container { display: flex; flex-direction: column; height: calc(100vh - 60px); position: relative; overflow: hidden; }
+.result-header { background: #fff; padding: 20px 40px; border-bottom: 1px solid #e2e8f0; flex-shrink: 0; width: 100%; }
+.result-title { font-size: 1.3rem; font-weight: 850; margin: 0 0 15px 0; color: #1e293b; }
+
 /* ───── 스텝퍼 ───── */
-.result-stepper-row .step-wrap {
-  display: flex;
-  align-items: center;
-}
-.step-title {
-  font-size: 0.8rem;
-  font-weight: 850;
-}
+.result-stepper-row { display: flex; align-items: center; justify-content: space-between; max-width: 900px; margin: 0 auto; position: relative; }
+.step-box { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; opacity: 0.35; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2; }
+.step-box.active { opacity: 1; transform: translateY(-1px); }
+.step-icon-circle { width: 38px; height: 38px; background: #fff; border: 2px solid #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; transition: 0.3s; }
+.step-box.active .step-icon-circle { background: linear-gradient(135deg, #03A94D, #017E3F); color: #fff; border: none; box-shadow: 0 4px 10px rgba(3, 169, 77, 0.2); }
+.step-line { flex: 1; height: 2px; background: #e2e8f0; margin: -20px 15px 0; }
 
 /* ───── 메인 레이아웃 ───── */
 #result-main {

@@ -9,6 +9,7 @@ Responsibility:
 Public functions:
 - getCurrent
 - startWorkflow
+- resumeWorkflow
 - getG0Status
 - getRun
 - resolveWorkflow
@@ -101,6 +102,16 @@ def getG0Status(runId: int) -> ReportWorkflowResponseDto:
     return buildStatusResponse(run)
 
 
+def resumeWorkflow(runId: int, actorUserId: int | None = None) -> ReportWorkflowResponseDto:
+    reportWorkflowRepository = loadRepository()
+    run = reportWorkflowRepository.getRun(runId)
+    if not run:
+        raise ValueError(f"No ESG_MATERIALITY_RUN found for runId={runId}")
+
+    ensurePreDmaG0CycleForRun(run, actorUserId)
+    return buildStatusResponse(run)
+
+
 def getRun(runId: int) -> dict:
     reportWorkflowRepository = loadRepository()
     return reportWorkflowRepository.getRun(runId)
@@ -174,6 +185,7 @@ def loadRepository():
 __all__ = [
     "getCurrent",
     "startWorkflow",
+    "resumeWorkflow",
     "getG0Status",
     "getRun",
     "resolveWorkflow",

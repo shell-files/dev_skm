@@ -14,6 +14,7 @@ import {
   getG0Profile,
   saveG0Profile,
   getG0ProfileStatus,
+  listRequests,
 } from "@/apis/report";
 
 const STRUCTURED_LOOKUP_IDS = new Set(["G0-05__QL0002", "G0-06__QL0001"]);
@@ -23,6 +24,27 @@ const isApiFailed = (res) =>
   res?.status === false || res?.success === false || !res?.data;
 
 const isNoRunWorkflow = (workflow) => workflow?.workflowStep === "NO_RUN";
+
+const isPendingSubsidiaryRequest = (request = {}) => {
+  const requestStatus = String(request.requestStatus || "").trim().toUpperCase();
+  const transferStatus = String(request.transferStatus || "").trim().toUpperCase();
+
+  if (
+    transferStatus === "SENT" ||
+    transferStatus === "RECEIVED" ||
+    requestStatus === "RECEIVED"
+  ) {
+    return false;
+  }
+
+  return (
+    request.sendReadyYn === true ||
+    transferStatus === "NOT_SENT" ||
+    transferStatus === "PENDING" ||
+    requestStatus === "REQUESTED" ||
+    requestStatus === "PENDING"
+  );
+};
 
 const resolveG0InputMode = (item = {}) => {
   const atomicMetricId = item.atomicMetricId || "";
@@ -125,6 +147,34 @@ const OnBoard = () => {
   const [isSubReqModalOpen, setIsSubReqModalOpen] = useState(false);
   const [isSubTransferModalOpen, setIsSubTransferModalOpen] = useState(false);
   const [activeBatchId, setActiveBatchId] = useState(null);
+  const [hasPendingSubsidiaryRequest, setHasPendingSubsidiaryRequest] = useState(false);
+
+  const refreshPendingSubsidiaryRequests = useCallback(async (nextWorkflow) => {
+    if (
+      !companyId ||
+      !nextWorkflow ||
+      isNoRunWorkflow(nextWorkflow) ||
+      nextWorkflow.reportBasisType !== "CONSOLIDATED"
+    ) {
+      setHasPendingSubsidiaryRequest(false);
+      return;
+    }
+
+    try {
+      const res = await listRequests();
+      const items = Array.isArray(res?.data?.items)
+        ? res.data.items
+        : Array.isArray(res?.data)
+          ? res.data
+          : Array.isArray(res?.items)
+            ? res.items
+            : [];
+      setHasPendingSubsidiaryRequest(items.some(isPendingSubsidiaryRequest));
+    } catch (error) {
+      console.error("Failed to refresh subsidiary request state", error);
+      setHasPendingSubsidiaryRequest(false);
+    }
+  }, [companyId]);
 
   const initializeOnboarding = useCallback(async () => {
     if (!companyId) {
@@ -135,6 +185,7 @@ const OnBoard = () => {
       setG0Error(null);
       setLoadingWorkflow(false);
       setLoadingG0(false);
+      setHasPendingSubsidiaryRequest(false);
       return;
     }
 
@@ -149,6 +200,7 @@ const OnBoard = () => {
         setWorkflow(null);
         setG0Items([]);
         setG0ProfileStatus(null);
+        setHasPendingSubsidiaryRequest(false);
         setWorkflowError(workflowRes?.error?.message || "보고서 워크플로우 조회에 실패했습니다.");
         return;
       }
@@ -159,9 +211,12 @@ const OnBoard = () => {
       if (isNoRunWorkflow(nextWorkflow)) {
         setG0Items([]);
         setG0ProfileStatus("NOT_STARTED");
+        setHasPendingSubsidiaryRequest(false);
         setIsBasisModalOpen(true);
         return;
       }
+
+      await refreshPendingSubsidiaryRequests(nextWorkflow);
 
       const profileRes = await getG0Profile(companyId, reportingYear);
       if (isApiFailed(profileRes)) {
@@ -183,7 +238,7 @@ const OnBoard = () => {
       setLoadingWorkflow(false);
       setLoadingG0(false);
     }
-  }, [companyId, reportingYear]);
+  }, [companyId, refreshPendingSubsidiaryRequests, reportingYear]);
 
   useEffect(() => {
     initializeOnboarding();
@@ -374,6 +429,7 @@ const OnBoard = () => {
             renderNoRunState()
           ) : (
             <>
+              {hasPendingSubsidiaryRequest && (
               <div style={{ display: "flex", justifyContent: "flex-end", padding: "16px 24px 0 24px" }}>
                 <button
                   className="ob1-btn-input"
@@ -383,6 +439,7 @@ const OnBoard = () => {
                   지주사 요청 확인 및 전송
                 </button>
               </div>
+              )}
 
               {activeBatchId && (
                 <RollupSummaryPanel
@@ -517,16 +574,19 @@ const OnBoard = () => {
         isOpen={isSubReqModalOpen}
         onClose={() => setIsSubReqModalOpen(false)}
         runId={workflow?.runId}
-        onRequested={(batch) => {
+        onRequested={async (batch) => {
           setActiveBatchId(batch.batchId);
           setIsSubReqModalOpen(false);
+          await initializeOnboarding();
         }}
       />
 
       <SubsidiaryTransferModal
         isOpen={isSubTransferModalOpen}
         onClose={() => setIsSubTransferModalOpen(false)}
-        onTransferred={(batchId) => {
+        onTransferred={async (batchId) => {
+          setActiveBatchId(batchId);
+          await initializeOnboarding();
           console.log("전송 완료된 배치", batchId);
         }}
       />

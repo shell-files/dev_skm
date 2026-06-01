@@ -4,7 +4,7 @@ from src.models.reportworkflow import (
     ReportWorkflowResponseDto,
     ReportWorkflowStartRequestDto,
 )
-from src.services.reportworkflows.service import getCurrent, getG0Status, getRun, startWorkflow
+from src.services.reportworkflows.service import getCurrent, getG0Status, getRun, resumeWorkflow, startWorkflow
 from src.utils.companyscope import checkScope
 
 
@@ -56,6 +56,28 @@ async def startWorkflowRoute(
         raise HTTPException(status_code=403, detail=str(e))
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@reportWorkflowRouter.post(
+    "/{runId}/resume",
+    response_model=ReportWorkflowResponseDto,
+    summary="Resume existing report workflow and repair legacy G0 cycle",
+)
+async def resumeWorkflowRoute(runId: int, userModel=Depends(requireUser)):
+    try:
+        run = getRun(runId)
+        if not run:
+            raise HTTPException(status_code=404, detail=f"No ESG_MATERIALITY_RUN found for runId={runId}")
+        checkScope(int(run["company_id"]), userModel)
+        return resumeWorkflow(runId, _userId(userModel))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

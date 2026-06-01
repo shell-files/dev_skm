@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router";
 import "@styles/onboarding1.css";
 import { useAuth } from "@hooks/AuthContext.jsx";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
@@ -122,6 +123,7 @@ const getStatusInfo = (status) => {
 };
 
 const OnBoard = () => {
+  const navigate = useNavigate(); 
   const { selectedCompany } = useAuth();
   const companyId =
     selectedCompany?.company_id ?? selectedCompany?.companyId;
@@ -248,6 +250,7 @@ const OnBoard = () => {
     switch (workflow.nextAction) {
       case "START_DMA":
         showDefaultAlert("진행", "이중중대성평가를 시작합니다.", "success");
+        navigate("/benchmk");
         break;
       case "REQUEST_ROLLUP":
         setIsSubReqModalOpen(true);

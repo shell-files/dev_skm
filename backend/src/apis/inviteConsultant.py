@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from src.models.model import inviteConsultantModel
-from backend.src.utils.invite import inviteConsultantProcess
+from src.utils.invite import inviteConsultantProcess
 from src.utils.auth import get_token
 
 

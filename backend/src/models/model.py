@@ -120,3 +120,26 @@ class userUpdateModel(BaseModel):
 class userDeleteModel(BaseModel):
     """ user.py delete 회원 탈퇴 페이지 전용 모델 (uuid 이용) """
     uuid: str = Field(..., description="회원탈퇴시 사용되는 uuid 모델")
+
+
+class inviteMemberModel(BaseModel):
+    """ inviteMember.py 내부 직원 초대 API 모델 """
+    uuid: str = Field(..., description="내부 직원 초대 API에서 사용되는 uuid")
+    email: List[EmailStr] = Field(..., description="초대할 내부 직원의 이메일")
+    issue: List[int]= Field(..., description="이슈 그룹 리스트")
+    role: int = Field(..., description="권한 모델(Consultant, Employee)")
+    projectId: int = Field(..., description="프로젝트 id")
+
+class inviteConsultantModel(BaseModel):
+    """ inviteConsultant.py 컨설턴트 초대 API 모델 """
+    uuid: str = Field(..., description="컨설턴트 초대 API에서 사용되는 uuid 모델")
+    email: List[EmailStr] = Field(..., description="초대할 컨설턴트의 이메일 모델")
+    role: int = Field(..., description="권한 모델(3)")
+    projectId: int = Field(..., description="프로젝트 id")
+
+class inviteSignUpUserInfo(BaseModel):
+  """ invite.py 초대 링크로 회원가입 API 모델 """
+  companyName: str = Field(..., description="초대 링크로 회원가입 시 사용되는 회사명")
+  email: EmailStr = Field(..., description="초대 링크로 회원가입 시 사용되는 이메일")
+  name: str = Field(..., description="초대 링크로 회원가입 시 사용되는 이름")
+  password: str = Field(..., description="초대 링크로 회원가입 시 사용되는 비밀번호")

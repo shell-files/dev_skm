@@ -14,7 +14,6 @@ from src.models.model import inviteMemberModel, ResponseModel
 from fastapi import Depends
 
 
-
 def inviteProcess(inviteId: str):
   html = """
     <!DOCTYPE html>
@@ -65,7 +64,7 @@ def inviteSignUp(inviteId: str, inviteSignUpUserInfo: inviteSignUpUserInfo):
   name = inviteSignUpUserInfo.name
 
   # 2. 사용자 계정을 생성합니다.
-  inviteUserSql = f"INSERT INTO `USER` (`email`, `password`, `name`) values (?, ?, ?)"
+  inviteUserSql = f"INSERT INTO `with`.`USER` (`email`, `password`, `name`) values (?, ?, ?)"
   inviteUserSqlParam = (email, password, name)
   result = addKey(inviteUserSql, inviteUserSqlParam)
 
@@ -101,12 +100,12 @@ def inviteConsultantProcess(inviteConsultantModel, userModel):
         userId = userModel.id
 
         # 2. 회사 조회
-        companySql = """
-            SELECT aes_d(company_name, %s) AS company_name, id
+        companySql = f"""
+            SELECT aes_d(company_name, '{settings.maria_db_key}') AS company_name, id
             FROM `COMPANY`
             WHERE user_id = ?
         """
-        company = findOne(companySql, (settings.maria_db_key, userId))
+        company = findOne(companySql, (userId, ))
 
         if not company:
             return ResponseModel(False, "회사 정보를 찾을 수 없습니다.")
@@ -116,15 +115,14 @@ def inviteConsultantProcess(inviteConsultantModel, userModel):
 
             inviteSql = """
                 INSERT INTO `INVITE`
-                (company_id, user_id, role_id, project_id, email)
-                VALUES (?, ?, ?, ?, ?)
+                (company_id, user_id, role_id, email)
+                VALUES (?, ?, ?, ?)
             """
 
             result = addKey(inviteSql, (
                 company["id"],
                 userId,
                 inviteConsultantModel.role,
-                inviteConsultantModel.projectId,
                 email
             ))
 
@@ -132,23 +130,22 @@ def inviteConsultantProcess(inviteConsultantModel, userModel):
                 return ResponseModel(False, "초대 정보 저장 실패")
 
             inviteId = result[1]
-
             token, inviteUuid = generateConsultantInviteToken(
                 company["company_name"],
                 email,
                 inviteConsultantModel.role,
-                inviteConsultantModel.projectId,
                 inviteId,
                 company["id"]
             )
 
+
             setInviteRedis(inviteUuid, token)
 
+
             userExists = exists(
-                "SELECT 1 FROM `USER` WHERE email = ?",
+                "SELECT 1 FROM `with`.`USER` WHERE email = ?",
                 (email,)
             )
-
             sendToKafka({
                 "type": 3 if userExists else 2,
                 "uuid": inviteUuid
@@ -168,7 +165,7 @@ def inviteMember(inviteMemberModel: inviteMemberModel, userModel = Depends(get_t
 
         # 회사 조회
         selectSql = f"""
-                    SELECT ase_d(company_name, '{settings.maria_db_key}), id 
+                    SELECT aes_d(company_name, '{settings.maria_db_key}'), id 
                     FROM `COMPANY` 
                     WHERE user_id = ?
                     """

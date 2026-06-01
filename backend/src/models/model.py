@@ -131,11 +131,9 @@ class inviteMemberModel(BaseModel):
     projectId: int = Field(..., description="프로젝트 id")
 
 class inviteConsultantModel(BaseModel):
-    """ inviteConsultant.py 컨설턴트 초대 API 모델 """
-    uuid: str = Field(..., description="컨설턴트 초대 API에서 사용되는 uuid 모델")
-    email: List[EmailStr] = Field(..., description="초대할 컨설턴트의 이메일 모델")
-    role: int = Field(..., description="권한 모델(3)")
-    projectId: int = Field(..., description="프로젝트 id")
+    """컨설턴트 초대 API 모델"""
+    email: List[EmailStr] = Field(..., description="초대할 컨설턴트 이메일")
+    role: int = Field(..., description="권한 (3)")
 
 class inviteSignUpUserInfo(BaseModel):
   """ invite.py 초대 링크로 회원가입 API 모델 """

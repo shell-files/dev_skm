@@ -287,7 +287,8 @@ const DoubleMaterialityMatrix = () => {
               tickFormatter={(v) => ({ 1: "Low", 2: "Middle", 3: "High" }[v] ?? "")}
               label={{
                 value: "Environmental & Social Materiality (영향중요성)",
-                angle: -90, position: "insideLeft", offset: 14,
+                angle: -90, position: "insideLeft", offset: -5,
+                dy:125,
                 fontSize: 11, fontWeight: 700,
                 fill: "#475569", fontFamily: "Pretendard, sans-serif",
               }}
@@ -424,6 +425,11 @@ const IMPORTANCE_LEVELS = {
   low:    { text: "Low",    color: "#64748b", bg: "#f1f5f9" },
   medium: { text: "Middle", color: "#d97706", bg: "#fffbeb" },
   high:   { text: "High",   color: "#ef4444", bg: "#fff5f5" },
+  기회 :   { text: "기회",    color: "#22c55e", bg: "#f1f5f9" },
+  위기 :   { text: "위기",    color: "#ef4444", bg: "#f1f5f9" },
+  장기 :   { text: "위기",    color: "#64748b", bg: "#f1f5f9" },
+  단기 :   { text: "위기",    color: "#d97706", bg: "#f1f5f9" },
+  
 };
 
 const normalizeImportance = (value) => {
@@ -509,10 +515,10 @@ const Result = () => {
         <h1 className="sr-title">지속가능경영보고서 AI 자동 생성</h1>
         <div className="sr-stepper-row">
           {steps.map((step, index) => (
-            <div key={step.id} className="step-wrap">
+            <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
               <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
                 <div className="step-icon-circle">{step.icon}</div>
-                <div className="step-title">{step.title}</div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 850 }}>{step.title}</div>
               </div>
               {index < steps.length - 1 && <div className="step-line"></div>}
             </div>
@@ -647,7 +653,7 @@ const Result = () => {
             ].map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
                 <div style={{ flexShrink: 0, width: "32px", height: "32px", background: "#dcfce7", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem" }}>{item.icon}</div>
-                <div style={{ fontSize: "0.78rem", color: "#334155", lineHeight: 1.6 }}>
+                <div style={{ fontSize: "1rem", color: "#334155", lineHeight: 1.6 }}>
                   {item.text}{item.sub && <><br /><span style={{ color: "#64748b" }}>{item.sub}</span></>}
                 </div>
               </div>
@@ -682,9 +688,9 @@ const Result = () => {
       </table>
     </div>
 
-    {/* 후보있지만 제외된 이슈 */}
+    {/* 후보였지만 제외된 이슈 */}
     <div className="card-container">
-      <div style={{ fontSize: "0.95rem", fontWeight: 850, color: "#ef4444", marginBottom: "14px" }}>후보있지만 제외된 이슈</div>
+      <div style={{ fontSize: "0.95rem", fontWeight: 850, color: "#ef4444", marginBottom: "14px" }}>후보였지만 제외된 이슈</div>
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
         <thead>
           <tr style={{ background: "#f8fafc", borderBottom: "1.5px solid #e2e8f0" }}>
@@ -921,7 +927,6 @@ const Result = () => {
                   <DoubleMaterialityMatrix />
                 </div>
                 <div id="table-card">
-                  <p id="scatter-note">⚫ x 1 = low, ⚫ x 2 = middle, ⚫ x 3 = high</p>
                   <table className="result-table">
                     <thead>
                       <tr><th>순위</th><th>구분</th><th>탑 이슈</th><th>Type</th><th>Period</th><th>재무중요성</th><th>영향중요성</th></tr>
@@ -932,8 +937,8 @@ const Result = () => {
                           <td className="score-main">{row.rank}</td>
                           <td><span className={`badge badge-${row.cat.toLowerCase()}`}>{row.cat}</span></td>
                           <td className="issue-name">{row.name}</td>
-                          <td>{row.type}</td>
-                          <td>{row.period}</td>
+                          <td><span className={row.type === "위기" ? "type-badge-risk" : "type-badge-opp"}>{row.type}</span></td>
+                          <td><span className={row.period === "장기" ? "period-badge-long" : "period-badge-short"}>{row.period}</span></td>
                           <td><ImportanceBadge value={row.fin} /></td>
                           <td><ImportanceBadge value={row.impact} /></td>
                         </tr>

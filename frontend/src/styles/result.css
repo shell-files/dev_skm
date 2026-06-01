@@ -1139,3 +1139,78 @@
   outline: none !important;
   box-shadow: none !important;
 }
+
+/* 위기,장기,기회,단기 폰트&박스 색깔 */
+
+.type-badge-risk { background: #fee2e2; color: #ef4444; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+.type-badge-opp  { background: #dcfce7; color: #16a34a; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+.period-badge-long  { background: #dbeafe; color: #2563eb; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+.period-badge-short { background: #fef3c7; color: #d97706; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+
+
+/* ── 스크롤바 스타일 ── */
+
+/* 스크롤바 전체 너비/높이 */
+#result-left-panel::-webkit-scrollbar,
+#result-right-panel::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* 스크롤바 배경 (트랙) */
+#result-left-panel::-webkit-scrollbar-track,
+#result-right-panel::-webkit-scrollbar-track {
+  background: rgb(240, 240, 240) ef;
+  border-radius: 99px;
+}
+
+/* 스크롤바 막대 (썸) */
+#result-left-panel::-webkit-scrollbar-thumb,
+#result-right-panel::-webkit-scrollbar-thumb {
+  background: #C4C4C4;      /* ← 여기서 색 변경 */
+  border-radius: 99px;
+}
+
+/* 스크롤바 막대 호버 시 */
+#result-left-panel::-webkit-scrollbar-thumb:hover,
+#result-right-panel::-webkit-scrollbar-thumb:hover {
+  background: #919191;      /* ← 호버 색 */
+}
+
+/* ── Recharts 차트 클릭 outline 전체 제거 ── */
+
+/* 차트 전체를 감싸는 선 */
+.matrix-card .recharts-wrapper,
+.matrix-card .recharts-wrapper:focus,
+.matrix-card .recharts-wrapper:focus-visible,
+.matrix-card > div {
+  outline: none !important;
+}
+
+/* SVG 캔버스 선 */
+.matrix-card .recharts-surface,
+.matrix-card .recharts-surface:focus,
+.matrix-card .recharts-surface:focus-visible {
+  outline: none !important;
+}
+
+/* Y축·X축 라벨 텍스트 클릭 선 */
+.matrix-card .recharts-layer,
+.matrix-card .recharts-layer:focus,
+.matrix-card .recharts-cartesian-axis,
+.matrix-card .recharts-cartesian-axis:focus,
+.matrix-card text,
+.matrix-card text:focus {
+  outline: none !important;
+}
+
+/* 차트 안 숫자(tick) 클릭 선 */
+.matrix-card .recharts-cartesian-axis-tick,
+.matrix-card .recharts-cartesian-axis-tick:focus,
+.matrix-card .recharts-text {
+  outline: none !important;
+}
+
+/* 전체 SVG 하위 모든 요소 일괄 처리 */
+.matrix-card svg *:focus {
+  outline: none !important;
+}

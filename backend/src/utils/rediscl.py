@@ -158,3 +158,13 @@ def delCompanyRedis(uuid: str):
     except Exception as e:
         print(f"Error deleting Redis key: {e}")
         return {"status": False}
+
+def setInviteRedis(uuid: str, token: str):
+    """Redis에 uuid를 키로, token 값을 저장"""
+    try:
+        client3.set(uuid, token)
+        print(f"Success: Set Redis - uuid: {uuid}")
+        return {"status": True}
+    except Exception as e:
+        print(f"Error setting Redis keys: {e}")
+        return {"status": False}

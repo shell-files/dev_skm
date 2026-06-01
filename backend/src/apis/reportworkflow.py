@@ -10,13 +10,16 @@ from src.utils.companyscope import checkScope
 
 reportWorkflowRouter = APIRouter(prefix="/v1/report-workflow", tags=["report-workflow"])
 
-
 def requireUser(response: Response, request: Request):
     from src.utils.auth import get_token
     from src.utils.settings import settings
 
     token = request.cookies.get(settings.cookie_key)
-    return get_token(response, token)
+
+    return get_token(response=response,
+                     request=request,
+                     token=token
+                     )
 
 
 @reportWorkflowRouter.get(
@@ -27,10 +30,11 @@ def requireUser(response: Response, request: Request):
 async def getCurrentRoute(
     companyId: int = Query(...),
     reportingYear: int = Query(...),
-    userModel=Depends(requireUser),
+    userModel = Depends(requireUser)
 ):
     try:
         checkScope(companyId, userModel)
+        
         return getCurrent(companyId, reportingYear)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))

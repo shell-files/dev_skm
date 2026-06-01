@@ -160,6 +160,7 @@ const OnBoard = () => {
     setWorkflowError(null);
     try {
       const res = await getCurrent(companyId, DEFAULT_REPORTING_YEAR);
+      console.log(res)
       const isFailed =
         res?.status === false ||
         res?.success === false ||
@@ -181,9 +182,6 @@ const OnBoard = () => {
     }
   }, [companyId]);
 
-  useEffect(() => {
-    fetchWorkflow();
-  }, [fetchWorkflow]);
 
   /* ─── G0 profile 조회 ─── */
   const fetchG0Profile = useCallback(async () => {
@@ -226,8 +224,10 @@ const OnBoard = () => {
   }, [companyId]);
 
   useEffect(() => {
+    fetchWorkflow();
     fetchG0Profile();
-  }, [fetchG0Profile]);
+    console.log("run()");
+  }, [fetchWorkflow, fetchG0Profile]);
 
   /* ─── 통계 계산 ─── */
   const totalCount = g0Items.length;

@@ -700,7 +700,8 @@
 .result-stats-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 12px;
+    gap: 20px;
+    margin-top: 16px;
 }
 .result-stat-card {
     display: flex;
@@ -726,7 +727,8 @@
 .result-panels-row {
     display: grid;
     grid-template-columns: 1fr 2fr 1fr;
-    gap: 12px;
+    gap: 20px;
+    margin-top: 16px;
 }
 .result-panel {
     background: #fff;

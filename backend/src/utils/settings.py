@@ -3,6 +3,7 @@
 class Settings(BaseSettings):
   host_ip: str
   domain: str
+  skm_domain: str
   # --------------------------
   # ocrai.py
   # --------------------------

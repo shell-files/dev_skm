@@ -78,6 +78,7 @@ const authSlice = createSlice({
           state.userName = "";
           state.selectedCompany = {}
           state.loading = false;
+          location.href = import.meta.env.VITE_API_URL_MAIN;
         } else {
           showDefaultAlert("로그아웃 실패", "접속 오류가 발생 했습니다.", "error");
         }

@@ -41,6 +41,7 @@ jobs:
         env:
           HOST_IP: ${{ secrets.HOST_IP }}
           DOMAIN: ${{ secrets.DOMAIN }}
+          SKM_DOMAIN: ${{ secrets.SKM_DOMAIN }}
           KAFKA_SERVER: ${{ secrets.KAFKA_SERVER }}
           KAFKA_TOPIC: ${{ secrets.KAFKA_TOPIC }}
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}

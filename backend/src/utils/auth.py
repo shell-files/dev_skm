@@ -16,6 +16,8 @@ def get_domain(request: Request):
     allowed_domains = ["myapp.com", "main.myapp.com"]
     if current_domain.endswith(settings.domain):
         cookie_domain = f".{settings.domain}"
+    elif current_domain.endswith(settings.skm_domain):
+        cookie_domain = f".{settings.skm_domain}"
     elif current_domain in allowed_domains:
         cookie_domain = ".myapp.com"
     else:

@@ -3,6 +3,8 @@ import { useNavigate } from "react-router";
 import "@styles/draft.css";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
+import * as XLSX from "xlsx";
 
 
 
@@ -208,6 +210,16 @@ const Draft = () => {
   ];
   const activeIndex = 4;
 
+  // 수정 모드 진입 시 모든 textarea 높이를 내용에 맞게 재계산
+  useEffect(() => {
+    if (!isEditing) return;
+    const textareas = document.querySelectorAll(".edit-para-textarea");
+    textareas.forEach((el) => {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    });
+  }, [isEditing]);
+
   // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -223,7 +235,7 @@ const Draft = () => {
   setExportMenuOpen(false);
 
   if (type === "PDF") {
-    const target = document.getElementById("draftDoc");
+    const target = document.querySelector("#draftDoc .doc-content");
 
     // overflow 문제 해결: 요소를 body에 복제해서 캡처
     const clone = target.cloneNode(true);
@@ -249,7 +261,7 @@ const Draft = () => {
 
     document.body.removeChild(clone);
 
-    const pdf        = new jsPDF("p", "mm", "a4");
+    const pdf        = new jsPDF("l", "mm", "a4");
     const pageWidth  = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
     const imgData    = canvas.toDataURL("image/png");
@@ -268,6 +280,51 @@ const Draft = () => {
     }
 
     pdf.save("sustainability_report.pdf");
+    return;
+  }
+
+  if (type === "Word") {
+    const children = [
+      new Paragraph({ text: "기후목표·전환계획", heading: HeadingLevel.HEADING_1 }),
+      new Paragraph({ text: "전환 리스크에 선제적으로 대응하는 넷제로 로드맵", heading: HeadingLevel.HEADING_2 }),
+      new Paragraph({ text: "" }),
+    ];
+
+    Object.keys(paragraphData).forEach((pid) => {
+      const d = paragraphData[pid];
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: d.tag, bold: true, color: "03A94D" })],
+          spacing: { before: 200 },
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: texts[pid], size: 22 })],
+          spacing: { after: 160 },
+        })
+      );
+    });
+
+    const doc = new Document({ sections: [{ children }] });
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sustainability_draft.docx";
+    a.click();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  if (type === "Excel") {
+    const rows = [["태그", "단락 ID", "본문 내용"]];
+    Object.keys(paragraphData).forEach((pid) => {
+      rows.push([paragraphData[pid].tag, paragraphData[pid].id, texts[pid]]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [{ wch: 14 }, { wch: 12 }, { wch: 80 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "본문");
+    XLSX.writeFile(wb, "sustainability_draft.xlsx");
     return;
   }
 
@@ -308,10 +365,10 @@ const Draft = () => {
   const metric = data ? data.metrics[0] : null;
 
   return (
-    <div className="sr-container">
-      <header className="sr-header">
-        <h1 className="sr-title">지속가능경영보고서 AI 자동 생성</h1>
-        <div className="sr-stepper-row">
+    <div className="draft-container">
+      <header className="draft-header">
+        <h1 className="draft-title">지속가능경영보고서 AI 자동 생성</h1>
+        <div className="draft-stepper-row">
           {steps.map((step, index) => (
             <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
               <div
@@ -396,19 +453,12 @@ const Draft = () => {
                       <textarea
                         className="edit-para-textarea"
                         value={texts[pid]}
-                        rows={texts[pid].split('\n').length || 3} // 줄바꿈 개수만큼 기본 높이 확보
                         onChange={(e) => {
                           handleTextChange(pid, e.target.value);
-                          // 입력할 때마다 입력창 높이를 글 내용 높이(scrollHeight)에 맞게 실시간 자동 확장
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
+                          e.target.style.height = "auto";
+                          e.target.style.height = e.target.scrollHeight + "px";
                         }}
-                        onFocus={(e) => {
-                          // 처음 포커스 되었을 때도 높이를 본문 크기에 맞게 자동으로 딱 맞춰줌
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
-                        }}
-                        onClick={(e) => e.stopPropagation()} // 클릭 시 부모 문단 클릭 이벤트 방지
+                        onClick={(e) => e.stopPropagation()}
                       />
                        ) : (
                       <p className="dp-text">{texts[pid]}</p>

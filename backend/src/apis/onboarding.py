@@ -14,13 +14,10 @@ from src.utils.auth import get_token
 from src.utils.companyscope import checkScope
 
 
-onboardingRouter = APIRouter(
-    prefix="/v1/onboarding",
-    tags=["onboarding"],
-)
+router = APIRouter()
 
 
-@onboardingRouter.get(
+@router.get(
     "/metrics",
     response_model=OnboardingMetricsResponseDto,
     summary="List onboarding metrics by cycle scope",
@@ -48,8 +45,8 @@ async def list_onboarding_metrics(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@onboardingRouter.patch(
-    "/metrics/{metricId}/values",
+@router.patch(
+    "/metrics/{metricId}",
     response_model=OnboardingMetricValuesResponseDto,
     summary="Save onboarding metric input values",
 )
@@ -81,4 +78,4 @@ def statusForValueError(error: ValueError) -> int:
     return 400
 
 
-__all__ = ["onboardingRouter"]
+__all__ = ["router"]

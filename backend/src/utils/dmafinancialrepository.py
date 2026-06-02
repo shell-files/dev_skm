@@ -12,6 +12,8 @@ Public functions:
 - buildFinancialBasisPriority
 - fetchRows
 - fetchFinancialBasisRows
+- checkBasisReady
+- fetchApprovedBasisRow
 - buildBasis
 - buildBasisFromRows
 - checkUsable
@@ -35,7 +37,18 @@ from __future__ import annotations
 from decimal import Decimal, InvalidOperation
 from typing import Any, Optional
 
-from src.utils.db import findAll
+
+
+def findAll(sql: str, params=None):
+    from src.utils.db import findAll as dbFindAll
+
+    return dbFindAll(sql, params)
+
+
+def findOne(sql: str, params=None):
+    from src.utils.db import findOne as dbFindOne
+
+    return dbFindOne(sql, params)
 
 
 FINANCIAL_BASIS_ATOMIC_MAP = {
@@ -64,7 +77,6 @@ FINANCIAL_BASIS_ATOMIC_MAP = {
 FINANCIAL_BASIS_FIELDS = list(FINANCIAL_BASIS_ATOMIC_MAP.keys())
 
 PRIORITY_GROUP_ROLLUP_G = "GROUP_ROLLUP_RESULT_G"
-PRIORITY_KPI_FACT_G = "KPI_FACT_G"
 PRIORITY_KPI_FACT_Q = "KPI_FACT_Q"
 PRIORITY_ONBOARDING_INPUT_Q = "ONBOARDING_INPUT_Q"
 
@@ -72,11 +84,6 @@ PRIORITY_CONFIG = {
     PRIORITY_GROUP_ROLLUP_G: {
         "basisType": "CONSOLIDATED",
         "basisSource": "ESG_GROUP_ROLLUP_RESULT",
-        "atomicKind": "consolidated",
-    },
-    PRIORITY_KPI_FACT_G: {
-        "basisType": "CONSOLIDATED",
-        "basisSource": "ESG_KPI_FACT",
         "atomicKind": "consolidated",
     },
     PRIORITY_KPI_FACT_Q: {
@@ -96,14 +103,13 @@ def getBasis(
     companyId: int,
     reportingYear: int,
     preferConsolidated: bool = True,
+    requiredRollupBatchId: Optional[int] = None,
 ) -> dict:
     priorityList = buildPriority(preferConsolidated)
     attempts = []
-    minimalRevenueBasis = None
-    minimalRevenueIndex = 0
 
     for index, priority in enumerate(priorityList):
-        rows = fetchRows(companyId, reportingYear, priority)
+        rows = fetchRows(companyId, reportingYear, priority, requiredRollupBatchId)
         basis = buildBasis(companyId, reportingYear, rows, priority)
         presentFields = _presentFields(basis)
         attempts.append(
@@ -116,7 +122,7 @@ def getBasis(
             }
         )
 
-        if len(presentFields) >= 3:
+        if checkUsable(basis):
             basis["fallbackUsedYn"] = index > 0
             basis["trace"]["priority"] = priorityList
             basis["trace"]["attempts"] = attempts
@@ -127,23 +133,6 @@ def getBasis(
             )
             return basis
 
-        if minimalRevenueBasis is None and checkUsable(basis):
-            minimalRevenueBasis = basis
-            minimalRevenueIndex = index
-
-    if minimalRevenueBasis:
-        presentFields = _presentFields(minimalRevenueBasis)
-        selectedPriority = minimalRevenueBasis["trace"].get("selectedPriority", "UNKNOWN")
-        minimalRevenueBasis["fallbackUsedYn"] = minimalRevenueIndex > 0
-        minimalRevenueBasis["trace"]["priority"] = priorityList
-        minimalRevenueBasis["trace"]["attempts"] = attempts
-        minimalRevenueBasis["trace"]["reason"] = _selectedReason(
-            preferConsolidated=preferConsolidated,
-            selectedPriority=selectedPriority,
-            presentFieldCount=len(presentFields),
-        )
-        return minimalRevenueBasis
-
     emptyBasis = buildEmptyBasis(companyId, reportingYear)
     emptyBasis["trace"]["priority"] = priorityList
     emptyBasis["trace"]["attempts"] = attempts
@@ -152,17 +141,10 @@ def getBasis(
 
 def buildPriority(preferConsolidated: bool) -> list[str]:
     if preferConsolidated:
-        return [
-            PRIORITY_GROUP_ROLLUP_G,
-            PRIORITY_KPI_FACT_G,
-            PRIORITY_KPI_FACT_Q,
-            PRIORITY_ONBOARDING_INPUT_Q,
-        ]
+        return [PRIORITY_GROUP_ROLLUP_G]
     return [
         PRIORITY_KPI_FACT_Q,
         PRIORITY_ONBOARDING_INPUT_Q,
-        PRIORITY_GROUP_ROLLUP_G,
-        PRIORITY_KPI_FACT_G,
     ]
 
 
@@ -170,6 +152,7 @@ def fetchRows(
     companyId: int,
     reportingYear: int,
     priority: str,
+    requiredRollupBatchId: Optional[int] = None,
 ) -> list[dict]:
     if priority not in PRIORITY_CONFIG:
         return []
@@ -178,6 +161,8 @@ def fetchRows(
     placeholders = ", ".join(["?"] * len(atomicIds))
 
     if priority == PRIORITY_GROUP_ROLLUP_G:
+        if requiredRollupBatchId is None:
+            return []
         sql = f"""
             SELECT
                 'ESG_GROUP_ROLLUP_RESULT' AS sourceTable,
@@ -190,12 +175,14 @@ def fetchRows(
               AND reporting_year = ?
               AND group_metric_id = 'G0-02'
               AND group_atomic_metric_id IN ({placeholders})
+              AND esg_rollup_batch_id = ?
+              AND LOWER(COALESCE(rollup_status, '')) = 'approved'
               AND delete_yn = 0
             ORDER BY updated_at DESC, id DESC
         """
-        return findAll(sql, (companyId, reportingYear, *atomicIds)) or []
+        return findAll(sql, (companyId, reportingYear, *atomicIds, requiredRollupBatchId)) or []
 
-    if priority in (PRIORITY_KPI_FACT_G, PRIORITY_KPI_FACT_Q):
+    if priority == PRIORITY_KPI_FACT_Q:
         sql = f"""
             SELECT
                 'ESG_KPI_FACT' AS sourceTable,
@@ -208,15 +195,9 @@ def fetchRows(
               AND reporting_year = ?
               AND metric_id = 'G0-02'
               AND atomic_metric_id IN ({placeholders})
+              AND LOWER(COALESCE(approval_status, '')) = 'approved'
               AND delete_yn = 0
-            ORDER BY
-                CASE
-                    WHEN LOWER(COALESCE(approval_status, '')) = 'approved' THEN 0
-                    WHEN LOWER(COALESCE(approval_status, '')) = 'submitted' THEN 1
-                    ELSE 2
-                END,
-                updated_at DESC,
-                id DESC
+            ORDER BY updated_at DESC, id DESC
         """
         return findAll(sql, (companyId, reportingYear, *atomicIds)) or []
 
@@ -233,15 +214,9 @@ def fetchRows(
               AND reporting_year = ?
               AND metric_id = 'G0-02'
               AND atomic_metric_id IN ({placeholders})
+              AND LOWER(COALESCE(input_status, '')) = 'approved'
               AND delete_yn = 0
-            ORDER BY
-                CASE
-                    WHEN LOWER(COALESCE(input_status, '')) = 'approved' THEN 0
-                    WHEN LOWER(COALESCE(input_status, '')) = 'submitted' THEN 1
-                    ELSE 2
-                END,
-                updated_at DESC,
-                id DESC
+            ORDER BY updated_at DESC, id DESC
         """
         return findAll(sql, (companyId, reportingYear, *atomicIds)) or []
 
@@ -322,9 +297,121 @@ def buildBasis(
 
 def checkUsable(basis: dict) -> bool:
     presentFieldCount = len(_presentFields(basis))
-    if presentFieldCount >= 3:
-        return True
-    return basis.get("revenue") is not None
+    return presentFieldCount == len(FINANCIAL_BASIS_FIELDS)
+
+
+def checkBasisReady(
+    companyId: int,
+    reportingYear: int,
+    reportBasisType: str = "ENTITY",
+    requiredRollupBatchId: Optional[int] = None,
+) -> dict:
+    normalizedBasisType = str(reportBasisType or "").strip().upper()
+    if normalizedBasisType == "CONSOLIDATED":
+        atomicIds = [
+            FINANCIAL_BASIS_ATOMIC_MAP[fieldName]["consolidated"]
+            for fieldName in FINANCIAL_BASIS_FIELDS
+        ]
+        row = fetchApprovedBasisRow(
+            companyId=companyId,
+            reportingYear=reportingYear,
+            atomicIds=atomicIds,
+            consolidatedYn=True,
+            requiredRollupBatchId=requiredRollupBatchId,
+        )
+    else:
+        normalizedBasisType = "ENTITY"
+        atomicIds = [
+            FINANCIAL_BASIS_ATOMIC_MAP[fieldName]["entity"]
+            for fieldName in FINANCIAL_BASIS_FIELDS
+        ]
+        row = fetchApprovedBasisRow(
+            companyId=companyId,
+            reportingYear=reportingYear,
+            atomicIds=atomicIds,
+            consolidatedYn=False,
+            requiredRollupBatchId=None,
+        )
+
+    approvedAtomicIds = [
+        atomicId
+        for atomicId in str(row.get("approved_atomic_metric_ids") or "").split(",")
+        if atomicId
+    ]
+    approvedCount = len(set(approvedAtomicIds))
+    missingAtomicIds = [
+        atomicId
+        for atomicId in atomicIds
+        if atomicId not in approvedAtomicIds
+    ]
+    return {
+        "readyYn": approvedCount >= len(atomicIds),
+        "basisType": normalizedBasisType,
+        "requiredRollupBatchId": requiredRollupBatchId,
+        "approvedCount": approvedCount,
+        "requiredCount": len(atomicIds),
+        "approvedAtomicMetricIds": approvedAtomicIds,
+        "missingAtomicMetricIds": missingAtomicIds,
+    }
+
+
+def fetchApprovedBasisRow(
+    companyId: int,
+    reportingYear: int,
+    atomicIds: list[str],
+    consolidatedYn: bool,
+    requiredRollupBatchId: Optional[int] = None,
+) -> dict:
+    placeholders = ", ".join(["?"] * len(atomicIds))
+    if consolidatedYn:
+        if requiredRollupBatchId is None:
+            return {}
+        sql = f"""
+            SELECT
+                GROUP_CONCAT(DISTINCT group_atomic_metric_id) AS approved_atomic_metric_ids
+            FROM ESG_GROUP_ROLLUP_RESULT
+            WHERE parent_company_id = ?
+              AND reporting_year = ?
+              AND group_metric_id = 'G0-02'
+              AND group_atomic_metric_id IN ({placeholders})
+              AND esg_rollup_batch_id = ?
+              AND LOWER(COALESCE(rollup_status, '')) = 'approved'
+              AND delete_yn = 0
+        """
+        return findOne(sql, (companyId, reportingYear, *atomicIds, requiredRollupBatchId)) or {}
+
+    sql = f"""
+        SELECT
+            GROUP_CONCAT(DISTINCT atomic_metric_id) AS approved_atomic_metric_ids
+        FROM (
+            SELECT atomic_metric_id
+            FROM ESG_ONBOARDING_INPUT_VALUE
+            WHERE company_id = ?
+              AND reporting_year = ?
+              AND metric_id = 'G0-02'
+              AND atomic_metric_id IN ({placeholders})
+              AND LOWER(COALESCE(input_status, '')) = 'approved'
+              AND (
+                  value_numeric IS NOT NULL
+                  OR TRIM(COALESCE(value_text, '')) <> ''
+              )
+              AND delete_yn = 0
+            UNION
+            SELECT atomic_metric_id
+            FROM ESG_KPI_FACT
+            WHERE company_id = ?
+              AND reporting_year = ?
+              AND metric_id = 'G0-02'
+              AND atomic_metric_id IN ({placeholders})
+              AND LOWER(COALESCE(approval_status, '')) = 'approved'
+              AND (
+                  value_numeric IS NOT NULL
+                  OR TRIM(COALESCE(value_text, '')) <> ''
+              )
+              AND delete_yn = 0
+        ) approved_basis
+    """
+    return findOne(sql, (companyId, reportingYear, *atomicIds, companyId, reportingYear, *atomicIds)) or {}
 
 
 def buildEmptyBasis(companyId: int, reportingYear: int) -> dict:
@@ -335,9 +422,9 @@ def buildEmptyBasis(companyId: int, reportingYear: int) -> dict:
         basisSource=None,
         selectedPriority="NONE",
     )
-    basis["fallbackUsedYn"] = True
+    basis["fallbackUsedYn"] = False
     basis["missingFields"] = FINANCIAL_BASIS_FIELDS.copy()
-    basis["trace"]["reason"] = "No G0-02 financial basis rows found"
+    basis["trace"]["reason"] = "No complete approved G0-02 financial basis rows found"
     basis["trace"]["partialBasisYn"] = False
     basis["trace"]["warnings"] = []
     return basis
@@ -354,8 +441,9 @@ def getG0FinancialBasis(
     companyId: int,
     reportingYear: int,
     preferConsolidated: bool = True,
+    requiredRollupBatchId: Optional[int] = None,
 ) -> dict:
-    return getBasis(companyId, reportingYear, preferConsolidated)
+    return getBasis(companyId, reportingYear, preferConsolidated, requiredRollupBatchId)
 
 
 def buildFinancialBasisPriority(preferConsolidated: bool) -> list[str]:
@@ -366,8 +454,9 @@ def fetchFinancialBasisRows(
     companyId: int,
     reportingYear: int,
     priority: str,
+    requiredRollupBatchId: Optional[int] = None,
 ) -> list[dict]:
-    return fetchRows(companyId, reportingYear, priority)
+    return fetchRows(companyId, reportingYear, priority, requiredRollupBatchId)
 
 
 def buildBasisFromRows(
@@ -490,21 +579,15 @@ def _selectedReason(
     selectedPriority: str,
     presentFieldCount: int,
 ) -> str:
-    if 0 < presentFieldCount < 3:
-        return "Only partial G0-02 financial basis found; revenue-based minimal basis selected"
+    if presentFieldCount < len(FINANCIAL_BASIS_FIELDS):
+        return "No complete approved G0-02 financial basis rows found"
     if selectedPriority == PRIORITY_GROUP_ROLLUP_G:
-        if preferConsolidated:
-            return "preferConsolidated=true and consolidated G values exist"
-        return "entity basis unavailable; consolidated G values selected as fallback"
-    if selectedPriority == PRIORITY_KPI_FACT_G:
-        return "consolidated G values selected from ESG_KPI_FACT fallback"
+        return "consolidated G0-02 group rollup result selected"
     if selectedPriority == PRIORITY_KPI_FACT_Q:
-        return "entity Q values selected from ESG_KPI_FACT"
+        return "entity G0-02 Q values selected from ESG_KPI_FACT"
     if selectedPriority == PRIORITY_ONBOARDING_INPUT_Q:
-        return "entity Q values selected from ESG_ONBOARDING_INPUT_VALUE fallback"
-    if presentFieldCount > 0:
-        return "partial G0-02 financial basis selected"
-    return "No G0-02 financial basis rows found"
+        return "entity G0-02 Q values selected from ESG_ONBOARDING_INPUT_VALUE"
+    return "No complete approved G0-02 financial basis rows found"
 
 
 __all__ = [
@@ -515,10 +598,12 @@ __all__ = [
     "buildPriority",
     "buildFinancialBasisPriority",
     "emptyFinancialBasis",
+    "fetchApprovedBasisRow",
     "fetchRows",
     "fetchFinancialBasisRows",
     "getBasis",
     "getG0FinancialBasis",
+    "checkBasisReady",
     "checkUsable",
     "isUsableBasis",
     "normalizeValue",

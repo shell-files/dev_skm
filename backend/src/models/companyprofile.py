@@ -11,6 +11,11 @@ class G0ProfileItemDto(BaseModel):
     atomicMetricId: str
     metricName: Optional[str] = None
     atomicName: Optional[str] = None
+    dataValueType: Optional[str] = None
+    atomicDataRole: Optional[str] = None
+    rollupRole: Optional[str] = None
+    inputMode: str = "MANUAL_TEXTAREA"
+    editableYn: bool = True
     valueText: Optional[str] = None
     valueNumeric: Optional[float] = None
     unit: Optional[str] = None

@@ -10,10 +10,10 @@ from src.utils.settings import settings
 from src.utils.validatetok import validateToken
 from src.utils.auth import get_domain, get_token
 
-reportWorkflowRouter = APIRouter(prefix="/v1/report-workflow", tags=["report-workflow"])
+_actionRouter = APIRouter()
 
 
-@reportWorkflowRouter.get(
+@_actionRouter.get(
     "/current",
     response_model=ReportWorkflowResponseDto,
     summary="Get current report workflow status",
@@ -35,7 +35,7 @@ async def getCurrentRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@reportWorkflowRouter.post(
+@_actionRouter.post(
     "/start",
     response_model=ReportWorkflowResponseDto,
     summary="Start report workflow basis selection",
@@ -55,7 +55,7 @@ async def startWorkflowRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@reportWorkflowRouter.post(
+@_actionRouter.post(
     "/{runId}/resume",
     response_model=ReportWorkflowResponseDto,
     summary="Resume existing report workflow and repair legacy G0 cycle",
@@ -77,7 +77,7 @@ async def resumeWorkflowRoute(runId: int, userModel=Depends(get_token)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@reportWorkflowRouter.get(
+@_actionRouter.get(
     "/{runId}/g0-status",
     response_model=ReportWorkflowResponseDto,
     summary="Get G0 readiness for report workflow",
@@ -99,7 +99,14 @@ async def getG0StatusRoute(runId: int, userModel=Depends(get_token)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-__all__ = ["reportWorkflowRouter"]
+router = APIRouter()
+router.include_router(_actionRouter)
+
+reportWorkflowRouter = APIRouter(prefix="/v1/report-workflow", tags=["report-workflow"])
+reportWorkflowRouter.include_router(_actionRouter)
+
+
+__all__ = ["router", "reportWorkflowRouter"]
 
 
 def _userId(userModel):

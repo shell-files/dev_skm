@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import '@styles/onboardingModal.css';
 import { getAtomicId, isEditableItem, resolveG0InputMode } from '../onboardingUtils';
 
@@ -377,7 +378,7 @@ export default function OnboardingModalShell({
 
   if (!isOpen || !metricItem || !subMetrics) return null;
 
-  return (
+  return createPortal(
     <div className="ob-modal-overlay" onClick={onClose}>
       <div className="ob-modal-shell" onClick={(event) => event.stopPropagation()}>
         {renderHeader()}
@@ -396,6 +397,8 @@ export default function OnboardingModalShell({
 
         {renderFooterActions()}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
+

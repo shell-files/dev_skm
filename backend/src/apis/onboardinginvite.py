@@ -15,7 +15,7 @@ from src.services.onboarding_invites.service import (
 from src.utils.auth import get_token
 
 
-
+router = APIRouter()
 
 onboardingInviteRouter = APIRouter(
     prefix="/v1/onboarding-invites",
@@ -23,8 +23,11 @@ onboardingInviteRouter = APIRouter(
 )
 
 
-
-
+@router.get(
+    "",
+    response_model=OnboardingInviteListResponseDto,
+    summary="List onboarding invites",
+)
 @onboardingInviteRouter.get(
     "",
     response_model=OnboardingInviteListResponseDto,
@@ -46,6 +49,11 @@ async def listInviteItemsRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post(
+    "/{inviteId}/resend",
+    response_model=OnboardingInviteActionResponseDto,
+    summary="Resend onboarding invite",
+)
 @onboardingInviteRouter.post(
     "/{inviteId}/resend",
     response_model=OnboardingInviteActionResponseDto,
@@ -66,6 +74,11 @@ async def resendInviteMailRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post(
+    "/{inviteId}/revoke",
+    response_model=OnboardingInviteActionResponseDto,
+    summary="Revoke onboarding invite",
+)
 @onboardingInviteRouter.post(
     "/{inviteId}/revoke",
     response_model=OnboardingInviteActionResponseDto,
@@ -86,4 +99,4 @@ async def revokeInviteMailRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-__all__ = ["onboardingInviteRouter"]
+__all__ = ["router", "onboardingInviteRouter"]

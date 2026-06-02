@@ -91,7 +91,7 @@ const Media = () => {
   const [selectedPress, setSelectedPress] = useState([]);
   const [selectedReg, setSelectedReg] = useState([]);
   const [selectedAge, setSelectedAge] = useState([]);
-  
+
 
 
 
@@ -210,164 +210,164 @@ const Media = () => {
   const addPress = (e) => {
     const val = e.target.value;
     if (val && !selectedPress.includes(val)) {
-    setSelectedPress(prev => [...prev, val]);
-  }
-  e.target.value = ""; // 선택 후 드롭다운 초기화
-};
+      setSelectedPress(prev => [...prev, val]);
+    }
+    e.target.value = ""; // 선택 후 드롭다운 초기화
+  };
 
   const removePress = (name) => {
-  setSelectedPress(prev => prev.filter(p => p !== name));
-};
+    setSelectedPress(prev => prev.filter(p => p !== name));
+  };
 
   const addReg = (e) => {
     const val = e.target.value;
     if (val && !selectedReg.includes(val)) {
-    setSelectedReg(prev => [...prev, val]);
-  }
-  e.target.value = "";
-};
+      setSelectedReg(prev => [...prev, val]);
+    }
+    e.target.value = "";
+  };
 
   const removeReg = (name) => {
     setSelectedReg(prev => prev.filter(p => p !== name));
-};
- 
+  };
+
   const addAge = (e) => {
     const val = e.target.value;
     if (val && !selectedAge.includes(val)) {
-    setSelectedAge(prev => [...prev, val]);
-  }
-  e.target.value = "";
-};
+      setSelectedAge(prev => [...prev, val]);
+    }
+    e.target.value = "";
+  };
 
   const removeAge = (name) => {
     setSelectedAge(prev => prev.filter(p => p !== name));
-};
+  };
   const today = new Date().toISOString().split("T")[0];
 
   return (
     <>
-    <div className="media-container">
-      {/* --- STEPPER HEADER --- */}
-      <header className="media-header">
-        <h1 className="media-title">지속가능경영보고서 AI 자동 생성</h1>
-        <div className="media-stepper-row">
-          {STEPS.map((step, index) => (
-            <Fragment key={step.id}>
-              <div
-                className={`step-box ${index === activeIndex ? "active" : ""}`}
-                onClick={() => moveStep(index)}
-                style={{ cursor: "pointer" }}
-              >
-                <div className="step-icon-circle">{step.icon}</div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 800 }}>{step.title}</div>
-              </div>
-              {index < STEPS.length - 1 && <div className="step-line"></div>}
-            </Fragment>
-          ))}
-        </div>
-      </header>
-
-      {/* --- FILTERS SETUP INPUT CARD --- */}
-      <main className="main-content">
-        <div className="input-card">
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px", color: "#0f172a" }}>
-            미디어 및 기관별 필터 수집 설정
-          </h2>
-          <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "10px", lineHeight: 1.5 }}>
-            언론사 뉴스, 정부 규제 데이터 및 ESG 전문기관의 평가 피드를 동기화하여 부정 위험성 및 공시 트렌드를 실시간 모니터링합니다.
-          </p>
-          
-          <div className="media-setup-grid">
-            {/* 카드 1: 언론 채널 */}
-            <div className="media-card">
-              <div className="media-badge">언론 채널</div>
-              <div className="form-group" style={{ marginTop: "8px" }}>
-                <label>수집 언론사명</label>
-                <select className="media-select" onChange={addPress} defaultValue="">
-                  <option value="">언론사 선택</option>
-                  <option value="임팩트온">임팩트온</option>
-                  <option value="ESG 경제">ESG 경제</option>
-                </select>
-                {selectedPress.length > 0 && (
-    <div style={{
-      display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px"
-    }}>
-      {selectedPress.map((name) => (
-        <span key={name} style={{
-          display: "inline-flex", alignItems: "center", gap: "4px",
-          padding: "3px 10px", background: "#f0fdf4",
-          border: "1px solid #bbf7d0", borderRadius: "20px",
-          fontSize: "0.78rem", fontWeight: 700, color: "#16a34a",
-        }}>
-          {name}
-          <button
-            onClick={() => removePress(name)}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              color: "#94a3b8", fontSize: "0.75rem", padding: "0",
-              lineHeight: 1,
-                  }}
-                >✕</button>
-              </span>
-              ))}
-            </div>
-            )}
-        
-              </div>
-              <div className="form-group">
-                <label>수집 희망 기간</label>
-                <div className="date-range-group">
-                   {/* 시작 날짜 - 2023-01-01 이후만 선택 가능 */}
-                  <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" />
-                  <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
-                  <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} max={new Date().toISOString().split("T")[0]} />
+      <div className="media-container">
+        {/* --- STEPPER HEADER --- */}
+        <header className="media-header">
+          <h1 className="media-title">지속가능경영보고서 AI 자동 생성</h1>
+          <div className="media-stepper-row">
+            {STEPS.map((step, index) => (
+              <Fragment key={step.id}>
+                <div
+                  className={`step-box ${index === activeIndex ? "active" : ""}`}
+                  onClick={() => moveStep(index)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <div className="step-icon-circle">{step.icon}</div>
+                  <div style={{ fontSize: "0.8rem", fontWeight: 800 }}>{step.title}</div>
                 </div>
-              </div>
-              <div className="status-container">
-                <span className="status-label">현재 상태</span>
-                <span className={`status-badge ${status.press}`}>{getStatusText(status.press)}</span>
-              </div>
-            </div>
+                {index < STEPS.length - 1 && <div className="step-line"></div>}
+              </Fragment>
+            ))}
+          </div>
+        </header>
 
-            {/* 카드 2: 규제 기관 */}
-            <div className="media-card">
-              <div className="media-badge">규제 기관</div>
-              <div className="form-group" style={{ marginTop: "8px" }}>
-                <label>정부 및 규제 데이터 소스</label>
-                <select className="media-select" onChange={addReg} defaultValue="">
-                  <option value="">규제 기관 선택</option>
-                  <option value="CBAM"> CBAM</option>
-                  <option value="CSRS">CSRS</option>
-                  <option value="ESRD">ESRD</option>
-                  <option value="DPP">DPP</option>
-                </select>
-                 {selectedReg.length > 0 && (
-                <div style={{
-                  display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px"
-                }}>
-                  {selectedReg.map((name) => (
-                    <span key={name} style={{
-                      display: "inline-flex", alignItems: "center", gap: "4px",
-                      padding: "3px 10px", background: "#f0fdf4",
-                      border: "1px solid #bbf7d0", borderRadius: "20px",
-                      fontSize: "0.78rem", fontWeight: 700, color: "#16a34a",
+        {/* --- FILTERS SETUP INPUT CARD --- */}
+        <main className="main-content">
+          <div className="input-card">
+            <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px", color: "#0f172a" }}>
+              미디어 및 기관별 필터 수집 설정
+            </h2>
+            <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "10px", lineHeight: 1.5 }}>
+              언론사 뉴스, 정부 규제 데이터 및 ESG 전문기관의 평가 피드를 동기화하여 부정 위험성 및 공시 트렌드를 실시간 모니터링합니다.
+            </p>
+
+            <div className="media-setup-grid">
+              {/* 카드 1: 언론 채널 */}
+              <div className="media-card">
+                <div className="media-badge">언론 채널</div>
+                <div className="form-group" style={{ marginTop: "8px" }}>
+                  <label>수집 언론사명</label>
+                  <select className="media-select" onChange={addPress} defaultValue="">
+                    <option value="">언론사 선택</option>
+                    <option value="임팩트온">임팩트온</option>
+                    <option value="ESG 경제">ESG 경제</option>
+                  </select>
+                  {selectedPress.length > 0 && (
+                    <div style={{
+                      display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px"
                     }}>
-                      {name}
-                      <button
-                        onClick={() => removeReg(name)}
-                        style={{
-                          background: "none", border: "none", cursor: "pointer",
-                          color: "#94a3b8", fontSize: "0.75rem", padding: "0",
-                          lineHeight: 1,
-                        }}
-                      >✕</button>
-                    </span>
-                  ))}
+                      {selectedPress.map((name) => (
+                        <span key={name} style={{
+                          display: "inline-flex", alignItems: "center", gap: "4px",
+                          padding: "3px 10px", background: "#f0fdf4",
+                          border: "1px solid #bbf7d0", borderRadius: "20px",
+                          fontSize: "0.78rem", fontWeight: 700, color: "#16a34a",
+                        }}>
+                          {name}
+                          <button
+                            onClick={() => removePress(name)}
+                            style={{
+                              background: "none", border: "none", cursor: "pointer",
+                              color: "#94a3b8", fontSize: "0.75rem", padding: "0",
+                              lineHeight: 1,
+                            }}
+                          >✕</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                 </div>
-              )}
-                    </div>  
-             
-              {/* <div className="form-group">
+                <div className="form-group">
+                  <label>수집 희망 기간</label>
+                  <div className="date-range-group">
+                    {/* 시작 날짜 - 2023-01-01 이후만 선택 가능 */}
+                    <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" />
+                    <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
+                    <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} max={new Date().toISOString().split("T")[0]} />
+                  </div>
+                </div>
+                <div className="status-container">
+                  <span className="status-label">현재 상태</span>
+                  <span className={`status-badge ${status.press}`}>{getStatusText(status.press)}</span>
+                </div>
+              </div>
+
+              {/* 카드 2: 규제 기관 */}
+              <div className="media-card">
+                <div className="media-badge">규제 기관</div>
+                <div className="form-group" style={{ marginTop: "8px" }}>
+                  <label>정부 및 규제 데이터 소스</label>
+                  <select className="media-select" onChange={addReg} defaultValue="">
+                    <option value="">규제 기관 선택</option>
+                    <option value="CBAM"> CBAM</option>
+                    <option value="CSRS">CSRS</option>
+                    <option value="ESRD">ESRD</option>
+                    <option value="DPP">DPP</option>
+                  </select>
+                  {selectedReg.length > 0 && (
+                    <div style={{
+                      display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px"
+                    }}>
+                      {selectedReg.map((name) => (
+                        <span key={name} style={{
+                          display: "inline-flex", alignItems: "center", gap: "4px",
+                          padding: "3px 10px", background: "#f0fdf4",
+                          border: "1px solid #bbf7d0", borderRadius: "20px",
+                          fontSize: "0.78rem", fontWeight: 700, color: "#16a34a",
+                        }}>
+                          {name}
+                          <button
+                            onClick={() => removeReg(name)}
+                            style={{
+                              background: "none", border: "none", cursor: "pointer",
+                              color: "#94a3b8", fontSize: "0.75rem", padding: "0",
+                              lineHeight: 1,
+                            }}
+                          >✕</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* <div className="form-group">
                 <label>대상 규제 제정 기간</label>
                 <div className="date-range-group">
                   <input type="date" name="regStartDate" value={formData.regStartDate} onChange={handleChange} min="2023-01-01" />
@@ -375,252 +375,252 @@ const Media = () => {
                   <input type="date" name="regEndDate" value={formData.regEndDate} onChange={handleChange} max={new Date().toISOString().split("T")[0]}/>
                 </div>
               </div> */}
-              <div className="status-container">
-                <span className="status-label">현재 상태</span>
-                <span className={`status-badge ${status.reg}`}>{getStatusText(status.reg)}</span>
+                <div className="status-container">
+                  <span className="status-label">현재 상태</span>
+                  <span className={`status-badge ${status.reg}`}>{getStatusText(status.reg)}</span>
+                </div>
+              </div>
+
+              {/* 카드 3: 전문 평가기관 */}
+              <div className="media-card">
+                <div className="media-badge">전문 평가기관</div>
+                <div className="form-group" style={{ marginTop: "8px" }}>
+                  <label>ESG 외부 평가/리서치 기관</label>
+                  <select className="media-select" onChange={addAge} defaultValue="">
+                    <option value="">평가 기관 선택</option>
+                    <option value="MSCI">MSCI</option>
+                    <option value="Sustainalytics">Sustainalytics</option>
+                    <option value="한국ESG기준원">한국ESG기준원</option>
+                  </select>
+                  {selectedAge.length > 0 && (
+                    <div style={{
+                      display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px"
+                    }}>
+                      {selectedAge.map((name) => (
+                        <span key={name} style={{
+                          display: "inline-flex", alignItems: "center", gap: "4px",
+                          padding: "3px 10px", background: "#f0fdf4",
+                          border: "1px solid #bbf7d0", borderRadius: "20px",
+                          fontSize: "0.78rem", fontWeight: 700, color: "#16a34a",
+                        }}>
+                          {name}
+                          <button
+                            onClick={() => removeAge(name)}
+                            style={{
+                              background: "none", border: "none", cursor: "pointer",
+                              color: "#94a3b8", fontSize: "0.75rem", padding: "0",
+                              lineHeight: 1,
+                            }}
+                          >✕</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                </div>
+                <div className="form-group">
+                  <label>리포트 공시 기간</label>
+                  <div className="date-range-group">
+                    <input type="number" name="expertStartDate" value={formData.expertStartDate} onChange={handleChange} min="2020" max={new Date().getFullYear()} placeholder="시작 연도" style={{ width: "90px", padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "0.85rem" }} />
+                    <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
+                    <input type="number" name="expertEndDate" value={formData.expertEndDate} onChange={handleChange} min="2020" max={new Date().getFullYear()} placeholder="종료 연도" style={{ width: "90px", padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "0.85rem" }} />
+                  </div>
+                </div>
+                <div className="status-container">
+                  <span className="status-label">현재 상태</span>
+                  <span className={`status-badge ${status.expert}`}>{getStatusText(status.expert)}</span>
+                </div>
               </div>
             </div>
 
-            {/* 카드 3: 전문 평가기관 */}
-            <div className="media-card">
-              <div className="media-badge">전문 평가기관</div>
-              <div className="form-group" style={{ marginTop: "8px" }}>
-                <label>ESG 외부 평가/리서치 기관</label>
-                <select className="media-select" onChange={addAge} defaultValue="">
-                  <option value="">평가 기관 선택</option>
-                  <option value="MSCI">MSCI</option>
-                  <option value="Sustainalytics">Sustainalytics</option>
-                  <option value="한국ESG기준원">한국ESG기준원</option>
-                </select>
-                {selectedAge.length > 0 && (
-                <div style={{
-                  display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px"
-                }}>
-                  {selectedAge.map((name) => (
-                    <span key={name} style={{
-                      display: "inline-flex", alignItems: "center", gap: "4px",
-                      padding: "3px 10px", background: "#f0fdf4",
-                      border: "1px solid #bbf7d0", borderRadius: "20px",
-                      fontSize: "0.78rem", fontWeight: 700, color: "#16a34a",
-                    }}>
-                      {name}
-                      <button
-                        onClick={() => removeAge(name)}
-                        style={{
-                          background: "none", border: "none", cursor: "pointer",
-                          color: "#94a3b8", fontSize: "0.75rem", padding: "0",
-                          lineHeight: 1,
-                        }}
-                      >✕</button>
-                    </span>
-                  ))}
+            <div className="action-container">
+              <button className="media-btn" onClick={startMediaCollection} style={{ marginBottom: "50px" }}>
+                실시간 AI 분석 시작
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <div className={`media-result-dashboard ${dashboardOpen ? "open" : ""} ${showResult ? "result-expanded" : ""}`}>
+
+          {/* 핸들 버튼 - 항상 표시 */}
+          <div
+            className="dashboard-handle"
+            onClick={() => setDashboardOpen(!dashboardOpen)}
+            style={{ cursor: "pointer" }}
+          >
+            <div className={`handle-pill ${showResult ? "complete" : ""}`}>
+              {isAnalyzing
+                ? "AI 파이프라인 수집 가동 중..."
+                : showResult
+                  ? "분석 완료 - 결과 요약 확인 (클릭)"
+                  : "빅데이터 연동 현황 확인하기"}
+            </div>
+          </div>
+
+          {/* 대시보드 내용 - 분석 중이거나 결과 있을 때만 렌더링 */}
+          {(dashboardOpen || isAnalyzing || showResult) && (
+            <div className={`robot-view-container ${showResult ? "showing-result" : ""}`}>
+              {/* 가동 애니메이션 파티클 필드 */}
+              <div id="particle-field" ref={particleRef}></div>
+              {!showResult && (
+                <img src={robot} className="robot-main-img" alt="마스코트 로봇" style={{ alignSelf: "center" }} />
+              )}
+              {/* 수집 대기 및 로딩 중 안내판 */}
+              {!showResult && (
+                <div style={{ textAlign: "center" }}>
+                  <h3 style={{ fontSize: "1.1rem", fontWeight: 850, margin: "0 0 4px 0" }}>{loadingTitle}</h3>
+                  <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>{loadingDesc}</p>
                 </div>
               )}
-                    
-              </div>
-              <div className="form-group">
-                <label>리포트 공시 기간</label>
-                <div className="date-range-group">
-                  <input type="number" name="expertStartDate" value={formData.expertStartDate} onChange={handleChange} min="2020" max={new Date().getFullYear()} placeholder="시작 연도" style={{ width: "90px", padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "0.85rem" }}/>
-                  <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
-                  <input type="number" name="expertEndDate" value={formData.expertEndDate} onChange={handleChange} min="2020" max={new Date().getFullYear()}  placeholder="종료 연도" style={{ width: "90px", padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "0.85rem" }}/>
+
+              {/* AI 분석 완료 후 노출될 데이터 레이아웃 영역 */}
+              {showResult && (
+                <div className="result-layout-content" style={{ width: "100%" }}>
+                  {/* 결과 배너 */}
+                  <div className="result-banner">
+                    <div className="result-banner-left">
+                      <div className="result-banner-title" style={{ textAlign: "center", alignSelf: "center" }}>
+                        [AI 미디어 시그널 분석 결과]
+                      </div>
+                      <p className="result-banner-desc">
+                        언론 기사, 전문기관 자료, 핵심규제 프레임을 종합 반영하여<br />
+                        외부 시그널 기반의 주요 서브이슈를 도출했습니다.
+                      </p>
+                    </div>
+                    {/* 로봇 이미지 우측 배치 */}
+                    <img
+                      src={robot}
+                      alt="마스코트 로봇"
+                      style={{ height: "120px", width: "auto", flexShrink: 0, marginLeft: "16px" }}
+                    />
+                  </div>
+
+                  {/* 통계 카드 4개 */}
+
+                  <div className="result-stats-row">
+                    <div className="result-stat-card">
+                      <div className="stat-icon-wrap">📰</div>
+                      <div>
+                        <div className="stat-label">언론 기사</div>
+                        <div className="stat-value">{DASHBOARD_MOCK_DATA.stats.press.count}</div>
+                        <div className="stat-sub">{DASHBOARD_MOCK_DATA.stats.press.sub}</div>
+                      </div>
+                    </div>
+                    <div className="result-stat-card">
+                      <div className="stat-icon-wrap">🏛️</div>
+                      <div>
+                        <div className="stat-label">전문기관 자료</div>
+                        <div className="stat-value">{DASHBOARD_MOCK_DATA.stats.expert.count}</div>
+                        <div className="stat-sub">{DASHBOARD_MOCK_DATA.stats.expert.sub}</div>
+                      </div>
+                    </div>
+                    <div className="result-stat-card">
+                      <div className="stat-icon-wrap">⚖️</div>
+                      <div>
+                        <div className="stat-label">규제 프레임</div>
+                        <div className="stat-value">{DASHBOARD_MOCK_DATA.stats.regulation.count}</div>
+                        <div className="stat-sub">{DASHBOARD_MOCK_DATA.stats.regulation.sub}</div>
+                      </div>
+                    </div>
+                    <div className="result-stat-card">
+                      <div className="stat-icon-wrap">🔗</div>
+                      <div>
+                        <div className="stat-label">반영 방식 안내</div>
+                        <div className="stat-value">{DASHBOARD_MOCK_DATA.stats.total.count}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 하단 3패널 */}
+                  <div className="result-panels-row">
+                    {/* 패널1: Source 별 반영 현황 */}
+                    <div className="result-panel">
+                      <div className="panel-header-row">
+                        <span className="panel-title">Source 별 반영 현황</span>
+                        <span className="panel-info-btn">ⓘ</span>
+                      </div>
+                      <table className="issue-table">
+                        <thead>
+                          <tr>
+                            <th>Source</th><th>수집·기준 건수</th><th>반영 이슈</th><th>적용 방식</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {DASHBOARD_MOCK_DATA.sourceTable.map((row, i) => (
+                            <tr key={i}>
+                              <td>{row.source}</td>
+                              <td>{row.count}</td>
+                              <td>{row.issues}</td>
+                              <td>{row.method}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* 패널2: 미디어 TOP 이슈 점수 */}
+                    <div className="result-panel">
+                      <div className="panel-header-row">
+                        <span className="panel-title">미디어 TOP 이슈 점수</span>
+                        <span className="panel-info-btn">ⓘ</span>
+                      </div>
+                      <table className="issue-table">
+                        <thead>
+
+                        </thead>
+                        <tbody>
+                          {DASHBOARD_MOCK_DATA.topIssues.map((item) => (
+                            <tr key={item.rank}>
+                              <td>{item.rank}</td>
+                              <td>{item.name}</td>
+                              <td>{item.impact}</td>
+                              <td>{item.financial}</td>
+                              <td>{item.source}</td>
+                              <td>
+
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* 패널3: 반영 방식 안내 */}
+                    <div className="result-panel">
+                      <div className="panel-header-row">
+                        <span className="panel-title">반영 방식 안내</span>
+                        <span className="panel-info-btn">ⓘ</span>
+                      </div>
+                      <ul className="reflect-list">
+                        {REFLECT_METHODS.map((item) => (
+                          <li key={item.key} className="reflect-item">
+                            <div className="reflect-icon">{item.icon}</div>
+                            <div>
+                              <div className="reflect-title">{item.title}</div>
+                              <p className="reflect-desc">{item.desc}</p>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                      <div className="reflect-note">ⓘ 향후 MSCI·S&P·EcoVadis 등 외부 평가기관 자료 확장 가능</div>
+                    </div>
+                  </div>
+
+                  {/* 다음 단계 알림 가이드 가이드바 */}
+                  {STEPS[activeIndex + 1] && (
+                    <div style={{ textAlign: "center", marginTop: "25px", color: "#64748b", fontSize: "0.9rem" }}>
+                      다음 단계 가이드: <strong>{STEPS[activeIndex + 1].title}</strong> 진행이 가능합니다.
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="status-container">
-                <span className="status-label">현재 상태</span>
-                <span className={`status-badge ${status.expert}`}>{getStatusText(status.expert)}</span>
-              </div>
+              )}
             </div>
-          </div> 
-
-          <div className="action-container">
-            <button className="media-btn" onClick={startMediaCollection} style={{ marginBottom: "50px" }}>
-               실시간 AI 분석 시작
-            </button>
-          </div>
-          </div>
-      </main>
-
-      <div className={`media-result-dashboard ${dashboardOpen ? "open" : ""} ${showResult ? "result-expanded" : ""}`}>
-
-      {/* 핸들 버튼 - 항상 표시 */}
-  <div
-  className="dashboard-handle"
-  onClick={() => setDashboardOpen(!dashboardOpen)}
-  style={{ cursor: "pointer" }}
->
-    <div className={`handle-pill ${showResult ? "complete" : ""}`}>
-      {isAnalyzing
-        ? "AI 파이프라인 수집 가동 중..."
-        : showResult
-        ? "분석 완료 - 결과 요약 확인 (클릭)"
-        : "빅데이터 연동 현황 확인하기"}
-    </div>
-  </div>
-
-        {/* 대시보드 내용 - 분석 중이거나 결과 있을 때만 렌더링 */}
-        {(dashboardOpen || isAnalyzing || showResult) && (
-         <div className={`robot-view-container ${showResult ? "showing-result" : ""}`}>
-          {/* 가동 애니메이션 파티클 필드 */}
-          <div id="particle-field" ref={particleRef}></div>
-          {!showResult && (
-          <img src={robot} className="robot-main-img" alt="마스코트 로봇" style={{ alignSelf: "center" }} />
           )}
-          {/* 수집 대기 및 로딩 중 안내판 */}
-          {!showResult && (
-            <div style={{ textAlign: "center" }}>
-              <h3 style={{ fontSize: "1.1rem", fontWeight: 850, margin: "0 0 4px 0" }}>{loadingTitle}</h3>
-              <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>{loadingDesc}</p>
-            </div>
-          )}
-
-          {/* AI 분석 완료 후 노출될 데이터 레이아웃 영역 */}
-          {showResult && (
-            <div className="result-layout-content" style={{ width: "100%" }}>
-              {/* 결과 배너 */}
-              <div className="result-banner">
-                <div className="result-banner-left">
-                  <div className="result-banner-title" style={{ textAlign: "center", alignSelf: "center" }}>
-                    [AI 미디어 시그널 분석 결과]
-                  </div>
-                  <p className="result-banner-desc">
-                    언론 기사, 전문기관 자료, 핵심규제 프레임을 종합 반영하여<br />
-                    외부 시그널 기반의 주요 서브이슈를 도출했습니다.
-                  </p>
-                </div>
-                  {/* 로봇 이미지 우측 배치 */}
-                  <img
-                    src={robot}
-                    alt="마스코트 로봇"
-                    style={{ height: "120px", width: "auto", flexShrink: 0, marginLeft: "16px" }}
-                  />
-              </div>
-              
-              {/* 통계 카드 4개 */}
-
-              <div className="result-stats-row">
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap">📰</div>
-                  <div>
-                    <div className="stat-label">언론 기사</div>
-                    <div className="stat-value">{DASHBOARD_MOCK_DATA.stats.press.count}</div>
-                    <div className="stat-sub">{DASHBOARD_MOCK_DATA.stats.press.sub}</div>
-                  </div>
-                </div>
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap">🏛️</div>
-                  <div>
-                    <div className="stat-label">전문기관 자료</div>
-                    <div className="stat-value">{DASHBOARD_MOCK_DATA.stats.expert.count}</div>
-                    <div className="stat-sub">{DASHBOARD_MOCK_DATA.stats.expert.sub}</div>
-                  </div>
-                </div>
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap">⚖️</div>
-                  <div>
-                    <div className="stat-label">규제 프레임</div>
-                    <div className="stat-value">{DASHBOARD_MOCK_DATA.stats.regulation.count}</div>
-                    <div className="stat-sub">{DASHBOARD_MOCK_DATA.stats.regulation.sub}</div>
-                  </div>
-                </div>
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap">🔗</div>
-                  <div>
-                    <div className="stat-label">반영 방식 안내</div>
-                    <div className="stat-value">{DASHBOARD_MOCK_DATA.stats.total.count}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 하단 3패널 */}
-              <div className="result-panels-row">
-                {/* 패널1: Source 별 반영 현황 */}
-                <div className="result-panel">
-                  <div className="panel-header-row">
-                    <span className="panel-title">Source 별 반영 현황</span>
-                    <span className="panel-info-btn">ⓘ</span>
-                  </div>
-                  <table className="issue-table">
-                    <thead>
-                      <tr>
-                        <th>Source</th><th>수집·기준 건수</th><th>반영 이슈</th><th>적용 방식</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {DASHBOARD_MOCK_DATA.sourceTable.map((row, i) => (
-                        <tr key={i}>
-                          <td>{row.source}</td>
-                          <td>{row.count}</td>
-                          <td>{row.issues}</td>
-                          <td>{row.method}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* 패널2: 미디어 TOP 이슈 점수 */}
-                <div className="result-panel">
-                  <div className="panel-header-row">
-                    <span className="panel-title">미디어 TOP 이슈 점수</span>
-                    <span className="panel-info-btn">ⓘ</span>
-                  </div>
-                  <table className="issue-table">
-                    <thead>
-                     
-                    </thead>
-                    <tbody>
-                      {DASHBOARD_MOCK_DATA.topIssues.map((item) => (
-                        <tr key={item.rank}>
-                          <td>{item.rank}</td>
-                          <td>{item.name}</td>
-                          <td>{item.impact}</td>
-                          <td>{item.financial}</td>
-                          <td>{item.source}</td>
-                          <td>
-                            
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* 패널3: 반영 방식 안내 */}
-                <div className="result-panel">
-                  <div className="panel-header-row">
-                    <span className="panel-title">반영 방식 안내</span>
-                    <span className="panel-info-btn">ⓘ</span>
-                  </div>
-                  <ul className="reflect-list">
-                    {REFLECT_METHODS.map((item) => (
-                      <li key={item.key} className="reflect-item">
-                        <div className="reflect-icon">{item.icon}</div>
-                        <div>
-                          <div className="reflect-title">{item.title}</div>
-                          <p className="reflect-desc">{item.desc}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="reflect-note">ⓘ 향후 MSCI·S&P·EcoVadis 등 외부 평가기관 자료 확장 가능</div>
-                </div>
-              </div>
-
-              {/* 다음 단계 알림 가이드 가이드바 */}
-              {STEPS[activeIndex + 1] && (
-                <div style={{ textAlign: "center", marginTop: "25px", color: "#64748b", fontSize: "0.9rem" }}>
-                  다음 단계 가이드: <strong>{STEPS[activeIndex + 1].title}</strong> 진행이 가능합니다.
-                </div>
-             )}
-             </div>
-          )}
-          </div>        
-      )}
+        </div>
       </div>
-      </div>
-      </>
-      
-       );
-      }
+    </>
+
+  );
+}
 export default Media;

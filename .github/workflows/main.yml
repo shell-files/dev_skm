@@ -24,6 +24,7 @@ jobs:
           "VITE_API_URL=${{ secrets.VITE_API_URL }}" | Set-Content -Path .env -Encoding UTF8
           "VITE_API_URL_MAIN=${{ secrets.VITE_API_URL_MAIN }}" | Add-Content -Path .env
           "VITE_API_URL_SKM=${{ secrets.VITE_API_URL_SKM }}" | Add-Content -Path .env
+          "VITE_API_URL_SKM_BACK=${{ secrets.VITE_API_URL_SKM_BACK }}" | Add-Content -Path .env
           "VITE_API_URL_HG=${{ secrets.VITE_API_URL_HG }}" | Add-Content -Path .env
           "VITE_API_URL_TV=${{ secrets.VITE_API_URL_TV }}" | Add-Content -Path .env
       - name: Node Build
@@ -40,6 +41,7 @@ jobs:
         env:
           HOST_IP: ${{ secrets.HOST_IP }}
           DOMAIN: ${{ secrets.DOMAIN }}
+          SKM_DOMAIN: ${{ secrets.SKM_DOMAIN }}
           KAFKA_SERVER: ${{ secrets.KAFKA_SERVER }}
           KAFKA_TOPIC: ${{ secrets.KAFKA_TOPIC }}
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
@@ -64,5 +66,7 @@ jobs:
           FILE_DIR: ${{ secrets.FILE_DIR }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
+          APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
         working-directory: .
         run: docker compose up -d

@@ -75,6 +75,14 @@ const REFLECT_METHODS = [
   }
 ];
 
+import { POST } from "@utils/Network";
+
+const MEDIA_SOURCE_OPTIONS = [
+  { value: "all", label: "전체 (임팩트온 + ESG경제)" },
+  { value: "impacton", label: "임팩트온" },
+  { value: "esgeconomy", label: "ESG경제" },
+];
+
 const Media = () => {
   const navigate = useNavigate();
   const particleRef = useRef(null);
@@ -102,8 +110,19 @@ const Media = () => {
     expert: "ready",
   });
 
+  const [analysisResult, setAnalysisResult] = useState({
+    articleCount: 0,
+    collectedArticleCount: 0,
+    filteredArticleCount: 0,
+    observedSubIssueCount: 0,
+    savedSignalCount: 0,
+    sourceBreakdown: [],
+    topIssues: []
+  });
+
   const [formData, setFormData] = useState({
-    pressKeyword: "",
+    pressSource: "all",
+
     regOrg: "",
     expertOrg: "",
     pressStartDate: "",
@@ -147,29 +166,31 @@ const Media = () => {
     }));
   };
 
-  const moveStep = (index) => {
-    if (isAnalyzing) return;
-    if (index === activeIndex) return;
-    navigate(STEPS[index].path);
-  };
-
-  // --- 실시간 AI 분석 가동 프로세스 핸들러 ---
-  const startMediaCollection = () => {
+  const startMediaCollection = async () => {
     if (isAnalyzing) return;
 
-    // 데이터 유효성 검사 (Validation)
-    if (selectedPress.length === 0) {
-      showDefaultAlert("입력 오류", "언론사명 또는 키워드를 입력해주세요.", "warning");
+    if (!formData.pressSource) {
+      showDefaultAlert(
+        "입력 오류",
+        "수집 언론사를 선택해주세요.",
+        "warning"
+      );
       return;
     }
-    if (selectedReg.length === 0) {
-      showDefaultAlert("입력 오류", "규제 기관을 선택해주세요.", "warning");
+
+    if (!formData.pressStartDate || !formData.pressEndDate) {
+      showDefaultAlert(
+        "입력 오류",
+        "수집 희망 기간을 선택해주세요.",
+        "warning"
+      );
       return;
     }
-    if (selectedAge.length === 0) {
-      showDefaultAlert("입력 오류", "평가 기관을 선택해주세요.", "warning");
-      return;
-    }
+
+    const selectedSources =
+      formData.pressSource === "all"
+        ? ["impacton", "esgeconomy"]
+        : [formData.pressSource];
 
     // 수집 애니메이션 및 대시보드 상태 가동
     setIsAnalyzing(true);
@@ -197,7 +218,7 @@ const Media = () => {
       });
       setShowResult(true);
       setIsAnalyzing(false);
-    }, 2500);
+    }, 1000);
   };
 
   const getStatusText = (type) => {
@@ -245,14 +266,21 @@ const Media = () => {
   const today = new Date().toISOString().split("T")[0];
 
   return (
-    <>
     <div className="media-container">
-      {/* --- STEPPER HEADER --- */}
       <header className="media-header">
-        <h1 className="media-title">지속가능경영보고서 AI 자동 생성</h1>
+        <h1 className="media-title">
+          지속가능경영보고서 AI 자동 생성
+        </h1>
+
         <div className="media-stepper-row">
-          {STEPS.map((step, index) => (
-            <Fragment key={step.id}>
+          {steps.map((step, index) => (
+            <div
+              key={step.id}
+              style={{
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
               <div
                 className={`step-box ${index === activeIndex ? "active" : ""}`}
                 onClick={() => moveStep(index)}
@@ -267,10 +295,16 @@ const Media = () => {
         </div>
       </header>
 
-      {/* --- FILTERS SETUP INPUT CARD --- */}
-      <main className="main-content">
-        <div className="input-card">
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px", color: "#0f172a" }}>
+      <main className="media-main-content">
+        <div className="media-input-card">
+          <h2
+            style={{
+              fontSize: "1.4rem",
+              fontWeight: 850,
+              marginBottom: "6px",
+              color: "#0f172a",
+            }}
+          >
             미디어 및 기관별 필터 수집 설정
           </h2>
           <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "10px", lineHeight: 1.5 }}>
@@ -434,12 +468,38 @@ const Media = () => {
           </div> 
 
           <div className="action-container">
-            <button className="media-btn" onClick={startMediaCollection} style={{ marginBottom: "50px" }}>
-               실시간 AI 분석 시작
+            <button
+              className="media-btn"
+              onClick={startMediaCollection}
+              style={{marginBottom: "50px"}}
+            >
+              실시간 AI 분석 시작
             </button>
           </div>
-          </div>
+        </div>
       </main>
+
+      <div
+        className={`media-result-dashboard ${
+          dashboardOpen ? "open" : ""
+        }`}
+      >
+        <div
+          className="dashboard-handle"
+          onClick={() =>
+            setDashboardOpen(
+              !dashboardOpen
+            )
+          }
+        >
+          <div className="handle-pill">
+            {isAnalyzing
+              ? "AI 파이프라인 수집 가동 중..."
+              : showResult
+              ? "분석 완료 - 결과 요약 확인 (클릭)"
+              : "빅데이터 연동 현황 확인하기 (클릭)"}
+          </div>
+      </div>
 
       <div className={`media-result-dashboard ${dashboardOpen ? "open" : ""} ${showResult ? "result-expanded" : ""}`}>
 

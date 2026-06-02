@@ -1,14 +1,3 @@
-﻿/* ============================================================================
- *  [병합 작업 요약]  benchmarking.jsx(소문자) → BenchMarking.jsx(대문자) 통합
- * ----------------------------------------------------------------------------
- *  - 베이스: 대문자 BenchMarking.jsx (정상 동작하는 React 컴포넌트) 유지
- *  - 이식:   소문자 파일의 "통계카드 4개 + 3패널"만 React 문법으로 변환해 추가
- *  - 숫자:   현재는 더미. 백엔드 연동 시 dashboardData 한 곳만 교체하면 됨
- *
- *  ▶ 코드에서 [병합-추가] = 이번에 새로 들어간 부분
- *             [병합-수정] = 기존 코드를 살짝 손본 부분
- *             (주석 없는 부분은 대문자 원본 그대로)
- * ========================================================================== */
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -19,7 +8,6 @@ import {
   showConfirmAlert,
 } from "@components/UI/ServiceAlert";
 
-import axios from 'axios';
 import { POST } from "@utils/Network";
 
 const USE_DUMMY = true; // true: 더미 모드, false: 실제 API 연동 모드
@@ -52,17 +40,12 @@ const DUMMY_DB_RESULTS = [
   { domain: "G", selected_issue: "윤리·준법경영 시스템", selected_sub_issue: "부패방지 경영시스템(ISO 37001) 운영, 임직원 윤리강령 준수 서약, 내부고발제도 활성화를 설명하는 문장.", type: "sub" },
 ];
 
-// ════════════════════════════════════════════════════════════════
-// [병합-추가] 결과 대시보드(통계카드 + 3패널)용 더미 데이터.
-//   - 소문자 파일에선 HTML에 하드코딩돼 있던 값을 객체로 구조화한 것.
-//   - 나중에 백엔드 연동 시, 응답을 이 객체와 같은 형태로 받아
-//     setDashboardData(response.data.dashboard) 한 줄로 교체하면 됨.
-// ════════════════════════════════════════════════════════════════
 const DUMMY_RESULT_DASHBOARD = {stats:{
     reports: 24,
     leaderCount: 8,
     peerCount: 8,
     subcount: 8,
+    identifiedIssues: 10,
     commonIssues: 19,
     blindSpots: 9,
   }
@@ -111,10 +94,7 @@ const Benchmarking = () => {
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [showResult, setShowResult] = useState(false);
 
-  // API 혹은 더미로부터 들어오는 원본 Row 보관 상태
   const [rawRows, setRawRows] = useState([]);
-  // [병합-추가] 결과 대시보드(통계카드 + 3패널) 데이터 상태.
-  //   백엔드 연동 전까지는 더미를 기본값으로 사용.
   const [dashboardData, setDashobardData] = useState(DUMMY_RESULT_DASHBOARD);
 
   const particleRef = useRef(null);
@@ -136,9 +116,6 @@ const Benchmarking = () => {
     navigate(steps[index].path);
   };
 
-  useEffect(() => {
-    createParticles();
-  }, []);
 
   useEffect(() => {
     let interval;
@@ -193,21 +170,6 @@ const Benchmarking = () => {
     return Object.values(map);
   };
 
-  const createParticles = () => {
-    if (!particleRef.current) return;
-    particleRef.current.innerHTML = "";
-    for (let i = 0; i < 12; i++) {
-      const p = document.createElement("div");
-      p.className = "particle";
-      const size = Math.random() * 5 + 3;
-      p.style.width = `${size}px`;
-      p.style.height = `${size}px`;
-      p.style.left = `${Math.random() * 100}%`;
-      p.style.top = `${Math.random() * 100}%`;
-      p.style.animationDelay = `${Math.random() * 2}s`;
-      particleRef.current.appendChild(p);
-    }
-  };
 
   const handleCompanyNameChange = (group, value) => {
     setCompanyNames((prev) => ({
@@ -301,9 +263,6 @@ const Benchmarking = () => {
         });
         if (response && response.status !== false) {
           setRawRows(response.data || []);
-          // [병합-추가/백엔드 TODO] 통계카드 + 3패널 데이터도 응답에서 주입.
-          //   응답이 DUMMY_RESULT_DASHBOARD와 같은 형태라면 아래 한 줄이면 됨:
-          // setDashboardData(response.data.dashboard);
         } else {
           showDefaultAlert("데이터 분석 오류", "네트워크 통신 중 에러가 발생했습니다.", "error");
         }
@@ -322,7 +281,7 @@ const Benchmarking = () => {
       <div className="upload-group-container" id={`group-${groupKey}`}>
         <div className="upload-group-badge">{label}</div>
 
-        <div className="company-top-input-row">
+        <div className="company-top-Bench-input-row">
           <input
             type="text"
             className="company-name-input"
@@ -376,11 +335,11 @@ const Benchmarking = () => {
   const processedIssues = getGroupedIssues();
 
   return (
-    <div className="benchmarking-container">
-      <header className="benchmarking-header">
-        <h1 className="benchmarking-title">지속가능경영보고서 AI 자동 생성</h1>
+    <div className="Bench-container">
+      <header className="Bench-header">
+        <h1 className="Bench-title">지속가능경영보고서 AI 자동 생성</h1>
 
-        <div className="benchmarking-stepper-row">
+        <div className="Bench-stepper-row">
           {steps.map((step, index) => (
             <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
               <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
@@ -393,122 +352,171 @@ const Benchmarking = () => {
         </div>
       </header>
 
-      <main className="main-content">
-        <div className="input-card" style={{ marginBottom: "50px" }}>
+      <main className="Bench-main-content">
+        <div className="Bench-input-card" style={{ marginBottom: "50px" }}>
           <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px" }}>벤치마킹 분석</h2>
           <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "4px" }}>
             산업군 리더 기업들의 공시 지표를 수집하고 우리 기업과의 격차 분석을 시작합니다.
           </p>
 
-          <div className="upload-section-grid">
+          <div className="Bench-upload-section-grid">
             {renderUploadGroup("leader", "리더", "회사이름 필수 입력")}
             {renderUploadGroup("peer", "피어", "회사이름 필수 입력")}
             {renderUploadGroup("sub", "자회사", "회사이름 필수 입력")}
           </div>
 
-          <button className="benchmarking-btn" id="bench-btn" onClick={runAnalysis}> 실시간 AI 분석 시작</button>
+          <button className="Bench-btn" id="bench-btn" onClick={runAnalysis}> 실시간 AI 분석 시작</button>
         </div>
       </main>
 
-      <div className={`benchmarking-result-dashboard ${dashboardOpen ? "open" : ""}`} id="dashboard">
-        <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen)}>
-          <div className="handle-pill">
+      <div className={`dashboard-result-dashboard ${dashboardOpen ? "open " : ""}`} id="dashboard" >
+        <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen) }>
+          <div className="handle-pill" >
             {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인" : "실시간 분석 대기 중"}
           </div>
         </div>
+          {/* [병합-수정] showResult일 때 showing-result 클래스 부여 → 결과 길어지면 내부 스크롤 (CSS와 연동) */}
+        <div className={`robot-view-container ${isAnalyzing ? "analyzing" : ""} ${showResult ? "showing-result":""}`}>
+          <div id="particle-field" className="particle-field" ref={particleRef}></div>
 
-        {showResult && (
-          <div className="result-layout" id="benchmarking-result">
-              {/* 통계 카드 4개 */}
-              <div className="result-stats-row">
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap">R</div>
-                  <div>
-                    <div className="stat-label">분석보고서</div>
-                    <div className="stat-value">{dashboardData.stats.reports}개</div>
-                    <div className="stat-sub">
-                      리더 {dashboardData.stats.leaderCount} · 피어 {dashboardData.stats.peerCount} · 자사회 {dashboardData.stats.subcount}
-                    </div>
+          {!showResult ? (
+            <div id="loading-content" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div className="robot-stage">
+                <div className="robot-float-wrap">
+                  <img src={robot} className="robot-main-img mascot-entrance-pop" alt="robot" />
+                </div>
+              </div>
+              <h3 style={{ fontSize: "1.2rem", fontWeight: 850, margin: "0 0 4px 0" }}>
+                {isAnalyzing ? "벤치마킹 분석 진행 중..." : "분석 준비가 완료되었습니다"}
+              </h3>
+              {isAnalyzing && (
+                <div className="progress-section">
+                  <div className="progress-bar-wrap">
+                    <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
+                  </div>
+                  <div style={{ marginTop: "6px", fontWeight: 900, fontSize: "0.85rem", color: "var(--Bench-primary)" }}>
+                    {progress}% 분석 중
                   </div>
                 </div>
+              )}
+            </div>
+          ) : (
+            <div className="result-layout" id="benchmarking-result">
+              <div className="ai-message-box" style={{ marginBottom: "20px" }}>
+                <strong style={{ color: "var(--Bench-primary)", fontWeight: 850 }}>
+                  [AI 벤치마킹 이슈 도출 및 Gap Analysis]
+                </strong>
+                <p style={{ margin: "8px 0 0", color: "#334155", fontWeight: 500, lineHeight: 1.5 }}>
+                  보고서(SR) 교차 파싱 결과 <strong>{processedIssues.length}개</strong>의 핵심 이슈가 식별되었습니다. 자회사의 누락(Gap) 요소를 보완하여 최적의 초안 요건을 빌드하세요.
+                </p>
+              </div>
 
+               {/* 통계 카드 4개 */}
+               <div className = "result-stats-row">
                 <div className="result-stat-card">
-                  <div className="stat-icon-wrap">I</div>
+                  <div className="stat-icon-wrap">📋</div>
                   <div>
-                    <div className="stat-label">발견 이슈</div>
+                    <div className="stat-label"> 분석보고서</div>
+                    <div className="stat-value">{dashboardData.stats.reports}개</div>
+                    <div className="stat-sub">
+                      리더 {dashboardData.stats.leaderCount} · 피어 {dashboardData.stats.peerCount} · 자회사 {dashboardData.stats.subcount}
+                    </div>
+                    </div>  
+                    </div>
+                
+                <div className="result-stat-card">
+                  <div className="stat-icon-wrap">≡</div>
+                  <div>
+                    <div className="stat-label">식별 이슈</div>
                     <div className="stat-value">{dashboardData.stats.identifiedIssues}개</div>
                   </div>
                 </div>
-
                 <div className="result-stat-card">
-                  <div className="stat-icon-wrap">C</div>
+                  <div className="stat-icon-wrap">👥</div>
                   <div>
-                    <div className="stat-label">공통 이슈</div>
+                    <div className="stat-label"> 공통 이슈</div>
                     <div className="stat-value">{dashboardData.stats.commonIssues}개</div>
                   </div>
                 </div>
 
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap">B</div>
-                  <div>
-                    <div className="stat-label">자사 Blind Spot</div>
-                    <div className="stat-value">{dashboardData.stats.blindSpots}개</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="gap-analysis-container">
-                <div className="gap-table-header">
-                  <div className="col-info-stacked-header">식별된 ESG 이슈그룹 및 세부 분석 문장(Sub Issue)</div>
-                  <div className="col-status-group-header">
-                    <div className="status-label">리더</div>
-                    <div className="status-label">피어</div>
-                    <div className="status-label">자회사</div>
-                  </div>
-                </div>
-
-                <div className="gap-table-body">
-                  {processedIssues.map((issue, index) => (
-                    <div className="gap-table-row" key={index}>
-                      {/* 좌측: 이슈 대분류 태그 + 이슈그룹명 + 세부 문장 수직 누적 배치 */}
-                      <div className="col-info-stacked">
-                        <div className="issue-main-row">
-                          <span className={`category-tag tag-${issue.category.toLowerCase()}`}>
-                            {issue.category}
-                          </span>
-                          <span className="issue-title-text">{issue.title}</span>
-                        </div>
-                        <div className="issue-sub-sentence">
-                          {issue.sentence}
-                        </div>
-                      </div>
-
-                      {/* 우측: 공시 여부 심볼 체계 */}
-                      <div className="col-status-group">
-                        <div className="status-cell">
-                          <span className={`status-dot ${issue.leader ? "checked" : "empty"}`}>
-                            {issue.leader ? "●" : "○"}
-                          </span>
-                        </div>
-                        <div className="status-cell">
-                          <span className={`status-dot ${issue.peer ? "checked" : "empty"}`}>
-                            {issue.peer ? "●" : "○"}
-                          </span>
-                        </div>
-                        <div className="status-cell">
-                          <span className={`status-dot ${issue.sub ? "checked" : "unreported"}`}>
-                            {issue.sub ? "●" : "✕"}
-                          </span>
-                        </div>
-                      </div>
+                
+                  <div className="result-stat-card">
+                    <div className="stat-icon-wrap">🎯</div>
+                    <div>
+                      <div className="stat-label">자사 Blind Spot</div>
+                      <div className="stat-value">{dashboardData.stats.blindSpots}개</div>
                     </div>
-                  ))}
+                  </div>
+              </div>
+                {/* 하단 3패널 (Top 이슈 점수 / 공통 선정 이슈 / Blind Spot) */}
+              <div className="result-panels-row">
+                {/* 패널1: 벤치마킹 Top 이슈 점수 */}
+                <div className="result-panel">
+                  <div className="panel-header-row">
+                    <span className="panel-title">벤치마킹 Top 이슈 점수</span>
+                    <span className="panel-info-btn">ⓘ</span>
+                  </div>
+                  <table className="issue-table">
+                    <thead>
+                      <tr><th>순위</th><th>Sub Issue</th><th>Impact</th><th>Financial</th></tr>
+                    </thead>
+                    <tbody>
+                      {dashboardData.topIssues.map((item) => (
+                        <tr key={item.rank}>
+                          <td>{item.rank}</td>
+                          <td>{item.name}</td>
+                          <td>{item.impact}</td>
+                          <td>{item.financial}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 패널2: 공통 선정 이슈 */}
+                <div className="result-panel">
+                  <div className="panel-header-row">
+                    <span className="panel-title">공통 선정 이슈</span>
+                    <span className="panel-info-btn">ⓘ</span>
+                  </div>
+                  <table className="issue-table">
+                    <thead>
+                      <tr><th>Sub Issue</th><th>리더</th><th>피어</th><th>자사</th></tr>
+                    </thead>
+                    <tbody>
+                      {dashboardData.commonIssues.map((item, index) => (
+                        <tr key={index}>
+                          <td>{item.name}</td>
+                          <td>{item.leader && <span className="chk">✓</span>}</td>
+                          <td>{item.peer && <span className="chk">✓</span>}</td>
+                          <td>{item.sub && <span className="chk">✓</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 패널3: 자사 Blind Spot */}
+                <div className="result-panel">
+                  <div className="panel-header-row">
+                    <span className="panel-title">자사 Blind Spot</span>
+                    <span className="panel-info-btn">ⓘ</span>
+                  </div>
+                  <ul className="blind-spot-list">
+                    {dashboardData.blindSpots.map((item, index) => (
+                      <li key={index}>
+                        <div className="blind-spot-title">{item.title}</div>
+                        <p className="blind-spot-desc">{item.desc}</p>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             </div>
           )}
         </div>
       </div>
+    </div>
   );
 }
 

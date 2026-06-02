@@ -31,6 +31,7 @@ fastMail = FastMail(mailConf)
 # Producer 함수 
 def sendToKafka(data):
     """API 서버에서 메시지를 보낼 때 사용"""
+    
     kafkaProducer.send(settings.kafka_topic, data)
     kafkaProducer.flush()
 
@@ -49,7 +50,6 @@ async def handleEmailJob(data):
     {"type": 3, "email": "user@example.com", "companyName": "회사명"}
     {"type": 4, "email": "user@example.com", "tempPwd": "임시비밀번호"} 
     """
-
     # 1. 타입에 따른 제목 및 본문 설정
     subject, body, email = getHtml(data)
     if subject:
@@ -73,6 +73,7 @@ def runEmailConsumer():
         value_deserializer=lambda v: json.loads(v.decode("utf-8"))
     )
     for message in consumer:
+        
         asyncio.run(handleEmailJob(message.value))
 
 def startConsumer():

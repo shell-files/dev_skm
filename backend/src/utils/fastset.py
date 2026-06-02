@@ -43,7 +43,7 @@ def run():
     )
 
     # Static Files
-    # app.mount("/static", StaticFiles(directory="static"), name="static")
+    app.mount("/static", StaticFiles(directory="static"), name="static")
     Instrumentator().instrument(app).expose(app)
     return app
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@hooks/AuthContext';
-// import { api } from '@utils/Network';
+import { POST } from '@utils/Network';
 import { showDefaultAlert } from '@components/UI/ServiceAlert';
 import "@styles/invite.css";
 
@@ -135,11 +135,11 @@ const Invite = ({ activeService = 'disclosure' }) => {
       if (USE_DUMMY_API) {
         await new Promise(r => setTimeout(r, 800));
       } else {
-        await api.post("/inviteConsultant", {
-          uuid: String(user?.uuid),
+        await POST("/inviteConsultant", {
           email: [...emails1],
-          role: Number(3)
+          role: Number(3),
         });
+        
       }
       showDefaultAlert("성공", "컨설턴트 초대장이 발송되었습니다.", "success");
       console.log("email:", typeof(emails1))

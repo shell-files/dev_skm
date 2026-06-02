@@ -41,6 +41,7 @@ jobs:
         env:
           HOST_IP: ${{ secrets.HOST_IP }}
           DOMAIN: ${{ secrets.DOMAIN }}
+          SKM_DOMAIN: ${{ secrets.SKM_DOMAIN }}
           KAFKA_SERVER: ${{ secrets.KAFKA_SERVER }}
           KAFKA_TOPIC: ${{ secrets.KAFKA_TOPIC }}
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
@@ -65,5 +66,7 @@ jobs:
           FILE_DIR: ${{ secrets.FILE_DIR }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
+          APPS_SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
         working-directory: .
         run: docker compose up -d

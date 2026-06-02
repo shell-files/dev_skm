@@ -6,7 +6,7 @@
  */
 import { GET, POST, PATCH } from "@utils/Network";
 
-export const DEFAULT_REPORTING_YEAR = 2025;
+export const DEFAULT_REPORTING_YEAR = new Date().getFullYear();
 
 const normalizeDirectDtoResponse = (res) => {
   if (!res || res?.status === false || res?.success === false) {
@@ -29,6 +29,9 @@ export const getCurrent = (companyId, reportingYear = DEFAULT_REPORTING_YEAR) =>
 export const startWorkflow = (payload) =>
   POST("/api/v1/report-workflow/start", payload);
 
+export const resumeWorkflow = (runId) =>
+  POST(`/api/v1/report-workflow/${runId}/resume`);
+
 export const getG0Status = (runId) =>
   GET(`/api/v1/report-workflow/${runId}/g0-status`);
 
@@ -45,6 +48,26 @@ export const saveG0Profile = async (companyId, payload) =>
 export const getG0ProfileStatus = async (companyId, reportingYear = DEFAULT_REPORTING_YEAR) =>
   normalizeDirectDtoResponse(
     await GET(`/api/v1/company-profile/g0/${companyId}/status`, { reportingYear })
+  );
+
+export const getOnboardingMetrics = async (
+  companyId,
+  reportingYear = DEFAULT_REPORTING_YEAR,
+  cycleType = "PRE_DMA_G0",
+  metricId
+) => {
+  const params = { companyId, reportingYear, cycleType };
+  if (metricId) {
+    params.metricId = metricId;
+  }
+  return normalizeDirectDtoResponse(
+    await GET("/onboarding/metrics", params)
+  );
+};
+
+export const saveOnboardingMetricValues = async (metricId, payload) =>
+  normalizeDirectDtoResponse(
+    await PATCH(`/onboarding/metrics/${metricId}`, payload)
   );
 
 export const listSubsidiaries = (runId) =>

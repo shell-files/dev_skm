@@ -25,12 +25,7 @@ onboardingAssignmentRouter = APIRouter(
 )
 
 
-def requireUser(response: Response, request: Request):
-    from src.utils.auth import get_token
-    from src.utils.settings import settings
-
-    token = request.cookies.get(settings.cookie_key)
-    return get_token(response, token)
+from src.utils.auth import get_token
 
 
 @onboardingAssignmentRouter.post(
@@ -40,7 +35,7 @@ def requireUser(response: Response, request: Request):
 )
 async def bulkAssignRoute(
     request: OnboardingAssignmentBulkAssignRequestDto,
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return bulkAssign(request, userModel)
@@ -63,7 +58,7 @@ async def listAssignmentItemsRoute(
     companyId: int = Query(...),
     reportingYear: int = Query(...),
     cycleType: str = Query(default="PRE_DMA_G0"),
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return listAssignmentItems(companyId, reportingYear, cycleType, userModel)
@@ -85,7 +80,7 @@ async def getAssignmentItemRoute(
     companyId: int = Query(...),
     reportingYear: int = Query(...),
     cycleType: str = Query(default="PRE_DMA_G0"),
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return getAssignmentItem(metricId, companyId, reportingYear, cycleType, userModel)
@@ -105,7 +100,7 @@ async def getAssignmentItemRoute(
 async def patchAssignmentRoute(
     metricId: str,
     request: OnboardingAssignmentPatchRequestDto,
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return patchAssignment(metricId, request, userModel)
@@ -126,7 +121,7 @@ async def patchAssignmentRoute(
 )
 async def bulkUnassignRoute(
     request: OnboardingAssignmentBulkUnassignRequestDto,
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return bulkUnassign(request, userModel)

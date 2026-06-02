@@ -24,13 +24,6 @@ from src.services.rollups.service import (
 rollupRouter = APIRouter(prefix="/v1/rollups", tags=["rollups"])
 
 
-# def requireUser(response: Response, request: Request):
-#     from src.utils.auth import get_token
-#     from src.utils.settings import settings
-
-#     token = request.cookies.get(settings.cookie_key)
-#     return get_token(response, token)
-
 
 @rollupRouter.get(
     "/subsidiaries",

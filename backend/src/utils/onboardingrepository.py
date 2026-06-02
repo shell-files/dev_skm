@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 from src.utils.db import findAll, findOne, getConn
+from src.utils.settings import settings
 
 
 METRIC_ID_G0_02 = "G0-02"
@@ -165,6 +166,7 @@ def listValueRows(companyId: int, reportingYear: int, metricIds: list[str]) -> l
         WHERE kf.company_id = ?
           AND kf.reporting_year = ?
           AND kf.metric_id IN ({placeholders})
+          AND LOWER(COALESCE(kf.approval_status, '')) = 'approved'
           AND kf.delete_yn = 0
 
         UNION ALL
@@ -190,7 +192,7 @@ def listValueRows(companyId: int, reportingYear: int, metricIds: list[str]) -> l
 
 def listAssignmentRows(cycleId: int, companyId: int) -> list[dict]:
     return findAll(
-        """
+        f"""
         SELECT
             a.id AS assignment_id,
             a.metric_id,
@@ -200,8 +202,8 @@ def listAssignmentRows(cycleId: int, companyId: int) -> list[dict]:
             a.due_date,
             a.invite_id,
             i.invite_status,
-            i.invite_email_enc,
-            u.email AS user_email
+            aes_d(i.invite_email_enc, '{settings.maria_db_key}') AS invite_email,
+            aes_d(u.email, '{settings.maria_db_key}') AS user_email
         FROM ESG_METRIC_ASSIGNMENT a
         LEFT JOIN ESG_ONBOARDING_INVITE i
           ON i.id = a.invite_id
@@ -249,91 +251,17 @@ def upsertMetricInputValues(
     if not conn:
         raise RuntimeError("DB connection failed")
     try:
-        savedCount = 0
         with conn.cursor(dictionary=True) as cur:
-            for value in values:
-                cur.execute(
-                    """
-                    SELECT id
-                    FROM ESG_ONBOARDING_INPUT_VALUE
-                    WHERE company_id = ?
-                      AND reporting_year = ?
-                      AND metric_id = ?
-                      AND atomic_metric_id = ?
-                      AND delete_yn = 0
-                    ORDER BY id DESC
-                    LIMIT 1
-                    FOR UPDATE
-                    """,
-                    (
-                        companyId,
-                        reportingYear,
-                        metricId,
-                        value["atomicMetricId"],
-                    ),
-                )
-                existing = cur.fetchone()
-                if existing:
-                    cur.execute(
-                        """
-                        UPDATE ESG_ONBOARDING_INPUT_VALUE
-                        SET esg_onboarding_cycle_id = ?,
-                            esg_metric_assignment_id = ?,
-                            value_text = ?,
-                            value_numeric = ?,
-                            unit = ?,
-                            value_source_type = 'manual_input',
-                            input_status = 'draft',
-                            input_user_id = ?,
-                            approved_by_user_id = NULL,
-                            approved_at = NULL,
-                            updated_at = CURRENT_TIMESTAMP
-                        WHERE id = ?
-                        """,
-                        (
-                            cycleId,
-                            assignmentId,
-                            value.get("valueText"),
-                            value.get("valueNumeric"),
-                            value.get("unit"),
-                            userId,
-                            existing["id"],
-                        ),
-                    )
-                else:
-                    cur.execute(
-                        """
-                        INSERT INTO ESG_ONBOARDING_INPUT_VALUE (
-                            esg_onboarding_cycle_id,
-                            esg_metric_assignment_id,
-                            company_id,
-                            reporting_year,
-                            company_scope_type,
-                            metric_id,
-                            atomic_metric_id,
-                            value_numeric,
-                            value_text,
-                            unit,
-                            value_source_type,
-                            input_status,
-                            input_user_id
-                        ) VALUES (?, ?, ?, ?, 'ENTITY', ?, ?, ?, ?, ?, 'manual_input', 'draft', ?)
-                        """,
-                        (
-                            cycleId,
-                            assignmentId,
-                            companyId,
-                            reportingYear,
-                            metricId,
-                            value["atomicMetricId"],
-                            value.get("valueNumeric"),
-                            value.get("valueText"),
-                            value.get("unit"),
-                            userId,
-                        ),
-                    )
-                invalidateG002KpiFactTx(cur, companyId, reportingYear, metricId, value["atomicMetricId"])
-                savedCount += 1
+            savedCount = upsertMetricInputValuesTx(
+                cur,
+                cycleId=cycleId,
+                companyId=companyId,
+                reportingYear=reportingYear,
+                metricId=metricId,
+                assignmentId=assignmentId,
+                values=values,
+                userId=userId,
+            )
         conn.commit()
         return savedCount
     except Exception:
@@ -341,6 +269,124 @@ def upsertMetricInputValues(
         raise
     finally:
         conn.close()
+
+
+def upsertMetricValueGroups(groups: list[dict]) -> int:
+    if not groups:
+        return 0
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("DB connection failed")
+    try:
+        savedCount = 0
+        with conn.cursor(dictionary=True) as cur:
+            for group in groups:
+                savedCount += upsertMetricInputValuesTx(cur, **group)
+        conn.commit()
+        return savedCount
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def upsertMetricInputValuesTx(
+    cur,
+    *,
+    cycleId: int,
+    companyId: int,
+    reportingYear: int,
+    metricId: str,
+    assignmentId: Optional[int],
+    values: list[dict],
+    userId: Optional[int],
+) -> int:
+    savedCount = 0
+    for value in values:
+        cur.execute(
+            """
+            SELECT id
+            FROM ESG_ONBOARDING_INPUT_VALUE
+            WHERE company_id = ?
+              AND reporting_year = ?
+              AND metric_id = ?
+              AND atomic_metric_id = ?
+              AND delete_yn = 0
+            ORDER BY id DESC
+            LIMIT 1
+            FOR UPDATE
+            """,
+            (
+                companyId,
+                reportingYear,
+                metricId,
+                value["atomicMetricId"],
+            ),
+        )
+        existing = cur.fetchone()
+        if existing:
+            cur.execute(
+                """
+                UPDATE ESG_ONBOARDING_INPUT_VALUE
+                SET esg_onboarding_cycle_id = ?,
+                    esg_metric_assignment_id = ?,
+                    value_text = ?,
+                    value_numeric = ?,
+                    unit = ?,
+                    value_source_type = 'manual_input',
+                    input_status = 'draft',
+                    input_user_id = ?,
+                    approved_by_user_id = NULL,
+                    approved_at = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (
+                    cycleId,
+                    assignmentId,
+                    value.get("valueText"),
+                    value.get("valueNumeric"),
+                    value.get("unit"),
+                    userId,
+                    existing["id"],
+                ),
+            )
+        else:
+            cur.execute(
+                """
+                INSERT INTO ESG_ONBOARDING_INPUT_VALUE (
+                    esg_onboarding_cycle_id,
+                    esg_metric_assignment_id,
+                    company_id,
+                    reporting_year,
+                    company_scope_type,
+                    metric_id,
+                    atomic_metric_id,
+                    value_numeric,
+                    value_text,
+                    unit,
+                    value_source_type,
+                    input_status,
+                    input_user_id
+                ) VALUES (?, ?, ?, ?, 'ENTITY', ?, ?, ?, ?, ?, 'manual_input', 'draft', ?)
+                """,
+                (
+                    cycleId,
+                    assignmentId,
+                    companyId,
+                    reportingYear,
+                    metricId,
+                    value["atomicMetricId"],
+                    value.get("valueNumeric"),
+                    value.get("valueText"),
+                    value.get("unit"),
+                    userId,
+                ),
+            )
+        invalidateG002KpiFactTx(cur, companyId, reportingYear, metricId, value["atomicMetricId"])
+        savedCount += 1
+    return savedCount
 
 
 def invalidateG002KpiFactTx(cur, companyId: int, reportingYear: int, metricId: str, atomicMetricId: str) -> None:
@@ -361,4 +407,3 @@ def invalidateG002KpiFactTx(cur, companyId: int, reportingYear: int, metricId: s
         """,
         (companyId, reportingYear, metricId, atomicMetricId),
     )
-

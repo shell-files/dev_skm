@@ -15,6 +15,7 @@ from src.utils import onboardingrepository as repo
 
 CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
 PRE_DMA_G0_CYCLE_NOT_READY = "PRE_DMA_G0_CYCLE_NOT_READY: 보고서 발행 기준을 먼저 선택해 주세요."
+PRE_DMA_G0_SCOPE_NOT_READY = "PRE_DMA_G0_SCOPE_NOT_READY: 온보딩 지표 범위가 초기화되지 않았습니다. 기존 프로젝트를 재개해 주세요."
 STRUCTURED_LOOKUP_IDS = {"G0-05__QL0002", "G0-06__QL0001"}
 EDITABLE_INPUT_MODES = {"MANUAL_NUMBER", "MANUAL_TEXTAREA", "YEAR_RANGE"}
 
@@ -28,7 +29,14 @@ def listMetrics(
 ) -> OnboardingMetricsResponseDto:
     year = repo.resolveReportingYear(companyId, reportingYear)
     cycle = requireCycle(companyId, year, cycleType)
-    scopes = repo.listMetricScopes(int(cycle["id"]), companyId, metricId)
+    allScopes = repo.listMetricScopes(int(cycle["id"]), companyId)
+    if not allScopes:
+        raise ValueError(PRE_DMA_G0_SCOPE_NOT_READY)
+    scopes = allScopes
+    if metricId:
+        scopes = [row for row in allScopes if row.get("metric_id") == metricId]
+        if not scopes:
+            raise ValueError(f"Unsupported metricId for cycle scope: {metricId}")
     metricIds = [row["metric_id"] for row in scopes]
     masterRows = repo.listAtomicMaster(metricIds)
     valueRows = repo.listValueRows(companyId, year, metricIds)
@@ -75,6 +83,25 @@ def saveMetricValues(
     request: OnboardingMetricValuesRequestDto,
     userId: Optional[int] = None,
 ) -> OnboardingMetricValuesResponseDto:
+    prepared = validateMetricValues(metricId=metricId, request=request, userId=userId)
+    cycle = prepared["cycle"]
+    savedCount = saveMetricValueGroups([prepared])
+    return OnboardingMetricValuesResponseDto(
+        companyId=request.companyId,
+        reportingYear=request.reportingYear,
+        cycleId=int(cycle["id"]),
+        cycleType=request.cycleType,
+        metricId=metricId,
+        savedItemCount=savedCount,
+    )
+
+
+def validateMetricValues(
+    *,
+    metricId: str,
+    request: OnboardingMetricValuesRequestDto,
+    userId: Optional[int] = None,
+) -> dict:
     cycle = requireCycle(request.companyId, request.reportingYear, request.cycleType)
     metrics = listMetrics(
         companyId=request.companyId,
@@ -82,8 +109,6 @@ def saveMetricValues(
         cycleType=request.cycleType,
         metricId=metricId,
     )
-    if not metrics.items:
-        raise ValueError(f"Unsupported metricId for cycle scope: {metricId}")
     metric = metrics.items[0]
     atomicById = {item.atomicMetricId: item for item in metric.atomicItems}
     cleanedValues = []
@@ -105,23 +130,23 @@ def saveMetricValues(
         raise ValueError("values is required")
 
     assignmentId = repo.resolveAssignmentId(int(cycle["id"]), request.companyId, metricId)
-    savedCount = repo.upsertMetricInputValues(
-        cycleId=int(cycle["id"]),
-        companyId=request.companyId,
-        reportingYear=request.reportingYear,
-        metricId=metricId,
-        assignmentId=assignmentId,
-        values=cleanedValues,
-        userId=userId,
-    )
-    return OnboardingMetricValuesResponseDto(
-        companyId=request.companyId,
-        reportingYear=request.reportingYear,
-        cycleId=int(cycle["id"]),
-        cycleType=request.cycleType,
-        metricId=metricId,
-        savedItemCount=savedCount,
-    )
+    return {
+        "cycle": cycle,
+        "metric": metric,
+        "group": {
+            "cycleId": int(cycle["id"]),
+            "companyId": request.companyId,
+            "reportingYear": request.reportingYear,
+            "metricId": metricId,
+            "assignmentId": assignmentId,
+            "values": cleanedValues,
+            "userId": userId,
+        },
+    }
+
+
+def saveMetricValueGroups(groups: list[dict]) -> int:
+    return repo.upsertMetricValueGroups([group["group"] if "group" in group else group for group in groups])
 
 
 def requireCycle(companyId: int, reportingYear: int, cycleType: str) -> dict:
@@ -219,11 +244,15 @@ def latestValueForInputMode(rows: list[dict], atomicMetricId: str, inputMode: st
 
 
 def buildAssignment(row: dict) -> OnboardingAssignmentDto:
+    assignmentStatus = row.get("assignment_status")
+    email = None
+    if str(assignmentStatus or "").strip().lower() != "unassigned":
+        email = row.get("invite_email") or row.get("user_email") or row.get("assignee_email")
     return OnboardingAssignmentDto(
         assignmentId=int(row["assignment_id"]) if row.get("assignment_id") is not None else None,
-        assignmentStatus=row.get("assignment_status"),
+        assignmentStatus=assignmentStatus,
         assigneeUserId=int(row["assignee_user_id"]) if row.get("assignee_user_id") is not None else None,
-        assigneeEmailMasked=maskEmail(row.get("assignee_email")),
+        assigneeEmailMasked=maskEmail(email),
         dueDate=str(row.get("due_date")) if row.get("due_date") is not None else None,
     )
 
@@ -251,4 +280,3 @@ def floatOrNone(value):
         return float(value)
     except (TypeError, ValueError):
         return None
-

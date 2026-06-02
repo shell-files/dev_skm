@@ -7,6 +7,7 @@ from datetime import date
 from typing import Optional
 
 from src.utils.db import findAll, findOne, getConn
+from src.utils.onboardingapprovalrepository import listCycleMetricScope
 from src.utils.settings import settings
 
 
@@ -418,8 +419,8 @@ def buildInviteMailEvent(
 
 
 def listAssignments(companyId: int, reportingYear: int, cycle: dict) -> list[dict]:
-    metricRows = listG0MetricMaster()
     cycleId = int(cycle["id"]) if cycle else None
+    metricRows = listCycleMetricScope(cycleId, companyId) if cycleId is not None else []
     assignmentRows = []
     if cycleId is not None:
         assignmentRows = findAll(

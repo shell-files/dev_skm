@@ -1,51 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import '@styles/onboardingModal.css';
-
-const STRUCTURED_LOOKUP_IDS = new Set(['G0-05__QL0002', 'G0-06__QL0001']);
-const EDITABLE_INPUT_MODES = new Set(['MANUAL_NUMBER', 'MANUAL_TEXTAREA', 'YEAR_RANGE']);
-
-const resolveG0InputMode = (item = {}) => {
-  const atomicMetricId = item.atomicMetricId || '';
-  const dataValueType = String(item.dataValueType || '').trim().toUpperCase();
-
-  if (
-    item.atomicDataRole === 'DERIVED' ||
-    item.rollupRole === 'consolidated_result' ||
-    /^G0-02__G\d+/.test(atomicMetricId) ||
-    atomicMetricId === 'G0-03__G0001'
-  ) {
-    return 'ROLLUP_READONLY';
-  }
-
-  if (STRUCTURED_LOOKUP_IDS.has(atomicMetricId) || item.inputMode === 'STRUCTURED_LOOKUP') {
-    return 'STRUCTURED_LOOKUP';
-  }
-
-  if (item.editableYn === false) {
-    return 'ROLLUP_READONLY';
-  }
-
-  if (item.inputMode) return item.inputMode;
-
-  if (atomicMetricId === 'G0-05__QL0001') {
-    return 'YEAR_RANGE';
-  }
-
-  if (
-    /^G0-02__Q\d+/.test(atomicMetricId) ||
-    /^G0-03__Q\d+/.test(atomicMetricId) ||
-    dataValueType === 'QUANT' ||
-    dataValueType === 'NUMBER' ||
-    dataValueType === 'NUMERIC' ||
-    item.dataValueType === '정량'
-  ) {
-    return 'MANUAL_NUMBER';
-  }
-
-  return 'MANUAL_TEXTAREA';
-};
-
-const isEditableItem = (item) => EDITABLE_INPUT_MODES.has(resolveG0InputMode(item));
+import { getAtomicId, isEditableItem, resolveG0InputMode } from '../onboardingUtils';
 
 /**
  * OnboardingModalShell
@@ -71,7 +26,7 @@ export default function OnboardingModalShell({
     const initialFiles = {};
 
     subMetrics.forEach((sub) => {
-      const id = sub.atomicMetricId;
+      const id = getAtomicId(sub);
       if (!id) return;
       initialValues[id] = sub.valueText || (sub.valueNumeric != null ? String(sub.valueNumeric) : '') || '';
       initialFiles[id] = null;
@@ -289,7 +244,7 @@ export default function OnboardingModalShell({
           </thead>
           <tbody>
             {subMetrics.map((sub) => {
-              const id = sub.atomicMetricId;
+              const id = getAtomicId(sub);
               if (!id) return null;
 
               return (
@@ -352,9 +307,9 @@ export default function OnboardingModalShell({
   /* ─── Render: Validation (right panel) ─── */
   const renderValidationSection = () => {
     const validations = subMetrics
-      .filter((sub) => sub.atomicMetricId && isEditableItem(sub))
+      .filter((sub) => getAtomicId(sub) && isEditableItem(sub))
       .map((sub) => {
-        const id = sub.atomicMetricId;
+        const id = getAtomicId(sub);
         const value = atomicValues[id];
         return {
           id,

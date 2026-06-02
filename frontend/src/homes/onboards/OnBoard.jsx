@@ -9,6 +9,15 @@ import SubsidiaryRequestModal from "./modal/SubsidiaryRequestModal";
 import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
 import RollupSummaryPanel from "./RollupSummaryPanel";
 import {
+  calculateMetricStatus,
+  calculateProfileStats,
+  getAtomicId,
+  getInputTypeBadge,
+  getStatusInfo,
+  isEditableItem,
+  resolveG0InputMode,
+} from "./onboardingUtils";
+import {
   DEFAULT_REPORTING_YEAR,
   getCurrent,
   getG0Profile,
@@ -16,9 +25,6 @@ import {
   getG0ProfileStatus,
   listRequests,
 } from "@/apis/report";
-
-const STRUCTURED_LOOKUP_IDS = new Set(["G0-05__QL0002", "G0-06__QL0001"]);
-const EDITABLE_INPUT_MODES = new Set(["MANUAL_NUMBER", "MANUAL_TEXTAREA", "YEAR_RANGE"]);
 
 const isApiFailed = (res) =>
   res?.status === false || res?.success === false || !res?.data;
@@ -46,76 +52,7 @@ const isPendingSubsidiaryRequest = (request = {}) => {
   );
 };
 
-const resolveG0InputMode = (item = {}) => {
-  const atomicMetricId = item.atomicMetricId || "";
-  const dataValueType = String(item.dataValueType || "").trim().toUpperCase();
-
-  if (
-    item.atomicDataRole === "DERIVED" ||
-    item.rollupRole === "consolidated_result" ||
-    /^G0-02__G\d+/.test(atomicMetricId) ||
-    atomicMetricId === "G0-03__G0001"
-  ) {
-    return "ROLLUP_READONLY";
-  }
-
-  if (
-    STRUCTURED_LOOKUP_IDS.has(atomicMetricId) ||
-    item.inputMode === "STRUCTURED_LOOKUP"
-  ) {
-    return "STRUCTURED_LOOKUP";
-  }
-
-  if (item.editableYn === false) {
-    return "ROLLUP_READONLY";
-  }
-
-  if (item.inputMode) {
-    return item.inputMode;
-  }
-
-  if (atomicMetricId === "G0-05__QL0001") {
-    return "YEAR_RANGE";
-  }
-
-  if (
-    /^G0-02__Q\d+/.test(atomicMetricId) ||
-    /^G0-03__Q\d+/.test(atomicMetricId) ||
-    dataValueType === "QUANT" ||
-    dataValueType === "NUMBER" ||
-    dataValueType === "NUMERIC" ||
-    item.dataValueType === "정량"
-  ) {
-    return "MANUAL_NUMBER";
-  }
-
-  return "MANUAL_TEXTAREA";
-};
-
-const isEditableItem = (item) => EDITABLE_INPUT_MODES.has(resolveG0InputMode(item));
-
-const getInputTypeBadge = (item = {}) => {
-  switch (resolveG0InputMode(item)) {
-    case "MANUAL_NUMBER":
-      return { label: "숫자 입력", cls: "direct" };
-    case "MANUAL_TEXTAREA":
-      return { label: "서술 입력", cls: "narrative" };
-    case "YEAR_RANGE":
-      return { label: "기간 입력", cls: "direct" };
-    case "STRUCTURED_LOOKUP":
-      return { label: "범위 설정", cls: "reference" };
-    case "ROLLUP_READONLY":
-      return { label: "자동 산출", cls: "reference" };
-    default:
-      return { label: resolveG0InputMode(item) || "-", cls: "" };
-  }
-};
-
-const hasValue = (item) =>
-  (item.valueText !== null && item.valueText !== undefined && item.valueText !== "") ||
-  (item.valueNumeric !== null && item.valueNumeric !== undefined);
-
-const groupByMetric = (items) => {
+const groupByMetric = (items = []) => {
   const grouped = [];
   const seen = new Set();
   items.forEach((item) => {
@@ -125,6 +62,212 @@ const groupByMetric = (items) => {
     }
   });
   return grouped;
+};
+
+const OnboardingStatCards = ({ stats, g0ProfileStatus }) => {
+  const statusInfo = getStatusInfo(g0ProfileStatus);
+
+  return (
+    <div className="ob1-cards">
+      <div className="ob1-stat-card">
+        <div className="ob1-stat-title">전체 G0 입력 항목</div>
+        <div className="ob1-stat-value">{stats.totalCount}</div>
+      </div>
+      <div className="ob1-stat-card">
+        <div className="ob1-stat-title">입력 완료</div>
+        <div className="ob1-stat-value success">{stats.completedCount}</div>
+      </div>
+      <div className="ob1-stat-card">
+        <div className="ob1-stat-title">미입력</div>
+        <div className="ob1-stat-value warning">{stats.notStartedCount}</div>
+      </div>
+      <div className="ob1-stat-card">
+        <div className="ob1-stat-title">프로필 상태</div>
+        <div className="ob1-stat-value">
+          <span className={`ob1-status-pill ${statusInfo.cls}`}>
+            {statusInfo.label}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const OnboardingWorkflowCta = ({
+  activeBatchId,
+  hasPendingSubsidiaryRequest,
+  loadingWorkflow,
+  variant = "action",
+  workflow,
+  isNoRunWorkflow,
+  onBasisModalOpen,
+  onCalculated,
+  onCtaClick,
+  onTransferModalOpen,
+}) => {
+  if (variant === "noRun" || isNoRunWorkflow(workflow)) {
+    return (
+      <>
+        <div className="ob1-empty-state">
+          <div className="ob1-empty-icon">G0</div>
+          <p className="ob1-empty-title">보고서 발행 기준 선택이 필요합니다</p>
+          <p className="ob1-empty-desc">
+            G0 입력을 시작하려면 먼저 독립기준 또는 연결기준 보고서 워크플로우를 생성해 주세요.
+          </p>
+          <button type="button" className="ob1-btn-cta" onClick={onBasisModalOpen}>
+            발행 기준 선택
+          </button>
+        </div>
+        <div className="ob1-cta-container">
+          <button className="ob1-btn-cta" onClick={onCtaClick} disabled={loadingWorkflow}>
+            {loadingWorkflow ? "로딩중..." : "발행 기준 선택"}
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  if (variant === "top") {
+    return (
+      <>
+        {hasPendingSubsidiaryRequest && (
+          <div style={{ display: "flex", justifyContent: "flex-end", padding: "16px 24px 0 24px" }}>
+            <button
+              className="ob1-btn-input"
+              onClick={onTransferModalOpen}
+              style={{ padding: "8px 16px", background: "#f8fafc", color: "#1e293b", border: "1px solid #cbd5e1" }}
+            >
+              지주사 요청 확인 및 전송
+            </button>
+          </div>
+        )}
+
+        {activeBatchId && (
+          <RollupSummaryPanel
+            batchId={activeBatchId}
+            onCalculated={onCalculated}
+          />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <div className="ob1-cta-container">
+      <button
+        className="ob1-btn-cta"
+        onClick={onCtaClick}
+        disabled={loadingWorkflow}
+      >
+        {loadingWorkflow
+          ? "로딩중..."
+          : !workflow
+            ? "워크플로우 상태 확인 필요"
+            : workflow.nextAction === "START_DMA"
+              ? "이중중대성평가 진행하기"
+              : workflow.nextAction === "REQUEST_ROLLUP"
+                ? "자회사 데이터 요청하기"
+                : workflow.nextAction === "WAIT_ROLLUP"
+                  ? "롤업 대기"
+                  : "G0 입력 상태 확인"}
+      </button>
+    </div>
+  );
+};
+
+const OnboardingMetricTable = ({
+  g0Error,
+  g0Items,
+  loadingG0,
+  onOpenMetric,
+  onRetry,
+}) => {
+  if (g0Error) {
+    return (
+      <div className="ob1-inline-error">
+        <span className="ob1-error-icon">!</span>
+        <span>{g0Error}</span>
+        <button type="button" className="ob1-btn-retry" onClick={onRetry}>
+          다시 시도
+        </button>
+      </div>
+    );
+  }
+
+  if (loadingG0) {
+    return (
+      <div className="ob1-table-loading">
+        <div className="ob1-spinner" />
+        <p>G0 프로필 데이터를 불러오고 있습니다...</p>
+      </div>
+    );
+  }
+
+  if (g0Items.length === 0) {
+    return (
+      <div className="ob1-empty-state">
+        <div className="ob1-empty-icon">G0</div>
+        <p className="ob1-empty-title">G0 지표가 없습니다</p>
+        <p className="ob1-empty-desc">보고서 워크플로우를 먼저 시작해 주세요.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ob1-table-container">
+      <table className="ob1-table">
+        <thead>
+          <tr>
+            <th style={{ width: "12%" }}>Metric ID</th>
+            <th style={{ width: "15%" }}>Atomic ID</th>
+            <th style={{ width: "35%" }}>지표명</th>
+            <th style={{ width: "10%" }}>입력 유형</th>
+            <th style={{ width: "10%" }}>단위</th>
+            <th style={{ width: "10%" }}>상태</th>
+            <th style={{ width: "8%" }}>데이터 입력</th>
+          </tr>
+        </thead>
+        <tbody>
+          {groupByMetric(g0Items).map((item) => {
+            const subMetrics = g0Items.filter((sub) => sub.metricId === item.metricId);
+            const statusInfo = calculateMetricStatus(subMetrics);
+            const typeBadge = getInputTypeBadge(
+              subMetrics.find((sub) => isEditableItem(sub)) || subMetrics[0] || item
+            );
+            const atomicId = getAtomicId(item);
+
+            return (
+              <tr key={item.metricId}>
+                <td>{item.metricId}</td>
+                <td>{subMetrics.length > 1 ? `(${subMetrics.length}개 항목)` : atomicId || "-"}</td>
+                <td className="ob1-td-name">{item.metricName || item.atomicName || "-"}</td>
+                <td>
+                  <span className={`ob1-type-badge ${typeBadge.cls || ""}`}>
+                    {typeBadge.label}
+                  </span>
+                </td>
+                <td>{item.unit || "-"}</td>
+                <td>
+                  <span className={`ob1-status-pill ${statusInfo.cls}`}>
+                    {statusInfo.label}
+                  </span>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="ob1-btn-input"
+                    onClick={() => onOpenMetric(item, subMetrics)}
+                  >
+                    입력
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
 };
 
 const OnBoard = () => {
@@ -256,11 +399,7 @@ const OnBoard = () => {
     }
   }, [companyId, reportingYear, workflow]);
 
-  const editableItems = g0Items.filter((item) => isEditableItem(item));
-  const totalCount = g0Items.length;
-  const completedCount = editableItems.filter((item) => hasValue(item)).length;
-  const notStartedCount = Math.max(0, editableItems.length - completedCount);
-  const groupedG0Items = groupByMetric(g0Items);
+  const profileStats = calculateProfileStats(g0Items);
   const basisLabel =
     workflow?.reportBasisType === "CONSOLIDATED"
       ? "연결기준"
@@ -298,7 +437,8 @@ const OnBoard = () => {
         items: selectedItem.metrics
           .filter((item) => isEditableItem(item))
           .map((item) => {
-            const rawValue = values[item.atomicMetricId] ?? "";
+            const atomicMetricId = getAtomicId(item);
+            const rawValue = values[atomicMetricId] ?? "";
             const trimmed = String(rawValue).trim();
             const numericYn =
               resolveG0InputMode(item) === "MANUAL_NUMBER" &&
@@ -307,7 +447,7 @@ const OnBoard = () => {
 
             return {
               metricId: item.metricId,
-              atomicMetricId: item.atomicMetricId,
+              atomicMetricId,
               valueText: numericYn ? null : trimmed || null,
               valueNumeric: numericYn ? Number(trimmed) : null,
               unit: item.unit || null,
@@ -335,36 +475,6 @@ const OnBoard = () => {
     }
   };
 
-  const getSubMetrics = (metricId) => g0Items.filter((item) => item.metricId === metricId);
-
-  const renderNoRunState = () => (
-    <div className="ob1-empty-state">
-      <div className="ob1-empty-icon">G0</div>
-      <p className="ob1-empty-title">보고서 발행 기준 선택이 필요합니다</p>
-      <p className="ob1-empty-desc">
-        G0 입력을 시작하려면 먼저 독립기준 또는 연결기준 보고서 워크플로우를 생성해 주세요.
-      </p>
-      <button type="button" className="ob1-btn-cta" onClick={() => setIsBasisModalOpen(true)}>
-        발행 기준 선택
-      </button>
-    </div>
-  );
-
-  const renderMetricStatus = (subMetrics) => {
-    const statusTargets = subMetrics.filter((sub) => isEditableItem(sub));
-    if (statusTargets.length === 0) {
-      const modes = new Set(subMetrics.map((sub) => resolveG0InputMode(sub)));
-      if (modes.has("ROLLUP_READONLY")) return { label: "자동 산출", cls: "draft" };
-      if (modes.has("STRUCTURED_LOOKUP")) return { label: "범위 설정 필요", cls: "draft" };
-      return { label: "조회 전용", cls: "draft" };
-    }
-
-    const completed = statusTargets.filter((sub) => hasValue(sub)).length;
-    if (completed === 0) return { label: "미입력", cls: "not-started" };
-    if (completed < statusTargets.length) return { label: "진행중", cls: "draft" };
-    return { label: "입력 완료", cls: "approved" };
-  };
-
   if (loadingWorkflow && loadingG0) {
     return (
       <div id="ob1-page">
@@ -386,28 +496,7 @@ const OnBoard = () => {
         </p>
       </div>
 
-      <div className="ob1-cards">
-        <div className="ob1-stat-card">
-          <div className="ob1-stat-title">전체 G0 입력 항목</div>
-          <div className="ob1-stat-value">{totalCount}</div>
-        </div>
-        <div className="ob1-stat-card">
-          <div className="ob1-stat-title">입력 완료</div>
-          <div className="ob1-stat-value success">{completedCount}</div>
-        </div>
-        <div className="ob1-stat-card">
-          <div className="ob1-stat-title">미입력</div>
-          <div className="ob1-stat-value warning">{notStartedCount}</div>
-        </div>
-        <div className="ob1-stat-card">
-          <div className="ob1-stat-title">프로필 상태</div>
-          <div className="ob1-stat-value">
-            <span className={`ob1-status-pill ${g0ProfileStatus === "COMPLETED" ? "approved" : "not-started"}`}>
-              {g0ProfileStatus === "COMPLETED" ? "완료" : g0ProfileStatus === "IN_PROGRESS" ? "진행중" : "미시작"}
-            </span>
-          </div>
-        </div>
-      </div>
+      <OnboardingStatCards stats={profileStats} g0ProfileStatus={g0ProfileStatus} />
 
       <div className="ob1-content-layout">
         <div className="ob1-sidebar-panel">
@@ -426,139 +515,52 @@ const OnBoard = () => {
           )}
 
           {isNoRunWorkflow(workflow) ? (
-            renderNoRunState()
+            <OnboardingWorkflowCta
+              variant="noRun"
+              loadingWorkflow={loadingWorkflow}
+              workflow={workflow}
+              isNoRunWorkflow={isNoRunWorkflow}
+              onBasisModalOpen={() => setIsBasisModalOpen(true)}
+              onCtaClick={handleCtaClick}
+            />
           ) : (
             <>
-              {hasPendingSubsidiaryRequest && (
-              <div style={{ display: "flex", justifyContent: "flex-end", padding: "16px 24px 0 24px" }}>
-                <button
-                  className="ob1-btn-input"
-                  onClick={() => setIsSubTransferModalOpen(true)}
-                  style={{ padding: "8px 16px", background: "#f8fafc", color: "#1e293b", border: "1px solid #cbd5e1" }}
-                >
-                  지주사 요청 확인 및 전송
-                </button>
-              </div>
-              )}
+              <OnboardingWorkflowCta
+                variant="top"
+                activeBatchId={activeBatchId}
+                hasPendingSubsidiaryRequest={hasPendingSubsidiaryRequest}
+                loadingWorkflow={loadingWorkflow}
+                workflow={workflow}
+                isNoRunWorkflow={isNoRunWorkflow}
+                onCalculated={() => {
+                  initializeOnboarding();
+                }}
+                onCtaClick={handleCtaClick}
+                onTransferModalOpen={() => setIsSubTransferModalOpen(true)}
+              />
 
-              {activeBatchId && (
-                <RollupSummaryPanel
-                  batchId={activeBatchId}
-                  onCalculated={() => {
-                    initializeOnboarding();
-                  }}
-                />
-              )}
+              <OnboardingMetricTable
+                g0Error={g0Error}
+                g0Items={g0Items}
+                loadingG0={loadingG0}
+                onRetry={initializeOnboarding}
+                onOpenMetric={(item, subMetrics) => {
+                  setSelectedItem({
+                    parent: item,
+                    metrics: subMetrics,
+                  });
+                  setIsModalOpen(true);
+                }}
+              />
 
-              {g0Error && (
-                <div className="ob1-inline-error">
-                  <span className="ob1-error-icon">!</span>
-                  <span>{g0Error}</span>
-                  <button type="button" className="ob1-btn-retry" onClick={initializeOnboarding}>
-                    다시 시도
-                  </button>
-                </div>
-              )}
-
-              {loadingG0 && !g0Error && (
-                <div className="ob1-table-loading">
-                  <div className="ob1-spinner" />
-                  <p>G0 프로필 데이터를 불러오고 있습니다...</p>
-                </div>
-              )}
-
-              {!loadingG0 && !g0Error && g0Items.length === 0 && (
-                <div className="ob1-empty-state">
-                  <div className="ob1-empty-icon">G0</div>
-                  <p className="ob1-empty-title">G0 지표가 없습니다</p>
-                  <p className="ob1-empty-desc">보고서 워크플로우를 먼저 시작해 주세요.</p>
-                </div>
-              )}
-
-              {!loadingG0 && !g0Error && g0Items.length > 0 && (
-                <div className="ob1-table-container">
-                  <table className="ob1-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: "12%" }}>Metric ID</th>
-                        <th style={{ width: "15%" }}>Atomic ID</th>
-                        <th style={{ width: "35%" }}>지표명</th>
-                        <th style={{ width: "10%" }}>입력 유형</th>
-                        <th style={{ width: "10%" }}>단위</th>
-                        <th style={{ width: "10%" }}>상태</th>
-                        <th style={{ width: "8%" }}>데이터 입력</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {groupedG0Items.map((item) => {
-                        const subMetrics = getSubMetrics(item.metricId);
-                        const statusInfo = renderMetricStatus(subMetrics);
-                        const typeBadge = getInputTypeBadge(
-                          subMetrics.find((sub) => isEditableItem(sub)) || subMetrics[0] || item
-                        );
-
-                        return (
-                          <tr key={item.metricId}>
-                            <td>{item.metricId}</td>
-                            <td>{subMetrics.length > 1 ? `(${subMetrics.length}개 항목)` : item.atomicMetricId || "-"}</td>
-                            <td className="ob1-td-name">{item.metricName || item.atomicName || "-"}</td>
-                            <td>
-                              <span className={`ob1-type-badge ${typeBadge.cls || ""}`}>
-                                {typeBadge.label}
-                              </span>
-                            </td>
-                            <td>{item.unit || "-"}</td>
-                            <td>
-                              <span className={`ob1-status-pill ${statusInfo.cls}`}>
-                                {statusInfo.label}
-                              </span>
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                className="ob1-btn-input"
-                                onClick={() => {
-                                  setSelectedItem({
-                                    parent: item,
-                                    metrics: subMetrics,
-                                  });
-                                  setIsModalOpen(true);
-                                }}
-                              >
-                                입력
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <OnboardingWorkflowCta
+                loadingWorkflow={loadingWorkflow}
+                workflow={workflow}
+                isNoRunWorkflow={isNoRunWorkflow}
+                onCtaClick={handleCtaClick}
+              />
             </>
           )}
-
-          <div className="ob1-cta-container">
-            <button
-              className="ob1-btn-cta"
-              onClick={handleCtaClick}
-              disabled={loadingWorkflow}
-            >
-              {loadingWorkflow
-                ? "로딩중..."
-                : isNoRunWorkflow(workflow)
-                  ? "발행 기준 선택"
-                  : !workflow
-                    ? "워크플로우 상태 확인 필요"
-                    : workflow.nextAction === "START_DMA"
-                      ? "이중중대성평가 진행하기"
-                      : workflow.nextAction === "REQUEST_ROLLUP"
-                        ? "자회사 데이터 요청하기"
-                        : workflow.nextAction === "WAIT_ROLLUP"
-                          ? "롤업 대기"
-                          : "G0 입력 상태 확인"}
-            </button>
-          </div>
         </div>
       </div>
 

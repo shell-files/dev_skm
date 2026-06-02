@@ -14,15 +14,15 @@ import {
   getAtomicId,
   getInputTypeBadge,
   getStatusInfo,
+  hasAtomicValue,
   isEditableItem,
   resolveG0InputMode,
 } from "./onboardingUtils";
 import {
   DEFAULT_REPORTING_YEAR,
   getCurrent,
-  getG0Profile,
-  saveG0Profile,
-  getG0ProfileStatus,
+  getOnboardingMetrics,
+  saveOnboardingMetricValues,
   listRequests,
 } from "@/apis/report";
 
@@ -62,6 +62,26 @@ const groupByMetric = (items = []) => {
     }
   });
   return grouped;
+};
+
+const flattenOnboardingItems = (metrics = []) =>
+  metrics.flatMap((metric) =>
+    (metric.atomicItems || []).map((atomic) => ({
+      ...atomic,
+      metricId: atomic.metricId || metric.metricId,
+      metricName: atomic.metricName || metric.metricName,
+      approvalPolicyCode: metric.approvalPolicyCode,
+      assignment: metric.assignment,
+    }))
+  );
+
+const getProfileStatusFromItems = (items = []) => {
+  const editableItems = items.filter((item) => isEditableItem(item));
+  if (editableItems.length === 0) return "NOT_STARTED";
+  const completedCount = editableItems.filter((item) => hasAtomicValue(item)).length;
+  if (completedCount === 0) return "NOT_STARTED";
+  if (completedCount < editableItems.length) return "IN_PROGRESS";
+  return "COMPLETED";
 };
 
 const OnboardingStatCards = ({ stats, g0ProfileStatus }) => {
@@ -361,7 +381,7 @@ const OnBoard = () => {
 
       await refreshPendingSubsidiaryRequests(nextWorkflow);
 
-      const profileRes = await getG0Profile(companyId, reportingYear);
+      const profileRes = await getOnboardingMetrics(companyId, reportingYear, "PRE_DMA_G0");
       if (isApiFailed(profileRes)) {
         setG0Items([]);
         setG0ProfileStatus(null);
@@ -369,8 +389,9 @@ const OnBoard = () => {
         return;
       }
 
-      setG0Items(profileRes.data.items || []);
-      setG0ProfileStatus(profileRes.data.g0ProfileStatus || "NOT_STARTED");
+      const flattenedItems = flattenOnboardingItems(profileRes.data.items || []);
+      setG0Items(flattenedItems);
+      setG0ProfileStatus(getProfileStatusFromItems(flattenedItems));
     } catch (error) {
       console.error(error);
       setWorkflow(null);
@@ -386,18 +407,6 @@ const OnBoard = () => {
   useEffect(() => {
     initializeOnboarding();
   }, [initializeOnboarding, location.state?.workflowStartedAt]);
-
-  const fetchG0Status = useCallback(async () => {
-    if (!companyId || isNoRunWorkflow(workflow)) return;
-    try {
-      const res = await getG0ProfileStatus(companyId, reportingYear);
-      if (!isApiFailed(res)) {
-        setG0ProfileStatus(res.data.g0ProfileStatus || "NOT_STARTED");
-      }
-    } catch (error) {
-      console.error("G0 status fetch failed", error);
-    }
-  }, [companyId, reportingYear, workflow]);
 
   const profileStats = calculateProfileStats(g0Items);
   const basisLabel =
@@ -432,9 +441,16 @@ const OnBoard = () => {
     if (!selectedItem || !companyId || isNoRunWorkflow(workflow)) return;
 
     try {
+      const metricId = selectedItem.parent?.metricId || selectedItem.metrics?.[0]?.metricId;
+      if (!metricId) {
+        showDefaultAlert("오류", "저장할 지표 정보를 찾을 수 없습니다.", "error");
+        return;
+      }
       const payload = {
+        companyId,
         reportingYear,
-        items: selectedItem.metrics
+        cycleType: "PRE_DMA_G0",
+        values: selectedItem.metrics
           .filter((item) => isEditableItem(item))
           .map((item) => {
             const atomicMetricId = getAtomicId(item);
@@ -455,7 +471,7 @@ const OnBoard = () => {
           }),
       };
 
-      const res = await saveG0Profile(companyId, payload);
+      const res = await saveOnboardingMetricValues(metricId, payload);
       if (isApiFailed(res)) {
         showDefaultAlert("오류", res?.error?.message || res?.detail || "저장에 실패했습니다.", "error");
         return;
@@ -468,7 +484,6 @@ const OnBoard = () => {
       );
       setIsModalOpen(false);
       await initializeOnboarding();
-      await fetchG0Status();
     } catch (error) {
       console.error(error);
       showDefaultAlert("오류", "처리 중 오류가 발생했습니다.", "error");

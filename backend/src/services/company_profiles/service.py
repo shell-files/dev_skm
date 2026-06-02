@@ -13,7 +13,8 @@ from src.models.onboarding import OnboardingMetricValuesRequestDto, OnboardingVa
 from src.services.onboardings.service import (
     CYCLE_TYPE_PRE_DMA_G0,
     listMetrics,
-    saveMetricValues,
+    saveMetricValueGroups,
+    validateMetricValues,
 )
 from src.utils.onboardingrepository import resolveReportingYear
 
@@ -63,27 +64,30 @@ def saveG0Profile(
     for item in request.items:
         grouped.setdefault(item.metricId, []).append(item)
 
-    savedCount = 0
+    preparedGroups = []
     for metricId, items in grouped.items():
-        response = saveMetricValues(
-            metricId=metricId,
-            request=OnboardingMetricValuesRequestDto(
-                companyId=companyId,
-                reportingYear=request.reportingYear,
-                cycleType=CYCLE_TYPE_PRE_DMA_G0,
-                values=[
-                    OnboardingValueItemDto(
-                        atomicMetricId=item.atomicMetricId,
-                        valueText=item.valueText,
-                        valueNumeric=item.valueNumeric,
-                        unit=item.unit,
-                    )
-                    for item in items
-                ],
-            ),
-            userId=userId,
+        preparedGroups.append(
+            validateMetricValues(
+                metricId=metricId,
+                request=OnboardingMetricValuesRequestDto(
+                    companyId=companyId,
+                    reportingYear=request.reportingYear,
+                    cycleType=CYCLE_TYPE_PRE_DMA_G0,
+                    values=[
+                        OnboardingValueItemDto(
+                            atomicMetricId=item.atomicMetricId,
+                            valueText=item.valueText,
+                            valueNumeric=item.valueNumeric,
+                            unit=item.unit,
+                        )
+                        for item in items
+                    ],
+                ),
+                userId=userId,
+            )
         )
-        savedCount += response.savedItemCount
+
+    savedCount = saveMetricValueGroups(preparedGroups)
 
     status = getG0ProfileStatus(companyId, request.reportingYear)
     return G0ProfileUpsertResponseDto(
@@ -134,4 +138,3 @@ def statusFromItems(items: list[G0ProfileItemDto]):
 
 def hasValue(item: G0ProfileItemDto) -> bool:
     return item.valueNumeric is not None or bool((item.valueText or "").strip())
-

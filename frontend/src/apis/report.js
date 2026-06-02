@@ -50,6 +50,26 @@ export const getG0ProfileStatus = async (companyId, reportingYear = DEFAULT_REPO
     await GET(`/api/v1/company-profile/g0/${companyId}/status`, { reportingYear })
   );
 
+export const getOnboardingMetrics = async (
+  companyId,
+  reportingYear = DEFAULT_REPORTING_YEAR,
+  cycleType = "PRE_DMA_G0",
+  metricId
+) => {
+  const params = { companyId, reportingYear, cycleType };
+  if (metricId) {
+    params.metricId = metricId;
+  }
+  return normalizeDirectDtoResponse(
+    await GET("/api/v1/onboarding/metrics", params)
+  );
+};
+
+export const saveOnboardingMetricValues = async (metricId, payload) =>
+  normalizeDirectDtoResponse(
+    await PATCH(`/api/v1/onboarding/metrics/${metricId}/values`, payload)
+  );
+
 export const listSubsidiaries = (runId) =>
   GET("/api/v1/rollups/subsidiaries", { runId });
 

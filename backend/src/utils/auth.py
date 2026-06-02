@@ -25,9 +25,9 @@ def get_domain(request: Request):
     print(f"Cookie Domain : {cookie_domain}")
     return cookie_domain
 
-def get_token(response: Response, token: str = Depends(cookie_scheme)) -> UserModel:
+def get_token(request: Request, response: Response, token: str = Depends(cookie_scheme)) -> UserModel:
     """
-    쿠키에서 토큰을 추출하고 검증하며, 필요 시 쿠키를 갱신합니다.
+    쿠키에서 토큰을 추출하고 검증하며, 필요 시 쿠키를 유연하게 갱신합니다.
     """
     try:
         # 1. 토큰 존재 여부 확인
@@ -35,10 +35,10 @@ def get_token(response: Response, token: str = Depends(cookie_scheme)) -> UserMo
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="토큰이 없습니다.")
 
-        # 2. 통합 인증 모듈 호출
+        # 2. 통합 인증 모듈 호출 (구 UUID 유예 로직이 반영된 validateToken)
         authResponse = validateToken(token)
 
-        # 인증 실패 처리 (딕셔너리 반환 대신 예외 발생)
+        # 인증 실패 처리
         if not authResponse.get("status"):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -46,15 +46,20 @@ def get_token(response: Response, token: str = Depends(cookie_scheme)) -> UserMo
             )
 
         # 3. 쿠키 갱신 (UUID가 변경되었거나 갱신이 필요한 경우)
-        activeUuid = authResponse["data"]["uuid"]
+        authData = authResponse.get("data", {})
+        activeUuid = authData.get("uuid")
 
-        # 현재 쿠키값과 전달받은 activeUuid가 다를 때만 set_cookie를 호출하는 것이 효율적입니다.
-        if token != activeUuid:
+        # [개선] 만약 토큰이 갱신되었거나(is_updated), 현재 쿠키값과 activeUuid가 다르면 쿠키 재발급
+        if token != activeUuid or authData.get("is_updated"):
             max_age = (60 * 60 * 24 * settings.refresh_token_expire_days)
+            
+            # 동적 도메인 추출 함수 활용
+            cookie_domain = get_domain(request)
+            
             response.set_cookie(
                 key=settings.cookie_key,
                 value=activeUuid,
-                domain=settings.domain,
+                domain=cookie_domain,  # settings.domain 대신 동적 도메인 적용
                 httponly=True,
                 samesite="lax",
                 # secure=True, # 프로덕션 환경 권장
@@ -62,14 +67,18 @@ def get_token(response: Response, token: str = Depends(cookie_scheme)) -> UserMo
             )
 
         # 4. Redis에서 사용자 정보 조회
+        # (validateToken 단계에서 유예 시간을 주었기 때문에, 동시 요청의 activeUuid가 구_UUID여도 안전하게 통과됨)
         tokenResponse = getTokenRedis(activeUuid)
-        if not tokenResponse:
+        if not tokenResponse or not tokenResponse.get("status"):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="사용자 세션을 찾을 수 없습니다.")
 
         payload = decryptFromJwe(tokenResponse["accessToken"])
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="토큰 복호화에 실패했습니다.")
+            
         user_data = payload.get("user")
-
         if not user_data:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="유효하지 않은 유저 정보입니다.")
@@ -77,10 +86,8 @@ def get_token(response: Response, token: str = Depends(cookie_scheme)) -> UserMo
         return UserModel(**user_data)
 
     except HTTPException as http_exc:
-        # 명시적인 HTTP 에러는 그대로 다시 던집니다.
         raise http_exc
     except Exception as e:
-        # 예상치 못한 에러 로깅
         print(f"Auth Error: {e}")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

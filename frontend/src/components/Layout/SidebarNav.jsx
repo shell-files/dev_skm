@@ -1,11 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useAuth } from '@hooks/AuthContext.jsx';
+import ReportBasisSelectModal from "@components/reports/ReportBasisSelectModal.jsx";
+import { DEFAULT_REPORTING_YEAR, getCurrent } from "@/apis/report";
+import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
 const Sidebarnav = ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { selectedCompany, selectCompany, handleLogout, goHome, goMyPage, openAlarmCenter } = useAuth();
+    const companyId =
+        selectedCompany?.company_id ??
+        selectedCompany?.companyId;
 
     // 권한 확인
     const role = selectedCompany?.role || "ESG담당자";
@@ -155,7 +161,36 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
         }
     }
 
-    const goBenchMk = () => { navigate("/benchmk"); if(window.innerWidth <= 800) setIsOpen(false); };
+    const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
+
+    
+
+    const handleReportNav = async () => {
+        if (!companyId) {
+            showDefaultAlert("오류", "회사를 먼저 선택해 주세요.", "error");
+            return;
+        }
+
+        try {
+            const res = await getCurrent(companyId, DEFAULT_REPORTING_YEAR);
+            const isFailed = res?.status === false || res?.success === false || !res?.data;
+            if (isFailed) {
+                showDefaultAlert("오류", res.error?.message || "보고서 워크플로우 조회에 실패했습니다.", "error");
+                return;
+            }
+
+            if (res?.data?.workflowStep === 'NO_RUN') {
+                setIsBasisModalOpen(true);
+            } else {
+                navigate("/onb");
+                if (window.innerWidth <= 800) setIsOpen(false);
+            }
+        } catch (err) {
+            console.error("Failed to get current report workflow", err);
+            showDefaultAlert("오류", "보고서 워크플로우 조회에 실패했습니다.", "error");
+        }
+    };
+
     const goOnboard = () => { navigate("/onb"); if(window.innerWidth <= 800) setIsOpen(false); };
     const goManagerdata = () => { navigate("/managerData"); if(window.innerWidth <= 800) setIsOpen(false); };
     const goManager = () => { navigate("/manager"); if(window.innerWidth <= 800) setIsOpen(false); };
@@ -174,7 +209,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                         </div>
                     </div>
                     <div className="nav-group">
-                        <div className="nav-item" onClick={goBenchMk}>
+                        <div className="nav-item" onClick={handleReportNav}>
                             <div className="nav-accordion-header">
                                 <span>지속가능경영보고서</span>
                             </div>
@@ -236,6 +271,13 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                     <option value="TV">TV</option>
                 </select>
             </div>
+
+            <ReportBasisSelectModal 
+                isOpen={isBasisModalOpen} 
+                onClose={() => setIsBasisModalOpen(false)} 
+                companyId={companyId}
+                reportingYear={selectedCompany?.reportingYear || DEFAULT_REPORTING_YEAR}
+            />
         </aside>
     );
 }

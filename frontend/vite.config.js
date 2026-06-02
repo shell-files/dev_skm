@@ -12,7 +12,7 @@ export default defineConfig({
     allowedHosts: ['localhost','skm.weareithero.cloud','skm.myapp.com'],
     proxy: {
         '/api': {
-          target: 'http://skm.weareithero.cloud', // 원래 찌르려던 백엔드 주소
+          target: 'http://main.weareithero.cloud', // 원래 찌르려던 백엔드 주소
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''), 
         }

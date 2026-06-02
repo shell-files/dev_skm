@@ -154,6 +154,15 @@
     outline: none;
 }
 
+.date-range-group input[type="number"] {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: #334155;
+}
+
 /* 상태값 테마별 배지 칩 정의 */
 .status-container {
     display: flex;
@@ -162,6 +171,7 @@
     margin-top: 5px;
     padding-top: 12px;
     border-top: 1px dashed #e2e8f0;
+    margin-top: auto;
 }
 
 .status-label {
@@ -233,7 +243,7 @@
 }
 
 /* 바텀 실시간 분석 현황판 연동 */
-.media-result-dashboard {
+    .media-result-dashboard {
     position: absolute;
     bottom: 0;
     left: 0;
@@ -248,9 +258,9 @@
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.06);
 }
 
-.media-result-dashboard.open {
+    .media-result-dashboard.open {
     height: 400px;
-}
+    }
 
 .dashboard-handle {
     height: 45px;
@@ -263,12 +273,14 @@
 }
 
 .handle-pill {
+    position : relative;
     padding: 6px 20px;
     background: #f1f5f9;
     border-radius: 30px;
     font-weight: 700;
     font-size: 0.8rem;
-    color: #64748b;
+    color: #64748b;       
+    font-size: 0.8rem;
 }
 
 .robot-view-container {
@@ -822,3 +834,22 @@
     border-top: 1px dashed #e2e8f0;
     font-size: 0.72rem; color: #94a3b8;
 }
+
+
+
+.media-result-dashboard-handle-wrap {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 45px;
+  background: #fff;
+  border-top: 1px solid var(--media-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.06);
+}
+
+
+

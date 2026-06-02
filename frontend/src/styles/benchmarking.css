@@ -2,7 +2,7 @@
    중앙 컨텐츠 영역
 ========================================================= */
 
-.sr-container {
+.benchmarking-container {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -16,7 +16,7 @@
     overflow: hidden;
 }
 
-.sr-header {
+.benchmarking-header {
     flex-shrink: 0;
 
     width: 100%;
@@ -24,10 +24,10 @@
     padding: 20px 40px;
 
     background: #fff;
-    border-bottom: 1px solid var(--sr-border);
+    border-bottom: 1px solid var(--benchmarking-border);
 }
 
-.sr-title {
+.benchmarking-title {
     margin: 0 0 15px;
 
     color: #1e293b;
@@ -40,7 +40,7 @@
    Stepper
 ========================================================= */
 
-.sr-stepper-row {
+.benchmarking-stepper-row {
     position: relative;
 
     display: flex;
@@ -116,7 +116,7 @@
 ========================================================= */
 
 .main-container,
-.sr-container {
+.benchmarking-container {
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -377,7 +377,7 @@
    Dashboard
 ========================================================= */
 
-.sr-result-dashboard {
+.benchmarking-result-dashboard {
     position: absolute;
     left: 0;
     right: 0;
@@ -391,7 +391,7 @@
 
     background: #fff;
 
-    border-top: 1px solid var(--sr-border);
+    border-top: 1px solid var(--benchmarking-border);
 
     overflow: hidden;
 
@@ -400,7 +400,7 @@
     box-shadow: 0 -10px 40px rgba(0,0,0,0.06);
 }
 
-.sr-result-dashboard.open {
+.benchmarking-result-dashboard.open {
     height: 400px;
 }
 
@@ -461,7 +461,7 @@
 
     border-radius: 50%;
 
-    background: var(--sr-primary);
+    background: var(--benchmarking-primary);
 
     opacity: 0;
 }
@@ -633,7 +633,7 @@
    Button
 ========================================================= */
 
-.sr-btn {
+.benchmarking-btn {
     align-self: center;
     margin-bottom: auto;
     padding: 12px 50px;
@@ -654,13 +654,13 @@
     box-shadow: 0 4px 12px rgba(3,169,77,0.15);
 }
 
-.sr-btn:hover {
+.benchmarking-btn:hover {
     transform: translateY(-1px);
 
     box-shadow: 0 6px 16px rgba(3,169,77,0.25);
 }
 
-.sr-btn.secondary {
+.benchmarking-btn.secondary {
     background: #334155;
 
     box-shadow: 0 4px 12px rgba(51,65,85,0.15);
@@ -703,7 +703,7 @@
         grid-template-columns: 1fr;
     }
 
-    .sr-result-dashboard.open {
+    .benchmarking-result-dashboard.open {
         height: 500px;
     }
 }
@@ -713,22 +713,22 @@
 ========================================================= */
 
 @media (max-width: 768px) {
-    .sr-header {
+    .benchmarking-header {
         padding: 16px;
     }
 
-    .sr-title {
+    .benchmarking-title {
         font-size: 1.1rem;
     }
 
-    .sr-stepper-row {
+    .benchmarking-stepper-row {
         overflow-x: auto;
         justify-content: flex-start;
 
         padding-bottom: 8px;
     }
 
-    .sr-stepper-row::-webkit-scrollbar {
+    .benchmarking-stepper-row::-webkit-scrollbar {
         height: 4px;
     }
 
@@ -805,7 +805,7 @@
         width: 90px;
     }
 
-    .sr-result-dashboard.open {
+    .benchmarking-result-dashboard.open {
         height: 85vh;
     }
 } /* [완료] 끊겨있던 미디어쿼리 중괄호 복구 완료 */
@@ -820,7 +820,7 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    border: 1px solid var(--sr-border);
+    border: 1px solid var(--benchmarking-border);
     border-radius: 10px;
     background: #ffffff;
     overflow: hidden;
@@ -838,7 +838,7 @@
     display: flex;
     align-items: center;
     background-color: #f1f5f9;
-    border-bottom: 2px solid var(--sr-border);
+    border-bottom: 2px solid var(--benchmarking-border);
     padding: 14px 20px;
     font-weight: 800;
     color: #334155;
@@ -978,7 +978,7 @@
 
 /* 리더/피어 공시 상태 (●) */
 #benchmarking-result .status-dot.checked {
-    color: var(--sr-primary);
+    color: var(--benchmarking-primary);
 }
 
 /* 미공시 상태 (○) */

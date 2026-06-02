@@ -367,14 +367,14 @@ const Media = () => {
               )}
                     </div>  
              
-              <div className="form-group">
+              {/* <div className="form-group">
                 <label>대상 규제 제정 기간</label>
                 <div className="date-range-group">
                   <input type="date" name="regStartDate" value={formData.regStartDate} onChange={handleChange} min="2023-01-01" />
                   <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
                   <input type="date" name="regEndDate" value={formData.regEndDate} onChange={handleChange} max={new Date().toISOString().split("T")[0]}/>
                 </div>
-              </div>
+              </div> */}
               <div className="status-container">
                 <span className="status-label">현재 상태</span>
                 <span className={`status-badge ${status.reg}`}>{getStatusText(status.reg)}</span>
@@ -421,9 +421,9 @@ const Media = () => {
               <div className="form-group">
                 <label>리포트 공시 기간</label>
                 <div className="date-range-group">
-                  <input type="date" name="expertStartDate" value={formData.expertStartDate} onChange={handleChange} min="2023-01-01" />
+                  <input type="number" name="expertStartDate" value={formData.expertStartDate} onChange={handleChange} min="2020" max={new Date().getFullYear()} placeholder="시작 연도" style={{ width: "90px", padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "0.85rem" }}/>
                   <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
-                  <input type="date" name="expertEndDate" value={formData.expertEndDate} onChange={handleChange} max={new Date().toISOString().split("T")[0]}/>
+                  <input type="number" name="expertEndDate" value={formData.expertEndDate} onChange={handleChange} min="2020" max={new Date().getFullYear()}  placeholder="종료 연도" style={{ width: "90px", padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "0.85rem" }}/>
                 </div>
               </div>
               <div className="status-container">
@@ -440,20 +440,27 @@ const Media = () => {
           </div>
           </div>
       </main>
-          </div>
-      
-            
-      
-        {/*  RESULTS DASHBOARD */}
-      <div className={`media-result-dashboard ${dashboardOpen ? "open" : ""} ${showResult ? "result-expanded" : ""}`}>
-        {/* 대시보드 조절 핸들 드롭다운 */}
-        <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen)} style={{ cursor: "pointer" }}>
-          <div className={`handle-pill ${showResult ? "complete" : ""}`}>
-            {isAnalyzing ? "AI 파이프라인 수집 가동 중..." : showResult ? "분석 완료 - 결과 요약 확인 (클릭)" : "빅데이터 연동 현황 확인하기 (클릭)"}
-          </div>
-        </div>
 
-        <div className={`robot-view-container ${showResult ? "showing-result" : ""}`}>
+      <div className={`media-result-dashboard ${dashboardOpen ? "open" : ""} ${showResult ? "result-expanded" : ""}`}>
+
+      {/* 핸들 버튼 - 항상 표시 */}
+  <div
+  className="dashboard-handle"
+  onClick={() => setDashboardOpen(!dashboardOpen)}
+  style={{ cursor: "pointer" }}
+>
+    <div className={`handle-pill ${showResult ? "complete" : ""}`}>
+      {isAnalyzing
+        ? "AI 파이프라인 수집 가동 중..."
+        : showResult
+        ? "분석 완료 - 결과 요약 확인 (클릭)"
+        : "빅데이터 연동 현황 확인하기"}
+    </div>
+  </div>
+
+        {/* 대시보드 내용 - 분석 중이거나 결과 있을 때만 렌더링 */}
+        {(dashboardOpen || isAnalyzing || showResult) && (
+         <div className={`robot-view-container ${showResult ? "showing-result" : ""}`}>
           {/* 가동 애니메이션 파티클 필드 */}
           <div id="particle-field" ref={particleRef}></div>
           {!showResult && (
@@ -488,8 +495,9 @@ const Media = () => {
                     style={{ height: "120px", width: "auto", flexShrink: 0, marginLeft: "16px" }}
                   />
               </div>
-
+              
               {/* 통계 카드 4개 */}
+
               <div className="result-stats-row">
                 <div className="result-stat-card">
                   <div className="stat-icon-wrap">📰</div>
@@ -604,14 +612,15 @@ const Media = () => {
                 <div style={{ textAlign: "center", marginTop: "25px", color: "#64748b", fontSize: "0.9rem" }}>
                   다음 단계 가이드: <strong>{STEPS[activeIndex + 1].title}</strong> 진행이 가능합니다.
                 </div>
-              )}
-              
-            </div>
+             )}
+             </div>
           )}
-          
-        </div>
-      </div></>
-  );
-};
-
+          </div>        
+      )}
+      </div>
+      </div>
+      </>
+      
+       );
+      }
 export default Media;

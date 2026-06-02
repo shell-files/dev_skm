@@ -29,12 +29,15 @@ services:
       - ./backend/uv.lock:/workspace/uv.lock
       - ./backend/.python-version:/workspace/.python-version
       - ./backend/src:/workspace/src
+      - ./backend/static:/workspace/static
+      - backend_venv:/workspace/.venv
       - ./backend/srfiles:/workspace/srfiles
       - skm_secrets:/workspace/secrets
       
     environment:
       - HOST_IP=${HOST_IP}
       - DOMAIN=${DOMAIN}
+      - SKM_DOMAIN=${SKM_DOMAIN}
       - KAFKA_SERVER=${KAFKA_SERVER}
       - KAFKA_TOPIC=${KAFKA_TOPIC}
       - MAIL_USERNAME=${MAIL_USERNAME}
@@ -59,6 +62,9 @@ services:
       - FILE_DIR=${FILE_DIR}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GEMINI_MODEL=${GEMINI_MODEL}
+      - APPS_SCRIPT_URL=${APPS_SCRIPT_URL}
+      - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID}
+      
     command: ["uv", "run", "fastapi", "run"]
 
   # mariadb:
@@ -88,3 +94,5 @@ networks:
 volumes:
   skm_secrets:
     external: true
+  backend_venv:
+  

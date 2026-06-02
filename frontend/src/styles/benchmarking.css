@@ -2,7 +2,7 @@
    중앙 컨텐츠 영역
 ========================================================= */
 
-.benchmarking-container {
+.Bench-container {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -16,7 +16,7 @@
     overflow: hidden;
 }
 
-.benchmarking-header {
+.Bench-header {
     flex-shrink: 0;
 
     width: 100%;
@@ -24,10 +24,10 @@
     padding: 20px 40px;
 
     background: #fff;
-    border-bottom: 1px solid var(--benchmarking-border);
+    border-bottom: 1px solid var(--Bench-border);
 }
 
-.benchmarking-title {
+.Bench-title {
     margin: 0 0 15px;
 
     color: #1e293b;
@@ -40,7 +40,7 @@
    Stepper
 ========================================================= */
 
-.benchmarking-stepper-row {
+.Bench-stepper-row {
     position: relative;
 
     display: flex;
@@ -103,7 +103,7 @@
 
 .step-line {
     flex: 1;
-    min-width: 110px;
+    min-width: 30px;
     height: 2px;
 
     margin-top: -20px;
@@ -114,9 +114,8 @@
 /* =========================================================
    Main Layout
 ========================================================= */
-
 .main-container,
-.benchmarking-container {
+.Bench-container {
     display: flex;
     flex-direction: column;
     flex: 1;
@@ -125,7 +124,7 @@
     min-height: 0;
 }
 
-.main-content {
+.Bench-main-content {
     flex: 1;
 
     min-height: 0;
@@ -133,14 +132,14 @@
     overflow-y: auto;
     overflow-x: hidden;
 
-    padding: 24px 0px;
+    padding: 24px 130px;
     padding-bottom: 180px;
 
     display: flex;
     justify-content: center;
 }
 
-.input-card {
+.Bench-input-card {
     width: 100%;
     min-width: 0;
 
@@ -148,20 +147,23 @@
     flex-direction: column;
     justify-content: flex-start;
 
-    padding: 32px 48px 120px;
+    padding: 32px 0 120px;
 
     background: #fff;
 
     text-align: center;
     overflow: visible;
+    
 }
 
 /* =========================================================
    Upload Grid
 ========================================================= */
 
-.upload-section-grid {
+.Bench-upload-section-grid {
+    
     display: grid;
+
     grid-template-columns: repeat(3, minmax(0, 1fr));
 
     gap: 20px;
@@ -175,48 +177,44 @@
 
 .upload-group-container {
     position: relative;
-
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    height: auto;
+    padding: 24px;
+    background: #fff;
+    transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-
-    width: 100%;
-    min-width: 0;
-    min-height: 220px;
-
-    padding: 24px 16px 16px;
-
-    border: 2px solid #03A94D;
-    border-radius: 14px;
-
-    background: #fff;
+    gap: 18px;
+}
+.upload-group-container:hover {
+    border-color: #03A94D;
+    box-shadow: 0 10px 25px rgba(3, 169, 77, 0.05);
 }
 
 .upload-group-badge {
     position: absolute;
-    top: -15px;
-    left: 14px;
-    z-index: 5;
-
-    padding: 1px 14px;
-
-    border: 2px solid #03A94D;
-    border-bottom: none;
-    border-radius: 6px 6px 0 0;
-
+    top: -12px;
+    left: 20px;
     background: #fff;
-
-    color: #334155;
-
-    font-size: 0.85rem;
+    border: 2px solid #e2e8f0;
+    padding: 2px 14px;
+    border-radius: 20px;
     font-weight: 800;
+    font-size: 0.8rem;
+    color: #475569;
+    transition: all 0.3s;
+}
+.upload-group-badge:hover .upload-group-badge {
+    border-color: #03A94D;
+    color: #03A94D;
 }
 
 /* =========================================================
    Input Row
 ========================================================= */
 
-.company-top-input-row {
+.company-top-Bench-input-row {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -377,7 +375,7 @@
    Dashboard
 ========================================================= */
 
-.benchmarking-result-dashboard {
+.dashboard-result-dashboard {
     position: absolute;
     left: 0;
     right: 0;
@@ -391,7 +389,7 @@
 
     background: #fff;
 
-    border-top: 1px solid var(--benchmarking-border);
+    border-top: 1px solid var(--Bench-border);
 
     overflow: hidden;
 
@@ -400,8 +398,8 @@
     box-shadow: 0 -10px 40px rgba(0,0,0,0.06);
 }
 
-.benchmarking-result-dashboard.open {
-    height: 400px;
+.dashboard-result-dashboard.open {
+    height: 80%;
 }
 
 .dashboard-handle {
@@ -461,7 +459,7 @@
 
     border-radius: 50%;
 
-    background: var(--benchmarking-primary);
+    background: var(--Bench-primary);
 
     opacity: 0;
 }
@@ -633,9 +631,9 @@
    Button
 ========================================================= */
 
-.benchmarking-btn {
+.Bench-btn {
     align-self: center;
-    margin-bottom: auto;
+    margin-bottom: 45px;
     padding: 12px 50px;
 
     border: none;
@@ -654,13 +652,13 @@
     box-shadow: 0 4px 12px rgba(3,169,77,0.15);
 }
 
-.benchmarking-btn:hover {
+.Bench-btn:hover {
     transform: translateY(-1px);
 
     box-shadow: 0 6px 16px rgba(3,169,77,0.25);
 }
 
-.benchmarking-btn.secondary {
+.Bench-btn.secondary {
     background: #334155;
 
     box-shadow: 0 4px 12px rgba(51,65,85,0.15);
@@ -675,11 +673,12 @@
 ========================================================= */
 
 @media (max-width: 1200px) {
-    .input-card {
+
+    .Bench-input-card {
         padding: 28px 28px 120px;
     }
 
-    .upload-section-grid {
+    .Bench-upload-section-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
@@ -689,21 +688,22 @@
 ========================================================= */
 
 @media (max-width: 992px) {
-    .main-content {
+
+    .Bench-main-content {
         padding: 18px;
         padding-bottom: 220px;
     }
 
-    .input-card {
+    .Bench-input-card {
         padding: 24px 20px 140px;
     }
 
-    .upload-section-grid,
+    .Bench-upload-section-grid,
     .summary-grid {
         grid-template-columns: 1fr;
     }
 
-    .benchmarking-result-dashboard.open {
+    .Bench-result-dashboard.open {
         height: 500px;
     }
 }
@@ -713,22 +713,23 @@
 ========================================================= */
 
 @media (max-width: 768px) {
-    .benchmarking-header {
+
+    .Bench-header {
         padding: 16px;
     }
 
-    .benchmarking-title {
+    .Bench-title {
         font-size: 1.1rem;
     }
 
-    .benchmarking-stepper-row {
+    .Bench-stepper-row {
         overflow-x: auto;
         justify-content: flex-start;
 
         padding-bottom: 8px;
     }
 
-    .benchmarking-stepper-row::-webkit-scrollbar {
+    .Bench-stepper-row::-webkit-scrollbar {
         height: 4px;
     }
 
@@ -740,21 +741,21 @@
         flex-shrink: 0;
     }
 
-    .main-content {
+    .Bench-main-content {
         padding: 14px;
         padding-bottom: 240px;
     }
 
-    .input-card {
+    .Bench-input-card {
         padding: 20px 16px 160px;
     }
 
-    .upload-section-grid {
+    .Bench-upload-section-grid {
         grid-template-columns: 1fr;
         gap: 16px;
     }
 
-    .company-top-input-row {
+    .company-top-Bench-input-row {
         flex-direction: column;
         align-items: stretch;
     }
@@ -778,12 +779,13 @@
 ========================================================= */
 
 @media (max-width: 480px) {
-    .main-content {
+
+    .Bench-main-content {
         padding: 10px;
         padding-bottom: 260px;
     }
 
-    .input-card {
+    .Bench-input-card {
         padding: 18px 12px 180px;
     }
 
@@ -793,7 +795,9 @@
 
     .upload-group-badge {
         left: 10px;
+
         padding: 2px 10px;
+
         font-size: 0.72rem;
     }
 
@@ -805,209 +809,135 @@
         width: 90px;
     }
 
-    .benchmarking-result-dashboard.open {
+    .Bench-result-dashboard.open {
         height: 85vh;
     }
-} /* [완료] 끊겨있던 미디어쿼리 중괄호 복구 완료 */
-
-
-/* ==========================================================================
-   #benchmarking-result 고유 ID 스코프 지정 (타 페이지와 스타일 섞임 차단)
-========================================================================== */
-
-/* 1. 갭 분석 결과 테이블 메인 프레임 */
-#benchmarking-result .gap-analysis-container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    border: 1px solid var(--benchmarking-border);
-    border-radius: 10px;
-    background: #ffffff;
-    overflow: hidden;
-    margin-top: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    
-    /* 대시보드 내부 영역 스크롤 고정 */
-    flex: 1;
-    min-height: 320px;
-    max-height: 500px;
 }
 
-/* 2. 테이블 레이아웃 헤더 */
-#benchmarking-result .gap-table-header {
+
+
+
+/* =========================================================
+결과창
+========================================================= */
+
+
+
+.Bench-result-dashboard.open.result-expanded { height: 78vh; }
+
+
+.robot-view-container.showing-result {
+    align-items: flex-start;
+    justify-content: flex-start;
+    overflow-y: auto;
+    background: #f8fafc;
+}
+
+.result-layout {
+    width: 100%;
+    max-width: none;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.handle-pill.complete { background: #dcfce7; color: #03A94D; }
+
+.result-banner {
     display: flex;
     align-items: center;
-    background-color: #f1f5f9;
-    border-bottom: 2px solid var(--benchmarking-border);
-    padding: 14px 20px;
-    font-weight: 800;
-    color: #334155;
-    font-size: 0.9rem;
+    justify-content: space-between;
+    padding: 18px 24px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 14px;
 }
+.result-banner-title { font-size: 1.05rem; font-weight: 850; color: #03A94D; margin-bottom: 6px; }
+.result-banner-desc { font-size: 0.82rem; color: #475569; line-height: 1.65; margin: 0; }
+.result-banner-robot { width: 90px; flex-shrink: 0; margin-left: 20px; }
 
-#benchmarking-result .col-info-stacked-header {
-    flex: 2.8;
+.result-stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
 }
-
-#benchmarking-result .col-status-group-header {
-    flex: 130px;
-    display: flex;
-    justify-content: space-around;
-    padding-right: 15px;
-}
-
-/* 3. 테이블 리스트 바디 내부 스크롤 처리 */
-#benchmarking-result .gap-table-body {
-    overflow-y: auto;
-    flex: 1;
-    background: #ffffff;
-}
-
-#benchmarking-result .gap-table-body::-webkit-scrollbar {
-    width: 6px;
-}
-#benchmarking-result .gap-table-body::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1;
-    border-radius: 4px;
-}
-#benchmarking-result .gap-table-body::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-/* 4. [★겹침 방지] 개별 데이터 줄(Row) 배치 규칙 */
-#benchmarking-result .gap-table-row {
-    display: flex;
-    align-items: flex-start; /* 문장이 길어져도 가로 행 찌그러짐을 방지하는 상단 정렬 */
-    padding: 18px 20px;
-    border-bottom: 1px solid #f1f5f9;
-    transition: background-color 0.2s ease;
-    
-    min-height: 84px;         /* 박스 압착 현상 절대 방지용 최소 높이 */
-    box-sizing: border-box;
-}
-
-#benchmarking-result .gap-table-row:last-child {
-    border-bottom: none;
-}
-
-#benchmarking-result .gap-table-row:hover {
-    background-color: #f8fafc;
-}
-
-/* 5. [★공간 분리] 좌측 대분류 + 중대이슈 + 세부 문장 수직 정렬 규칙 */
-#benchmarking-result .col-info-stacked {
-    flex: 2.8;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;                 /* 타이틀과 서브 문장 사이 충돌 방지 세로 간격 */
-    min-width: 0;
-    width: 100%;
-}
-
-#benchmarking-result .issue-main-row {
+.result-stat-card {
     display: flex;
     align-items: center;
     gap: 12px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
 }
-
-/* ESG 식별 심볼 배지 (E, S, G) */
-#benchmarking-result .category-tag {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 900;
-    color: #ffffff;
+.stat-icon-wrap {
     flex-shrink: 0;
-}
-#benchmarking-result .tag-e { background-color: #10b981; }
-#benchmarking-result .tag-s { background-color: #3b82f6; }
-#benchmarking-result .tag-g { background-color: #8b5cf6; }
-
-#benchmarking-result .issue-title-text {
-    font-size: 0.95rem;
-    font-weight: 750;
-    color: #1e293b;
-}
-
-/* [★가독성 극대화] 장문형 서브 이슈 정의 텍스트 공간 */
-#benchmarking-result .issue-sub-sentence {
-    font-size: 0.83rem;
-    color: #64748b;
-    font-weight: 500;
-    line-height: 1.5;
-    padding-left: 36px;       /* 대분류 태그 줄과 맞춘 들여쓰기 구조 */
-    
-    width: 100%;              /* 영역 가로폭 이탈 완전 제어 */
-    word-break: keep-all;     /* 한글 단어 단위 개행 처리 */
-    overflow-wrap: break-word;/* 긴 영문/숫자 예외 케이스 줄바꿈 처리 */
-}
-
-/* 6. [★압착 방지] 우측 공시 Matrix 체크 마킹 고정 프레임 */
-#benchmarking-result .col-status-group {
-    flex: 130px;
-    flex-shrink: 0;           /* 브라우저 폭 축소 시 아이콘 겹침 및 깨짐 차단 */
-    display: flex;
-    align-items: center;
-    justify-content: space-around;
-    
-    align-self: center;       /* 왼쪽 문장의 줄 수에 관계없이 아이콘은 상시 수직 정중앙 유지 */
-    margin-left: 16px;        /* 텍스트 박스와의 최소 안전 마진 */
-}
-
-#benchmarking-result .status-label, 
-#benchmarking-result .status-cell {
-    width: 40px;
-    text-align: center;
-}
-
-#benchmarking-result .status-label {
-    font-size: 0.85rem;
-    color: #475569;
-}
-
-/* 7. 상태 아이콘 커스텀 폰트 */
-#benchmarking-result .status-dot {
+    width: 40px; height: 40px;
+    display: flex; align-items: center; justify-content: center;
+    background: #f0fdf4;
+    border-radius: 10px;
     font-size: 1.1rem;
-    font-weight: bold;
-    display: inline-block;
+}
+.stat-label { font-size: 0.72rem; color: #64748b; font-weight: 600; margin-bottom: 2px; }
+.stat-value { font-size: 1.5rem; font-weight: 850; color: #1e293b; line-height: 1.1; }
+.stat-sub { font-size: 0.68rem; color: #94a3b8; margin-top: 3px; }
+
+.result-panels-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+.result-panel {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px;
+}
+.panel-header-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+}
+.panel-title { font-size: 0.88rem; font-weight: 850; color: #1e293b; }
+.panel-info-btn {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 1px solid #cbd5e1;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.68rem; color: #94a3b8; cursor: default;
 }
 
-/* 리더/피어 공시 상태 (●) */
-#benchmarking-result .status-dot.checked {
-    color: var(--benchmarking-primary);
+.issue-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+.issue-table th {
+    padding: 6px 8px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #64748b; font-weight: 700; text-align: center;
+}
+.issue-table th:first-child { text-align: left; }
+.issue-table td {
+    padding: 7px 8px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155; text-align: center;
+}
+.issue-table td:first-child { text-align: left; }
+.issue-table tr:last-child td { border-bottom: none; }
+
+.chk {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px;
+    background: #03A94D; border-radius: 50%;
+    color: #fff; font-size: 0.72rem; font-weight: 800;
 }
 
-/* 미공시 상태 (○) */
-#benchmarking-result .status-dot.empty {
-    color: #cbd5e1;
-}
+.blind-spot-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.blind-spot-title { font-size: 0.84rem; font-weight: 800; color: #1e293b; }
+.blind-spot-title::before { content: "• "; color: #03A94D; }
+.blind-spot-desc { font-size: 0.74rem; color: #64748b; margin: 4px 0 0 10px; line-height: 1.55; }
 
-/* 자회사 공시 누락에 따른 Gap 리스크 포인트 (✕) */
-#benchmarking-result .status-dot.unreported {
-    color: #ef4444;
-    font-size: 0.95rem;
-    font-weight: 800;
+@media (max-width: 1100px) {
+    .result-stats-row { grid-template-columns: repeat(2, 1fr); }
+    .result-panels-row { grid-template-columns: 1fr; }
 }
-
-/* 8. 미디어 쿼리 반응형 처리 */
-@media (max-width: 768px) {
-    #benchmarking-result .gap-table-header, 
-    #benchmarking-result .gap-table-row {
-        padding: 14px 10px;
-    }
-    #benchmarking-result .issue-title-text {
-        font-size: 0.85rem;
-    }
-    #benchmarking-result .issue-sub-sentence {
-        padding-left: 0;     /* 모바일 뷰에서는 인덴트를 제거하여 가로폭 가독성 최대 확보 */
-        font-size: 0.78rem;
-    }
-    #benchmarking-result .col-status-group, 
-    #benchmarking-result .col-status-group-header {
-        flex: 110px;
-    }
+@media (max-width: 640px) {
+    .result-stats-row { grid-template-columns: 1fr 1fr; }
 }

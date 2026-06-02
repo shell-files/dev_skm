@@ -2,12 +2,12 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
-from src.models.onboardinginvite import (
+from src.models.onboarding import (
     OnboardingInviteActionResponseDto,
     OnboardingInviteCompanyRequestDto,
     OnboardingInviteListResponseDto,
 )
-from src.services.onboarding_invites.service import (
+from src.services.onboardings.service import (
     listInviteItems,
     resendInviteMail,
     revokeInviteMail,

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
-from src.models.onboardingassignment import (
+from src.models.onboarding import (
     OnboardingAssignmentBulkAssignRequestDto,
     OnboardingAssignmentBulkAssignResponseDto,
     OnboardingAssignmentBulkUnassignRequestDto,
@@ -9,7 +9,7 @@ from src.models.onboardingassignment import (
     OnboardingAssignmentListResponseDto,
     OnboardingAssignmentPatchRequestDto,
 )
-from src.services.onboarding_assignments.service import (
+from src.services.onboardings.service import (
     PreDmaG0CycleNotReadyError,
     bulkAssign,
     bulkUnassign,

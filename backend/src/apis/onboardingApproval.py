@@ -2,14 +2,14 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
-from src.models.onboardingapproval import (
+from src.models.onboarding import (
     OnboardingApprovalActionResponseDto,
     OnboardingApprovalDecisionRequestDto,
     OnboardingApprovalListResponseDto,
     OnboardingApprovalRequestDto,
     OnboardingApprovalStatusResponseDto,
 )
-from src.services.onboarding_approvals.service import (
+from src.services.onboardings.service import (
     approveApproval,
     getApprovalStatus,
     listApprovals,

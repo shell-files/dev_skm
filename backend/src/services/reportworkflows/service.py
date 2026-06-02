@@ -171,7 +171,7 @@ def normalizeReportBasisType(value):
 
 
 def ensurePreDmaG0CycleForRun(run: dict, actorUserId: int | None = None) -> None:
-    from src.services.onboarding_approvals.service import ensureWorkflowPreDmaG0Cycle
+    from src.services.onboardings.service import ensureWorkflowPreDmaG0Cycle
 
     ensureWorkflowPreDmaG0Cycle(run, actorUserId)
 

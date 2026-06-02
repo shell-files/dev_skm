@@ -1,7 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime
+import hashlib
+import secrets
+import uuid
+from datetime import date, datetime
 from typing import Optional
+
+import mariadb
 
 from src.utils.db import findAll, findOne, getConn
 from src.utils.settings import settings
@@ -407,3 +412,1779 @@ def invalidateG002KpiFactTx(cur, companyId: int, reportingYear: int, metricId: s
         """,
         (companyId, reportingYear, metricId, atomicMetricId),
     )
+
+
+SUPPORTED_CYCLE_TYPE = "PRE_DMA_G0"
+SUPPORTED_TARGET_ROLE = "EMPLOYEE"
+INVITE_EXPIRE_DAYS = 7
+ASSIGNMENT_STATUS_ASSIGNED = "assigned"
+ASSIGNMENT_STATUS_INVITED = "invited"
+ASSIGNMENT_STATUS_UNASSIGNED = "unassigned"
+ASSIGNABLE_ROLE_CODES = {"EMPLOYEE", "ESG", "ADMIN"}
+
+
+def normalizeEmail(email: str) -> str:
+    return str(email or "").strip().lower()
+
+
+def hashText(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def maskEmail(email: Optional[str]) -> Optional[str]:
+    if not email or "@" not in email:
+        return email
+    name, domain = email.split("@", 1)
+    if not name:
+        return f"***@{domain}"
+    return f"{name[0]}***@{domain}"
+
+
+def listG0MetricMaster() -> list[dict]:
+    return findAll(
+        """
+        SELECT DISTINCT metric_id, metric_name_kr
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE delete_yn = 0
+          AND active_yn = 1
+          AND metric_id LIKE 'G0-%'
+        ORDER BY metric_id
+        """
+    ) or []
+
+
+def validateG0MetricIds(metricIds: list[str]) -> list[str]:
+    cleaned = []
+    for metricId in metricIds or []:
+        value = str(metricId or "").strip()
+        if not value:
+            continue
+        if "__" in value:
+            raise ValueError(f"atomic_metric_id is not allowed: {value}")
+        if value not in cleaned:
+            cleaned.append(value)
+    if not cleaned:
+        raise ValueError("metricIds is required")
+    allowed = {row["metric_id"] for row in listG0MetricMaster()}
+    invalid = [metricId for metricId in cleaned if metricId not in allowed]
+    if invalid:
+        raise ValueError(f"Unsupported metricId: {', '.join(invalid)}")
+    return cleaned
+
+
+def resolveExistingUser(companyId: int, normalizedEmail: str) -> Optional[int]:
+    rows = findAll(
+        f"""
+        SELECT
+            u.id AS user_id,
+            aes_d(r.role, '{settings.maria_db_key}') AS role_code
+        FROM `with`.`USER` u
+        JOIN `with`.`USER_ROLE` ur
+          ON ur.user_id = u.id
+         AND ur.company_id = ?
+         AND ur.delete_yn = 0
+        JOIN `with`.`ROLE` r
+          ON r.id = ur.role_id
+         AND r.delete_yn = 0
+        WHERE u.email = aes_e(?, '{settings.maria_db_key}')
+          AND u.delete_yn = 0
+        ORDER BY u.id
+        """,
+        (companyId, normalizedEmail),
+    ) or []
+    for row in rows:
+        roleCode = str(row.get("role_code") or "").strip().upper()
+        if roleCode in ASSIGNABLE_ROLE_CODES and row.get("user_id") is not None:
+            return int(row["user_id"])
+    return None
+
+
+def getCompanyName(companyId: int) -> str:
+    companyName = getCompanyNameFromCompanyTable(companyId)
+    if companyName:
+        return companyName
+    row = findOne(
+        f"""
+        SELECT COALESCE(company_code, CAST(company_id AS CHAR)) AS company_name
+        FROM ESG_COMPANY_PROFILE
+        WHERE company_id = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (companyId,),
+    ) or {}
+    return row.get("company_name") or str(companyId)
+
+
+def getCompanyNameFromCompanyTable(companyId: int) -> Optional[str]:
+    for schemaName in [None, "skm", "with"]:
+        tableInfo = getCompanyTableInfo(schemaName)
+        if not tableInfo:
+            continue
+        qualifiedTable = tableInfo["qualifiedTable"]
+        idColumn = tableInfo["idColumn"]
+        nameColumn = tableInfo["nameColumn"]
+        deleteFilter = "AND delete_yn = 0" if tableInfo.get("hasDeleteYn") else ""
+        try:
+            row = findOne(
+                f"""
+                SELECT aes_d({nameColumn}, '{settings.maria_db_key}') AS company_name
+                FROM {qualifiedTable}
+                WHERE {idColumn} = ?
+                  {deleteFilter}
+                ORDER BY {idColumn} DESC
+                LIMIT 1
+                """,
+                (companyId,),
+            ) or {}
+        except Exception:
+            continue
+        companyName = str(row.get("company_name") or "").strip()
+        if companyName:
+            return companyName
+    return None
+
+
+def getCompanyTableInfo(schemaName: Optional[str]) -> Optional[dict]:
+    schemaFilter = "DATABASE()" if schemaName is None else "?"
+    params = [] if schemaName is None else [schemaName]
+    rows = findAll(
+        f"""
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = {schemaFilter}
+          AND table_name = 'COMPANY'
+        """,
+        tuple(params),
+    ) or []
+    columns = {str(row.get("column_name") or "").lower() for row in rows}
+    if not columns:
+        return None
+    idColumn = "company_id" if "company_id" in columns else "id" if "id" in columns else None
+    nameColumn = "company_name" if "company_name" in columns else "name" if "name" in columns else None
+    if not idColumn or not nameColumn:
+        return None
+    qualifiedTable = "COMPANY" if schemaName is None else f"`{schemaName}`.`COMPANY`"
+    return {
+        "qualifiedTable": qualifiedTable,
+        "idColumn": idColumn,
+        "nameColumn": nameColumn,
+        "hasDeleteYn": "delete_yn" in columns,
+    }
+
+
+def bulkAssignMetrics(
+    *,
+    companyId: int,
+    reportingYear: int,
+    cycle: dict,
+    metricIds: list[str],
+    assigneeEmail: str,
+    dueDate: Optional[date],
+    sendInviteYn: bool,
+    actorUserId: Optional[int],
+) -> dict:
+    normalizedEmail = normalizeEmail(assigneeEmail)
+    if not normalizedEmail or "@" not in normalizedEmail:
+        raise ValueError("assigneeEmail is invalid")
+
+    assigneeUserId = resolveExistingUser(companyId, normalizedEmail)
+    cycleId = int(cycle["id"])
+    rawToken = None
+    mailEvent = None
+    inviteId = None
+    inviteCreatedYn = False
+    inviteReusedYn = False
+    assignmentStatus = ASSIGNMENT_STATUS_ASSIGNED if assigneeUserId else ASSIGNMENT_STATUS_INVITED
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("DB connection failed")
+
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            oldInviteIds = listAssignmentInviteIdsTx(cur, cycleId, companyId, metricIds)
+            if assigneeUserId is None:
+                invite = getReusableInviteTx(cur, companyId, cycleId, normalizedEmail)
+                if invite:
+                    inviteId = int(invite["id"])
+                    inviteReusedYn = True
+                    if sendInviteYn:
+                        rawToken = secrets.token_urlsafe(32)
+                        rotateInviteTokenTx(cur, inviteId, rawToken)
+                else:
+                    rawToken = secrets.token_urlsafe(32)
+                    inviteId = insertInviteTx(
+                        cur,
+                        companyId=companyId,
+                        cycleId=cycleId,
+                        normalizedEmail=normalizedEmail,
+                        rawToken=rawToken,
+                        actorUserId=actorUserId,
+                        sentYn=sendInviteYn,
+                    )
+                    inviteCreatedYn = True
+                if sendInviteYn and rawToken:
+                    mailEvent = buildInviteMailEvent(
+                        companyName=getCompanyName(companyId),
+                        email=normalizedEmail,
+                        rawToken=rawToken,
+                        metricCount=len(metricIds),
+                        dueDate=dueDate,
+                    )
+
+            for metricId in metricIds:
+                upsertAssignmentTx(
+                    cur,
+                    cycleId=cycleId,
+                    companyId=companyId,
+                    metricId=metricId,
+                    assigneeUserId=assigneeUserId,
+                    inviteId=inviteId,
+                    assignmentStatus=assignmentStatus,
+                    dueDate=dueDate,
+                    actorUserId=actorUserId,
+                )
+            for oldInviteId in oldInviteIds:
+                if oldInviteId != inviteId:
+                    revokeOrphanInviteTx(cur, oldInviteId)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+    return {
+        "companyId": companyId,
+        "reportingYear": reportingYear,
+        "cycleId": cycleId,
+        "metricIds": metricIds,
+        "assignmentCount": len(metricIds),
+        "assignmentStatus": assignmentStatus,
+        "assigneeResolvedYn": assigneeUserId is not None,
+        "inviteCreatedYn": inviteCreatedYn,
+        "inviteReusedYn": inviteReusedYn,
+        "inviteId": inviteId,
+        "mailEvent": mailEvent,
+    }
+
+
+def getReusableInviteTx(cur, companyId: int, cycleId: int, normalizedEmail: str) -> dict:
+    cur.execute(
+        """
+        SELECT *
+        FROM ESG_ONBOARDING_INVITE
+        WHERE company_id = ?
+          AND esg_onboarding_cycle_id = ?
+          AND invite_email_hash = ?
+          AND invite_status = 'pending'
+          AND expires_at > CURRENT_TIMESTAMP
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+        FOR UPDATE
+        """,
+        (companyId, cycleId, hashText(normalizedEmail)),
+    )
+    return cur.fetchone() or {}
+
+
+def insertInviteTx(
+    cur,
+    *,
+    companyId: int,
+    cycleId: int,
+    normalizedEmail: str,
+    rawToken: str,
+    actorUserId: Optional[int],
+    sentYn: bool,
+) -> int:
+    cur.execute(
+        f"""
+        INSERT INTO ESG_ONBOARDING_INVITE (
+            invite_public_id,
+            company_id,
+            esg_onboarding_cycle_id,
+            invite_email_enc,
+            invite_email_hash,
+            target_role_code,
+            invite_status,
+            invite_token_hash,
+            expires_at,
+            invited_by_user_id,
+            last_sent_at,
+            resend_count,
+            delete_yn
+        ) VALUES (?, ?, ?, aes_e(?, '{settings.maria_db_key}'), ?, ?, 'pending', ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? DAY), ?, CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END, CASE WHEN ? THEN 1 ELSE 0 END, 0)
+        """,
+        (
+            uuid.uuid4().hex,
+            companyId,
+            cycleId,
+            normalizedEmail,
+            hashText(normalizedEmail),
+            SUPPORTED_TARGET_ROLE,
+            hashText(rawToken),
+            INVITE_EXPIRE_DAYS,
+            actorUserId,
+            1 if sentYn else 0,
+            1 if sentYn else 0,
+        ),
+    )
+    return int(cur.lastrowid)
+
+
+def rotateInviteTokenTx(cur, inviteId: int, rawToken: str) -> None:
+    cur.execute(
+        """
+        UPDATE ESG_ONBOARDING_INVITE
+        SET invite_token_hash = ?,
+            expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? DAY),
+            last_sent_at = CURRENT_TIMESTAMP,
+            resend_count = resend_count + 1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND invite_status = 'pending'
+          AND delete_yn = 0
+        """,
+        (hashText(rawToken), INVITE_EXPIRE_DAYS, inviteId),
+    )
+
+
+def upsertAssignmentTx(
+    cur,
+    *,
+    cycleId: int,
+    companyId: int,
+    metricId: str,
+    assigneeUserId: Optional[int],
+    inviteId: Optional[int],
+    assignmentStatus: str,
+    dueDate: Optional[date],
+    actorUserId: Optional[int],
+) -> None:
+    cur.execute(
+        """
+        INSERT INTO ESG_METRIC_ASSIGNMENT (
+            esg_onboarding_cycle_id,
+            company_id,
+            metric_id,
+            invite_id,
+            assignee_user_id,
+            assignee_email,
+            assignment_status,
+            assignment_source_type,
+            due_date,
+            created_by_user_id,
+            delete_yn
+        ) VALUES (?, ?, ?, ?, ?, NULL, ?, 'manual', ?, ?, 0)
+        ON DUPLICATE KEY UPDATE
+            invite_id = VALUES(invite_id),
+            assignee_user_id = VALUES(assignee_user_id),
+            assignee_email = NULL,
+            assignment_status = VALUES(assignment_status),
+            assignment_source_type = 'manual',
+            due_date = VALUES(due_date),
+            created_by_user_id = VALUES(created_by_user_id),
+            delete_yn = 0,
+            updated_at = CURRENT_TIMESTAMP
+        """,
+        (
+            cycleId,
+            companyId,
+            metricId,
+            inviteId,
+            assigneeUserId,
+            assignmentStatus,
+            dueDate.isoformat() if hasattr(dueDate, "isoformat") else dueDate,
+            actorUserId,
+        ),
+    )
+
+
+def buildInviteMailEvent(
+    *,
+    companyName: str,
+    email: str,
+    rawToken: str,
+    metricCount: int,
+    dueDate: Optional[date],
+) -> dict:
+    return {
+        "type": 5,
+        "email": email,
+        "companyName": companyName,
+        "inviteLink": f"http://main.{settings.host_ip}/onboarding-invite/{rawToken}",
+        "metricCount": metricCount,
+        "dueDate": dueDate.isoformat() if hasattr(dueDate, "isoformat") else dueDate,
+    }
+
+
+def listAssignments(companyId: int, reportingYear: int, cycle: dict) -> list[dict]:
+    cycleId = int(cycle["id"]) if cycle else None
+    metricRows = listCycleMetricScope(cycleId, companyId) if cycleId is not None else []
+    assignmentRows = []
+    if cycleId is not None:
+        assignmentRows = findAll(
+            f"""
+            SELECT
+                a.metric_id,
+                a.assignment_status,
+                a.assignee_user_id,
+                a.assignee_email,
+                a.due_date,
+                a.invite_id,
+                i.invite_status,
+                aes_d(i.invite_email_enc, '{settings.maria_db_key}') AS invite_email,
+                aes_d(u.email, '{settings.maria_db_key}') AS user_email
+            FROM ESG_METRIC_ASSIGNMENT a
+            LEFT JOIN ESG_ONBOARDING_INVITE i
+              ON i.id = a.invite_id
+             AND i.delete_yn = 0
+            LEFT JOIN `with`.`USER` u
+              ON u.id = a.assignee_user_id
+             AND u.delete_yn = 0
+            WHERE a.esg_onboarding_cycle_id = ?
+              AND a.company_id = ?
+              AND a.delete_yn = 0
+            ORDER BY a.metric_id
+            """,
+            (cycleId, companyId),
+        ) or []
+    assignmentByMetric = {row["metric_id"]: row for row in assignmentRows}
+    items = []
+    for metric in metricRows:
+        metricId = metric["metric_id"]
+        assignment = assignmentByMetric.get(metricId) or {}
+        email = None
+        if assignment.get("assignment_status") != ASSIGNMENT_STATUS_UNASSIGNED:
+            email = assignment.get("invite_email") or assignment.get("user_email") or assignment.get("assignee_email")
+        items.append(
+            {
+                "metricId": metricId,
+                "metricName": metric.get("metric_name_kr"),
+                "assignmentStatus": assignment.get("assignment_status") or ASSIGNMENT_STATUS_UNASSIGNED,
+                "assigneeUserId": assignment.get("assignee_user_id"),
+                "assigneeEmailMasked": maskEmail(email),
+                "dueDate": str(assignment.get("due_date")) if assignment.get("due_date") is not None else None,
+                "inviteId": assignment.get("invite_id"),
+                "inviteStatus": assignment.get("invite_status"),
+            }
+        )
+    return items
+
+
+def listAssignmentInviteIdsTx(cur, cycleId: int, companyId: int, metricIds: list[str]) -> list[int]:
+    if not metricIds:
+        return []
+    placeholders = ", ".join(["?"] * len(metricIds))
+    cur.execute(
+        f"""
+        SELECT DISTINCT invite_id
+        FROM ESG_METRIC_ASSIGNMENT
+        WHERE esg_onboarding_cycle_id = ?
+          AND company_id = ?
+          AND metric_id IN ({placeholders})
+          AND invite_id IS NOT NULL
+          AND delete_yn = 0
+        """,
+        (cycleId, companyId, *metricIds),
+    )
+    return [int(row["invite_id"]) for row in cur.fetchall() or []]
+
+
+def bulkUnassignMetrics(companyId: int, reportingYear: int, cycle: dict, metricIds: list[str]) -> dict:
+    cycleId = int(cycle["id"])
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("DB connection failed")
+    revokedInviteIds = []
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            placeholders = ", ".join(["?"] * len(metricIds))
+            cur.execute(
+                f"""
+                SELECT DISTINCT invite_id
+                FROM ESG_METRIC_ASSIGNMENT
+                WHERE esg_onboarding_cycle_id = ?
+                  AND company_id = ?
+                  AND metric_id IN ({placeholders})
+                  AND invite_id IS NOT NULL
+                  AND delete_yn = 0
+                """,
+                (cycleId, companyId, *metricIds),
+            )
+            affectedInviteIds = [int(row["invite_id"]) for row in cur.fetchall() or []]
+            cur.execute(
+                f"""
+                UPDATE ESG_METRIC_ASSIGNMENT
+                SET assignee_user_id = NULL,
+                    assignee_email = NULL,
+                    invite_id = NULL,
+                    assignment_status = ?,
+                    due_date = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE esg_onboarding_cycle_id = ?
+                  AND company_id = ?
+                  AND metric_id IN ({placeholders})
+                  AND delete_yn = 0
+                """,
+                (ASSIGNMENT_STATUS_UNASSIGNED, cycleId, companyId, *metricIds),
+            )
+            unassignedCount = cur.rowcount
+            for inviteId in affectedInviteIds:
+                if revokeOrphanInviteTx(cur, inviteId):
+                    revokedInviteIds.append(inviteId)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return {
+        "companyId": companyId,
+        "reportingYear": reportingYear,
+        "cycleId": cycleId,
+        "metricIds": metricIds,
+        "unassignedCount": unassignedCount,
+        "revokedInviteIds": revokedInviteIds,
+    }
+
+
+def revokeOrphanInviteTx(cur, inviteId: int) -> bool:
+    cur.execute(
+        """
+        SELECT COUNT(*) AS active_count
+        FROM ESG_METRIC_ASSIGNMENT
+        WHERE invite_id = ?
+          AND assignment_status <> ?
+          AND delete_yn = 0
+        """,
+        (inviteId, ASSIGNMENT_STATUS_UNASSIGNED),
+    )
+    row = cur.fetchone() or {}
+    if int(row.get("active_count") or 0) > 0:
+        return False
+    cur.execute(
+        """
+        UPDATE ESG_ONBOARDING_INVITE
+        SET invite_status = 'revoked',
+            revoked_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+          AND invite_status = 'pending'
+          AND delete_yn = 0
+        """,
+        (inviteId,),
+    )
+    return cur.rowcount > 0
+
+
+CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
+METRIC_SCOPE_PRE_DMA_G0_PROFILE = "PRE_DMA_G0_PROFILE"
+METRIC_SCOPE_G0_02_FINANCIAL_BASIS = "G0_02_FINANCIAL_BASIS"
+SCOPE_SOURCE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
+APPROVAL_POLICY_INPUT_APPROVAL_ONLY = "INPUT_APPROVAL_ONLY"
+APPROVAL_POLICY_PROMOTE_TO_KPI_FACT = "PROMOTE_TO_KPI_FACT"
+PRE_DMA_G0_SCOPE_POLICIES = {
+    "G0-01": {
+        "approvalPolicyCode": APPROVAL_POLICY_INPUT_APPROVAL_ONLY,
+        "displayOrder": 10,
+    },
+    "G0-02": {
+        "approvalPolicyCode": APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
+        "displayOrder": 20,
+    },
+    "G0-03": {
+        "approvalPolicyCode": APPROVAL_POLICY_INPUT_APPROVAL_ONLY,
+        "displayOrder": 30,
+    },
+    "G0-04": {
+        "approvalPolicyCode": APPROVAL_POLICY_INPUT_APPROVAL_ONLY,
+        "displayOrder": 40,
+    },
+    "G0-05": {
+        "approvalPolicyCode": APPROVAL_POLICY_INPUT_APPROVAL_ONLY,
+        "displayOrder": 50,
+    },
+    "G0-06": {
+        "approvalPolicyCode": APPROVAL_POLICY_INPUT_APPROVAL_ONLY,
+        "displayOrder": 60,
+    },
+}
+REQUIRED_ATOMIC_IDS = [
+    "G0-02__Q0001",
+    "G0-02__Q0002",
+    "G0-02__Q0003",
+    "G0-02__Q0004",
+    "G0-02__Q0005",
+]
+
+
+def ensurePreDmaG0Cycle(
+    companyId: int,
+    reportingYear: int,
+    reportBasisType: Optional[str] = None,
+    sourceMaterialityRunId: Optional[int] = None,
+    actorUserId: Optional[int] = None,
+) -> dict:
+    conn = getConn()
+    if not conn:
+        return {}
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            try:
+                cycle = ensureCycleTx(
+                    cur,
+                    companyId,
+                    reportingYear,
+                    reportBasisType,
+                    sourceMaterialityRunId,
+                    actorUserId,
+                )
+                conn.commit()
+            except mariadb.IntegrityError:
+                conn.rollback()
+                with conn.cursor(dictionary=True) as retryCur:
+                    cycle = ensureCycleTx(
+                        retryCur,
+                        companyId,
+                        reportingYear,
+                        reportBasisType,
+                        sourceMaterialityRunId,
+                        actorUserId,
+                    )
+                    conn.commit()
+            return cycle
+    finally:
+        conn.close()
+
+
+def resolvePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:
+    return findOne(
+        """
+        SELECT *
+        FROM ESG_ONBOARDING_CYCLE
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND cycle_type = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (companyId, reportingYear, CYCLE_TYPE_PRE_DMA_G0),
+    ) or {}
+
+
+def listPreDmaG0MetricMaster() -> list[dict]:
+    return findAll(
+        """
+        SELECT DISTINCT metric_id, metric_name_kr
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE delete_yn = 0
+          AND active_yn = 1
+          AND metric_id LIKE 'G0-%'
+        ORDER BY metric_id
+        """
+    ) or []
+
+
+def listCycleMetricScope(cycleId: int, companyId: int) -> list[dict]:
+    return findAll(
+        """
+        SELECT
+            s.*,
+            m.metric_name_kr
+        FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE s
+        LEFT JOIN (
+            SELECT metric_id, MIN(metric_name_kr) AS metric_name_kr
+            FROM ESG_ATOMIC_METRIC_MASTER
+            WHERE delete_yn = 0
+              AND active_yn = 1
+            GROUP BY metric_id
+        ) m
+          ON m.metric_id = s.metric_id
+        WHERE s.esg_onboarding_cycle_id = ?
+          AND s.company_id = ?
+          AND s.active_yn = 1
+          AND s.delete_yn = 0
+        ORDER BY s.display_order, s.metric_id
+        """,
+        (cycleId, companyId),
+    ) or []
+
+
+def validateCycleMetricIds(cycleId: int, companyId: int, metricIds: list[str]) -> list[str]:
+    cleaned = []
+    for metricId in metricIds or []:
+        value = str(metricId or "").strip()
+        if not value:
+            continue
+        if "__" in value:
+            raise ValueError(f"atomic_metric_id is not allowed: {value}")
+        if value not in cleaned:
+            cleaned.append(value)
+    if not cleaned:
+        raise ValueError("metricIds is required")
+    allowed = {row["metric_id"] for row in listCycleMetricScope(cycleId, companyId)}
+    invalid = [metricId for metricId in cleaned if metricId not in allowed]
+    if invalid:
+        raise ValueError(f"Unsupported metricId for cycle scope: {', '.join(invalid)}")
+    return cleaned
+
+
+def listG002Inputs(companyId: int, reportingYear: int) -> list[dict]:
+    placeholders = ", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))
+    return findAll(
+        f"""
+        SELECT *
+        FROM ESG_ONBOARDING_INPUT_VALUE
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND metric_id = ?
+          AND atomic_metric_id IN ({placeholders})
+          AND delete_yn = 0
+        ORDER BY atomic_metric_id
+        """,
+        (companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+    ) or []
+
+
+def listG002KpiFacts(companyId: int, reportingYear: int) -> list[dict]:
+    placeholders = ", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))
+    return findAll(
+        f"""
+        SELECT *
+        FROM ESG_KPI_FACT
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND metric_id = ?
+          AND atomic_metric_id IN ({placeholders})
+          AND LOWER(COALESCE(approval_status, '')) = 'approved'
+          AND value_numeric IS NOT NULL
+          AND delete_yn = 0
+          AND source_input_value_id IS NOT NULL
+          AND EXISTS (
+              SELECT 1
+              FROM ESG_ONBOARDING_INPUT_VALUE iv
+              WHERE iv.id = ESG_KPI_FACT.source_input_value_id
+                AND iv.company_id = ESG_KPI_FACT.company_id
+                AND iv.reporting_year = ESG_KPI_FACT.reporting_year
+                AND iv.metric_id = ESG_KPI_FACT.metric_id
+                AND iv.atomic_metric_id = ESG_KPI_FACT.atomic_metric_id
+                AND LOWER(COALESCE(iv.input_status, '')) = 'approved'
+                AND iv.delete_yn = 0
+          )
+        ORDER BY atomic_metric_id
+        """,
+        (companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+    ) or []
+
+
+def getMetricName(metricId: str) -> Optional[str]:
+    row = findOne(
+        """
+        SELECT metric_name_kr
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE metric_id = ?
+          AND delete_yn = 0
+          AND active_yn = 1
+        ORDER BY atomic_metric_id
+        LIMIT 1
+        """,
+        (metricId,),
+    ) or {}
+    return row.get("metric_name_kr")
+
+
+def getLatestHistory(companyId: int, reportingYear: int, metricId: str) -> dict:
+    return findOne(
+        """
+        SELECT *
+        FROM ESG_ONBOARDING_APPROVAL_HISTORY
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND metric_id = ?
+          AND delete_yn = 0
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+        """,
+        (companyId, reportingYear, metricId),
+    ) or {}
+
+
+def listApprovalSummaries(
+    companyId: int,
+    reportingYear: Optional[int] = None,
+    status: Optional[str] = None,
+    cycleType: Optional[str] = None,
+) -> list[dict]:
+    params = [companyId]
+    yearFilter = ""
+    if reportingYear is not None:
+        yearFilter = "AND iv.reporting_year = ?"
+        params.append(reportingYear)
+    inputRows = findAll(
+        f"""
+        SELECT
+            iv.company_id,
+            iv.reporting_year,
+            iv.metric_id
+        FROM ESG_ONBOARDING_INPUT_VALUE iv
+        LEFT JOIN ESG_ONBOARDING_CYCLE c
+          ON c.id = iv.esg_onboarding_cycle_id
+         AND c.delete_yn = 0
+        WHERE iv.company_id = ?
+          {yearFilter}
+          AND iv.metric_id = ?
+          AND iv.atomic_metric_id IN ({", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))})
+          AND iv.delete_yn = 0
+          {cycleTypeFilter(cycleType)}
+        GROUP BY iv.company_id, iv.reporting_year, iv.metric_id
+        ORDER BY iv.reporting_year DESC
+        """,
+        (*params, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+    ) or []
+    summaries = []
+    for row in inputRows:
+        summary = buildApprovalSummary(int(row["company_id"]), int(row["reporting_year"]), row["metric_id"])
+        if status and str(summary.get("approvalStatus") or "").upper() != str(status).upper():
+            continue
+        summaries.append(summary)
+    return summaries
+
+
+def submitG002Approval(
+    companyId: int,
+    reportingYear: int,
+    reportBasisType: Optional[str],
+    sourceMaterialityRunId: Optional[int],
+    actorUserId: Optional[int],
+) -> dict:
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("DB connection failed")
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cycle = ensureCycleTx(
+                cur,
+                companyId,
+                reportingYear,
+                reportBasisType,
+                sourceMaterialityRunId,
+                actorUserId,
+            )
+            assignment = resolveAssignment(cur, int(cycle["id"]), companyId, METRIC_ID_G0_02)
+            rows = selectInputRowsForUpdate(cur, companyId, reportingYear)
+            if checkAlreadyApprovedTx(cur, rows, companyId, reportingYear):
+                conn.commit()
+                return buildApprovalSummary(companyId, reportingYear, METRIC_ID_G0_02)
+            validateCompleteRows(rows, allowedStatuses={"draft", "rejected", "submitted", "approved"})
+            assignmentId = int(assignment["id"]) if assignment else None
+            cur.execute(
+                f"""
+                UPDATE ESG_ONBOARDING_INPUT_VALUE
+                SET esg_onboarding_cycle_id = ?,
+                    esg_metric_assignment_id = ?,
+                    input_status = 'submitted',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE company_id = ?
+                  AND reporting_year = ?
+                  AND metric_id = ?
+                  AND atomic_metric_id IN ({", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))})
+                  AND delete_yn = 0
+                """,
+                (int(cycle["id"]), assignmentId, companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+            )
+            insertHistory(
+                cur,
+                cycleId=int(cycle["id"]),
+                assignmentId=assignmentId,
+                companyId=companyId,
+                reportingYear=reportingYear,
+                metricId=METRIC_ID_G0_02,
+                actionType="submit",
+                actionStatus="submitted",
+                actorUserId=actorUserId,
+                assigneeUserId=assignment.get("assignee_user_id") if assignment else None,
+                commentText=None,
+            )
+        conn.commit()
+        return buildApprovalSummary(companyId, reportingYear, METRIC_ID_G0_02)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def approveG002Approval(
+    companyId: int,
+    reportingYear: int,
+    actorUserId: Optional[int],
+    commentText: Optional[str] = None,
+) -> dict:
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("DB connection failed")
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cycle = resolveCycle(cur, companyId, reportingYear)
+            if not cycle:
+                raise ValueError("PRE_DMA_G0 cycle was not found")
+            assignment = resolveAssignment(cur, int(cycle["id"]), companyId, METRIC_ID_G0_02)
+            rows = selectInputRowsForUpdate(cur, companyId, reportingYear)
+            if checkAlreadyApprovedTx(cur, rows, companyId, reportingYear):
+                conn.commit()
+                return buildApprovalSummary(companyId, reportingYear, METRIC_ID_G0_02)
+            validateCompleteRows(rows, allowedStatuses={"submitted", "reviewed"})
+            assignmentId = int(assignment["id"]) if assignment else None
+            for row in rows:
+                if row["atomic_metric_id"] not in REQUIRED_ATOMIC_IDS:
+                    continue
+                upsertKpiFact(cur, row, actorUserId)
+            cur.execute(
+                f"""
+                UPDATE ESG_ONBOARDING_INPUT_VALUE
+                SET esg_onboarding_cycle_id = ?,
+                    esg_metric_assignment_id = ?,
+                    input_status = 'approved',
+                    approved_by_user_id = ?,
+                    approved_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE company_id = ?
+                  AND reporting_year = ?
+                  AND metric_id = ?
+                  AND atomic_metric_id IN ({", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))})
+                  AND delete_yn = 0
+                """,
+                (int(cycle["id"]), assignmentId, actorUserId, companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+            )
+            insertHistory(
+                cur,
+                cycleId=int(cycle["id"]),
+                assignmentId=assignmentId,
+                companyId=companyId,
+                reportingYear=reportingYear,
+                metricId=METRIC_ID_G0_02,
+                actionType="approve",
+                actionStatus="approved",
+                actorUserId=actorUserId,
+                assigneeUserId=assignment.get("assignee_user_id") if assignment else None,
+                commentText=commentText,
+            )
+        conn.commit()
+        return buildApprovalSummary(companyId, reportingYear, METRIC_ID_G0_02)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def rejectG002Approval(
+    companyId: int,
+    reportingYear: int,
+    actorUserId: Optional[int],
+    commentText: str,
+) -> dict:
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("DB connection failed")
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cycle = resolveCycle(cur, companyId, reportingYear)
+            if not cycle:
+                raise ValueError("PRE_DMA_G0 cycle was not found")
+            assignment = resolveAssignment(cur, int(cycle["id"]), companyId, METRIC_ID_G0_02)
+            rows = selectInputRowsForUpdate(cur, companyId, reportingYear)
+            validateCompleteRows(rows, allowedStatuses={"submitted", "reviewed"})
+            assignmentId = int(assignment["id"]) if assignment else None
+            cur.execute(
+                f"""
+                UPDATE ESG_ONBOARDING_INPUT_VALUE
+                SET input_status = 'rejected',
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE company_id = ?
+                  AND reporting_year = ?
+                  AND metric_id = ?
+                  AND atomic_metric_id IN ({", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))})
+                  AND delete_yn = 0
+                """,
+                (companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+            )
+            insertHistory(
+                cur,
+                cycleId=int(cycle["id"]),
+                assignmentId=assignmentId,
+                companyId=companyId,
+                reportingYear=reportingYear,
+                metricId=METRIC_ID_G0_02,
+                actionType="reject",
+                actionStatus="rejected",
+                actorUserId=actorUserId,
+                assigneeUserId=assignment.get("assignee_user_id") if assignment else None,
+                commentText=commentText,
+            )
+        conn.commit()
+        return buildApprovalSummary(companyId, reportingYear, METRIC_ID_G0_02)
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def buildApprovalSummary(companyId: int, reportingYear: int, metricId: str) -> dict:
+    inputs = listG002Inputs(companyId, reportingYear)
+    facts = listG002KpiFacts(companyId, reportingYear)
+    cycle = findOne(
+        """
+        SELECT *
+        FROM ESG_ONBOARDING_CYCLE
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND cycle_type = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (companyId, reportingYear, CYCLE_TYPE_PRE_DMA_G0),
+    ) or {}
+    assignment = {}
+    if cycle:
+        assignment = findOne(
+            """
+            SELECT *
+            FROM ESG_METRIC_ASSIGNMENT
+            WHERE esg_onboarding_cycle_id = ?
+              AND company_id = ?
+              AND metric_id = ?
+              AND delete_yn = 0
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (cycle["id"], companyId, metricId),
+        ) or {}
+    latestHistory = getLatestHistory(companyId, reportingYear, metricId)
+    approvedAtomicIds = {row["atomic_metric_id"] for row in facts}
+    inputByAtomic = {row["atomic_metric_id"]: row for row in inputs}
+    completedAtomicIds = {
+        atomicId
+        for atomicId, row in inputByAtomic.items()
+        if atomicId in REQUIRED_ATOMIC_IDS and row.get("value_numeric") is not None
+    }
+    submittedAtomicIds = {
+        atomicId
+        for atomicId, row in inputByAtomic.items()
+        if atomicId in REQUIRED_ATOMIC_IDS
+        and str(row.get("input_status") or "").lower() in {"submitted", "reviewed", "approved"}
+        and row.get("value_numeric") is not None
+    }
+    missingAtomicIds = [
+        atomicId
+        for atomicId in REQUIRED_ATOMIC_IDS
+        if atomicId not in approvedAtomicIds
+    ]
+    return {
+        "companyId": companyId,
+        "reportingYear": reportingYear,
+        "metricId": metricId,
+        "metricName": getMetricName(metricId),
+        "approvalStatus": resolveApprovalStatus(inputs, facts),
+        "inputUserId": firstNonNull([row.get("input_user_id") for row in inputs]),
+        "assigneeUserId": assignment.get("assignee_user_id"),
+        "cycleId": int(cycle["id"]) if cycle else None,
+        "assignmentId": int(assignment["id"]) if assignment else None,
+        "requiredAtomicCount": len(REQUIRED_ATOMIC_IDS),
+        "completedAtomicCount": len(completedAtomicIds),
+        "submittedAtomicCount": len(submittedAtomicIds),
+        "approvedAtomicCount": len(approvedAtomicIds),
+        "missingAtomicMetricIds": missingAtomicIds,
+        "submittedAt": formatDatetime(submittedAt(inputs, latestHistory)),
+        "approvedAt": formatDatetime(approvedAt(inputs, facts, latestHistory)),
+        "commentText": latestHistory.get("comment_text"),
+        "selfSubmittedYn": False,
+    }
+
+
+def cycleTypeFilter(cycleType: Optional[str]) -> str:
+    if not cycleType:
+        return ""
+    if str(cycleType).upper() != CYCLE_TYPE_PRE_DMA_G0:
+        return "AND 1 = 0"
+    return "AND (c.cycle_type = 'PRE_DMA_G0' OR c.id IS NULL)"
+
+
+def resolveCycle(cur, companyId: int, reportingYear: int) -> dict:
+    cur.execute(
+        """
+        SELECT *
+        FROM ESG_ONBOARDING_CYCLE
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND cycle_type = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (companyId, reportingYear, CYCLE_TYPE_PRE_DMA_G0),
+    )
+    return cur.fetchone() or {}
+
+
+def ensureCycleTx(
+    cur,
+    companyId: int,
+    reportingYear: int,
+    reportBasisType: Optional[str],
+    sourceMaterialityRunId: Optional[int],
+    actorUserId: Optional[int],
+) -> dict:
+    cycle = resolveCycle(cur, companyId, reportingYear)
+    if cycle:
+        normalizeCycleTx(
+            cur,
+            cycle,
+            reportBasisType=reportBasisType,
+            sourceMaterialityRunId=sourceMaterialityRunId,
+        )
+        cycle = resolveCycle(cur, companyId, reportingYear)
+        effectiveRunId = resolveScopeRunId(cycle, sourceMaterialityRunId)
+        seedPreDmaG0ScopeTx(
+            cur,
+            cycleId=int(cycle["id"]),
+            companyId=companyId,
+            sourceMaterialityRunId=effectiveRunId,
+            actorUserId=actorUserId,
+        )
+        return cycle
+    insertCycle(cur, companyId, reportingYear, reportBasisType, sourceMaterialityRunId, actorUserId)
+    cycle = resolveCycle(cur, companyId, reportingYear)
+    effectiveRunId = resolveScopeRunId(cycle, sourceMaterialityRunId)
+    seedPreDmaG0ScopeTx(
+        cur,
+        cycleId=int(cycle["id"]),
+        companyId=companyId,
+        sourceMaterialityRunId=effectiveRunId,
+        actorUserId=actorUserId,
+    )
+    return cycle
+
+
+def resolveScopeRunId(cycle: dict, sourceMaterialityRunId: Optional[int]) -> Optional[int]:
+    if sourceMaterialityRunId is not None:
+        return int(sourceMaterialityRunId)
+    cycleRunId = cycle.get("source_materiality_run_id") if cycle else None
+    return int(cycleRunId) if cycleRunId is not None else None
+
+
+def seedPreDmaG0ScopeTx(
+    cur,
+    cycleId: int,
+    companyId: int,
+    sourceMaterialityRunId: Optional[int],
+    actorUserId: Optional[int],
+) -> None:
+    metricRows = listPreDmaG0MetricMasterTx(cur)
+    expectedMetricIds = set(PRE_DMA_G0_SCOPE_POLICIES.keys())
+    actualMetricIds = {
+        row["metric_id"]
+        for row in metricRows
+        if row.get("metric_id") in expectedMetricIds
+    }
+    missingMetricIds = sorted(expectedMetricIds - actualMetricIds)
+    if missingMetricIds:
+        raise RuntimeError(
+            "PRE_DMA_G0 master metrics are missing: "
+            + ", ".join(missingMetricIds)
+        )
+    metricIds = sorted(
+        expectedMetricIds,
+        key=lambda metricId: PRE_DMA_G0_SCOPE_POLICIES[metricId]["displayOrder"],
+    )
+    for metricId in metricIds:
+        policy = PRE_DMA_G0_SCOPE_POLICIES[metricId]
+        cur.execute(
+            """
+            INSERT INTO ESG_ONBOARDING_CYCLE_METRIC_SCOPE (
+                esg_onboarding_cycle_id,
+                company_id,
+                metric_id,
+                scope_source_type,
+                source_materiality_run_id,
+                source_selected_sub_issue_id,
+                source_sub_issue_code,
+                required_yn,
+                input_required_yn,
+                approval_required_yn,
+                approval_policy_code,
+                rollup_readonly_yn,
+                display_order,
+                active_yn,
+                created_by_user_id,
+                delete_yn
+            ) VALUES (?, ?, ?, ?, ?, NULL, NULL, 1, 1, 1, ?, 0, ?, 1, ?, 0)
+            ON DUPLICATE KEY UPDATE
+                scope_source_type = VALUES(scope_source_type),
+                source_materiality_run_id = COALESCE(VALUES(source_materiality_run_id), source_materiality_run_id),
+                source_selected_sub_issue_id = NULL,
+                source_sub_issue_code = NULL,
+                required_yn = 1,
+                input_required_yn = 1,
+                approval_required_yn = 1,
+                approval_policy_code = VALUES(approval_policy_code),
+                rollup_readonly_yn = 0,
+                display_order = VALUES(display_order),
+                active_yn = 1,
+                delete_yn = 0,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (
+                cycleId,
+                companyId,
+                metricId,
+                SCOPE_SOURCE_TYPE_PRE_DMA_G0,
+                sourceMaterialityRunId,
+                policy["approvalPolicyCode"],
+                policy["displayOrder"],
+                actorUserId,
+            ),
+        )
+
+
+def listPreDmaG0MetricMasterTx(cur) -> list[dict]:
+    cur.execute(
+        """
+        SELECT DISTINCT metric_id, metric_name_kr
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE delete_yn = 0
+          AND active_yn = 1
+          AND metric_id LIKE 'G0-%'
+        ORDER BY metric_id
+        """
+    )
+    return cur.fetchall() or []
+
+
+def normalizeCycleTx(
+    cur,
+    cycle: dict,
+    reportBasisType: Optional[str],
+    sourceMaterialityRunId: Optional[int],
+) -> None:
+    updates = []
+    params = []
+    metricScopeCode = cycle.get("metric_scope_code")
+    if metricScopeCode in (None, "", METRIC_SCOPE_G0_02_FINANCIAL_BASIS):
+        updates.append("metric_scope_code = ?")
+        params.append(METRIC_SCOPE_PRE_DMA_G0_PROFILE)
+    if cycle.get("report_basis_type") is None and reportBasisType is not None:
+        updates.append("report_basis_type = ?")
+        params.append(reportBasisType)
+    if cycle.get("source_materiality_run_id") is None and sourceMaterialityRunId is not None:
+        updates.append("source_materiality_run_id = ?")
+        params.append(sourceMaterialityRunId)
+    if not updates:
+        return
+    updates.append("updated_at = CURRENT_TIMESTAMP")
+    params.append(int(cycle["id"]))
+    cur.execute(
+        f"""
+        UPDATE ESG_ONBOARDING_CYCLE
+        SET {", ".join(updates)}
+        WHERE id = ?
+          AND delete_yn = 0
+        """,
+        tuple(params),
+    )
+
+
+def insertCycle(
+    cur,
+    companyId: int,
+    reportingYear: int,
+    reportBasisType: Optional[str],
+    sourceMaterialityRunId: Optional[int],
+    actorUserId: Optional[int],
+) -> None:
+    cur.execute(
+        """
+        INSERT INTO ESG_ONBOARDING_CYCLE (
+            company_id,
+            reporting_year,
+            cycle_name,
+            cycle_type,
+            report_basis_type,
+            required_before_dma_yn,
+            cycle_status,
+            source_materiality_run_id,
+            metric_scope_code,
+            created_by_user_id
+        ) VALUES (?, ?, ?, ?, ?, 1, 'active', ?, ?, ?)
+        """,
+        (
+            companyId,
+            reportingYear,
+            f"PRE-DMA G0 {reportingYear}",
+            CYCLE_TYPE_PRE_DMA_G0,
+            reportBasisType,
+            sourceMaterialityRunId,
+            METRIC_SCOPE_PRE_DMA_G0_PROFILE,
+            actorUserId,
+        ),
+    )
+
+
+def resolveAssignment(cur, cycleId: int, companyId: int, metricId: str) -> dict:
+    cur.execute(
+        """
+        SELECT *
+        FROM ESG_METRIC_ASSIGNMENT
+        WHERE esg_onboarding_cycle_id = ?
+          AND company_id = ?
+          AND metric_id = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (cycleId, companyId, metricId),
+    )
+    return cur.fetchone() or {}
+
+
+def selectInputRowsForUpdate(cur, companyId: int, reportingYear: int) -> list[dict]:
+    cur.execute(
+        f"""
+        SELECT *
+        FROM ESG_ONBOARDING_INPUT_VALUE
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND metric_id = ?
+          AND atomic_metric_id IN ({", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))})
+          AND delete_yn = 0
+        ORDER BY atomic_metric_id
+        FOR UPDATE
+        """,
+        (companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+    )
+    return cur.fetchall() or []
+
+
+def validateCompleteRows(rows: list[dict], allowedStatuses: set[str]) -> None:
+    rowByAtomic = {row["atomic_metric_id"]: row for row in rows}
+    missing = [atomicId for atomicId in REQUIRED_ATOMIC_IDS if atomicId not in rowByAtomic]
+    if missing:
+        raise ValueError(f"Missing G0-02 input rows: {', '.join(missing)}")
+    invalidValues = [
+        atomicId
+        for atomicId in REQUIRED_ATOMIC_IDS
+        if rowByAtomic[atomicId].get("value_numeric") is None
+    ]
+    if invalidValues:
+        raise ValueError(f"Missing numeric values: {', '.join(invalidValues)}")
+    invalidStatuses = [
+        f"{atomicId}:{rowByAtomic[atomicId].get('input_status')}"
+        for atomicId in REQUIRED_ATOMIC_IDS
+        if str(rowByAtomic[atomicId].get("input_status") or "").lower() not in allowedStatuses
+    ]
+    if invalidStatuses:
+        raise ValueError(f"Invalid input status: {', '.join(invalidStatuses)}")
+
+
+def checkAlreadyApprovedTx(cur, rows: list[dict], companyId: int, reportingYear: int) -> bool:
+    rowByAtomic = {row["atomic_metric_id"]: row for row in rows}
+    if any(atomicId not in rowByAtomic for atomicId in REQUIRED_ATOMIC_IDS):
+        return False
+    if any(
+        str(rowByAtomic[atomicId].get("input_status") or "").lower() != "approved"
+        for atomicId in REQUIRED_ATOMIC_IDS
+    ):
+        return False
+    placeholders = ", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))
+    cur.execute(
+        f"""
+        SELECT COUNT(*) AS approved_count
+        FROM ESG_KPI_FACT k
+        JOIN ESG_ONBOARDING_INPUT_VALUE iv
+          ON iv.id = k.source_input_value_id
+         AND iv.company_id = k.company_id
+         AND iv.reporting_year = k.reporting_year
+         AND iv.metric_id = k.metric_id
+         AND iv.atomic_metric_id = k.atomic_metric_id
+         AND iv.delete_yn = 0
+         AND LOWER(COALESCE(iv.input_status, '')) = 'approved'
+        WHERE k.company_id = ?
+          AND k.reporting_year = ?
+          AND k.metric_id = ?
+          AND k.atomic_metric_id IN ({placeholders})
+          AND LOWER(COALESCE(k.approval_status, '')) = 'approved'
+          AND k.value_numeric IS NOT NULL
+          AND k.delete_yn = 0
+        """,
+        (companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+    )
+    row = cur.fetchone() or {}
+    return int(row.get("approved_count") or 0) >= len(REQUIRED_ATOMIC_IDS)
+
+
+def upsertKpiFact(cur, inputRow: dict, actorUserId: Optional[int]) -> None:
+    cur.execute(
+        """
+        INSERT INTO ESG_KPI_FACT (
+            source_input_value_id,
+            company_id,
+            reporting_year,
+            company_scope_type,
+            metric_id,
+            atomic_metric_id,
+            value_numeric,
+            value_text,
+            unit,
+            value_source_type,
+            approval_status,
+            approved_by_user_id,
+            approved_at,
+            delete_yn
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'onboarding_approval', 'approved', ?, CURRENT_TIMESTAMP, 0)
+        ON DUPLICATE KEY UPDATE
+            source_input_value_id = VALUES(source_input_value_id),
+            company_scope_type = VALUES(company_scope_type),
+            metric_id = VALUES(metric_id),
+            value_numeric = VALUES(value_numeric),
+            value_text = VALUES(value_text),
+            unit = VALUES(unit),
+            value_source_type = VALUES(value_source_type),
+            approval_status = 'approved',
+            approved_by_user_id = VALUES(approved_by_user_id),
+            approved_at = CURRENT_TIMESTAMP,
+            delete_yn = 0,
+            updated_at = CURRENT_TIMESTAMP
+        """,
+        (
+            inputRow.get("id"),
+            inputRow.get("company_id"),
+            inputRow.get("reporting_year"),
+            inputRow.get("company_scope_type") or "ENTITY",
+            inputRow.get("metric_id"),
+            inputRow.get("atomic_metric_id"),
+            inputRow.get("value_numeric"),
+            inputRow.get("value_text"),
+            inputRow.get("unit"),
+            actorUserId,
+        ),
+    )
+
+
+def insertHistory(
+    cur,
+    cycleId: int,
+    assignmentId: Optional[int],
+    companyId: int,
+    reportingYear: int,
+    metricId: str,
+    actionType: str,
+    actionStatus: str,
+    actorUserId: Optional[int],
+    assigneeUserId: Optional[int],
+    commentText: Optional[str],
+) -> None:
+    cur.execute(
+        """
+        INSERT INTO ESG_ONBOARDING_APPROVAL_HISTORY (
+            esg_onboarding_cycle_id,
+            esg_metric_assignment_id,
+            company_id,
+            reporting_year,
+            metric_id,
+            atomic_metric_id,
+            action_type,
+            action_status,
+            actor_user_id,
+            assignee_user_id,
+            comment_text
+        ) VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?)
+        """,
+        (
+            cycleId,
+            assignmentId,
+            companyId,
+            reportingYear,
+            metricId,
+            actionType,
+            actionStatus,
+            actorUserId,
+            assigneeUserId,
+            commentText,
+        ),
+    )
+
+
+def resolveApprovalStatus(inputs: list[dict], facts: list[dict]) -> str:
+    if len(facts) >= len(REQUIRED_ATOMIC_IDS):
+        return "APPROVED"
+    statuses = {str(row.get("input_status") or "").lower() for row in inputs}
+    if "rejected" in statuses:
+        return "REJECTED"
+    if statuses and statuses.issubset({"submitted", "reviewed", "approved"}):
+        return "SUBMITTED"
+    if inputs:
+        return "DRAFT"
+    return "NOT_STARTED"
+
+
+def submittedAt(inputs: list[dict], latestHistory: dict):
+    if str(latestHistory.get("action_status") or "").lower() == "submitted":
+        return latestHistory.get("created_at")
+    submittedRows = [
+        row.get("updated_at")
+        for row in inputs
+        if str(row.get("input_status") or "").lower() in {"submitted", "reviewed", "approved"}
+    ]
+    return max(submittedRows) if submittedRows else None
+
+
+def approvedAt(inputs: list[dict], facts: list[dict], latestHistory: dict):
+    if str(latestHistory.get("action_status") or "").lower() == "approved":
+        return latestHistory.get("created_at")
+    approvedValues = [row.get("approved_at") for row in inputs if row.get("approved_at")]
+    approvedValues.extend([row.get("approved_at") for row in facts if row.get("approved_at")])
+    return max(approvedValues) if approvedValues else None
+
+
+def firstNonNull(values: list) -> Optional[int]:
+    for value in values:
+        if value is not None:
+            return int(value)
+    return None
+
+
+def formatDatetime(value) -> Optional[str]:
+    if value is None:
+        return None
+    return str(value)
+
+
+def getInvite(inviteId: int) -> dict:
+    return findOne(
+        f"""
+        SELECT
+            i.*,
+            aes_d(i.invite_email_enc, '{settings.maria_db_key}') AS invite_email
+        FROM ESG_ONBOARDING_INVITE i
+        WHERE i.id = ?
+          AND i.delete_yn = 0
+        LIMIT 1
+        """,
+        (inviteId,),
+    ) or {}
+
+
+def listInvites(companyId: int, cycleId: Optional[int], status: Optional[str]) -> list[dict]:
+    params = [companyId]
+    cycleFilter = ""
+    statusFilter = ""
+    if cycleId is not None:
+        cycleFilter = "AND i.esg_onboarding_cycle_id = ?"
+        params.append(cycleId)
+    if status:
+        statusFilter = "AND i.invite_status = ?"
+        params.append(status)
+    rows = findAll(
+        f"""
+        SELECT
+            i.id AS inviteId,
+            i.invite_public_id AS invitePublicId,
+            aes_d(i.invite_email_enc, '{settings.maria_db_key}') AS inviteEmail,
+            i.target_role_code AS targetRoleCode,
+            i.invite_status AS inviteStatus,
+            i.expires_at AS expiresAt,
+            i.last_sent_at AS lastSentAt,
+            i.resend_count AS resendCount,
+            GROUP_CONCAT(a.metric_id ORDER BY a.metric_id) AS assignedMetricIdsCsv
+        FROM ESG_ONBOARDING_INVITE i
+        LEFT JOIN ESG_METRIC_ASSIGNMENT a
+          ON a.invite_id = i.id
+         AND a.delete_yn = 0
+         AND a.assignment_status <> ?
+        WHERE i.company_id = ?
+          {cycleFilter}
+          {statusFilter}
+          AND i.delete_yn = 0
+        GROUP BY
+            i.id,
+            i.invite_public_id,
+            i.invite_email_enc,
+            i.target_role_code,
+            i.invite_status,
+            i.expires_at,
+            i.last_sent_at,
+            i.resend_count
+        ORDER BY i.updated_at DESC, i.id DESC
+        """,
+        (ASSIGNMENT_STATUS_UNASSIGNED, *params),
+    ) or []
+    return [
+        {
+            "inviteId": int(row["inviteId"]),
+            "invitePublicId": row.get("invitePublicId"),
+            "inviteEmailMasked": maskEmail(row.get("inviteEmail")),
+            "targetRoleCode": row.get("targetRoleCode"),
+            "inviteStatus": row.get("inviteStatus"),
+            "expiresAt": str(row.get("expiresAt")) if row.get("expiresAt") is not None else None,
+            "lastSentAt": str(row.get("lastSentAt")) if row.get("lastSentAt") is not None else None,
+            "resendCount": int(row.get("resendCount") or 0),
+            "assignedMetricIds": [
+                metricId
+                for metricId in str(row.get("assignedMetricIdsCsv") or "").split(",")
+                if metricId
+            ],
+        }
+        for row in rows
+    ]
+
+
+def resendInvite(inviteId: int, companyId: int) -> dict:
+    rawToken = secrets.token_urlsafe(32)
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("DB connection failed")
+    assignedMetricIds = []
+    dueDate = None
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                f"""
+                SELECT
+                    *,
+                    aes_d(invite_email_enc, '{settings.maria_db_key}') AS invite_email
+                FROM ESG_ONBOARDING_INVITE
+                WHERE id = ?
+                  AND company_id = ?
+                  AND invite_status = 'pending'
+                  AND delete_yn = 0
+                FOR UPDATE
+                """,
+                (inviteId, companyId),
+            )
+            invite = cur.fetchone()
+            if not invite:
+                raise ValueError("Pending invite was not found")
+            cur.execute(
+                """
+                SELECT metric_id, due_date
+                FROM ESG_METRIC_ASSIGNMENT
+                WHERE invite_id = ?
+                  AND assignment_status <> ?
+                  AND delete_yn = 0
+                ORDER BY CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date, metric_id
+                """,
+                (inviteId, ASSIGNMENT_STATUS_UNASSIGNED),
+            )
+            assignmentRows = cur.fetchall() or []
+            if not assignmentRows:
+                raise ValueError("Invite has no active metric assignments")
+            assignedMetricIds = [row["metric_id"] for row in assignmentRows]
+            dueDate = next((row.get("due_date") for row in assignmentRows if row.get("due_date") is not None), None)
+            cur.execute(
+                """
+                UPDATE ESG_ONBOARDING_INVITE
+                SET invite_token_hash = ?,
+                    expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? DAY),
+                    last_sent_at = CURRENT_TIMESTAMP,
+                    resend_count = resend_count + 1,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (hashText(rawToken), INVITE_EXPIRE_DAYS, inviteId),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+    mailEvent = buildInviteMailEvent(
+        companyName=getCompanyName(companyId),
+        email=invite["invite_email"],
+        rawToken=rawToken,
+        metricCount=len(assignedMetricIds),
+        dueDate=dueDate,
+    )
+    return {
+        "companyId": companyId,
+        "inviteId": inviteId,
+        "inviteStatus": "pending",
+        "mailEvent": mailEvent,
+    }
+
+
+def revokeInvite(inviteId: int, companyId: int) -> dict:
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("DB connection failed")
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                """
+                SELECT *
+                FROM ESG_ONBOARDING_INVITE
+                WHERE id = ?
+                  AND company_id = ?
+                  AND invite_status = 'pending'
+                  AND delete_yn = 0
+                FOR UPDATE
+                """,
+                (inviteId, companyId),
+            )
+            invite = cur.fetchone()
+            if not invite:
+                raise ValueError("Pending invite was not found")
+            cur.execute(
+                """
+                UPDATE ESG_ONBOARDING_INVITE
+                SET invite_status = 'revoked',
+                    revoked_at = CURRENT_TIMESTAMP,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (inviteId,),
+            )
+            cur.execute(
+                """
+                UPDATE ESG_METRIC_ASSIGNMENT
+                SET assignee_user_id = NULL,
+                    assignee_email = NULL,
+                    invite_id = NULL,
+                    assignment_status = ?,
+                    due_date = NULL,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE invite_id = ?
+                  AND delete_yn = 0
+                """,
+                (ASSIGNMENT_STATUS_UNASSIGNED, inviteId),
+            )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return {"companyId": companyId, "inviteId": inviteId, "inviteStatus": "revoked"}
+
+
+def listAssignedMetricIds(inviteId: int) -> list[str]:
+    rows = findAll(
+        """
+        SELECT metric_id
+        FROM ESG_METRIC_ASSIGNMENT
+        WHERE invite_id = ?
+          AND assignment_status <> ?
+          AND delete_yn = 0
+        ORDER BY metric_id
+        """,
+        (inviteId, ASSIGNMENT_STATUS_UNASSIGNED),
+    ) or []
+    return [row["metric_id"] for row in rows]

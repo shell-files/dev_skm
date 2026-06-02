@@ -12,20 +12,6 @@ from src.utils.auth import get_domain, get_token
 
 reportWorkflowRouter = APIRouter(prefix="/v1/report-workflow", tags=["report-workflow"])
 
-# def requireUser(request: Request, response: Response):
-#     token = request.cookies.get(settings.cookie_key)
-#     result = validateToken(token)
-
-#     if result.success and result.data.get("uuid"):
-#         response.set_cookie(
-#             key=settings.cookie_key,
-#             value=result.data["uuid"],
-#             domain=get_domain(request),
-#             httponly=True,
-#             samesite="lax"
-#         )
-
-#     return result
 
 @reportWorkflowRouter.get(
     "/current",
@@ -74,7 +60,7 @@ async def startWorkflowRoute(
     response_model=ReportWorkflowResponseDto,
     summary="Resume existing report workflow and repair legacy G0 cycle",
 )
-async def resumeWorkflowRoute(runId: int, userModel=Depends(requireUser)):
+async def resumeWorkflowRoute(runId: int, userModel=Depends(get_token)):
     try:
         run = getRun(runId)
         if not run:

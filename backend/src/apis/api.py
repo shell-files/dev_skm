@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from src.apis.onboarding import onboardingRouter
 from src.apis.onboardingassignment import onboardingAssignmentRouter
 from src.apis.companyprofile import companyProfileRouter
 from src.apis.onboardingapproval import onboardingApprovalRouter
@@ -10,6 +11,7 @@ from src.apis.rollup import rollupRouter
 
 router = APIRouter(tags=["api"])
 router.include_router(companyProfileRouter)
+router.include_router(onboardingRouter)
 router.include_router(onboardingAssignmentRouter)
 router.include_router(onboardingApprovalRouter)
 router.include_router(onboardingInviteRouter)

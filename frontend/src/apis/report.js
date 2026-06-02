@@ -61,13 +61,13 @@ export const getOnboardingMetrics = async (
     params.metricId = metricId;
   }
   return normalizeDirectDtoResponse(
-    await GET("/api/v1/onboarding/metrics", params)
+    await GET("/onboarding/metrics", params)
   );
 };
 
 export const saveOnboardingMetricValues = async (metricId, payload) =>
   normalizeDirectDtoResponse(
-    await PATCH(`/api/v1/onboarding/metrics/${metricId}/values`, payload)
+    await PATCH(`/onboarding/metrics/${metricId}`, payload)
   );
 
 export const listSubsidiaries = (runId) =>

@@ -23,32 +23,17 @@ const normalizeDirectDtoResponse = (res) => {
 
 export const getCurrent = (companyId, reportingYear = DEFAULT_REPORTING_YEAR) => {
   const params = companyId == null ? undefined : { companyId, reportingYear };
-  return GET("/api/v1/report-workflow/current", params);
+  return GET("/reportWorkflow/current", params);
 };
 
 export const startWorkflow = (payload) =>
-  POST("/api/v1/report-workflow/start", payload);
+  POST("/reportWorkflow/start", payload);
 
 export const resumeWorkflow = (runId) =>
-  POST(`/api/v1/report-workflow/${runId}/resume`);
+  POST(`/reportWorkflow/${runId}/resume`);
 
 export const getG0Status = (runId) =>
-  GET(`/api/v1/report-workflow/${runId}/g0-status`);
-
-export const getG0Profile = async (companyId, reportingYear = DEFAULT_REPORTING_YEAR) =>
-  normalizeDirectDtoResponse(
-    await GET(`/api/v1/company-profile/g0/${companyId}`, { reportingYear })
-  );
-
-export const saveG0Profile = async (companyId, payload) =>
-  normalizeDirectDtoResponse(
-    await PATCH(`/api/v1/company-profile/g0/${companyId}`, payload)
-  );
-
-export const getG0ProfileStatus = async (companyId, reportingYear = DEFAULT_REPORTING_YEAR) =>
-  normalizeDirectDtoResponse(
-    await GET(`/api/v1/company-profile/g0/${companyId}/status`, { reportingYear })
-  );
+  GET(`/reportWorkflow/${runId}/g0-status`);
 
 export const getOnboardingMetrics = async (
   companyId,
@@ -61,29 +46,29 @@ export const getOnboardingMetrics = async (
     params.metricId = metricId;
   }
   return normalizeDirectDtoResponse(
-    await GET("/onboarding/metrics", params)
+    await GET("/onboarding", params)
   );
 };
 
 export const saveOnboardingMetricValues = async (metricId, payload) =>
   normalizeDirectDtoResponse(
-    await PATCH(`/onboarding/metrics/${metricId}`, payload)
+    await PATCH(`/onboarding/${metricId}`, payload)
   );
 
 export const listSubsidiaries = (runId) =>
-  GET("/api/v1/rollups/subsidiaries", { runId });
+  GET("/rollup/subsidiaries", { runId });
 
 export const saveBatch = (payload) =>
-  POST("/api/v1/rollups/batches", payload);
+  POST("/rollup/batches", payload);
 
 export const listRequests = () =>
-  GET("/api/v1/rollups/requests");
+  GET("/rollup/requests");
 
 export const sendSource = (batchId) =>
-  POST(`/api/v1/rollups/batches/${batchId}/sources/send`);
+  POST(`/rollup/batches/${batchId}/sources/send`);
 
 export const getBatchStatus = (batchId) =>
-  GET(`/api/v1/rollups/batches/${batchId}/status`);
+  GET(`/rollup/batches/${batchId}/status`);
 
 export const calcBatch = (batchId) =>
-  POST(`/api/v1/rollups/batches/${batchId}/calculate`);
+  POST(`/rollup/batches/${batchId}/calculate`);

@@ -18,8 +18,14 @@ router = APIRouter()
 
 
 @router.get(
+    "",
+    response_model=OnboardingMetricsResponseDto,
+    summary="List onboarding metrics by cycle scope",
+)
+@router.get(
     "/metrics",
     response_model=OnboardingMetricsResponseDto,
+    include_in_schema=False,
     summary="List onboarding metrics by cycle scope",
 )
 async def list_onboarding_metrics(
@@ -46,8 +52,14 @@ async def list_onboarding_metrics(
 
 
 @router.patch(
+    "/{metricId}",
+    response_model=OnboardingMetricValuesResponseDto,
+    summary="Save onboarding metric input values",
+)
+@router.patch(
     "/metrics/{metricId}",
     response_model=OnboardingMetricValuesResponseDto,
+    include_in_schema=False,
     summary="Save onboarding metric input values",
 )
 async def patch_onboarding_metric_values(

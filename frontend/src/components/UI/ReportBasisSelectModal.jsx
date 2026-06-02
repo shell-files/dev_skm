@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import "@styles/reportBasisSelectModal.css";
 import { DEFAULT_REPORTING_YEAR, startWorkflow, getCurrent, resumeWorkflow } from "@/apis/report";
@@ -180,7 +181,7 @@ const ReportBasisSelectModal = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="rbm-overlay" role="dialog" aria-modal="true" aria-labelledby="rbm-title">
       <div className="rbm-layout">
         {/* ── 좌측: 메인 모달 ── */}
@@ -411,7 +412,7 @@ const ReportBasisSelectModal = ({
                     <span className="rbm-step-sub">{step.sub}</span>
                   </div>
                   {idx < steps.length - 1 && (
-                    <span className="rbm-step-arrow">→</span>
+                     <span className="rbm-step-arrow">→</span>
                   )}
                 </div>
               ))}
@@ -440,7 +441,8 @@ const ReportBasisSelectModal = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

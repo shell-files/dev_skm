@@ -19,15 +19,22 @@ from src.services.onboarding_assignments.service import (
 )
 
 
+from src.utils.auth import get_token
+
+
+router = APIRouter()
+
 onboardingAssignmentRouter = APIRouter(
     prefix="/v1/onboarding-assignments",
     tags=["onboarding-assignments"],
 )
 
 
-from src.utils.auth import get_token
-
-
+@router.post(
+    "/bulk-assign",
+    response_model=OnboardingAssignmentBulkAssignResponseDto,
+    summary="Bulk assign PRE_DMA_G0 metrics",
+)
 @onboardingAssignmentRouter.post(
     "/bulk-assign",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
@@ -49,6 +56,11 @@ async def bulkAssignRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get(
+    "",
+    response_model=OnboardingAssignmentListResponseDto,
+    summary="List PRE_DMA_G0 metric assignments",
+)
 @onboardingAssignmentRouter.get(
     "",
     response_model=OnboardingAssignmentListResponseDto,
@@ -70,6 +82,11 @@ async def listAssignmentItemsRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get(
+    "/{metricId}",
+    response_model=OnboardingAssignmentDetailResponseDto,
+    summary="Get one PRE_DMA_G0 metric assignment",
+)
 @onboardingAssignmentRouter.get(
     "/{metricId}",
     response_model=OnboardingAssignmentDetailResponseDto,
@@ -92,6 +109,11 @@ async def getAssignmentItemRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.patch(
+    "/{metricId}",
+    response_model=OnboardingAssignmentBulkAssignResponseDto,
+    summary="Assign one PRE_DMA_G0 metric",
+)
 @onboardingAssignmentRouter.patch(
     "/{metricId}",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
@@ -114,6 +136,11 @@ async def patchAssignmentRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post(
+    "/bulk-unassign",
+    response_model=OnboardingAssignmentBulkUnassignResponseDto,
+    summary="Bulk unassign PRE_DMA_G0 metrics",
+)
 @onboardingAssignmentRouter.post(
     "/bulk-unassign",
     response_model=OnboardingAssignmentBulkUnassignResponseDto,
@@ -135,4 +162,4 @@ async def bulkUnassignRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-__all__ = ["onboardingAssignmentRouter"]
+__all__ = ["router", "onboardingAssignmentRouter"]

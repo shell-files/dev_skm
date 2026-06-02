@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { listSubsidiaries, saveBatch } from "@/apis/report";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
@@ -90,7 +91,7 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="ob1-modal-overlay">
       <div className="ob1-modal-content" style={{ width: 480 }}>
         <div className="ob1-modal-header">
@@ -225,7 +226,8 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

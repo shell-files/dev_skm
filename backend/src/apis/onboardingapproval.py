@@ -19,14 +19,19 @@ from src.services.onboarding_approvals.service import (
 from src.utils.auth import get_token
 
 
+router = APIRouter()
+
 onboardingApprovalRouter = APIRouter(
     prefix="/v1/onboarding-approvals",
     tags=["onboarding-approvals"],
 )
 
 
-
-
+@router.post(
+    "/submit",
+    response_model=OnboardingApprovalActionResponseDto,
+    summary="Submit PRE_DMA_G0 G0-02 inputs for approval",
+)
 @onboardingApprovalRouter.post(
     "/submit",
     response_model=OnboardingApprovalActionResponseDto,
@@ -46,6 +51,11 @@ async def submitApprovalRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get(
+    "",
+    response_model=OnboardingApprovalListResponseDto,
+    summary="List onboarding approval requests",
+)
 @onboardingApprovalRouter.get(
     "",
     response_model=OnboardingApprovalListResponseDto,
@@ -66,6 +76,11 @@ async def listApprovalsRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get(
+    "/status",
+    response_model=OnboardingApprovalStatusResponseDto,
+    summary="Get PRE_DMA_G0 G0-02 approval status",
+)
 @onboardingApprovalRouter.get(
     "/status",
     response_model=OnboardingApprovalStatusResponseDto,
@@ -87,6 +102,11 @@ async def getApprovalStatusRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post(
+    "/approve",
+    response_model=OnboardingApprovalActionResponseDto,
+    summary="Approve PRE_DMA_G0 G0-02 inputs and promote to KPI facts",
+)
 @onboardingApprovalRouter.post(
     "/approve",
     response_model=OnboardingApprovalActionResponseDto,
@@ -106,6 +126,11 @@ async def approveApprovalRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post(
+    "/reject",
+    response_model=OnboardingApprovalActionResponseDto,
+    summary="Reject PRE_DMA_G0 G0-02 inputs",
+)
 @onboardingApprovalRouter.post(
     "/reject",
     response_model=OnboardingApprovalActionResponseDto,
@@ -125,4 +150,4 @@ async def rejectApprovalRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-__all__ = ["onboardingApprovalRouter"]
+__all__ = ["router", "onboardingApprovalRouter"]

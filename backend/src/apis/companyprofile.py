@@ -34,6 +34,8 @@ async def get_g0_profile(
         return getG0Profile(companyId, reportingYear)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=_statusForCompanyProfileValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -54,7 +56,7 @@ async def post_g0_profile(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=_statusForCompanyProfileValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -75,7 +77,7 @@ async def patch_g0_profile(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=_statusForCompanyProfileValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -95,6 +97,8 @@ async def get_g0_profile_status(
         return getG0ProfileStatus(companyId, reportingYear)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=_statusForCompanyProfileValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -103,6 +107,12 @@ def _userId(userModel) -> Optional[int]:
     if isinstance(userModel, dict):
         return userModel.get("id")
     return getattr(userModel, "id", None)
+
+
+def _statusForCompanyProfileValueError(error: ValueError) -> int:
+    if str(error).startswith("PRE_DMA_G0_CYCLE_NOT_READY"):
+        return 409
+    return 400
 
 
 __all__ = ["companyProfileRouter"]

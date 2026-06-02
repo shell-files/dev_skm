@@ -5,15 +5,17 @@ Responsibility:
 - Orchestrate report workflow Step A API behavior
 - Resolve current workflow status and next action from repository state
 - Preserve existing progressing run basis selections
+- Ensure PRE_DMA_G0 approval cycle exists after workflow start
 Public functions:
 - getCurrent
 - startWorkflow
+- resumeWorkflow
 - getG0Status
 - getRun
 - resolveWorkflow
 - resolveNextAction
 Do not:
-- do not create G0 input or approval data
+- do not create G0 input values or approval decisions
 - do not create or calculate rollup batches
 - do not call benchmark/media pipelines
 - do not connect applyRunExposure
@@ -58,15 +60,17 @@ def getCurrent(companyId: int, reportingYear: int) -> ReportWorkflowResponseDto:
     return buildStatusResponse(run)
 
 
-def startWorkflow(request: ReportWorkflowStartRequestDto) -> ReportWorkflowResponseDto:
+def startWorkflow(request: ReportWorkflowStartRequestDto, actorUserId: int | None = None) -> ReportWorkflowResponseDto:
     reportWorkflowRepository = loadRepository()
     run = reportWorkflowRepository.getCurrent(request.companyId, request.reportingYear)
     if run:
         currentBasisStatus = reportWorkflowRepository.getBasisStatus(run)
         if currentBasisStatus.get("basisStatus") in PROTECTED_START_STATUSES:
+            ensurePreDmaG0CycleForRun(run, actorUserId)
             return ReportWorkflowResponseDto(data=buildStatusDto(run, currentBasisStatus))
         run = reportWorkflowRepository.updateRunBasis(int(run["id"]), request.reportBasisType)
         if run.get("_basisOverwriteBlockedYn"):
+            ensurePreDmaG0CycleForRun(run, actorUserId)
             return buildStatusResponse(run)
     else:
         run = reportWorkflowRepository.createRun(
@@ -77,6 +81,8 @@ def startWorkflow(request: ReportWorkflowStartRequestDto) -> ReportWorkflowRespo
 
     if not run:
         raise RuntimeError("Failed to start report workflow")
+
+    ensurePreDmaG0CycleForRun(run, actorUserId)
 
     basisStatus = {
         "readyYn": False,
@@ -93,6 +99,16 @@ def getG0Status(runId: int) -> ReportWorkflowResponseDto:
     run = reportWorkflowRepository.getRun(runId)
     if not run:
         raise ValueError(f"No ESG_MATERIALITY_RUN found for runId={runId}")
+    return buildStatusResponse(run)
+
+
+def resumeWorkflow(runId: int, actorUserId: int | None = None) -> ReportWorkflowResponseDto:
+    reportWorkflowRepository = loadRepository()
+    run = reportWorkflowRepository.getRun(runId)
+    if not run:
+        raise ValueError(f"No ESG_MATERIALITY_RUN found for runId={runId}")
+
+    ensurePreDmaG0CycleForRun(run, actorUserId)
     return buildStatusResponse(run)
 
 
@@ -154,6 +170,12 @@ def normalizeReportBasisType(value):
     return None
 
 
+def ensurePreDmaG0CycleForRun(run: dict, actorUserId: int | None = None) -> None:
+    from src.services.onboarding_approvals.service import ensureWorkflowPreDmaG0Cycle
+
+    ensureWorkflowPreDmaG0Cycle(run, actorUserId)
+
+
 def loadRepository():
     from src.utils import reportworkflowrepository
 
@@ -163,6 +185,7 @@ def loadRepository():
 __all__ = [
     "getCurrent",
     "startWorkflow",
+    "resumeWorkflow",
     "getG0Status",
     "getRun",
     "resolveWorkflow",

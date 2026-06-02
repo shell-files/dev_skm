@@ -376,11 +376,11 @@ const Benchmarking = () => {
   const processedIssues = getGroupedIssues();
 
   return (
-    <div className="sr-container">
-      <header className="sr-header">
-        <h1 className="sr-title">지속가능경영보고서 AI 자동 생성</h1>
+    <div className="benchmarking-container">
+      <header className="benchmarking-header">
+        <h1 className="benchmarking-title">지속가능경영보고서 AI 자동 생성</h1>
 
-        <div className="sr-stepper-row">
+        <div className="benchmarking-stepper-row">
           {steps.map((step, index) => (
             <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
               <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
@@ -406,11 +406,11 @@ const Benchmarking = () => {
             {renderUploadGroup("sub", "자회사", "회사이름 필수 입력")}
           </div>
 
-          <button className="sr-btn" id="bench-btn" onClick={runAnalysis}> 실시간 AI 분석 시작</button>
+          <button className="benchmarking-btn" id="bench-btn" onClick={runAnalysis}> 실시간 AI 분석 시작</button>
         </div>
       </main>
 
-      <div className={`sr-result-dashboard ${dashboardOpen ? "open" : ""}`} id="dashboard">
+      <div className={`benchmarking-result-dashboard ${dashboardOpen ? "open" : ""}`} id="dashboard">
         <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen)}>
           <div className="handle-pill">
             {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인" : "실시간 분석 대기 중"}

@@ -430,10 +430,10 @@ const ONBOARDING_ROWS = [
 ];
 
 const MISSING_DATA_ROWS = [
-  { name: "온실가스 배출량 (Scope 1,2,3)", missing: "Scope 3 카테고리 11, 12, 15", pct: 60, barColor: "#22c55e" },
-  { name: "용수 사용량 및 재활용률",        missing: "사업장별 용수 사용량",        pct: 40, barColor: "#ef4444" },
-  { name: "공급망 ESG 평가 비율",          missing: "1차 협력사 평가 데이터",       pct: 50, barColor: "#f59e0b" },
-  { name: "정보보호 사고 건수",            missing: "연도별 사고 유형 및 건수",     pct: 30, barColor: "#ef4444" },
+  { name: "온실가스 배출량 (Scope 1,2,3)", missing: "Scope 3 카테고리 11, 12, 15", pct: "60", barColor: "#22c55e" },
+  { name: "용수 사용량 및 재활용률",        missing: "사업장별 용수 사용량",        pct: "40", barColor: "#ef4444" },
+  { name: "공급망 ESG 평가 비율",          missing: "1차 협력사 평가 데이터",       pct: "50", barColor: "#f59e0b" },
+  { name: "정보보호 사고 건수",            missing: "연도별 사고 유형 및 건수",     pct: "30", barColor: "#ef4444" },
 ];
 
 const SCATTER_TABLE_ROWS = [
@@ -919,7 +919,16 @@ const Result = () => {
                               </span>
                             </td>
                             {/* [TODO-동작] row.pct / row.barColor 로 프로그레스 바 그릴 수 있음 */}
-                            <td></td>
+                            <td>
+                              <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <span style={{ flex: 1, height: "8px", borderRadius: "4px", background: "#e5e7eb", overflow: "hidden" }}>
+                              <span style={{ display: "block", width: `${row.pct}%`, height: "100%", background: row.barColor, borderRadius: "4px" }} />
+                              </span>
+                              <span style={{ minWidth: "34px", textAlign: "right", fontWeight: 600, color: row.barColor }}>
+                                {row.pct}%
+                              </span>
+                            </span>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -936,8 +945,8 @@ const Result = () => {
                     {[
                       { bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onboard",
                         icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
-                      { bg: "#dbeafe", title: "부족 데이터 입력", desc: "필요 데이터 입력 및 관리", path: "/onboard",
-                        icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> },
+                      // { bg: "#dbeafe", title: "부족 데이터 입력", desc: "필요 데이터 입력 및 관리", path: "/onboard",
+                      //   icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg> },
                       { bg: "#ede9fe", title: "보고서 초안 생성", desc: "선택 이슈 기반 초안 생성", path: "/draft",
                         icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> },
                     ].map((item) => (

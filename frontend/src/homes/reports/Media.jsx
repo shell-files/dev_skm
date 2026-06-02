@@ -88,6 +88,13 @@ const Media = () => {
   const [showResult, setShowResult] = useState(false);
   const [loadingTitle, setLoadingTitle] = useState("미디어 수집 현황 대기 중");
   const [loadingDesc, setLoadingDesc] = useState("상단의 수집 시작 버튼을 누르면 실시간 크롤링 및 파싱이 가동됩니다.");
+  const [selectedPress, setSelectedPress] = useState([]);
+  const [selectedReg, setSelectedReg] = useState([]);
+  const [selectedAge, setSelectedAge] = useState([]);
+  
+
+
+
 
   const [status, setStatus] = useState({
     press: "ready",
@@ -151,15 +158,15 @@ const Media = () => {
     if (isAnalyzing) return;
 
     // 데이터 유효성 검사 (Validation)
-    if (!formData.pressKeyword.trim()) {
+    if (selectedPress.length === 0) {
       showDefaultAlert("입력 오류", "언론사명 또는 키워드를 입력해주세요.", "warning");
       return;
     }
-    if (!formData.regOrg) {
+    if (selectedReg.length === 0) {
       showDefaultAlert("입력 오류", "규제 기관을 선택해주세요.", "warning");
       return;
     }
-    if (!formData.expertOrg) {
+    if (selectedAge.length === 0) {
       showDefaultAlert("입력 오류", "평가 기관을 선택해주세요.", "warning");
       return;
     }
@@ -199,12 +206,51 @@ const Media = () => {
     if (type === "complete") return "수집완료";
   };
 
+
+  const addPress = (e) => {
+    const val = e.target.value;
+    if (val && !selectedPress.includes(val)) {
+    setSelectedPress(prev => [...prev, val]);
+  }
+  e.target.value = ""; // 선택 후 드롭다운 초기화
+};
+
+  const removePress = (name) => {
+  setSelectedPress(prev => prev.filter(p => p !== name));
+};
+
+  const addReg = (e) => {
+    const val = e.target.value;
+    if (val && !selectedReg.includes(val)) {
+    setSelectedReg(prev => [...prev, val]);
+  }
+  e.target.value = "";
+};
+
+  const removeReg = (name) => {
+    setSelectedReg(prev => prev.filter(p => p !== name));
+};
+ 
+  const addAge = (e) => {
+    const val = e.target.value;
+    if (val && !selectedAge.includes(val)) {
+    setSelectedAge(prev => [...prev, val]);
+  }
+  e.target.value = "";
+};
+
+  const removeAge = (name) => {
+    setSelectedAge(prev => prev.filter(p => p !== name));
+};
+  const today = new Date().toISOString().split("T")[0];
+
   return (
-    <div className="sr-container">
+    <>
+    <div className="media-container">
       {/* --- STEPPER HEADER --- */}
-      <header className="sr-header">
-        <h1 className="sr-title">지속가능경영보고서 AI 자동 생성</h1>
-        <div className="sr-stepper-row">
+      <header className="media-header">
+        <h1 className="media-title">지속가능경영보고서 AI 자동 생성</h1>
+        <div className="media-stepper-row">
           {STEPS.map((step, index) => (
             <Fragment key={step.id}>
               <div
@@ -230,28 +276,51 @@ const Media = () => {
           <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "10px", lineHeight: 1.5 }}>
             언론사 뉴스, 정부 규제 데이터 및 ESG 전문기관의 평가 피드를 동기화하여 부정 위험성 및 공시 트렌드를 실시간 모니터링합니다.
           </p>
-
+          
           <div className="media-setup-grid">
             {/* 카드 1: 언론 채널 */}
             <div className="media-card">
               <div className="media-badge">언론 채널</div>
               <div className="form-group" style={{ marginTop: "8px" }}>
-                <label>수집 언론사명 / 키워드</label>
-                <input
-                  type="text"
-                  className="media-input"
-                  placeholder="예: 매일경제, ESG 규제, 탄소배출"
-                  name="pressKeyword"
-                  value={formData.pressKeyword}
-                  onChange={handleChange}
-                />
+                <label>수집 언론사명</label>
+                <select className="media-select" onChange={addPress} defaultValue="">
+                  <option value="">언론사 선택</option>
+                  <option value="임팩트온">임팩트온</option>
+                  <option value="ESG 경제">ESG 경제</option>
+                </select>
+                {selectedPress.length > 0 && (
+    <div style={{
+      display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px"
+    }}>
+      {selectedPress.map((name) => (
+        <span key={name} style={{
+          display: "inline-flex", alignItems: "center", gap: "4px",
+          padding: "3px 10px", background: "#f0fdf4",
+          border: "1px solid #bbf7d0", borderRadius: "20px",
+          fontSize: "0.78rem", fontWeight: 700, color: "#16a34a",
+        }}>
+          {name}
+          <button
+            onClick={() => removePress(name)}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              color: "#94a3b8", fontSize: "0.75rem", padding: "0",
+              lineHeight: 1,
+                  }}
+                >✕</button>
+              </span>
+              ))}
+            </div>
+            )}
+        
               </div>
               <div className="form-group">
                 <label>수집 희망 기간</label>
                 <div className="date-range-group">
-                  <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} />
+                   {/* 시작 날짜 - 2023-01-01 이후만 선택 가능 */}
+                  <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" />
                   <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
-                  <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} />
+                  <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} max={new Date().toISOString().split("T")[0]} />
                 </div>
               </div>
               <div className="status-container">
@@ -265,19 +334,45 @@ const Media = () => {
               <div className="media-badge">규제 기관</div>
               <div className="form-group" style={{ marginTop: "8px" }}>
                 <label>정부 및 규제 데이터 소스</label>
-                <select className="media-select" name="regOrg" value={formData.regOrg} onChange={handleChange}>
+                <select className="media-select" onChange={addReg} defaultValue="">
                   <option value="">규제 기관 선택</option>
-                  <option value="환경부">환경부</option>
-                  <option value="금융위원회">금융위원회</option>
-                  <option value="공정거래위원회">공정거래위원회</option>
+                  <option value="CBAM"> CBAM</option>
+                  <option value="CSRS">CSRS</option>
+                  <option value="ESRD">ESRD</option>
+                  <option value="DPP">DPP</option>
                 </select>
-              </div>
+                 {selectedReg.length > 0 && (
+                <div style={{
+                  display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px"
+                }}>
+                  {selectedReg.map((name) => (
+                    <span key={name} style={{
+                      display: "inline-flex", alignItems: "center", gap: "4px",
+                      padding: "3px 10px", background: "#f0fdf4",
+                      border: "1px solid #bbf7d0", borderRadius: "20px",
+                      fontSize: "0.78rem", fontWeight: 700, color: "#16a34a",
+                    }}>
+                      {name}
+                      <button
+                        onClick={() => removeReg(name)}
+                        style={{
+                          background: "none", border: "none", cursor: "pointer",
+                          color: "#94a3b8", fontSize: "0.75rem", padding: "0",
+                          lineHeight: 1,
+                        }}
+                      >✕</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+                    </div>  
+             
               <div className="form-group">
                 <label>대상 규제 제정 기간</label>
                 <div className="date-range-group">
-                  <input type="date" name="regStartDate" value={formData.regStartDate} onChange={handleChange} />
+                  <input type="date" name="regStartDate" value={formData.regStartDate} onChange={handleChange} min="2023-01-01" />
                   <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
-                  <input type="date" name="regEndDate" value={formData.regEndDate} onChange={handleChange} />
+                  <input type="date" name="regEndDate" value={formData.regEndDate} onChange={handleChange} max={new Date().toISOString().split("T")[0]}/>
                 </div>
               </div>
               <div className="status-container">
@@ -291,19 +386,44 @@ const Media = () => {
               <div className="media-badge">전문 평가기관</div>
               <div className="form-group" style={{ marginTop: "8px" }}>
                 <label>ESG 외부 평가/리서치 기관</label>
-                <select className="media-select" name="expertOrg" value={formData.expertOrg} onChange={handleChange}>
+                <select className="media-select" onChange={addAge} defaultValue="">
                   <option value="">평가 기관 선택</option>
                   <option value="MSCI">MSCI</option>
                   <option value="Sustainalytics">Sustainalytics</option>
                   <option value="한국ESG기준원">한국ESG기준원</option>
                 </select>
+                {selectedAge.length > 0 && (
+                <div style={{
+                  display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px"
+                }}>
+                  {selectedAge.map((name) => (
+                    <span key={name} style={{
+                      display: "inline-flex", alignItems: "center", gap: "4px",
+                      padding: "3px 10px", background: "#f0fdf4",
+                      border: "1px solid #bbf7d0", borderRadius: "20px",
+                      fontSize: "0.78rem", fontWeight: 700, color: "#16a34a",
+                    }}>
+                      {name}
+                      <button
+                        onClick={() => removeAge(name)}
+                        style={{
+                          background: "none", border: "none", cursor: "pointer",
+                          color: "#94a3b8", fontSize: "0.75rem", padding: "0",
+                          lineHeight: 1,
+                        }}
+                      >✕</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+                    
               </div>
               <div className="form-group">
                 <label>리포트 공시 기간</label>
                 <div className="date-range-group">
-                  <input type="date" name="expertStartDate" value={formData.expertStartDate} onChange={handleChange} />
+                  <input type="date" name="expertStartDate" value={formData.expertStartDate} onChange={handleChange} min="2023-01-01" />
                   <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
-                  <input type="date" name="expertEndDate" value={formData.expertEndDate} onChange={handleChange} />
+                  <input type="date" name="expertEndDate" value={formData.expertEndDate} onChange={handleChange} max={new Date().toISOString().split("T")[0]}/>
                 </div>
               </div>
               <div className="status-container">
@@ -311,18 +431,21 @@ const Media = () => {
                 <span className={`status-badge ${status.expert}`}>{getStatusText(status.expert)}</span>
               </div>
             </div>
-          </div>
+          </div> 
 
           <div className="action-container">
-            <button className="sr-btn" onClick={startMediaCollection} style={{ marginBottom: "50px" }}>
-              ⚡ 실시간 AI 분석 시작
+            <button className="media-btn" onClick={startMediaCollection} style={{ marginBottom: "50px" }}>
+               실시간 AI 분석 시작
             </button>
           </div>
-        </div>
+          </div>
       </main>
-
-      {/* --- RESULTS DASHBOARD --- */}
-      <div className={`sr-result-dashboard ${dashboardOpen ? "open" : ""} ${showResult ? "result-expanded" : ""}`}>
+          </div>
+      
+            
+      
+        {/*  RESULTS DASHBOARD */}
+      <div className={`media-result-dashboard ${dashboardOpen ? "open" : ""} ${showResult ? "result-expanded" : ""}`}>
         {/* 대시보드 조절 핸들 드롭다운 */}
         <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen)} style={{ cursor: "pointer" }}>
           <div className={`handle-pill ${showResult ? "complete" : ""}`}>
@@ -333,8 +456,9 @@ const Media = () => {
         <div className={`robot-view-container ${showResult ? "showing-result" : ""}`}>
           {/* 가동 애니메이션 파티클 필드 */}
           <div id="particle-field" ref={particleRef}></div>
+          {!showResult && (
           <img src={robot} className="robot-main-img" alt="마스코트 로봇" style={{ alignSelf: "center" }} />
-
+          )}
           {/* 수집 대기 및 로딩 중 안내판 */}
           {!showResult && (
             <div style={{ textAlign: "center" }}>
@@ -357,6 +481,12 @@ const Media = () => {
                     외부 시그널 기반의 주요 서브이슈를 도출했습니다.
                   </p>
                 </div>
+                  {/* 로봇 이미지 우측 배치 */}
+                  <img
+                    src={robot}
+                    alt="마스코트 로봇"
+                    style={{ height: "120px", width: "auto", flexShrink: 0, marginLeft: "16px" }}
+                  />
               </div>
 
               {/* 통계 카드 4개 */}
@@ -429,9 +559,7 @@ const Media = () => {
                   </div>
                   <table className="issue-table">
                     <thead>
-                      <tr>
-                        <th>순위</th><th>Sub Issue</th><th>Impact</th><th>Financial</th><th>Source</th><th>Evidence</th>
-                      </tr>
+                     
                     </thead>
                     <tbody>
                       {DASHBOARD_MOCK_DATA.topIssues.map((item) => (
@@ -442,7 +570,7 @@ const Media = () => {
                           <td>{item.financial}</td>
                           <td>{item.source}</td>
                           <td>
-                            <button className="evidence-btn" onClick={() => navigate("/result")}>보기</button>
+                            
                           </td>
                         </tr>
                       ))}
@@ -477,11 +605,12 @@ const Media = () => {
                   다음 단계 가이드: <strong>{STEPS[activeIndex + 1].title}</strong> 진행이 가능합니다.
                 </div>
               )}
+              
             </div>
           )}
+          
         </div>
-      </div>
-    </div>
+      </div></>
   );
 };
 

@@ -41,7 +41,7 @@ def html1(companyName, uuid):
                     </ul>
                   </div>
                   <div style="text-align: center;">
-                    <a href="http://main.{settings.host_ip}/invite/{uuid}" style="background-color: #28a745; color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
+                    <a href="{settings.host_ip}/invite/{uuid}" style="background-color: #28a745; color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
                       회원가입 하러가기
                     </a>
                   </div>
@@ -71,7 +71,7 @@ def html2(type, companyName, uuid):
               </p>
           </div>
         """
-        url = f"http://main.{settings.host_ip}/invite/{uuid}"
+        url = f"{settings.host_ip}/invite/{uuid}"
     elif type == 3:
         consultantHtml = f"""
           <div style="background-color:#fff; border:3px solid #03a94d; border-radius:8px; padding:20px; margin-bottom:15px;">
@@ -83,7 +83,7 @@ def html2(type, companyName, uuid):
               </p>
           </div>
         """
-        url = f"http://{settings.host_ip}/login"
+        url = f"{settings.host_ip}/login"
     return f"""
 <!DOCTYPE html>
 <html lang="ko">

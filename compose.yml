@@ -95,5 +95,4 @@ volumes:
   skm_secrets:
     external: true
   backend_venv:
-    external: true
   

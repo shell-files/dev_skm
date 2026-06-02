@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse
+from src.utils.auth import get_token
 
 from src.models.rollup import (
     RollupBatchRequestDto,
@@ -20,16 +21,15 @@ from src.services.rollups.service import (
     sendSource,
 )
 
-
 rollupRouter = APIRouter(prefix="/v1/rollups", tags=["rollups"])
 
 
-def requireUser(response: Response, request: Request):
-    from src.utils.auth import get_token
-    from src.utils.settings import settings
+# def requireUser(response: Response, request: Request):
+#     from src.utils.auth import get_token
+#     from src.utils.settings import settings
 
-    token = request.cookies.get(settings.cookie_key)
-    return get_token(response, token)
+#     token = request.cookies.get(settings.cookie_key)
+#     return get_token(response, token)
 
 
 @rollupRouter.get(
@@ -39,7 +39,7 @@ def requireUser(response: Response, request: Request):
 )
 async def listSubsidiariesRoute(
     runId: int = Query(...),
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return listSubsidiaries(runId, userModel)
@@ -58,7 +58,7 @@ async def listSubsidiariesRoute(
 )
 async def saveBatchRoute(
     request: RollupBatchRequestDto,
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return saveBatch(request, userModel)
@@ -75,7 +75,7 @@ async def saveBatchRoute(
     response_model=RollupCalculateResponseDto,
     summary="Calculate DMA precheck G0-02 rollup batch",
 )
-async def calcBatchRoute(batchId: int, userModel=Depends(requireUser)):
+async def calcBatchRoute(batchId: int, userModel=Depends(get_token)):
     try:
         return calcBatch(batchId, userModel)
     except PermissionError as e:
@@ -91,7 +91,7 @@ async def calcBatchRoute(batchId: int, userModel=Depends(requireUser)):
     response_model=RollupRequestResponseDto,
     summary="List rollup transfer requests for current source company",
 )
-async def listRequestsRoute(userModel=Depends(requireUser)):
+async def listRequestsRoute(userModel=Depends(get_token)):
     try:
         return listRequests(userModel)
     except PermissionError as e:
@@ -107,7 +107,7 @@ async def listRequestsRoute(userModel=Depends(requireUser)):
     response_model=RollupSourceSendResponseDto,
     summary="Send approved G0-02 source data to parent rollup batch",
 )
-async def sendSourceRoute(batchId: int, userModel=Depends(requireUser)):
+async def sendSourceRoute(batchId: int, userModel=Depends(get_token)):
     try:
         return sendSource(batchId, userModel)
     except PermissionError as e:
@@ -123,7 +123,7 @@ async def sendSourceRoute(batchId: int, userModel=Depends(requireUser)):
     response_model=RollupBatchSummaryResponseDto,
     summary="Get DMA precheck rollup batch source transfer status",
 )
-async def getStatusRoute(batchId: int, userModel=Depends(requireUser)):
+async def getStatusRoute(batchId: int, userModel=Depends(get_token)):
     try:
         return getStatus(batchId, userModel)
     except PermissionError as e:

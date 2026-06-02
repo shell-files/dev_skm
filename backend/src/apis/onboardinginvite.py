@@ -12,6 +12,9 @@ from src.services.onboarding_invites.service import (
     resendInviteMail,
     revokeInviteMail,
 )
+from src.utils.auth import get_token
+
+
 
 
 onboardingInviteRouter = APIRouter(
@@ -20,12 +23,6 @@ onboardingInviteRouter = APIRouter(
 )
 
 
-def requireUser(response: Response, request: Request):
-    from src.utils.auth import get_token
-    from src.utils.settings import settings
-
-    token = request.cookies.get(settings.cookie_key)
-    return get_token(response, token)
 
 
 @onboardingInviteRouter.get(
@@ -37,7 +34,7 @@ async def listInviteItemsRoute(
     companyId: int = Query(...),
     cycleId: Optional[int] = Query(default=None),
     status: Optional[str] = Query(default=None),
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return listInviteItems(companyId, cycleId, status, userModel)
@@ -57,7 +54,7 @@ async def listInviteItemsRoute(
 async def resendInviteMailRoute(
     inviteId: int,
     request: OnboardingInviteCompanyRequestDto,
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return resendInviteMail(inviteId, request.companyId, userModel)
@@ -77,7 +74,7 @@ async def resendInviteMailRoute(
 async def revokeInviteMailRoute(
     inviteId: int,
     request: OnboardingInviteCompanyRequestDto,
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return revokeInviteMail(inviteId, request.companyId, userModel)

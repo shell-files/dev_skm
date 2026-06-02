@@ -16,6 +16,7 @@ from src.services.onboarding_approvals.service import (
     rejectApproval,
     submitApproval,
 )
+from src.utils.auth import get_token
 
 
 onboardingApprovalRouter = APIRouter(
@@ -24,12 +25,6 @@ onboardingApprovalRouter = APIRouter(
 )
 
 
-def requireUser(response: Response, request: Request):
-    from src.utils.auth import get_token
-    from src.utils.settings import settings
-
-    token = request.cookies.get(settings.cookie_key)
-    return get_token(response, token)
 
 
 @onboardingApprovalRouter.post(
@@ -39,7 +34,7 @@ def requireUser(response: Response, request: Request):
 )
 async def submitApprovalRoute(
     request: OnboardingApprovalRequestDto,
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return submitApproval(request, userModel)
@@ -61,7 +56,7 @@ async def listApprovalsRoute(
     reportingYear: Optional[int] = Query(default=None),
     status: Optional[str] = Query(default=None),
     cycleType: Optional[str] = Query(default=None),
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return listApprovals(companyId, reportingYear, status, cycleType, userModel)
@@ -80,7 +75,7 @@ async def getApprovalStatusRoute(
     companyId: int = Query(...),
     reportingYear: int = Query(...),
     metricId: str = Query(default="G0-02"),
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return getApprovalStatus(companyId, reportingYear, metricId, userModel)
@@ -99,7 +94,7 @@ async def getApprovalStatusRoute(
 )
 async def approveApprovalRoute(
     request: OnboardingApprovalDecisionRequestDto,
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return approveApproval(request, userModel)
@@ -118,7 +113,7 @@ async def approveApprovalRoute(
 )
 async def rejectApprovalRoute(
     request: OnboardingApprovalDecisionRequestDto,
-    userModel=Depends(requireUser),
+    userModel=Depends(get_token),
 ):
     try:
         return rejectApproval(request, userModel)

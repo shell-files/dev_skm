@@ -68,7 +68,7 @@ class Settings(BaseSettings):
   GOOGLE_APPLICATION_CREDENTIALS: str = "secrets/googleKey.json"
   surveyTemplate: str = "secrets/surveyTemplate.json"
   GOOGLE_PROJECT_ID: str | None = None
-  APPS_SCRIPT_URL:str
+  APPS_SCRIPT_URL: str
 
 
   model_config = SettingsConfigDict(

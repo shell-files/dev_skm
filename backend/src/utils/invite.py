@@ -161,26 +161,27 @@ def inviteMember(inviteMemberModel: inviteMemberModel, userModel = Depends(get_t
     try:
         # 인증 유저 정보 
         userId = userModel.id
-        uuid = userModel.uuid
-        email = userModel.email
 
         # 회사 조회
         selectSql = f"""
-                    SELECT aes_d(company_name, '{settings.maria_db_key}'), id 
-                    FROM `COMPANY` 
-                    WHERE user_id = ?
-                    """
-        company = findOne(selectSql, (userModel,id, ))
+            SELECT aes_d(company_name, '{settings.maria_db_key}'), id 
+            FROM `COMPANY` 
+            WHERE user_id = ?
+        """
+        company = findOne(selectSql, (userId, ))
+        
         if not company:
             return ResponseModel(False, "회사 정보를 찾을 수 없습니다.")
-        
-        for email in inviteMemberModel.email:
-            # DB에 초대 정보 저장
-            inviteSql = f"""
-            INSERT INTO `INVITE` 
-            (company_id, user_id, role_id, project_id, email) 
-            values (?, ?, ?, ?, ?)
+
+        for invite_email in inviteMemberModel.email:
+
+            # DB 저장
+            inviteSql = """
+                INSERT INTO `INVITE` 
+                (company_id, user_id, role_id,  email) 
+                VALUES (?, ?, ?, ?)
             """
+
             result = addKey(
                 inviteSql,
                 (
@@ -188,32 +189,37 @@ def inviteMember(inviteMemberModel: inviteMemberModel, userModel = Depends(get_t
                     userId,
                     inviteMemberModel.role,
                     inviteMemberModel.projectId,
-                    email
+                    invite_email
                 )
             )
 
-            if not result[0]:  # DB 저장 실패 시
+            if not result[0]:
                 return ResponseModel(False, "초대 정보 저장에 실패했습니다.")
 
             inviteId = result[1]
 
-            # 받는 사람 이메일, 이슈 그룹, 권한 정보 토큰화
-            token, uuid = generateInviteTokenWithUuid(
+            # 토큰 생성
+            token, invite_uuid = generateInviteTokenWithUuid(
                 inviteMemberModel.issue, 
                 company["company_name"], 
-                email, inviteMemberModel.role, 
+                invite_email,
+                inviteMemberModel.role, 
                 inviteMemberModel.projectId, 
                 inviteId, 
                 company["id"]
-                )
+            )
 
-            # Redis에 초대 토큰 저장
-            setInviteRedis(uuid, token)
-        
-            # 메일 발송
-            mailData = {"type": 1, "uuid": uuid}
-            sendToKafka(mailData)
-            
+            # Redis 저장
+            setInviteRedis(invite_uuid, token)
+
+            # Kafka 발송
+            sendToKafka({
+                "type": 1,
+                "uuid": invite_uuid,
+                "email": invite_email
+            })
+
         return ResponseModel(True, "초대장이 성공적으로 발송되었습니다.")
+
     except Exception as e:
         return ResponseModel(False, f"인증 오류 발생 : {e}")

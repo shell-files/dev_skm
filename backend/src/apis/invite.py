@@ -8,7 +8,7 @@ from src.utils.invite import inviteProcess, inviteSignUp
 from src.utils.kafkasv import startConsumer
 
 
-router = APIRouter(prefix="/invite")
+router = APIRouter()
 @router.on_event("startup")
 def startup_event():
     startConsumer()

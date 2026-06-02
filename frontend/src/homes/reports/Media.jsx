@@ -249,7 +249,7 @@ const Media = () => {
       <div className="media-container">
         {/* --- STEPPER HEADER --- */}
         <header className="media-header">
-          <h1 className="media-title">지속가능경영보고서 AI 자동 생성</h1>
+        
           <div className="media-stepper-row">
             {STEPS.map((step, index) => (
               <Fragment key={step.id}>
@@ -269,7 +269,7 @@ const Media = () => {
 
         {/* --- FILTERS SETUP INPUT CARD --- */}
         <main className="main-content">
-          <div className="input-card">
+          <div className="media-input-card">
             <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px", color: "#0f172a" }}>
               미디어 및 기관별 필터 수집 설정
             </h2>
@@ -318,9 +318,9 @@ const Media = () => {
                   <label>수집 희망 기간</label>
                   <div className="date-range-group">
                     {/* 시작 날짜 - 2023-01-01 이후만 선택 가능 */}
-                    <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" />
+                    <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" max = {new Date().toISOString().split("T")[0]} />
                     <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
-                    <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} max={new Date().toISOString().split("T")[0]} />
+                    <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} min = "2023-01-01" max={new Date().toISOString().split("T")[0]} />
                   </div>
                 </div>
                 <div className="status-container">
@@ -464,7 +464,7 @@ const Media = () => {
               {/* 가동 애니메이션 파티클 필드 */}
               <div id="particle-field" ref={particleRef}></div>
               {!showResult && (
-                <img src={robot} className="robot-main-img" alt="마스코트 로봇" style={{ alignSelf: "center" }} />
+                <img src={robot} className="robot-media-main-img" alt="마스코트 로봇" style={{ alignSelf: "center" }} />
               )}
               {/* 수집 대기 및 로딩 중 안내판 */}
               {!showResult && (

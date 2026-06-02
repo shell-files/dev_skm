@@ -24,11 +24,10 @@ def run():
     for _, module_name, _ in pkgutil.iter_modules(apis.__path__):
         module = importlib.import_module(f"src.apis.{module_name}")
         if hasattr(module, "router"):
-            app.include_router(
-                module.router,
-                prefix=f"/{module_name}",
-                tags=[module_name]
-            )
+            includeOptions = {"prefix": f"/{module_name}"}
+            if module_name != "api":
+                includeOptions["tags"] = [module_name]
+            app.include_router(module.router, **includeOptions)
 
     # CORS 설정
     origins = ["http://localhost", settings.host_ip,
@@ -44,7 +43,7 @@ def run():
     )
 
     # Static Files
-    # app.mount("/static", StaticFiles(directory="static"), name="static")
+    app.mount("/static", StaticFiles(directory="static"), name="static")
     Instrumentator().instrument(app).expose(app)
     return app
 

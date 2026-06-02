@@ -1,11 +1,17 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useAuth } from '@hooks/AuthContext.jsx';
+import ReportBasisSelectModal from "@components/UI/ReportBasisSelectModal.jsx";
+import { DEFAULT_REPORTING_YEAR } from "@/apis/report";
+import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
 const Sidebarnav = ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { selectedCompany, selectCompany, handleLogout, goHome, goMyPage, openAlarmCenter } = useAuth();
+    const companyId =
+        selectedCompany?.company_id ??
+        selectedCompany?.companyId;
 
     // 권한 확인
     const role = selectedCompany?.role || "ESG담당자";
@@ -155,8 +161,20 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
         }
     }
 
-    const goBenchMk = () => { navigate("/benchmk"); if(window.innerWidth <= 800) setIsOpen(false); };
-    const goOnboard = () => { navigate("/onb"); if(window.innerWidth <= 800) setIsOpen(false); };
+    const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
+
+    
+
+    const handleReportNav = () => {
+        if (!companyId) {
+            showDefaultAlert("오류", "회사를 먼저 선택해 주세요.", "error");
+            return;
+        }
+
+        setIsBasisModalOpen(true);
+    };
+
+    const goManagerdata = () => { navigate("/managerData"); if(window.innerWidth <= 800) setIsOpen(false); };
     const goManager = () => { navigate("/manager"); if(window.innerWidth <= 800) setIsOpen(false); };
     const handleGoHome = () => { goHome(); if(window.innerWidth <= 800) setIsOpen(false); };
 
@@ -173,14 +191,14 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                         </div>
                     </div>
                     <div className="nav-group">
-                        <div className="nav-item" onClick={goBenchMk}>
+                        <div className="nav-item" onClick={handleReportNav}>
                             <div className="nav-accordion-header">
                                 <span>지속가능경영보고서</span>
                             </div>
                         </div>
                     </div>
                     <div className="nav-group">
-                        <div className="nav-item" onClick={goOnboard}>
+                        <div className="nav-item" onClick={handleReportNav}>
                             <span>데이터 입력</span>
                         </div>
                     </div>
@@ -199,7 +217,8 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
                         <div className={`nav-accordion-content ${expanded.admin ? "expanded" : ""}`}>
                             <div className="inner-wrapper">
-                                <div className="nav-item sub-item" onClick={goManager}>데이터 승인</div>
+                                <div className="nav-item sub-item" onClick={goManagerdata}>데이터 승인</div>
+                                <div className="nav-item sub-item" onClick={goManager}>인원 관리</div>
                             </div>
                         </div>
                     </div>
@@ -234,6 +253,13 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                     <option value="TV">TV</option>
                 </select>
             </div>
+
+            <ReportBasisSelectModal 
+                isOpen={isBasisModalOpen} 
+                onClose={() => setIsBasisModalOpen(false)} 
+                companyId={companyId}
+                reportingYear={selectedCompany?.reportingYear || DEFAULT_REPORTING_YEAR}
+            />
         </aside>
     );
 }

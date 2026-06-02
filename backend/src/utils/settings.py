@@ -1,8 +1,9 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
+﻿from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
   host_ip: str
   domain: str
+  skm_domain: str
   # --------------------------
   # ocrai.py
   # --------------------------
@@ -27,7 +28,7 @@ class Settings(BaseSettings):
   mail_ssl_tls: bool = False
   use_credentials: bool = True
   validate_certs: bool = True
-  # tokenset.py
+  # token.py
   # --------------------------
   # secret_key: str
   private_key: str = "secrets/authpr.pem"
@@ -61,7 +62,14 @@ class Settings(BaseSettings):
   maria_db_port: int
   maria_db_key: str
   cookie_key: str
-  
+  # --------------------------
+  # Google
+  # --------------------------
+  GOOGLE_APPLICATION_CREDENTIALS: str = "secrets/googleKey.json"
+  surveyTemplate: str = "secrets/surveyTemplate.json"
+  GOOGLE_PROJECT_ID: str | None = None
+  APPS_SCRIPT_URL: str
+
 
   model_config = SettingsConfigDict(
     env_file=".env",

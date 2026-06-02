@@ -29,6 +29,8 @@ services:
       - ./backend/uv.lock:/workspace/uv.lock
       - ./backend/.python-version:/workspace/.python-version
       - ./backend/src:/workspace/src
+      - ./backend/static:/workspace/static
+      - ./backend/.venv:/workspace/.venv
       - ./backend/srfiles:/workspace/srfiles
       - skm_secrets:/workspace/secrets
       

@@ -7,7 +7,7 @@ import pkgutil
 # from contextlib import asynccontextmanager
 # from src.utils.kafkasv import startConsumer
 from prometheus_fastapi_instrumentator import Instrumentator
-# from fastapi.staticfiles import StaticFiles
+from fastapi.staticfiles import StaticFiles
 
 # # [STARTUP] 앱이 켜질 때 Kafka 실행
 # @asynccontextmanager
@@ -44,7 +44,7 @@ def run():
     )
 
     # Static Files
-    # app.mount("/static", StaticFiles(directory="static"), name="static")
+    app.mount("/static", StaticFiles(directory="static"), name="static")
     Instrumentator().instrument(app).expose(app)
     return app
 

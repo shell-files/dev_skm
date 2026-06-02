@@ -66,5 +66,7 @@ jobs:
           FILE_DIR: ${{ secrets.FILE_DIR }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
+          APPS_SCRIPT_ID: ${{ secrets.APPS_SCRIPT_ID }}
         working-directory: .
         run: docker compose up -d

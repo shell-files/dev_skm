@@ -62,7 +62,14 @@ class Settings(BaseSettings):
   maria_db_port: int
   maria_db_key: str
   cookie_key: str
-  
+  # --------------------------
+  # Google
+  # --------------------------
+  GOOGLE_APPLICATION_CREDENTIALS: str = "secrets/googleKey.json"
+  surveyTemplate: str = "secrets/surveyTemplate.json"
+  GOOGLE_PROJECT_ID: str | None = None
+  APPS_SCRIPT_URL:str
+
 
   model_config = SettingsConfigDict(
     env_file=".env",

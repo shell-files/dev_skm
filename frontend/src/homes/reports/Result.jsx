@@ -692,7 +692,7 @@ const Result = () => {
               { icon: "🎯", text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
               { icon: "📊", text: "2개 이상 분석축에서", sub: "반복 관측" },
               { icon: "🔗", text: "가치사슬 관련성 높음" },
-              { icon: "👥", text: "이해관계자 관심도 높음" },
+              { icon: "👥", text: "이해관계자 관심도 높음" }, 
               { icon: "🛡️", text: "리스크/기회 요인으로서의", sub: "중요성 고려" },
             ].map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>

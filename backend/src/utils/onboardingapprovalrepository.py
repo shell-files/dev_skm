@@ -11,6 +11,35 @@ CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
 METRIC_ID_G0_02 = "G0-02"
 METRIC_SCOPE_PRE_DMA_G0_PROFILE = "PRE_DMA_G0_PROFILE"
 METRIC_SCOPE_G0_02_FINANCIAL_BASIS = "G0_02_FINANCIAL_BASIS"
+SCOPE_SOURCE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
+APPROVAL_POLICY_INPUT_APPROVAL_ONLY = "INPUT_APPROVAL_ONLY"
+APPROVAL_POLICY_PROMOTE_TO_KPI_FACT = "PROMOTE_TO_KPI_FACT"
+PRE_DMA_G0_SCOPE_POLICIES = {
+    "G0-01": {
+        "approvalPolicyCode": APPROVAL_POLICY_INPUT_APPROVAL_ONLY,
+        "displayOrder": 10,
+    },
+    "G0-02": {
+        "approvalPolicyCode": APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
+        "displayOrder": 20,
+    },
+    "G0-03": {
+        "approvalPolicyCode": APPROVAL_POLICY_INPUT_APPROVAL_ONLY,
+        "displayOrder": 30,
+    },
+    "G0-04": {
+        "approvalPolicyCode": APPROVAL_POLICY_INPUT_APPROVAL_ONLY,
+        "displayOrder": 40,
+    },
+    "G0-05": {
+        "approvalPolicyCode": APPROVAL_POLICY_INPUT_APPROVAL_ONLY,
+        "displayOrder": 50,
+    },
+    "G0-06": {
+        "approvalPolicyCode": APPROVAL_POLICY_INPUT_APPROVAL_ONLY,
+        "displayOrder": 60,
+    },
+}
 REQUIRED_ATOMIC_IDS = [
     "G0-02__Q0001",
     "G0-02__Q0002",
@@ -32,29 +61,29 @@ def ensurePreDmaG0Cycle(
         return {}
     try:
         with conn.cursor(dictionary=True) as cur:
-            cycle = resolveCycle(cur, companyId, reportingYear)
-            if cycle:
-                normalizeCycleTx(
-                    cur,
-                    cycle,
-                    reportBasisType=reportBasisType,
-                    sourceMaterialityRunId=sourceMaterialityRunId,
-                )
-                conn.commit()
-                return resolveCycle(cur, companyId, reportingYear)
             try:
-                insertCycle(
+                cycle = ensureCycleTx(
                     cur,
-                    companyId=companyId,
-                    reportingYear=reportingYear,
-                    reportBasisType=reportBasisType,
-                    sourceMaterialityRunId=sourceMaterialityRunId,
-                    actorUserId=actorUserId,
+                    companyId,
+                    reportingYear,
+                    reportBasisType,
+                    sourceMaterialityRunId,
+                    actorUserId,
                 )
                 conn.commit()
             except mariadb.IntegrityError:
                 conn.rollback()
-            return resolveCycle(cur, companyId, reportingYear)
+                with conn.cursor(dictionary=True) as retryCur:
+                    cycle = ensureCycleTx(
+                        retryCur,
+                        companyId,
+                        reportingYear,
+                        reportBasisType,
+                        sourceMaterialityRunId,
+                        actorUserId,
+                    )
+                    conn.commit()
+            return cycle
     finally:
         conn.close()
 
@@ -73,6 +102,63 @@ def resolvePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:
         """,
         (companyId, reportingYear, CYCLE_TYPE_PRE_DMA_G0),
     ) or {}
+
+
+def listPreDmaG0MetricMaster() -> list[dict]:
+    return findAll(
+        """
+        SELECT DISTINCT metric_id, metric_name_kr
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE delete_yn = 0
+          AND active_yn = 1
+          AND metric_id LIKE 'G0-%'
+        ORDER BY metric_id
+        """
+    ) or []
+
+
+def listCycleMetricScope(cycleId: int, companyId: int) -> list[dict]:
+    return findAll(
+        """
+        SELECT
+            s.*,
+            m.metric_name_kr
+        FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE s
+        LEFT JOIN (
+            SELECT metric_id, MIN(metric_name_kr) AS metric_name_kr
+            FROM ESG_ATOMIC_METRIC_MASTER
+            WHERE delete_yn = 0
+              AND active_yn = 1
+            GROUP BY metric_id
+        ) m
+          ON m.metric_id = s.metric_id
+        WHERE s.esg_onboarding_cycle_id = ?
+          AND s.company_id = ?
+          AND s.active_yn = 1
+          AND s.delete_yn = 0
+        ORDER BY s.display_order, s.metric_id
+        """,
+        (cycleId, companyId),
+    ) or []
+
+
+def validateCycleMetricIds(cycleId: int, companyId: int, metricIds: list[str]) -> list[str]:
+    cleaned = []
+    for metricId in metricIds or []:
+        value = str(metricId or "").strip()
+        if not value:
+            continue
+        if "__" in value:
+            raise ValueError(f"atomic_metric_id is not allowed: {value}")
+        if value not in cleaned:
+            cleaned.append(value)
+    if not cleaned:
+        raise ValueError("metricIds is required")
+    allowed = {row["metric_id"] for row in listCycleMetricScope(cycleId, companyId)}
+    invalid = [metricId for metricId in cleaned if metricId not in allowed]
+    if invalid:
+        raise ValueError(f"Unsupported metricId for cycle scope: {', '.join(invalid)}")
+    return cleaned
 
 
 def listG002Inputs(companyId: int, reportingYear: int) -> list[dict]:
@@ -491,9 +577,122 @@ def ensureCycleTx(
             reportBasisType=reportBasisType,
             sourceMaterialityRunId=sourceMaterialityRunId,
         )
-        return resolveCycle(cur, companyId, reportingYear)
+        cycle = resolveCycle(cur, companyId, reportingYear)
+        effectiveRunId = resolveScopeRunId(cycle, sourceMaterialityRunId)
+        seedPreDmaG0ScopeTx(
+            cur,
+            cycleId=int(cycle["id"]),
+            companyId=companyId,
+            sourceMaterialityRunId=effectiveRunId,
+            actorUserId=actorUserId,
+        )
+        return cycle
     insertCycle(cur, companyId, reportingYear, reportBasisType, sourceMaterialityRunId, actorUserId)
-    return resolveCycle(cur, companyId, reportingYear)
+    cycle = resolveCycle(cur, companyId, reportingYear)
+    effectiveRunId = resolveScopeRunId(cycle, sourceMaterialityRunId)
+    seedPreDmaG0ScopeTx(
+        cur,
+        cycleId=int(cycle["id"]),
+        companyId=companyId,
+        sourceMaterialityRunId=effectiveRunId,
+        actorUserId=actorUserId,
+    )
+    return cycle
+
+
+def resolveScopeRunId(cycle: dict, sourceMaterialityRunId: Optional[int]) -> Optional[int]:
+    if sourceMaterialityRunId is not None:
+        return int(sourceMaterialityRunId)
+    cycleRunId = cycle.get("source_materiality_run_id") if cycle else None
+    return int(cycleRunId) if cycleRunId is not None else None
+
+
+def seedPreDmaG0ScopeTx(
+    cur,
+    cycleId: int,
+    companyId: int,
+    sourceMaterialityRunId: Optional[int],
+    actorUserId: Optional[int],
+) -> None:
+    metricRows = listPreDmaG0MetricMasterTx(cur)
+    expectedMetricIds = set(PRE_DMA_G0_SCOPE_POLICIES.keys())
+    actualMetricIds = {
+        row["metric_id"]
+        for row in metricRows
+        if row.get("metric_id") in expectedMetricIds
+    }
+    missingMetricIds = sorted(expectedMetricIds - actualMetricIds)
+    if missingMetricIds:
+        raise RuntimeError(
+            "PRE_DMA_G0 master metrics are missing: "
+            + ", ".join(missingMetricIds)
+        )
+    metricIds = sorted(
+        expectedMetricIds,
+        key=lambda metricId: PRE_DMA_G0_SCOPE_POLICIES[metricId]["displayOrder"],
+    )
+    for metricId in metricIds:
+        policy = PRE_DMA_G0_SCOPE_POLICIES[metricId]
+        cur.execute(
+            """
+            INSERT INTO ESG_ONBOARDING_CYCLE_METRIC_SCOPE (
+                esg_onboarding_cycle_id,
+                company_id,
+                metric_id,
+                scope_source_type,
+                source_materiality_run_id,
+                source_selected_sub_issue_id,
+                source_sub_issue_code,
+                required_yn,
+                input_required_yn,
+                approval_required_yn,
+                approval_policy_code,
+                rollup_readonly_yn,
+                display_order,
+                active_yn,
+                created_by_user_id,
+                delete_yn
+            ) VALUES (?, ?, ?, ?, ?, NULL, NULL, 1, 1, 1, ?, 0, ?, 1, ?, 0)
+            ON DUPLICATE KEY UPDATE
+                scope_source_type = VALUES(scope_source_type),
+                source_materiality_run_id = COALESCE(VALUES(source_materiality_run_id), source_materiality_run_id),
+                source_selected_sub_issue_id = NULL,
+                source_sub_issue_code = NULL,
+                required_yn = 1,
+                input_required_yn = 1,
+                approval_required_yn = 1,
+                approval_policy_code = VALUES(approval_policy_code),
+                rollup_readonly_yn = 0,
+                display_order = VALUES(display_order),
+                active_yn = 1,
+                delete_yn = 0,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (
+                cycleId,
+                companyId,
+                metricId,
+                SCOPE_SOURCE_TYPE_PRE_DMA_G0,
+                sourceMaterialityRunId,
+                policy["approvalPolicyCode"],
+                policy["displayOrder"],
+                actorUserId,
+            ),
+        )
+
+
+def listPreDmaG0MetricMasterTx(cur) -> list[dict]:
+    cur.execute(
+        """
+        SELECT DISTINCT metric_id, metric_name_kr
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE delete_yn = 0
+          AND active_yn = 1
+          AND metric_id LIKE 'G0-%'
+        ORDER BY metric_id
+        """
+    )
+    return cur.fetchall() or []
 
 
 def normalizeCycleTx(
@@ -799,9 +998,17 @@ __all__ = [
     "METRIC_ID_G0_02",
     "METRIC_SCOPE_PRE_DMA_G0_PROFILE",
     "METRIC_SCOPE_G0_02_FINANCIAL_BASIS",
+    "SCOPE_SOURCE_TYPE_PRE_DMA_G0",
+    "APPROVAL_POLICY_INPUT_APPROVAL_ONLY",
+    "APPROVAL_POLICY_PROMOTE_TO_KPI_FACT",
+    "PRE_DMA_G0_SCOPE_POLICIES",
     "REQUIRED_ATOMIC_IDS",
     "ensurePreDmaG0Cycle",
     "resolvePreDmaG0Cycle",
+    "listPreDmaG0MetricMaster",
+    "listCycleMetricScope",
+    "validateCycleMetricIds",
+    "seedPreDmaG0ScopeTx",
     "listG002Inputs",
     "listG002KpiFacts",
     "listApprovalSummaries",

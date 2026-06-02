@@ -13,12 +13,15 @@ from src.models.onboardingassignment import (
     OnboardingAssignmentPatchRequestDto,
 )
 from src.utils.companyscope import checkScope
-from src.utils.onboardingapprovalrepository import CYCLE_TYPE_PRE_DMA_G0, resolvePreDmaG0Cycle
+from src.utils.onboardingapprovalrepository import (
+    CYCLE_TYPE_PRE_DMA_G0,
+    resolvePreDmaG0Cycle,
+    validateCycleMetricIds,
+)
 from src.utils.onboardingassignmentrepository import (
     bulkAssignMetrics,
     bulkUnassignMetrics,
     listAssignments,
-    validateG0MetricIds,
 )
 
 
@@ -38,8 +41,8 @@ def bulkAssign(request: OnboardingAssignmentBulkAssignRequestDto, userModel) -> 
     checkScope(request.companyId, userModel)
     checkManager(userModel)
     checkCycleType(request.cycleType)
-    metricIds = validateG0MetricIds(request.metricIds)
     cycle = requirePreDmaG0Cycle(request.companyId, request.reportingYear)
+    metricIds = validateCycleMetricIds(int(cycle["id"]), request.companyId, request.metricIds)
     result = bulkAssignMetrics(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
@@ -94,8 +97,18 @@ def getAssignmentItem(
     cycleType: str,
     userModel,
 ) -> OnboardingAssignmentDetailResponseDto:
-    metricIds = validateG0MetricIds([metricId])
-    response = listAssignmentItems(companyId, reportingYear, cycleType, userModel)
+    checkScope(companyId, userModel)
+    checkManager(userModel)
+    checkCycleType(cycleType)
+    cycle = requirePreDmaG0Cycle(companyId, reportingYear)
+    metricIds = validateCycleMetricIds(int(cycle["id"]), companyId, [metricId])
+    response = OnboardingAssignmentListResponseDto(
+        companyId=companyId,
+        reportingYear=reportingYear,
+        cycleId=int(cycle["id"]),
+        cycleType=SUPPORTED_CYCLE_TYPE,
+        items=[OnboardingAssignmentItemDto(**item) for item in listAssignments(companyId, reportingYear, cycle)],
+    )
     for item in response.items:
         if item.metricId == metricIds[0]:
             return OnboardingAssignmentDetailResponseDto(
@@ -109,7 +122,6 @@ def getAssignmentItem(
 
 
 def patchAssignment(metricId: str, request: OnboardingAssignmentPatchRequestDto, userModel) -> OnboardingAssignmentBulkAssignResponseDto:
-    validateG0MetricIds([metricId])
     bulkRequest = OnboardingAssignmentBulkAssignRequestDto(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
@@ -126,8 +138,8 @@ def bulkUnassign(request: OnboardingAssignmentBulkUnassignRequestDto, userModel)
     checkScope(request.companyId, userModel)
     checkManager(userModel)
     checkCycleType(request.cycleType)
-    metricIds = validateG0MetricIds(request.metricIds)
     cycle = requirePreDmaG0Cycle(request.companyId, request.reportingYear)
+    metricIds = validateCycleMetricIds(int(cycle["id"]), request.companyId, request.metricIds)
     result = bulkUnassignMetrics(
         companyId=request.companyId,
         reportingYear=request.reportingYear,

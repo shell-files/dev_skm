@@ -25,9 +25,7 @@
             font-weight: normal; 
             margin-left: 6px; 
         }
-        .header-action { cursor: pointer; font-size: 13px; color: #555; position: relative; }
-        .header-action:hover { color: #03a94d; }
-
+        
         /* 중앙 컨텐츠 영역 */
         .draft-container { display: flex; flex-direction: column; height: calc(100vh - 60px); position: relative; overflow: hidden; }
         .draft-header {

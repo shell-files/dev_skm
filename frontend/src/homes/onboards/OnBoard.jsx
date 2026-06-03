@@ -24,7 +24,6 @@ import {
   calculateMetricStatus,
   calculateProfileStats,
   getAtomicId,
-  getInputTypeBadge,
   getStatusInfo,
   hasAtomicValue,
   isEditableItem,
@@ -101,7 +100,7 @@ const OnboardingStatCards = ({ stats, g0ProfileStatus }) => {
   return (
     <div className="ob1-cards">
       <div className="ob1-stat-card">
-        <div className="ob1-stat-title">전체 G0 입력 항목</div>
+        <div className="ob1-stat-title">전체 데이터 입력 항목</div>
         <div className="ob1-stat-value">{stats.totalCount}</div>
       </div>
       <div className="ob1-stat-card">
@@ -142,13 +141,12 @@ const OnboardingWorkflowCta = ({
     return (
       <>
         <div className="ob1-empty-state">
-          <div className="ob1-empty-icon">G0</div>
           <p className="ob1-empty-title">보고서 발행 기준 선택이 필요합니다.</p>
           <p className="ob1-empty-desc">
-            G0 입력을 시작하려면 먼저 별도 또는 연결 기준 보고서 워크플로우를 생성해 주세요.
+          먼저 보고서 워크플로우를 생성해 주세요.
           </p>
           <button type="button" className="ob1-btn-cta" onClick={onBasisModalOpen}>
-            발행 기준 선택
+            보고서 발행 기준 선택
           </button>
         </div>
         <div className="ob1-cta-container">
@@ -205,7 +203,7 @@ const OnboardingWorkflowCta = ({
                 ? "자회사 데이터 요청하기"
                 : workflow.nextAction === "WAIT_ROLLUP"
                   ? "롤업 대기"
-                  : "G0 입력 상태 확인"}
+                  : "입력 상태 확인"}
       </button>
     </div>
   );
@@ -239,7 +237,7 @@ const OnboardingMetricTable = ({
     return (
       <div className="ob1-table-loading">
         <div className="ob1-spinner" />
-        <p>G0 프로필 데이터를 불러오고 있습니다...</p>
+        <p>경영일반 데이터를 불러오고 있습니다...</p>
       </div>
     );
   }
@@ -247,8 +245,7 @@ const OnboardingMetricTable = ({
   if (g0Items.length === 0) {
     return (
       <div className="ob1-empty-state">
-        <div className="ob1-empty-icon">G0</div>
-        <p className="ob1-empty-title">G0 지표가 없습니다</p>
+        <p className="ob1-empty-title">할당된 데이터가 없습니다.</p>
         <p className="ob1-empty-desc">보고서 워크플로우를 먼저 시작해 주세요.</p>
       </div>
     );
@@ -502,7 +499,7 @@ const OnBoard = () => {
         showDefaultAlert("대기", "자회사 데이터 수집 및 롤업 완료를 기다리고 있습니다.", "info");
         break;
       default:
-        showDefaultAlert("안내", workflow.message || "G0 입력 상태를 확인해 주세요.", "info");
+        showDefaultAlert("안내", workflow.message || "데이터 입력 상태를 확인해 주세요.", "info");
     }
   };
 
@@ -606,7 +603,7 @@ const OnBoard = () => {
       <div className="ob1-header">
         <h1 className="ob1-title">온보딩 [{basisLabel}]</h1>
         <p className="ob1-desc">
-          지속가능경영보고서 작성을 위한 기본 경영일반(G0) 지표를 입력하고 확인합니다.<br />
+          지속가능경영보고서 작성을 위한 기본 경영일반 데이터를 입력하고 확인합니다.<br />
           {displayWorkflow?.reportBasisType === "CONSOLIDATED" && "본사 및 자회사의 데이터를 통합 관리합니다."}
         </p>
       </div>

@@ -249,6 +249,8 @@ const DataTab = ({
   };
 
   const handleToggleSelectAll = () => {
+    if (readOnlyYn) return;
+
     const visibleIds = visibleInputs.map((item) => item.id);
     const allSelected =
       visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
@@ -260,6 +262,8 @@ const DataTab = ({
   };
 
   const toggleSelect = (id) => {
+    if (readOnlyYn) return;
+
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
     );
@@ -374,6 +378,7 @@ const DataTab = ({
                           visibleInputs.length > 0 &&
                           visibleInputs.every((item) => selectedIds.includes(item.id))
                         }
+                        disabled={readOnlyYn}
                         onChange={handleToggleSelectAll}
                       />
                     </th>
@@ -426,6 +431,7 @@ const DataTab = ({
                               className="ob-checkbox"
                               aria-label={`Select ${item.metricId || item.id}`}
                               checked={selectedIds.includes(item.id)}
+                              disabled={readOnlyYn}
                               onChange={() => toggleSelect(item.id)}
                             />
                           </td>
@@ -554,6 +560,7 @@ const DataTab = ({
         metricItem={selectedItemForDetail}
         viewerRole={effectiveViewerRole}
         hasConsultant={effectiveHasConsultant}
+        readOnlyYn={readOnlyYn}
         onReview={({ commentText }) => {
           if (isActionSupported(selectedItemForDetail, readOnlyYn)) {
             runAction(selectedItemForDetail, "REVIEWED", commentText);

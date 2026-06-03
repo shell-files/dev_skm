@@ -478,22 +478,22 @@ const Media = () => {
               {showResult && (
                 <div className="result-layout-content" style={{ width: "100%" }}>
                   {/* 결과 배너 */}
-                  <div className="result-banner">
-                    <div className="result-banner-left">
-                      <div className="result-banner-title" style={{ textAlign: "center", alignSelf: "center" }}>
+                  <div className="result-banner" style={{ background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div className="result-banner-left" style={{ alignItems: "stretch", textAlign: "center" }}>
+                      <div className="result-banner-title" style={{ textAlign: "center" }}>
                         [AI 미디어 시그널 분석 결과]
                       </div>
-                      <p className="result-banner-desc">
+                      <p className="result-banner-desc" style={{ textAlign: "center" }}>
                         언론 기사, 전문기관 자료, 핵심규제 프레임을 종합 반영하여<br />
                         외부 시그널 기반의 주요 서브이슈를 도출했습니다.
                       </p>
                     </div>
                     {/* 로봇 이미지 우측 배치 */}
-                    <img
+                    {/* <img
                       src={robot}
                       alt="마스코트 로봇"
                       style={{ height: "120px", width: "auto", flexShrink: 0, marginLeft: "16px" }}
-                    />
+                    /> */}
                   </div>
 
                   {/* 통계 카드 4개 */}

@@ -85,7 +85,10 @@ const mapApprovalItemToInput = (item = {}) => {
     metricName: item.metricName || item.metricId,
     service: item.service || "disclosure",
     issueDomain: item.issueDomain || "general",
-    issueGroup: item.issueGroup || "General",
+    issueGroup: item.issueGroup || null,
+    subIssueId: item.subIssueId ?? null,
+    subIssueCode: item.subIssueCode || null,
+    subIssueName: item.subIssueName || null,
     status: approvalStatus,
     approvalStatus,
     submitStatus: ["SUBMITTED", "REVIEWED", "APPROVED", "REJECTED"].includes(

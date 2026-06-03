@@ -88,7 +88,13 @@ def getMaterialityResults(runId: int) -> MaterialityResultsResponseDto:
     onboardingMissingCount = countMissingMetrics(runId, selectedCodes)
     reportRun = getLatestReportRun(runId)
     reportRunId = int(reportRun["id"]) if reportRun.get("id") is not None else None
-    reportDraftReadyYn = bool(selectedCodes) and onboardingMissingCount == 0
+    reportDraftReadyYn = (
+        bool(selectedCodes)
+        and selectedContext.get("selectionSource") == "TABLE"
+        and not bool(selectedContext.get("fallbackYn"))
+        and requiredMetricCount > 0
+        and onboardingMissingCount == 0
+    )
 
     nextStep = NextStepDto(
         selectedIssueCount=len(selectedCodes),

@@ -82,6 +82,7 @@ def listMetrics(
     items = []
     for scope in scopes:
         scopedMetricId = scope["metric_id"]
+        scopeMetadata = resolveScopeMetadata(scope, cycle)
         atomicItems = [
             buildAtomicItem(row, latestValueForInputMode(valueRows, row.get("atomic_metric_id"), resolveInputMode(row)))
             for row in atomicRowsByMetric.get(scopedMetricId, [])
@@ -90,6 +91,10 @@ def listMetrics(
             OnboardingMetricItemDto(
                 metricId=scopedMetricId,
                 metricName=scope.get("metric_name_kr"),
+                issueDomain=scopeMetadata["issueDomain"],
+                subIssueId=scopeMetadata["subIssueId"],
+                subIssueCode=scopeMetadata["subIssueCode"],
+                subIssueName=scopeMetadata["subIssueName"],
                 scopeSourceType=scope.get("scope_source_type") or "PRE_DMA_G0",
                 requiredYn=bool(scope.get("required_yn")),
                 inputRequiredYn=bool(scope.get("input_required_yn")),
@@ -206,6 +211,48 @@ def scopeNotReadyMessage(cycleType: str) -> str:
     if normalizedCycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
         return POST_DMA_DISCLOSURE_SCOPE_NOT_READY
     return PRE_DMA_G0_SCOPE_NOT_READY
+
+
+def resolveScopeMetadata(scope: dict, cycle: dict) -> dict:
+    cycleType = str(cycle.get("cycle_type") or "").strip().upper()
+    if cycleType != CYCLE_TYPE_POST_DMA_DISCLOSURE:
+        return {
+            "issueDomain": "general",
+            "subIssueId": None,
+            "subIssueCode": None,
+            "subIssueName": None,
+        }
+
+    issueDomain = normalizeIssueDomain(scope.get("sub_issue_domain"))
+    subIssueId = scope.get("sub_issue_id")
+    subIssueCode = scope.get("sub_issue_code")
+    subIssueName = scope.get("sub_issue_name")
+    if not issueDomain or subIssueId is None or not subIssueCode or not subIssueName:
+        raise ValueError(
+            "POST_DMA_SUB_ISSUE_METADATA_NOT_READY: "
+            f"cycleId={cycle.get('id')}, "
+            f"metricId={scope.get('metric_id')}, "
+            f"subIssueCode={scope.get('source_sub_issue_code') or subIssueCode}"
+        )
+    return {
+        "issueDomain": issueDomain,
+        "subIssueId": int(subIssueId),
+        "subIssueCode": subIssueCode,
+        "subIssueName": subIssueName,
+    }
+
+
+def normalizeIssueDomain(value: Optional[str]) -> Optional[str]:
+    normalizedValue = str(value or "").strip().upper()
+    if normalizedValue in {"E", "ENVIRONMENT", "ENVIRONMENTAL"} or normalizedValue.startswith("E_"):
+        return "environmental"
+    if normalizedValue in {"S", "SOCIAL"} or normalizedValue.startswith("S_"):
+        return "social"
+    if normalizedValue in {"G", "GOVERNANCE"} or normalizedValue.startswith("G_"):
+        return "governance"
+    if normalizedValue in {"G0", "GENERAL"}:
+        return "general"
+    return None
 
 
 def buildAtomicItem(row: dict, value: dict) -> OnboardingAtomicItemDto:

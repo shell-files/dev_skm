@@ -77,7 +77,11 @@ def listMetricScopes(cycleId: int, companyId: int, metricId: Optional[str] = Non
         f"""
         SELECT
             s.*,
-            m.metric_name_kr
+            m.metric_name_kr,
+            selected.id AS sub_issue_id,
+            s.source_sub_issue_code AS sub_issue_code,
+            sub_master.sub_issue_name_kr AS sub_issue_name,
+            sub_master.issue_group_code AS sub_issue_domain
         FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE s
         LEFT JOIN (
             SELECT metric_id, MIN(metric_name_kr) AS metric_name_kr
@@ -87,6 +91,15 @@ def listMetricScopes(cycleId: int, companyId: int, metricId: Optional[str] = Non
             GROUP BY metric_id
         ) m
           ON m.metric_id = s.metric_id
+        LEFT JOIN ESG_MATERIALITY_SELECTED_SUB_ISSUE selected
+          ON selected.id = s.source_selected_sub_issue_id
+         AND selected.esg_materiality_run_id = s.source_materiality_run_id
+         AND selected.sub_issue_code = s.source_sub_issue_code
+         AND selected.delete_yn = 0
+        LEFT JOIN ESG_SUB_ISSUE_MASTER sub_master
+          ON sub_master.sub_issue_code = s.source_sub_issue_code
+         AND sub_master.delete_yn = 0
+         AND sub_master.active_yn = 1
         WHERE s.esg_onboarding_cycle_id = ?
           AND s.company_id = ?
           AND s.active_yn = 1
@@ -1137,28 +1150,7 @@ def listPreDmaG0MetricMaster() -> list[dict]:
 
 
 def listCycleMetricScope(cycleId: int, companyId: int) -> list[dict]:
-    return findAll(
-        """
-        SELECT
-            s.*,
-            m.metric_name_kr
-        FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE s
-        LEFT JOIN (
-            SELECT metric_id, MIN(metric_name_kr) AS metric_name_kr
-            FROM ESG_ATOMIC_METRIC_MASTER
-            WHERE delete_yn = 0
-              AND active_yn = 1
-            GROUP BY metric_id
-        ) m
-          ON m.metric_id = s.metric_id
-        WHERE s.esg_onboarding_cycle_id = ?
-          AND s.company_id = ?
-          AND s.active_yn = 1
-          AND s.delete_yn = 0
-        ORDER BY s.display_order, s.metric_id
-        """,
-        (cycleId, companyId),
-    ) or []
+    return listMetricScopes(cycleId, companyId)
 
 
 def validateCycleMetricIds(cycleId: int, companyId: int, metricIds: list[str]) -> list[str]:
@@ -1364,8 +1356,11 @@ def listCycleApprovalInboxRows(
                 "metricId": metricId,
                 "metricName": scope.get("metric_name_kr") or getMetricName(metricId),
                 "cycleType": cycle.get("cycle_type") or CYCLE_TYPE_PRE_DMA_G0,
-                "issueDomain": scope.get("issue_domain") or "general",
-                "issueGroup": scope.get("issue_group") or "경영일반",
+                "issueDomain": normalizeIssueDomain(scope.get("sub_issue_domain")) or "general",
+                "issueGroup": scope.get("issue_group") or None,
+                "subIssueId": int(scope["sub_issue_id"]) if scope.get("sub_issue_id") is not None else None,
+                "subIssueCode": scope.get("sub_issue_code"),
+                "subIssueName": scope.get("sub_issue_name"),
                 "approvalStatus": approvalStatus,
                 "inputUserId": firstNonNull([row.get("input_user_id") for row in metricInputRows]),
                 "assigneeUserId": assignment.get("assignee_user_id"),
@@ -1495,6 +1490,19 @@ def truthy(value) -> bool:
         return int(value) != 0
     except (TypeError, ValueError):
         return str(value).strip().lower() in {"y", "yes", "true", "1"}
+
+
+def normalizeIssueDomain(value: Optional[str]) -> Optional[str]:
+    normalizedValue = str(value or "").strip().upper()
+    if normalizedValue in {"E", "ENVIRONMENT", "ENVIRONMENTAL"} or normalizedValue.startswith("E_"):
+        return "environmental"
+    if normalizedValue in {"S", "SOCIAL"} or normalizedValue.startswith("S_"):
+        return "social"
+    if normalizedValue in {"G", "GOVERNANCE"} or normalizedValue.startswith("G_"):
+        return "governance"
+    if normalizedValue in {"G0", "GENERAL"}:
+        return "general"
+    return None
 
 
 def groupRows(rows: list[dict], key: str) -> dict[str, list[dict]]:

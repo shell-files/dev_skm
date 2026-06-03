@@ -35,6 +35,10 @@ class OnboardingAtomicItemDto(BaseModel):
 class OnboardingMetricItemDto(BaseModel):
     metricId: str
     metricName: Optional[str] = None
+    issueDomain: Optional[str] = None
+    subIssueId: Optional[int] = None
+    subIssueCode: Optional[str] = None
+    subIssueName: Optional[str] = None
     scopeSourceType: str
     requiredYn: bool = True
     inputRequiredYn: bool = True
@@ -192,6 +196,9 @@ class OnboardingApprovalItemDto(BaseModel):
     cycleType: Optional[str] = None
     issueDomain: Optional[str] = None
     issueGroup: Optional[str] = None
+    subIssueId: Optional[int] = None
+    subIssueCode: Optional[str] = None
+    subIssueName: Optional[str] = None
     approvalStatus: ApprovalActionStatus
     inputUserId: Optional[int] = None
     assigneeUserId: Optional[int] = None

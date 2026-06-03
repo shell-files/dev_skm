@@ -86,19 +86,10 @@ async def createFormProcess(req, token):
         return {
             "status": "success",
 
-            "employeeForm": {
-                "id": data.get("employeeFormId"),
-                "url": data.get("employeeFormUrl")
-            },
-
-            "managerForm": {
-                "id": data.get("managerFormId"),
-                "url": data.get("managerFormUrl")
-            },
-
-            "externalForm": {
-                "id": data.get("externalFormId"),
-                "url": data.get("externalFormUrl")
+            "urls": {
+                "emp": data.get("employeeFormUrl"),
+                "exec": data.get("managerFormUrl"),
+                "ext": data.get("externalFormUrl")
             },
 
             "sheet": {
@@ -114,7 +105,7 @@ async def createFormProcess(req, token):
         }
         
 # =========================
-# EXPORT CSV (Sheet 조회 API)
+# EXPORT CSV (Sheet 조회 API) 아직 DB 저장 X
 # =========================
 
 async def exportCsvProcess(sheet_id, token):

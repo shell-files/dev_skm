@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   calculateRollupBatch,
@@ -14,7 +14,7 @@ import "@styles/onboarding1.css";
  *   requestedCount, sentCount, pendingCount,
  *   calculateReadyYn, dmaReadyYn, batchStatus
  *
- * calculateReadyYn=false ??怨꾩궛 踰꾪듉 鍮꾪솢?깊솕
+ * calculateReadyYn=false -> 계산 버튼 비활성화
  */
 const RollupSummaryPanel = ({ batchId, onCalculated }) => {
   const dispatch = useDispatch();

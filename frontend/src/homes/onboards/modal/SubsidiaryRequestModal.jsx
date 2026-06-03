@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -10,8 +10,8 @@ import { showDefaultAlert } from "@components/UI/ServiceAlert";
 /**
  * SubsidiaryRequestModal
  *
- * G0 ?곗씠???붿껌 ?먰쉶???좏깮 modal.
- * DTO: res.data.items ??{ companyId, companyCode, companyName }
+ * G0 데이터 요청 자회사 선택 modal.
+ * DTO: res.data.items -> { companyId, companyCode, companyName }
  */
 const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
   const dispatch = useDispatch();
@@ -81,7 +81,7 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
       <div className="ob1-modal-content" style={{ width: 480 }}>
         <div className="ob1-modal-header">
           <h2>G0 데이터 요청 자회사 선택</h2>
-          <button className="ob1-btn-close" onClick={onClose}>횞</button>
+          <button className="ob1-btn-close" onClick={onClose}>×</button>
         </div>
         <div className="ob1-modal-body">
           <p style={{ marginBottom: 16, fontSize: "0.9rem", color: "#475569" }}>

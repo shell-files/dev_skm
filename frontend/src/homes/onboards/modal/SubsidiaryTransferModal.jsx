@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -10,12 +10,12 @@ import { showDefaultAlert, showConfirmAlert } from "@components/UI/ServiceAlert"
 /**
  * SubsidiaryTransferModal
  *
- * 吏二쇱궗 ?곗씠???꾩넚 modal.
- * DTO: res.data.items ??{
+ * 지주사 데이터 전송 modal.
+ * DTO: res.data.items -> {
  *   batchId, parentCompanyName, reportingYear,
  *   metricScopeCode, sendReadyYn, missingAtomicMetricIds
  * }
- * sendReadyYn=false 硫??꾩넚 鍮꾪솢?깊솕
+ * sendReadyYn=false 이면 전송 비활성화
  */
 const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
   const dispatch = useDispatch();
@@ -91,7 +91,7 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
       <div className="ob1-modal-content" style={{ width: 500 }}>
         <div className="ob1-modal-header">
           <h2>지주사 데이터 전송 요청 확인</h2>
-          <button className="ob1-btn-close" onClick={onClose}>횞</button>
+          <button className="ob1-btn-close" onClick={onClose}>×</button>
         </div>
         <div className="ob1-modal-body">
           <p style={{ marginBottom: 16, fontSize: "0.9rem", color: "#475569" }}>

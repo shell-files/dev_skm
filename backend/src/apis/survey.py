@@ -7,7 +7,7 @@ from src.services.surveys.service import (createFormProcess, exportCsvProcess, g
 
 router = APIRouter()
 
-@router.post("/",
+@router.post("",
     summary="설문 생성",
     description="구글 설문 생성"
 )

@@ -14,7 +14,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
         selectedCompany?.companyId;
 
     // 권한 확인 (UI 노출용)
-    const role = selectedCompany?.role || "ESG담당자";
+    const role = selectedCompany?.role ?? "guest";
     const isSysAdmin = role === "시스템관리자";
     const isESG = role === "ESG담당자" || role === "ESG 담당자";
     const isConsultant = role === "컨설턴트";

@@ -1,4 +1,4 @@
-export const STEP12_UI_FIXTURE_ENABLED = true;
+import { STEP12_UI_FIXTURE_ENABLED } from '@/dev/step12UiPreview/config';
 
 export const ONBOARDING_SCENARIOS = {
   UNASSIGNED: 'onboarding_unassigned',
@@ -24,11 +24,58 @@ export const ROLLUP_SCENARIOS = {
   SUB_MISSING: 'rollup_subsidiary_missing_inputs',
 };
 
-/* FIXTURE: Codex 연결 시 제거 */
+export const ONBOARDING_PREVIEW_ROWS = [
+  {
+    metricId: "G0-01",
+    metricName: "조직 정보",
+    atomicItems: [],
+  },
+  {
+    metricId: "G0-02",
+    metricName: "보고 경계",
+    atomicItems: [],
+  },
+  {
+    metricId: "G0-03",
+    metricName: "지배구조 정보",
+    atomicItems: [],
+  },
+];
+
+export const APPROVAL_PREVIEW_ROWS = [
+  {
+    id: "G0-01",
+    metricId: "G0-01",
+    metricName: "조직 정보",
+  },
+  {
+    id: "G0-02",
+    metricId: "G0-02",
+    metricName: "보고 경계",
+  },
+  {
+    id: "G0-03",
+    metricId: "G0-03",
+    metricName: "지배구조 정보",
+  },
+];
+
+export const PREVIEW_WORKFLOW = {
+  runId: "PREVIEW_RUN",
+  workflowStep: "G0_INPUT",
+  reportBasisType: "CONSOLIDATED",
+  nextAction: "REQUEST_ROLLUP",
+};
+
+export const PREVIEW_TODAY = "2026-06-03";
+
 export const mergeOnboardingFixtureRows = (groupedItems, scenario) => {
-  if (!groupedItems || groupedItems.length === 0) return [];
-  
-  return groupedItems.map((item, index) => {
+  const baseRows =
+    Array.isArray(groupedItems) && groupedItems.length > 0
+      ? groupedItems
+      : ONBOARDING_PREVIEW_ROWS;
+
+  return baseRows.map((item, index) => {
     let mock = {
       assigneeName: null,
       assigneeEmail: null,
@@ -64,11 +111,13 @@ export const mergeOnboardingFixtureRows = (groupedItems, scenario) => {
   });
 };
 
-/* FIXTURE: Codex 연결 시 제거 */
 export const mergeApprovalFixtureRows = (pagedInputs, scenario) => {
-  if (!pagedInputs || pagedInputs.length === 0) return [];
+  const baseRows =
+    Array.isArray(pagedInputs) && pagedInputs.length > 0
+      ? pagedInputs
+      : APPROVAL_PREVIEW_ROWS;
 
-  return pagedInputs.map(item => {
+  return baseRows.map(item => {
     let mock = {
       metricId: item.issueId || item.id,
       metricName: item.checklistQuestion || item.questionName || '지표명',
@@ -113,7 +162,6 @@ export const mergeApprovalFixtureRows = (pagedInputs, scenario) => {
   });
 };
 
-/* FIXTURE: Codex 연결 시 제거 */
 export const getFixtureRollupStatus = (scenario) => {
   switch (scenario) {
     case ROLLUP_SCENARIOS.PARENT_PENDING:

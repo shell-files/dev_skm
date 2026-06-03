@@ -10,7 +10,7 @@ export default function MetricAssignmentModal({
   isSubmitting = false,
   previewResult = null,
   onClose,
-  onSubmit,
+  onSubmitAssignment,
 }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -28,7 +28,7 @@ export default function MetricAssignmentModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit?.({
+    onSubmitAssignment?.({
       metricIds: selectedMetricIds,
       assigneeName: name,
       assigneeEmail: email,

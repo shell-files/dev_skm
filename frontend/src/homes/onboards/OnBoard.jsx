@@ -11,14 +11,15 @@ import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
 import RollupSummaryPanel from "./RollupSummaryPanel";
 import BatchActionBar from "@components/UI/BatchActionBar";
 import MetricAssignmentModal from "./modal/MetricAssignmentModal";
-import Step12UiPreviewPanel from "@components/dev/Step12UiPreviewPanel";
+import Step12UiPreviewPanel from "@/dev/step12UiPreview/UiPreviewPanel";
+import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
 import { 
-  STEP12_UI_FIXTURE_ENABLED, 
   mergeOnboardingFixtureRows, 
   ONBOARDING_SCENARIOS, 
   APPROVAL_SCENARIOS, 
-  ROLLUP_SCENARIOS 
-} from "../../mocks/step12UiFixtures";
+  ROLLUP_SCENARIOS,
+  PREVIEW_WORKFLOW
+} from "@/dev/step12UiPreview/fixtures";
 import {
   calculateMetricStatus,
   calculateProfileStats,
@@ -262,6 +263,7 @@ const OnboardingMetricTable = ({
               <input 
                 type="checkbox" 
                 className="ob1-checkbox" 
+                aria-label="전체 선택"
                 checked={isAllSelected}
                 onChange={() => onToggleSelectAll(groupedItems.map(i => i.metricId))}
               />
@@ -297,7 +299,7 @@ const OnboardingMetricTable = ({
             const isSelfAssigned = item.selfAssignedYn === true;
             
             // Mock Date validation for UI-only
-            const todayStr = '2026-06-03';
+            const todayStr = new Date().toISOString().slice(0, 10);
             const isOverdue = item.submissionDueDate && item.submissionDueDate < todayStr;
 
             return (
@@ -306,6 +308,7 @@ const OnboardingMetricTable = ({
                   <input 
                     type="checkbox" 
                     className="ob1-checkbox"
+                    aria-label={`${item.metricId} 선택`}
                     checked={isSelected}
                     onChange={() => onSelectMetric(item.metricId)}
                   />
@@ -399,6 +402,8 @@ const OnBoard = () => {
   const workflowErrorPayload = useSelector((state) => state.report.error.workflow);
   const g0ErrorPayload = useSelector((state) => state.report.error.onboarding);
   
+  const displayWorkflow = STEP12_UI_FIXTURE_ENABLED ? PREVIEW_WORKFLOW : workflow;
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
@@ -467,19 +472,19 @@ const OnBoard = () => {
 
   const profileStats = calculateProfileStats(g0Items);
   const basisLabel =
-    workflow?.reportBasisType === "CONSOLIDATED"
+    displayWorkflow?.reportBasisType === "CONSOLIDATED"
       ? "연결기준"
-      : workflow?.reportBasisType === "ENTITY"
+      : displayWorkflow?.reportBasisType === "ENTITY"
         ? "별도기준"
         : "미확정";
 
   const handleCtaClick = () => {
-    if (!workflow || isNoRunWorkflow(workflow)) {
+    if (!displayWorkflow || isNoRunWorkflow(displayWorkflow)) {
       setIsBasisModalOpen(true);
       return;
     }
 
-    switch (workflow.nextAction) {
+    switch (displayWorkflow.nextAction) {
       case "START_DMA":
         showDefaultAlert("진행", "이중중대성평가를 시작합니다.", "success");
         navigate("/benchmk");
@@ -596,7 +601,7 @@ const OnBoard = () => {
         <h1 className="ob1-title">온보딩 [{basisLabel}]</h1>
         <p className="ob1-desc">
           지속가능경영보고서 작성을 위한 기본 경영일반(G0) 지표를 입력하고 확인합니다.<br />
-          {workflow?.reportBasisType === "CONSOLIDATED" && "본사 및 자회사의 데이터를 통합 관리합니다."}
+          {displayWorkflow?.reportBasisType === "CONSOLIDATED" && "본사 및 자회사의 데이터를 통합 관리합니다."}
         </p>
       </div>
 
@@ -618,11 +623,11 @@ const OnBoard = () => {
             </div>
           )}
 
-          {isNoRunWorkflow(workflow) ? (
+          {isNoRunWorkflow(displayWorkflow) ? (
             <OnboardingWorkflowCta
               variant="noRun"
               loadingWorkflow={loadingWorkflow}
-              workflow={workflow}
+              workflow={displayWorkflow}
               isNoRunWorkflow={isNoRunWorkflow}
               onBasisModalOpen={() => setIsBasisModalOpen(true)}
               onCtaClick={handleCtaClick}
@@ -634,7 +639,7 @@ const OnBoard = () => {
                 activeBatchId={activeBatchId}
                 hasPendingSubsidiaryRequest={hasPendingSubsidiaryRequest}
                 loadingWorkflow={loadingWorkflow}
-                workflow={workflow}
+                workflow={displayWorkflow}
                 isNoRunWorkflow={isNoRunWorkflow}
                 onCalculated={() => initializeOnboarding()}
                 onCtaClick={handleCtaClick}
@@ -673,7 +678,7 @@ const OnBoard = () => {
 
               <OnboardingWorkflowCta
                 loadingWorkflow={loadingWorkflow}
-                workflow={workflow}
+                workflow={displayWorkflow}
                 isNoRunWorkflow={isNoRunWorkflow}
                 onCtaClick={handleCtaClick}
               />
@@ -697,7 +702,7 @@ const OnBoard = () => {
         mode={assignmentMode}
         selectedMetricIds={assignmentTargetIds}
         onClose={() => setIsAssignmentModalOpen(false)}
-        onSubmit={handleSubmitAssignment}
+        onSubmitAssignment={handleSubmitAssignment}
       />
 
       <SubsidiaryRequestModal

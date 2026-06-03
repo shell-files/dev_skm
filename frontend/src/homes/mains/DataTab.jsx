@@ -1,15 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import TabButton from '@components/UI/TabButton';
 import BatchActionBar from '@components/UI/BatchActionBar';
-import Step12UiPreviewPanel from "@components/dev/Step12UiPreviewPanel";
+import Step12UiPreviewPanel from "@/dev/step12UiPreview/UiPreviewPanel";
 import ApprovalDetailModal from "./modal/ApprovalDetailModal";
+import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
 import { 
-  STEP12_UI_FIXTURE_ENABLED, 
   mergeApprovalFixtureRows, 
   ONBOARDING_SCENARIOS, 
   APPROVAL_SCENARIOS, 
   ROLLUP_SCENARIOS 
-} from "../../mocks/step12UiFixtures";
+} from "@/dev/step12UiPreview/fixtures";
 import "@styles/Manager.css";
 import "@styles/TabButton.css";
 
@@ -157,6 +157,7 @@ const DataTab = ({
                     <input
                       type="checkbox"
                       className="ob-checkbox"
+                      aria-label="전체 선택"
                       checked={displayInputs.length > 0 && displayInputs.every(i => selectedIds.includes(i.id))}
                       onChange={toggleSelectAll}
                     />
@@ -192,6 +193,7 @@ const DataTab = ({
                           <input
                             type="checkbox"
                             className="ob-checkbox"
+                            aria-label={`${item.metricId || item.id} 선택`}
                             checked={selectedIds.includes(item.id)}
                             onChange={() => toggleSelect(item.id)}
                           />
@@ -281,9 +283,9 @@ const DataTab = ({
         onClose={() => setIsDetailModalOpen(false)}
         metricItem={selectedItemForDetail}
         viewerRole={effectiveViewerRole}
-        onReview={(id) => { handleAction(id, 'REVIEWED'); setIsDetailModalOpen(false); }}
-        onApprove={(id) => { handleAction(id, 'APPROVED'); setIsDetailModalOpen(false); }}
-        onReject={(id, reason) => { handleAction(id, 'REJECTED'); setIsDetailModalOpen(false); }}
+        onReview={({ metricId }) => { handleAction(metricId, 'REVIEWED'); setIsDetailModalOpen(false); }}
+        onApprove={({ metricId }) => { handleAction(metricId, 'APPROVED'); setIsDetailModalOpen(false); }}
+        onReject={({ metricId, commentText }) => { handleAction(metricId, 'REJECTED'); setIsDetailModalOpen(false); }}
       />
 
       <Step12UiPreviewPanel

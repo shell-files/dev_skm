@@ -22,6 +22,42 @@ export const ROLLUP_SCENARIOS = {
   SUB_MISSING: "rollup_subsidiary_missing_inputs",
 };
 
+export const APPROVAL_PROJECT_PREVIEW_ROWS = [
+  {
+    runId: "PREVIEW_RUN_2026",
+    companyId: "PREVIEW_COMPANY",
+    reportingYear: 2026,
+    reportBasisType: "CONSOLIDATED",
+    runStatus: "ACTIVE",
+    workflowStep: "G0_ONBOARDING",
+    currentStageLabel: "경영일반 승인",
+    pendingCount: 7,
+    readOnlyYn: false,
+  },
+  {
+    runId: "PREVIEW_RUN_2025",
+    companyId: "PREVIEW_COMPANY",
+    reportingYear: 2025,
+    reportBasisType: "CONSOLIDATED",
+    runStatus: "COMPLETED",
+    workflowStep: "COMPLETED",
+    currentStageLabel: "전체 승인 완료",
+    pendingCount: 0,
+    readOnlyYn: true,
+  },
+  {
+    runId: "PREVIEW_RUN_2024",
+    companyId: "PREVIEW_COMPANY",
+    reportingYear: 2024,
+    reportBasisType: "ENTITY",
+    runStatus: "COMPLETED",
+    workflowStep: "COMPLETED",
+    currentStageLabel: "전체 승인 완료",
+    pendingCount: 0,
+    readOnlyYn: true,
+  },
+];
+
 export const ONBOARDING_PREVIEW_ROWS = [
   {
     metricId: "G0-01",

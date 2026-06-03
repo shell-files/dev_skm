@@ -5,15 +5,17 @@ Responsibility:
 - Orchestrate report workflow Step A API behavior
 - Resolve current workflow status and next action from repository state
 - Preserve existing progressing run basis selections
-- Ensure PRE_DMA_G0 approval cycle exists after workflow start
+- Ensure PRE_DMA_G0 approval cycle exists after workflow start or resume
 Public functions:
 - getCurrent
 - startWorkflow
 - resumeWorkflow
 - getG0Status
 - getRun
+- listProjects
 - resolveWorkflow
 - resolveNextAction
+- resolveProjectStageLabel
 Do not:
 - do not create G0 input values or approval decisions
 - do not create or calculate rollup batches
@@ -24,6 +26,9 @@ Do not:
 from __future__ import annotations
 
 from src.models.reportworkflow import (
+    ReportWorkflowProjectItemDto,
+    ReportWorkflowProjectListDataDto,
+    ReportWorkflowProjectListResponseDto,
     ReportWorkflowResponseDto,
     ReportWorkflowStartRequestDto,
     ReportWorkflowStatusDto,
@@ -54,21 +59,30 @@ def getCurrent(companyId: int, reportingYear: int) -> ReportWorkflowResponseDto:
                 basisStatus="NO_RUN",
                 basisRequirementStatus="NOT_STARTED",
                 nextAction="SELECT_REPORT_BASIS",
-                message="활성화된 DMA 실행이 없습니다.",
+                message="No active report workflow exists.",
             )
         )
     return buildStatusResponse(run)
 
 
-def startWorkflow(request: ReportWorkflowStartRequestDto, actorUserId: int | None = None) -> ReportWorkflowResponseDto:
+def startWorkflow(
+    request: ReportWorkflowStartRequestDto,
+    actorUserId: int | None = None,
+) -> ReportWorkflowResponseDto:
     reportWorkflowRepository = loadRepository()
-    run = reportWorkflowRepository.getCurrent(request.companyId, request.reportingYear)
+    run = reportWorkflowRepository.getCurrent(
+        request.companyId,
+        request.reportingYear,
+    )
     if run:
         currentBasisStatus = reportWorkflowRepository.getBasisStatus(run)
         if currentBasisStatus.get("basisStatus") in PROTECTED_START_STATUSES:
             ensurePreDmaG0CycleForRun(run, actorUserId)
             return ReportWorkflowResponseDto(data=buildStatusDto(run, currentBasisStatus))
-        run = reportWorkflowRepository.updateRunBasis(int(run["id"]), request.reportBasisType)
+        run = reportWorkflowRepository.updateRunBasis(
+            int(run["id"]),
+            request.reportBasisType,
+        )
         if run.get("_basisOverwriteBlockedYn"):
             ensurePreDmaG0CycleForRun(run, actorUserId)
             return buildStatusResponse(run)
@@ -89,7 +103,7 @@ def startWorkflow(request: ReportWorkflowStartRequestDto, actorUserId: int | Non
         "basisStatus": "BASIS_SELECTED",
         "basisRequirementStatus": "PENDING",
         "nextAction": "OPEN_G0_ONBOARDING",
-        "message": "보고서 기준이 선택되었습니다. G0 온보딩 상태를 확인하세요.",
+        "message": "Report basis selected. Continue with G0 onboarding.",
     }
     return ReportWorkflowResponseDto(data=buildStatusDto(run, basisStatus))
 
@@ -102,7 +116,10 @@ def getG0Status(runId: int) -> ReportWorkflowResponseDto:
     return buildStatusResponse(run)
 
 
-def resumeWorkflow(runId: int, actorUserId: int | None = None) -> ReportWorkflowResponseDto:
+def resumeWorkflow(
+    runId: int,
+    actorUserId: int | None = None,
+) -> ReportWorkflowResponseDto:
     reportWorkflowRepository = loadRepository()
     run = reportWorkflowRepository.getRun(runId)
     if not run:
@@ -115,6 +132,47 @@ def resumeWorkflow(runId: int, actorUserId: int | None = None) -> ReportWorkflow
 def getRun(runId: int) -> dict:
     reportWorkflowRepository = loadRepository()
     return reportWorkflowRepository.getRun(runId)
+
+
+def listProjects(companyId: int) -> ReportWorkflowProjectListResponseDto:
+    reportWorkflowRepository = loadRepository()
+    items = []
+    for run in reportWorkflowRepository.listProjects(companyId):
+        runStatus = str(run.get("run_status") or "ACTIVE").strip().upper()
+        readOnlyYn = runStatus in {"COMPLETED", "ARCHIVED"}
+        if readOnlyYn:
+            workflowStep = runStatus
+            currentStageLabel = (
+                "All approvals completed"
+                if runStatus == "COMPLETED"
+                else "Archived"
+            )
+        else:
+            basisStatus = reportWorkflowRepository.getBasisStatus(run)
+            workflowStep = resolveWorkflow(basisStatus.get("basisStatus"))
+            currentStageLabel = resolveProjectStageLabel(run, basisStatus)
+
+        items.append(
+            ReportWorkflowProjectItemDto(
+                runId=int(run["id"]),
+                companyId=int(run["company_id"]),
+                reportingYear=int(run["reporting_year"]),
+                reportBasisType=normalizeReportBasisType(
+                    run.get("report_basis_type")
+                ),
+                runStatus=runStatus,
+                workflowStep=workflowStep,
+                currentStageLabel=currentStageLabel,
+                pendingCount=countPendingPreDmaG0Approvals(
+                    int(run["company_id"]),
+                    int(run["reporting_year"]),
+                ),
+                readOnlyYn=readOnlyYn,
+            )
+        )
+    return ReportWorkflowProjectListResponseDto(
+        data=ReportWorkflowProjectListDataDto(items=items)
+    )
 
 
 def buildStatusResponse(run: dict) -> ReportWorkflowResponseDto:
@@ -134,7 +192,10 @@ def buildStatusDto(run: dict, basisStatus: dict) -> ReportWorkflowStatusDto:
         readyYn=bool(basisStatus.get("readyYn")),
         basisStatus=basisStatus.get("basisStatus") or "BASIS_SELECTED",
         basisRequirementStatus=basisStatus.get("basisRequirementStatus") or "PENDING",
-        nextAction=resolveNextAction(basisStatus.get("basisStatus"), basisStatus.get("nextAction")),
+        nextAction=resolveNextAction(
+            basisStatus.get("basisStatus"),
+            basisStatus.get("nextAction"),
+        ),
         message=basisStatus.get("message") or "OK",
     )
 
@@ -163,6 +224,42 @@ def resolveNextAction(basisStatus: str, fallbackAction: str | None = None) -> st
     return nextActionMap.get(basisStatus) or fallbackAction or "OPEN_G0_ONBOARDING"
 
 
+def resolveProjectStageLabel(run: dict, basisStatus: dict | None = None) -> str:
+    runStatus = str(run.get("run_status") or "").strip().upper()
+    if runStatus == "COMPLETED":
+        return "All approvals completed"
+    if runStatus == "ARCHIVED":
+        return "Archived"
+
+    basisStatusValue = str((basisStatus or {}).get("basisStatus") or "").strip().upper()
+    if basisStatusValue == "CONSOLIDATED_ROLLUP_REQUIRED":
+        return "Rollup request required"
+    if basisStatusValue == "CONSOLIDATED_ROLLUP_PENDING":
+        return "Rollup in progress"
+    if basisStatusValue in {"ENTITY_READY", "CONSOLIDATED_READY"}:
+        return "DMA ready"
+    return "G0 approval"
+
+
+def countPendingPreDmaG0Approvals(companyId: int, reportingYear: int) -> int:
+    try:
+        from src.utils import onboardingrepository
+
+        rows = onboardingrepository.listCycleApprovalInboxRows(
+            companyId=companyId,
+            reportingYear=reportingYear,
+            cycleType="PRE_DMA_G0",
+            assignedOnlyYn=True,
+        )
+        return sum(
+            1
+            for row in rows
+            if str(row.get("approvalStatus") or "").strip().upper() != "APPROVED"
+        )
+    except Exception:
+        return 0
+
+
 def normalizeReportBasisType(value):
     normalizedValue = str(value or "").strip().upper()
     if normalizedValue in {"ENTITY", "CONSOLIDATED"}:
@@ -188,6 +285,8 @@ __all__ = [
     "resumeWorkflow",
     "getG0Status",
     "getRun",
+    "listProjects",
     "resolveWorkflow",
     "resolveNextAction",
+    "resolveProjectStageLabel",
 ]

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 
 export default function ApprovalDetailModal({
   isOpen,
@@ -11,119 +11,133 @@ export default function ApprovalDetailModal({
   onApprove,
   onReject,
 }) {
-  const [rejectReason, setRejectReason] = useState('');
-  
+  const [rejectReason, setRejectReason] = useState("");
+
   useEffect(() => {
     if (isOpen) {
-      setRejectReason('');
+      setRejectReason("");
     }
   }, [isOpen]);
 
   if (!isOpen || !metricItem) return null;
-  
-  const isConsultant = viewerRole === '컨설턴트' || viewerRole === 'CONSULTANT';
-  const isReviewed = metricItem.reviewStatus === 'REVIEWED';
-  const canApprove = isConsultant ? false : (!hasConsultant || isReviewed);
+
+  const isConsultant =
+    String(viewerRole || "").toUpperCase() === "CONSULTANT" ||
+    String(viewerRole || "").toUpperCase().includes("CONSULTANT");
+  const isReviewed = metricItem.reviewStatus === "REVIEWED";
+  const canApprove = isConsultant ? false : !hasConsultant || isReviewed;
   const metricId = metricItem.metricId || metricItem.id;
-  
+
   return createPortal(
-    <div className="ob-modal-overlay" onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div className="ob-modal-shell ob-approval-modal" onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '700px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
-        <div className="ob-modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 className="ob-modal-title" style={{ fontSize: '1.1rem', margin: 0, color: '#1e293b' }}>데이터 상세 보기</h2>
-          <button type="button" aria-label="승인 상세 모달 닫기" className="ob1-btn-close" onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
+    <div
+      className="ob-modal-overlay"
+      onClick={onClose}
+      style={overlayStyle}
+    >
+      <div
+        className="ob-modal-shell ob-approval-modal"
+        onClick={(event) => event.stopPropagation()}
+        style={shellStyle}
+      >
+        <div className="ob-modal-header" style={headerStyle}>
+          <h2 className="ob-modal-title" style={titleStyle}>Approval detail</h2>
+          <button
+            type="button"
+            aria-label="Close approval detail modal"
+            className="ob1-btn-close"
+            onClick={onClose}
+            style={closeButtonStyle}
+          >
+            x
+          </button>
         </div>
-        
-        <div className="ob-modal-body" style={{ padding: '24px', flex: 1, overflowY: 'auto' }}>
-          <div style={{ marginBottom: '24px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '8px' }}>
-              <span style={{ fontWeight: 600, color: '#475569', minWidth: '80px', fontSize: '0.9rem' }}>지표명</span>
-              <span style={{ color: '#1e293b', fontSize: '0.9rem' }}>{metricItem.metricName || metricItem.checklistQuestion || '-'}</span>
-            </div>
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '8px' }}>
-              <span style={{ fontWeight: 600, color: '#475569', minWidth: '80px', fontSize: '0.9rem' }}>Metric ID</span>
-              <span style={{ color: '#1e293b', fontSize: '0.9rem' }}>{metricItem.metricId || metricItem.id || '-'}</span>
-            </div>
-            <div style={{ display: 'flex', gap: '16px', marginBottom: '8px' }}>
-              <span style={{ fontWeight: 600, color: '#475569', minWidth: '80px', fontSize: '0.9rem' }}>담당자</span>
-              <span style={{ color: '#1e293b', fontSize: '0.9rem' }}>{metricItem.assigneeName || metricItem.userName || '미지정'}</span>
-            </div>
-            <div style={{ display: 'flex', gap: '16px' }}>
-              <span style={{ fontWeight: 600, color: '#475569', minWidth: '80px', fontSize: '0.9rem' }}>제출일</span>
-              <span style={{ color: '#1e293b', fontSize: '0.9rem' }}>{metricItem.submittedAt || '-'}</span>
-            </div>
+
+        <div className="ob-modal-body" style={bodyStyle}>
+          <div style={summaryStyle}>
+            <InfoRow label="Metric" value={metricItem.metricName || metricItem.checklistQuestion || "-"} />
+            <InfoRow label="Metric ID" value={metricItem.metricId || metricItem.id || "-"} />
+            <InfoRow label="Assignee" value={metricItem.assigneeName || metricItem.userName || "-"} />
+            <InfoRow label="Submitted" value={metricItem.submittedAt || "-"} />
           </div>
-          
-          <div style={{ marginBottom: '24px', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem', textAlign: 'left' }}>
-              <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+
+          <div style={tableBoxStyle}>
+            <table style={tableStyle}>
+              <thead style={tableHeadStyle}>
                 <tr>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#475569' }}>입력 항목</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#475569' }}>입력값</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 600, color: '#475569' }}>단위</th>
+                  <th style={thStyle}>Input item</th>
+                  <th style={thStyle}>Value</th>
+                  <th style={thStyle}>Unit</th>
                 </tr>
               </thead>
               <tbody>
-                <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                  <td style={{ padding: '12px 16px', color: '#1e293b' }}>{metricItem.metricName || '주요 입력값'}</td>
-                  <td style={{ padding: '12px 16px', color: '#1e293b', fontWeight: 600 }}>{metricItem.value ?? "-"}</td>
-                  <td style={{ padding: '12px 16px', color: '#64748b' }}>{metricItem.unit ?? "-"}</td>
+                <tr style={tableRowStyle}>
+                  <td style={tdStyle}>{metricItem.metricName || "Primary value"}</td>
+                  <td style={{ ...tdStyle, fontWeight: 600 }}>{metricItem.value ?? "-"}</td>
+                  <td style={{ ...tdStyle, color: "#64748b" }}>{metricItem.unit ?? "-"}</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <div style={{ marginBottom: '24px' }}>
-            <h4 style={{ fontSize: '0.95rem', marginBottom: '8px', color: '#1e293b' }}>증빙 자료</h4>
-            <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', fontSize: '0.85rem', color: '#64748b', textAlign: 'center' }}>
-              첨부된 파일이 없습니다.
-            </div>
+          <div style={{ marginBottom: "24px" }}>
+            <h4 style={sectionTitleStyle}>Evidence</h4>
+            <div style={emptyEvidenceStyle}>No attached evidence.</div>
           </div>
 
-          <div style={{ marginBottom: '8px' }}>
-            <h4 style={{ fontSize: '0.95rem', marginBottom: '8px', color: '#1e293b' }}>반려 사유 입력</h4>
+          <div style={{ marginBottom: "8px" }}>
+            <h4 style={sectionTitleStyle}>Rejection reason</h4>
             <textarea
-              style={{ width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', minHeight: '80px', resize: 'vertical', fontSize: '0.9rem', fontFamily: 'inherit' }}
-              placeholder="반려 시 사유를 입력해 주세요."
+              style={textareaStyle}
+              placeholder="Enter rejection reason."
               value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
+              onChange={(event) => setRejectReason(event.target.value)}
             />
           </div>
         </div>
-        
-        <div className="ob-modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: '8px', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px' }}>
-          <button type="button" className="ob-btn ob-btn-secondary" onClick={onClose} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', cursor: 'pointer', fontWeight: 600 }}>닫기</button>
-          
-          <button 
-            type="button" 
-            className="ob-btn" 
-            style={{ padding: '8px 16px', borderRadius: '6px', background: '#fff', border: '1px solid #fecaca', color: '#dc2626', cursor: rejectReason.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, opacity: rejectReason.trim() ? 1 : 0.5 }}
+
+        <div className="ob-modal-footer" style={footerStyle}>
+          <button type="button" className="ob-btn ob-btn-secondary" onClick={onClose} style={secondaryButtonStyle}>
+            Close
+          </button>
+
+          <button
+            type="button"
+            className="ob-btn"
+            style={{
+              ...rejectButtonStyle,
+              cursor: rejectReason.trim() ? "pointer" : "not-allowed",
+              opacity: rejectReason.trim() ? 1 : 0.5,
+            }}
             onClick={() => onReject?.({ metricId, commentText: rejectReason })}
             disabled={!rejectReason.trim()}
-            title={!rejectReason.trim() ? "반려 사유를 입력해 주세요." : ""}
+            title={!rejectReason.trim() ? "Enter rejection reason." : ""}
           >
-            반려
+            Reject
           </button>
-          
+
           {isConsultant ? (
-            <button 
-              type="button" 
-              className="ob-btn ob-btn-primary" 
-              style={{ padding: '8px 16px', borderRadius: '6px', background: '#2563eb', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
+            <button
+              type="button"
+              className="ob-btn ob-btn-primary"
+              style={primaryButtonStyle}
               onClick={() => onReview?.({ metricId, commentText: "" })}
             >
-              검토 완료
+              Mark reviewed
             </button>
           ) : (
-            <button 
-              type="button" 
-              className="ob-btn ob-btn-primary" 
-              style={{ padding: '8px 16px', borderRadius: '6px', background: canApprove ? '#059669' : '#94a3b8', border: 'none', color: '#fff', cursor: canApprove ? 'pointer' : 'not-allowed', fontWeight: 600 }}
+            <button
+              type="button"
+              className="ob-btn ob-btn-primary"
+              style={{
+                ...primaryButtonStyle,
+                background: canApprove ? "#059669" : "#94a3b8",
+                cursor: canApprove ? "pointer" : "not-allowed",
+              }}
               onClick={() => onApprove?.({ metricId, commentText: "" })}
               disabled={!canApprove}
-              title={!canApprove ? '컨설턴트 검토가 완료되어야 승인할 수 있습니다.' : ''}
+              title={!canApprove ? "Consultant review must be completed first." : ""}
             >
-              최종 승인
+              Approve
             </button>
           )}
         </div>
@@ -132,3 +146,180 @@ export default function ApprovalDetailModal({
     document.body
   );
 }
+
+const InfoRow = ({ label, value }) => (
+  <div style={{ display: "flex", gap: "16px", marginBottom: "8px" }}>
+    <span style={infoLabelStyle}>{label}</span>
+    <span style={infoValueStyle}>{value}</span>
+  </div>
+);
+
+const overlayStyle = {
+  position: "fixed",
+  inset: 0,
+  backgroundColor: "rgba(0,0,0,0.5)",
+  zIndex: 1000,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+};
+
+const shellStyle = {
+  background: "#fff",
+  borderRadius: "12px",
+  width: "100%",
+  maxWidth: "700px",
+  maxHeight: "90vh",
+  display: "flex",
+  flexDirection: "column",
+  boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
+};
+
+const headerStyle = {
+  padding: "20px 24px",
+  borderBottom: "1px solid #e2e8f0",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+};
+
+const titleStyle = {
+  fontSize: "1.1rem",
+  margin: 0,
+  color: "#1e293b",
+};
+
+const closeButtonStyle = {
+  border: "none",
+  background: "none",
+  fontSize: "1.5rem",
+  cursor: "pointer",
+  color: "#64748b",
+};
+
+const bodyStyle = {
+  padding: "24px",
+  flex: 1,
+  overflowY: "auto",
+};
+
+const summaryStyle = {
+  marginBottom: "24px",
+  background: "#f8fafc",
+  padding: "16px",
+  borderRadius: "8px",
+  border: "1px solid #e2e8f0",
+};
+
+const infoLabelStyle = {
+  fontWeight: 600,
+  color: "#475569",
+  minWidth: "80px",
+  fontSize: "0.9rem",
+};
+
+const infoValueStyle = {
+  color: "#1e293b",
+  fontSize: "0.9rem",
+};
+
+const tableBoxStyle = {
+  marginBottom: "24px",
+  border: "1px solid #e2e8f0",
+  borderRadius: "8px",
+  overflow: "hidden",
+};
+
+const tableStyle = {
+  width: "100%",
+  borderCollapse: "collapse",
+  fontSize: "0.9rem",
+  textAlign: "left",
+};
+
+const tableHeadStyle = {
+  background: "#f8fafc",
+  borderBottom: "1px solid #e2e8f0",
+};
+
+const thStyle = {
+  padding: "12px 16px",
+  fontWeight: 600,
+  color: "#475569",
+};
+
+const tableRowStyle = {
+  borderBottom: "1px solid #e2e8f0",
+};
+
+const tdStyle = {
+  padding: "12px 16px",
+  color: "#1e293b",
+};
+
+const sectionTitleStyle = {
+  fontSize: "0.95rem",
+  marginBottom: "8px",
+  color: "#1e293b",
+};
+
+const emptyEvidenceStyle = {
+  padding: "16px",
+  background: "#f8fafc",
+  borderRadius: "8px",
+  border: "1px dashed #cbd5e1",
+  fontSize: "0.85rem",
+  color: "#64748b",
+  textAlign: "center",
+};
+
+const textareaStyle = {
+  width: "100%",
+  padding: "12px",
+  borderRadius: "6px",
+  border: "1px solid #cbd5e1",
+  minHeight: "80px",
+  resize: "vertical",
+  fontSize: "0.9rem",
+  fontFamily: "inherit",
+};
+
+const footerStyle = {
+  padding: "16px 24px",
+  borderTop: "1px solid #e2e8f0",
+  background: "#f8fafc",
+  display: "flex",
+  justifyContent: "flex-end",
+  gap: "8px",
+  borderBottomLeftRadius: "12px",
+  borderBottomRightRadius: "12px",
+};
+
+const secondaryButtonStyle = {
+  padding: "8px 16px",
+  borderRadius: "6px",
+  border: "1px solid #cbd5e1",
+  background: "#fff",
+  color: "#475569",
+  cursor: "pointer",
+  fontWeight: 600,
+};
+
+const rejectButtonStyle = {
+  padding: "8px 16px",
+  borderRadius: "6px",
+  background: "#fff",
+  border: "1px solid #fecaca",
+  color: "#dc2626",
+  fontWeight: 600,
+};
+
+const primaryButtonStyle = {
+  padding: "8px 16px",
+  borderRadius: "6px",
+  background: "#2563eb",
+  border: "none",
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: 600,
+};

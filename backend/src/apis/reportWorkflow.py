@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from src.models.reportworkflow import (
+    ReportWorkflowProjectListResponseDto,
     ReportWorkflowResponseDto,
     ReportWorkflowStartRequestDto,
 )
-from src.services.reportworkflows.service import getCurrent, getG0Status, getRun, resumeWorkflow, startWorkflow
+from src.services.reportworkflows.service import getCurrent, getG0Status, getRun, listProjects, resumeWorkflow, startWorkflow
 from src.utils.companyscope import checkScope
 from src.utils.settings import settings
 from src.utils.validatetok import validateToken
@@ -47,6 +48,26 @@ async def startWorkflowRoute(
     try:
         checkScope(request.companyId, userModel)
         return startWorkflow(request, _userId(userModel))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@_actionRouter.get(
+    "/projects",
+    response_model=ReportWorkflowProjectListResponseDto,
+    summary="List yearly report workflow projects",
+)
+async def listProjectsRoute(
+    companyId: int = Query(...),
+    userModel=Depends(get_token),
+):
+    try:
+        checkScope(companyId, userModel)
+        return listProjects(companyId)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except HTTPException:

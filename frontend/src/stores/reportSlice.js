@@ -57,6 +57,8 @@ const initialState = {
   },
 
   approval: {
+    projects: [],
+    selectedProject: null,
     items: [],
   },
 
@@ -71,6 +73,7 @@ const initialState = {
     workflow: false,
     onboarding: false,
     saveMetric: false,
+    approvalProjects: false,
     approvals: false,
     subsidiaries: false,
     createBatch: false,
@@ -84,6 +87,7 @@ const initialState = {
     workflow: null,
     onboarding: null,
     saveMetric: null,
+    approvalProjects: null,
     approvals: null,
     subsidiaries: null,
     createBatch: null,
@@ -256,6 +260,22 @@ export const fetchApprovalItems = createAsyncThunk(
   }
 );
 
+export const fetchApprovalProjects = createAsyncThunk(
+  "report/fetchApprovalProjects",
+  async ({ companyId }, { rejectWithValue }) => {
+    try {
+      const res = await GET("/reportWorkflow/projects", { companyId });
+      return rejectIfFailed(res, rejectWithValue, "보고서 프로젝트 목록 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "보고서 프로젝트 목록 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
 export const fetchRollupSubsidiaries = createAsyncThunk(
   "report/fetchRollupSubsidiaries",
   async ({ runId }, { rejectWithValue }) => {
@@ -378,6 +398,16 @@ const reportSlice = createSlice({
     },
 
     resetReportState: () => initialState,
+
+    selectApprovalProject: (state, action) => {
+      state.approval.selectedProject = action.payload ?? null;
+      state.approval.items = [];
+    },
+
+    clearApprovalProject: (state) => {
+      state.approval.selectedProject = null;
+      state.approval.items = [];
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -435,6 +465,18 @@ const reportSlice = createSlice({
         state.error.saveMetric = null;
       })
       .addCase(saveOnboardingMetric.rejected, (state, action) => setRejected(state, "saveMetric", action));
+
+    builder
+      .addCase(fetchApprovalProjects.pending, (state) => setPending(state, "approvalProjects"))
+      .addCase(fetchApprovalProjects.fulfilled, (state, action) => {
+        state.loading.approvalProjects = false;
+        state.error.approvalProjects = null;
+        state.approval.projects = itemsOf(action.payload);
+      })
+      .addCase(fetchApprovalProjects.rejected, (state, action) => {
+        setRejected(state, "approvalProjects", action);
+        state.approval.projects = [];
+      });
 
     builder
       .addCase(fetchApprovalItems.pending, (state) => setPending(state, "approvals"))
@@ -513,8 +555,10 @@ const reportSlice = createSlice({
 });
 
 export const {
+  clearApprovalProject,
   clearReportError,
   resetReportState,
+  selectApprovalProject,
   setActiveBatchId,
 } = reportSlice.actions;
 

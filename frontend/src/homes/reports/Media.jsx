@@ -249,7 +249,7 @@ const Media = () => {
       <div className="media-container">
         {/* --- STEPPER HEADER --- */}
         <header className="media-header">
-        
+          <h1 className="media-title">지속가능경영보고서 AI 자동 생성</h1>
           <div className="media-stepper-row">
             {STEPS.map((step, index) => (
               <Fragment key={step.id}>
@@ -318,9 +318,9 @@ const Media = () => {
                   <label>수집 희망 기간</label>
                   <div className="date-range-group">
                     {/* 시작 날짜 - 2023-01-01 이후만 선택 가능 */}
-                    <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" max = {new Date().toISOString().split("T")[0]} />
+                    <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" />
                     <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
-                    <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} min = "2023-01-01" max={new Date().toISOString().split("T")[0]} />
+                    <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} max={new Date().toISOString().split("T")[0]} />
                   </div>
                 </div>
                 <div className="status-container">
@@ -464,7 +464,7 @@ const Media = () => {
               {/* 가동 애니메이션 파티클 필드 */}
               <div id="particle-field" ref={particleRef}></div>
               {!showResult && (
-                <img src={robot} className="robot-media-main-img" alt="마스코트 로봇" style={{ alignSelf: "center" }} />
+                <img src={robot} className="robot-main-img" alt="마스코트 로봇" style={{ alignSelf: "center" }} />
               )}
               {/* 수집 대기 및 로딩 중 안내판 */}
               {!showResult && (
@@ -478,22 +478,22 @@ const Media = () => {
               {showResult && (
                 <div className="result-layout-content" style={{ width: "100%" }}>
                   {/* 결과 배너 */}
-                  <div className="result-banner" style={{ background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div className="result-banner-left" style={{ alignItems: "stretch", textAlign: "center" }}>
-                      <div className="result-banner-title" style={{ textAlign: "center" }}>
+                  <div className="result-banner">
+                    <div className="result-banner-left">
+                      <div className="result-banner-title" style={{ textAlign: "center", alignSelf: "center" }}>
                         [AI 미디어 시그널 분석 결과]
                       </div>
-                      <p className="result-banner-desc" style={{ textAlign: "center" }}>
+                      <p className="result-banner-desc">
                         언론 기사, 전문기관 자료, 핵심규제 프레임을 종합 반영하여<br />
                         외부 시그널 기반의 주요 서브이슈를 도출했습니다.
                       </p>
                     </div>
                     {/* 로봇 이미지 우측 배치 */}
-                    {/* <img
+                    <img
                       src={robot}
                       alt="마스코트 로봇"
                       style={{ height: "120px", width: "auto", flexShrink: 0, marginLeft: "16px" }}
-                    /> */}
+                    />
                   </div>
 
                   {/* 통계 카드 4개 */}

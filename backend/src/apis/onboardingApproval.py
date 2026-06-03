@@ -66,10 +66,11 @@ async def listApprovalsRoute(
     reportingYear: Optional[int] = Query(default=None),
     status: Optional[str] = Query(default=None),
     cycleType: Optional[str] = Query(default=None),
+    assignedOnlyYn: bool = Query(default=True),
     userModel=Depends(get_token),
 ):
     try:
-        return listApprovals(companyId, reportingYear, status, cycleType, userModel)
+        return listApprovals(companyId, reportingYear, status, cycleType, assignedOnlyYn, userModel)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:

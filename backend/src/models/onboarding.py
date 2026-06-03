@@ -189,6 +189,9 @@ class OnboardingApprovalItemDto(BaseModel):
     reportingYear: int
     metricId: str
     metricName: Optional[str] = None
+    cycleType: Optional[str] = None
+    issueDomain: Optional[str] = None
+    issueGroup: Optional[str] = None
     approvalStatus: ApprovalActionStatus
     inputUserId: Optional[int] = None
     assigneeUserId: Optional[int] = None
@@ -203,6 +206,8 @@ class OnboardingApprovalItemDto(BaseModel):
     approvedAt: Optional[str] = None
     commentText: Optional[str] = None
     selfSubmittedYn: bool = False
+    actionSupportedYn: bool = False
+    actionDisabledReason: Optional[str] = None
 
 
 class OnboardingApprovalListDataDto(BaseModel):

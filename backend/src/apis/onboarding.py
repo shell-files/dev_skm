@@ -85,7 +85,14 @@ def userId(userModel) -> Optional[int]:
 
 
 def statusForValueError(error: ValueError) -> int:
-    if str(error).startswith(("PRE_DMA_G0_CYCLE_NOT_READY", "PRE_DMA_G0_SCOPE_NOT_READY")):
+    if str(error).startswith(
+        (
+            "PRE_DMA_G0_CYCLE_NOT_READY",
+            "PRE_DMA_G0_SCOPE_NOT_READY",
+            "POST_DMA_DISCLOSURE_CYCLE_NOT_READY",
+            "POST_DMA_DISCLOSURE_SCOPE_NOT_READY",
+        )
+    ):
         return 409
     return 400
 

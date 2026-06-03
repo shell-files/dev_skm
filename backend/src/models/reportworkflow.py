@@ -30,6 +30,27 @@ class ReportWorkflowResponseDto(BaseModel):
     data: ReportWorkflowStatusDto
 
 
+class ReportWorkflowPostDmaScopeDataDto(BaseModel):
+    runId: int
+    companyId: int
+    reportingYear: int
+    sourceMaterialityRunId: int
+    cycleId: int
+    cycleType: str
+    metricScopeCode: str
+    selectedSubIssueCount: int
+    scopeMetricCount: int
+    metricIds: List[str] = Field(default_factory=list)
+    cycleCreatedYn: bool
+    cycleReusedYn: bool
+    message: str
+
+
+class ReportWorkflowPostDmaScopeResponseDto(BaseModel):
+    success: bool = True
+    data: ReportWorkflowPostDmaScopeDataDto
+
+
 class ReportWorkflowProjectItemDto(BaseModel):
     runId: int
     companyId: int

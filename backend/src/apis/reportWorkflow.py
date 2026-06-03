@@ -1,11 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from src.models.reportworkflow import (
+    ReportWorkflowPostDmaScopeResponseDto,
     ReportWorkflowProjectListResponseDto,
     ReportWorkflowResponseDto,
     ReportWorkflowStartRequestDto,
 )
-from src.services.reportworkflows.service import getCurrent, getG0Status, getRun, listProjects, resumeWorkflow, startWorkflow
+from src.services.reportworkflows.service import (
+    getCurrent,
+    getG0Status,
+    getRun,
+    initializePostDmaDisclosureScope,
+    listProjects,
+    resumeWorkflow,
+    startWorkflow,
+)
 from src.utils.companyscope import checkScope
 from src.utils.settings import settings
 from src.utils.validatetok import validateToken
@@ -98,6 +107,28 @@ async def resumeWorkflowRoute(runId: int, userModel=Depends(get_token)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@_actionRouter.post(
+    "/{runId}/post-dma-scope/initialize",
+    response_model=ReportWorkflowPostDmaScopeResponseDto,
+    summary="Initialize POST_DMA_DISCLOSURE onboarding scope from selected sub-issues",
+)
+async def initializePostDmaScopeRoute(runId: int, userModel=Depends(get_token)):
+    try:
+        run = getRun(runId)
+        if not run:
+            raise HTTPException(status_code=404, detail=f"No ESG_MATERIALITY_RUN found for runId={runId}")
+        checkScope(int(run["company_id"]), userModel)
+        return initializePostDmaDisclosureScope(runId, _userId(userModel))
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @_actionRouter.get(
     "/{runId}/g0-status",
     response_model=ReportWorkflowResponseDto,
@@ -134,3 +165,19 @@ def _userId(userModel):
     if isinstance(userModel, dict):
         return userModel.get("id")
     return getattr(userModel, "id", None)
+
+
+def statusForValueError(error: ValueError) -> int:
+    message = str(error)
+    if message.startswith(
+        (
+            "MATERIALITY_SELECTION_NOT_CONFIRMED",
+            "SELECTED_SUB_ISSUE_MAPPING_NOT_READY",
+            "POST_DMA_DISCLOSURE_RUN_READ_ONLY",
+            "POST_DMA_DISCLOSURE_SOURCE_RUN_CONFLICT",
+            "POST_DMA_DISCLOSURE_CYCLE_NOT_ACTIVE",
+            "POST_DMA_SCOPE_MISMATCH_REQUIRES_REVIEW",
+        )
+    ):
+        return 409
+    return 404

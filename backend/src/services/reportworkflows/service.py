@@ -26,6 +26,8 @@ Do not:
 from __future__ import annotations
 
 from src.models.reportworkflow import (
+    ReportWorkflowPostDmaScopeDataDto,
+    ReportWorkflowPostDmaScopeResponseDto,
     ReportWorkflowProjectItemDto,
     ReportWorkflowProjectListDataDto,
     ReportWorkflowProjectListResponseDto,
@@ -41,6 +43,13 @@ PROTECTED_START_STATUSES = {
     "CONSOLIDATED_READY",
     "DMA_RUNNING",
     "DMA_COMPLETED",
+}
+POST_DMA_READ_ONLY_RUN_STATUSES = {
+    "COMPLETED",
+    "ARCHIVED",
+    "DELETED",
+    "CANCELLED",
+    "CANCELED",
 }
 
 
@@ -127,6 +136,42 @@ def resumeWorkflow(
 
     ensurePreDmaG0CycleForRun(run, actorUserId)
     return buildStatusResponse(run)
+
+
+def initializePostDmaDisclosureScope(
+    runId: int,
+    actorUserId: int | None = None,
+) -> ReportWorkflowPostDmaScopeResponseDto:
+    reportWorkflowRepository = loadRepository()
+    run = reportWorkflowRepository.getRun(runId)
+    if not run:
+        raise ValueError(f"No ESG_MATERIALITY_RUN found for runId={runId}")
+
+    runStatus = str(run.get("run_status") or "ACTIVE").strip().upper()
+    if runStatus in POST_DMA_READ_ONLY_RUN_STATUSES:
+        raise ValueError(
+            "POST_DMA_DISCLOSURE_RUN_READ_ONLY: "
+            f"runId={runId}, runStatus={runStatus}"
+        )
+
+    result = ensureWorkflowPostDmaDisclosureCycle(run, actorUserId)
+    return ReportWorkflowPostDmaScopeResponseDto(
+        data=ReportWorkflowPostDmaScopeDataDto(
+            runId=int(run["id"]),
+            companyId=int(run["company_id"]),
+            reportingYear=int(run["reporting_year"]),
+            sourceMaterialityRunId=int(result["cycle"].get("source_materiality_run_id") or run["id"]),
+            cycleId=int(result["cycle"]["id"]),
+            cycleType=result["cycle"].get("cycle_type") or "POST_DMA_DISCLOSURE",
+            metricScopeCode=result["cycle"].get("metric_scope_code") or "SELECTED_DISCLOSURE",
+            selectedSubIssueCount=int(result.get("selectedSubIssueCount") or 0),
+            scopeMetricCount=int(result.get("scopeMetricCount") or 0),
+            metricIds=list(result.get("metricIds") or []),
+            cycleCreatedYn=bool(result.get("cycleCreatedYn")),
+            cycleReusedYn=bool(result.get("cycleReusedYn")),
+            message="POST_DMA_DISCLOSURE scope initialized.",
+        )
+    )
 
 
 def getRun(runId: int) -> dict:
@@ -273,6 +318,12 @@ def ensurePreDmaG0CycleForRun(run: dict, actorUserId: int | None = None) -> None
     ensureWorkflowPreDmaG0Cycle(run, actorUserId)
 
 
+def ensureWorkflowPostDmaDisclosureCycle(run: dict, actorUserId: int | None = None) -> dict:
+    from src.services.onboardings.service import ensureWorkflowPostDmaDisclosureCycle as ensurePostDmaCycle
+
+    return ensurePostDmaCycle(run, actorUserId)
+
+
 def loadRepository():
     from src.utils import reportworkflowrepository
 
@@ -283,6 +334,7 @@ __all__ = [
     "getCurrent",
     "startWorkflow",
     "resumeWorkflow",
+    "initializePostDmaDisclosureScope",
     "getG0Status",
     "getRun",
     "listProjects",

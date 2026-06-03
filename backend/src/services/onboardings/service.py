@@ -33,11 +33,15 @@ from src.utils.companyscope import checkScope
 
 
 CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
+CYCLE_TYPE_POST_DMA_DISCLOSURE = "POST_DMA_DISCLOSURE"
 PRE_DMA_G0_CYCLE_NOT_READY = "PRE_DMA_G0_CYCLE_NOT_READY: 보고연도 프로젝트를 먼저 시작해 주세요."
 PRE_DMA_G0_SCOPE_NOT_READY = "PRE_DMA_G0_SCOPE_NOT_READY: 온보딩 지표 범위가 초기화되지 않았습니다. 기존 프로젝트를 재개해 주세요."
+POST_DMA_DISCLOSURE_CYCLE_NOT_READY = "POST_DMA_DISCLOSURE_CYCLE_NOT_READY: POST_DMA_DISCLOSURE cycle을 먼저 초기화해 주세요."
+POST_DMA_DISCLOSURE_SCOPE_NOT_READY = "POST_DMA_DISCLOSURE_SCOPE_NOT_READY: POST_DMA_DISCLOSURE 지표 범위가 초기화되지 않았습니다."
 STRUCTURED_LOOKUP_IDS = {"G0-05__QL0002", "G0-06__QL0001"}
 EDITABLE_INPUT_MODES = {"MANUAL_NUMBER", "MANUAL_TEXTAREA", "YEAR_RANGE"}
 SUPPORTED_CYCLE_TYPE = "PRE_DMA_G0"
+SUPPORTED_INPUT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
 SUPPORTED_TARGET_ROLE = "EMPLOYEE"
 INVITE_EXPIRE_DAYS = 7
 ASSIGNMENT_MANAGER_ROLES = {"ADMIN", "ESG"}
@@ -62,7 +66,7 @@ def listMetrics(
     cycle = requireCycle(companyId, year, cycleType)
     allScopes = repo.listMetricScopes(int(cycle["id"]), companyId)
     if not allScopes:
-        raise ValueError(PRE_DMA_G0_SCOPE_NOT_READY)
+        raise ValueError(scopeNotReadyMessage(cycle.get("cycle_type") or cycleType))
     scopes = allScopes
     if metricId:
         scopes = [row for row in allScopes if row.get("metric_id") == metricId]
@@ -182,12 +186,26 @@ def saveMetricValueGroups(groups: list[dict]) -> int:
 
 def requireCycle(companyId: int, reportingYear: int, cycleType: str) -> dict:
     normalizedCycleType = str(cycleType or "").strip().upper()
-    if normalizedCycleType != CYCLE_TYPE_PRE_DMA_G0:
-        raise ValueError("Only PRE_DMA_G0 cycleType is supported")
+    if normalizedCycleType not in SUPPORTED_INPUT_CYCLE_TYPES:
+        raise ValueError("Only PRE_DMA_G0 or POST_DMA_DISCLOSURE cycleType is supported")
     cycle = repo.getCycle(companyId, reportingYear, normalizedCycleType)
     if not cycle or str(cycle.get("cycle_status") or "").strip().lower() != "active":
-        raise ValueError(PRE_DMA_G0_CYCLE_NOT_READY)
+        raise ValueError(cycleNotReadyMessage(normalizedCycleType))
     return cycle
+
+
+def cycleNotReadyMessage(cycleType: str) -> str:
+    normalizedCycleType = str(cycleType or "").strip().upper()
+    if normalizedCycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
+        return POST_DMA_DISCLOSURE_CYCLE_NOT_READY
+    return PRE_DMA_G0_CYCLE_NOT_READY
+
+
+def scopeNotReadyMessage(cycleType: str) -> str:
+    normalizedCycleType = str(cycleType or "").strip().upper()
+    if normalizedCycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
+        return POST_DMA_DISCLOSURE_SCOPE_NOT_READY
+    return PRE_DMA_G0_SCOPE_NOT_READY
 
 
 def buildAtomicItem(row: dict, value: dict) -> OnboardingAtomicItemDto:
@@ -543,6 +561,18 @@ def ensureWorkflowPreDmaG0Cycle(run: dict, actorUserId: Optional[int] = None) ->
         reportingYear=int(run["reporting_year"]),
         reportBasisType=run.get("report_basis_type"),
         sourceMaterialityRunId=int(run["id"]) if run.get("id") is not None else None,
+        actorUserId=actorUserId,
+    )
+
+
+def ensureWorkflowPostDmaDisclosureCycle(run: dict, actorUserId: Optional[int] = None) -> dict:
+    if not run:
+        return {}
+    return repo.ensurePostDmaDisclosureCycle(
+        companyId=int(run["company_id"]),
+        reportingYear=int(run["reporting_year"]),
+        reportBasisType=run.get("report_basis_type"),
+        sourceMaterialityRunId=int(run["id"]),
         actorUserId=actorUserId,
     )
 

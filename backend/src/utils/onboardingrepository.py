@@ -982,9 +982,13 @@ def revokeOrphanInviteTx(cur, inviteId: int) -> bool:
 
 
 CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
+CYCLE_TYPE_POST_DMA_DISCLOSURE = "POST_DMA_DISCLOSURE"
 METRIC_SCOPE_PRE_DMA_G0_PROFILE = "PRE_DMA_G0_PROFILE"
 METRIC_SCOPE_G0_02_FINANCIAL_BASIS = "G0_02_FINANCIAL_BASIS"
+METRIC_SCOPE_SELECTED_DISCLOSURE = "SELECTED_DISCLOSURE"
 SCOPE_SOURCE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
+SCOPE_SOURCE_TYPE_MATERIAL_SUB_ISSUE = "MATERIAL_SUB_ISSUE"
+MAP_SCOPE_MVP_SELECTED = "MVP_SELECTED"
 APPROVAL_POLICY_INPUT_APPROVAL_ONLY = "INPUT_APPROVAL_ONLY"
 APPROVAL_POLICY_PROMOTE_TO_KPI_FACT = "PROMOTE_TO_KPI_FACT"
 PRE_DMA_G0_SCOPE_POLICIES = {
@@ -1057,6 +1061,48 @@ def ensurePreDmaG0Cycle(
                     )
                     conn.commit()
             return cycle
+    finally:
+        conn.close()
+
+
+def ensurePostDmaDisclosureCycle(
+    companyId: int,
+    reportingYear: int,
+    sourceMaterialityRunId: int,
+    reportBasisType: Optional[str] = None,
+    actorUserId: Optional[int] = None,
+) -> dict:
+    conn = getConn()
+    if not conn:
+        return {}
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            try:
+                result = ensurePostDmaDisclosureCycleTx(
+                    cur,
+                    companyId=companyId,
+                    reportingYear=reportingYear,
+                    sourceMaterialityRunId=sourceMaterialityRunId,
+                    reportBasisType=reportBasisType,
+                    actorUserId=actorUserId,
+                )
+                conn.commit()
+            except mariadb.IntegrityError:
+                conn.rollback()
+                with conn.cursor(dictionary=True) as retryCur:
+                    result = ensurePostDmaDisclosureCycleTx(
+                        retryCur,
+                        companyId=companyId,
+                        reportingYear=reportingYear,
+                        sourceMaterialityRunId=sourceMaterialityRunId,
+                        reportBasisType=reportBasisType,
+                        actorUserId=actorUserId,
+                    )
+                    conn.commit()
+            return result
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 
@@ -1837,6 +1883,376 @@ def ensureCycleTx(
         actorUserId=actorUserId,
     )
     return cycle
+
+
+def ensurePostDmaDisclosureCycleTx(
+    cur,
+    companyId: int,
+    reportingYear: int,
+    sourceMaterialityRunId: int,
+    reportBasisType: Optional[str],
+    actorUserId: Optional[int],
+) -> dict:
+    selectedRows = listSelectedSubIssueRowsTx(cur, sourceMaterialityRunId)
+    if not selectedRows:
+        raise ValueError(
+            "MATERIALITY_SELECTION_NOT_CONFIRMED: "
+            f"runId={sourceMaterialityRunId}"
+        )
+
+    mappingRows = listSelectedDisclosureMappingRowsTx(
+        cur,
+        [row["sub_issue_code"] for row in selectedRows if row.get("sub_issue_code")],
+    )
+    selectedByCode = {row["sub_issue_code"]: row for row in selectedRows}
+    mappedSubIssueCodes = {
+        row.get("sub_issue_code")
+        for row in mappingRows
+        if row.get("sub_issue_code")
+    }
+    missingSubIssueCodes = [
+        row["sub_issue_code"]
+        for row in selectedRows
+        if row.get("sub_issue_code") not in mappedSubIssueCodes
+    ]
+    if missingSubIssueCodes:
+        raise ValueError(
+            "SELECTED_SUB_ISSUE_MAPPING_NOT_READY: "
+            f"runId={sourceMaterialityRunId}, "
+            f"missingSubIssueCodes={', '.join(missingSubIssueCodes)}"
+        )
+
+    scopeRows = buildSelectedDisclosureScopeRows(selectedByCode, mappingRows)
+    expectedMetricIds = [row["metricId"] for row in scopeRows]
+    cycle = ensurePostDmaCycleTx(
+        cur,
+        companyId=companyId,
+        reportingYear=reportingYear,
+        reportBasisType=reportBasisType,
+        sourceMaterialityRunId=sourceMaterialityRunId,
+        actorUserId=actorUserId,
+    )
+    cycleCreatedYn = bool(cycle.get("_createdYn"))
+    existingScopeRows = listMetricScopesTx(cur, int(cycle["id"]), companyId)
+    existingMetricIds = sorted({row["metric_id"] for row in existingScopeRows if row.get("metric_id")})
+    if existingMetricIds and existingMetricIds != sorted(expectedMetricIds):
+        raise ValueError(
+            "POST_DMA_SCOPE_MISMATCH_REQUIRES_REVIEW: "
+            f"cycleId={cycle['id']}, "
+            f"existingMetricIds={', '.join(existingMetricIds)}, "
+            f"expectedMetricIds={', '.join(sorted(expectedMetricIds))}"
+        )
+
+    seedSelectedDisclosureScopeTx(
+        cur,
+        cycleId=int(cycle["id"]),
+        companyId=companyId,
+        sourceMaterialityRunId=sourceMaterialityRunId,
+        scopeRows=scopeRows,
+        actorUserId=actorUserId,
+    )
+    cycle = resolvePostDmaCycleTx(cur, companyId, reportingYear)
+    return {
+        "cycle": cycle,
+        "selectedSubIssueCount": len(selectedRows),
+        "scopeMetricCount": len(scopeRows),
+        "metricIds": expectedMetricIds,
+        "cycleCreatedYn": cycleCreatedYn,
+        "cycleReusedYn": not cycleCreatedYn,
+    }
+
+
+def listSelectedSubIssueRowsTx(cur, sourceMaterialityRunId: int) -> list[dict]:
+    cur.execute(
+        """
+        SELECT
+            id,
+            esg_materiality_run_id,
+            sub_issue_code,
+            selected_rank_no,
+            selection_type,
+            selection_reason
+        FROM ESG_MATERIALITY_SELECTED_SUB_ISSUE
+        WHERE esg_materiality_run_id = ?
+          AND delete_yn = 0
+        ORDER BY
+            CASE WHEN selected_rank_no IS NULL THEN 1 ELSE 0 END,
+            selected_rank_no ASC,
+            sub_issue_code ASC,
+            id ASC
+        """,
+        (sourceMaterialityRunId,),
+    )
+    return cur.fetchall() or []
+
+
+def listSelectedDisclosureMappingRowsTx(cur, subIssueCodes: list[str]) -> list[dict]:
+    cleanedCodes = [code for code in subIssueCodes if code]
+    if not cleanedCodes:
+        return []
+    placeholders = ", ".join(["?"] * len(cleanedCodes))
+    cur.execute(
+        f"""
+        SELECT
+            id,
+            sub_issue_code,
+            metric_id,
+            atomic_metric_id,
+            sort_order
+        FROM ESG_SUB_ISSUE_ATOMIC_MAP
+        WHERE sub_issue_code IN ({placeholders})
+          AND map_scope = ?
+          AND required_yn = 1
+          AND delete_yn = 0
+        ORDER BY sub_issue_code, sort_order, metric_id, atomic_metric_id, id
+        """,
+        (*cleanedCodes, MAP_SCOPE_MVP_SELECTED),
+    )
+    return cur.fetchall() or []
+
+
+def buildSelectedDisclosureScopeRows(
+    selectedByCode: dict[str, dict],
+    mappingRows: list[dict],
+) -> list[dict]:
+    candidates = []
+    for mappingRow in mappingRows:
+        metricId = mappingRow.get("metric_id")
+        subIssueCode = mappingRow.get("sub_issue_code")
+        selectedRow = selectedByCode.get(subIssueCode)
+        if not metricId or not selectedRow:
+            continue
+        candidates.append(
+            {
+                "metricId": metricId,
+                "sourceSelectedSubIssueId": int(selectedRow["id"]),
+                "sourceSubIssueCode": subIssueCode,
+                "selectedRankNo": selectedRow.get("selected_rank_no"),
+                "sortOrder": mappingRow.get("sort_order"),
+            }
+        )
+    candidates.sort(
+        key=lambda row: (
+            1 if row.get("selectedRankNo") is None else 0,
+            int(row.get("selectedRankNo") or 0),
+            int(row.get("sortOrder") or 0),
+            str(row.get("sourceSubIssueCode") or ""),
+            int(row.get("sourceSelectedSubIssueId") or 0),
+        )
+    )
+
+    rowsByMetric = {}
+    for candidate in candidates:
+        rowsByMetric.setdefault(candidate["metricId"], candidate)
+
+    scopeRows = []
+    for displayIndex, metricId in enumerate(rowsByMetric.keys(), start=1):
+        candidate = rowsByMetric[metricId]
+        scopeRows.append(
+            {
+                **candidate,
+                "displayOrder": displayIndex * 10,
+                "approvalPolicyCode": resolvePostDmaApprovalPolicy(candidate),
+            }
+        )
+    return scopeRows
+
+
+def resolvePostDmaApprovalPolicy(metricRow: dict) -> str:
+    return APPROVAL_POLICY_INPUT_APPROVAL_ONLY
+
+
+def ensurePostDmaCycleTx(
+    cur,
+    companyId: int,
+    reportingYear: int,
+    reportBasisType: Optional[str],
+    sourceMaterialityRunId: int,
+    actorUserId: Optional[int],
+) -> dict:
+    cycle = resolvePostDmaCycleTx(cur, companyId, reportingYear)
+    if not cycle:
+        insertPostDmaCycleTx(
+            cur,
+            companyId=companyId,
+            reportingYear=reportingYear,
+            reportBasisType=reportBasisType,
+            sourceMaterialityRunId=sourceMaterialityRunId,
+            actorUserId=actorUserId,
+        )
+        cycle = resolvePostDmaCycleTx(cur, companyId, reportingYear)
+        cycle["_createdYn"] = True
+        return cycle
+
+    existingRunId = cycle.get("source_materiality_run_id")
+    if existingRunId is not None and int(existingRunId) != int(sourceMaterialityRunId):
+        raise ValueError(
+            "POST_DMA_DISCLOSURE_SOURCE_RUN_CONFLICT: "
+            f"cycleId={cycle['id']}, "
+            f"existingRunId={existingRunId}, "
+            f"requestedRunId={sourceMaterialityRunId}"
+        )
+    cycleStatus = str(cycle.get("cycle_status") or "").strip().lower()
+    if cycleStatus != "active":
+        raise ValueError(
+            "POST_DMA_DISCLOSURE_CYCLE_NOT_ACTIVE: "
+            f"cycleId={cycle['id']}, cycleStatus={cycle.get('cycle_status')}"
+        )
+
+    updates = []
+    params = []
+    if existingRunId is None:
+        updates.append("source_materiality_run_id = ?")
+        params.append(sourceMaterialityRunId)
+    if cycle.get("report_basis_type") is None and reportBasisType is not None:
+        updates.append("report_basis_type = ?")
+        params.append(reportBasisType)
+    if cycle.get("metric_scope_code") != METRIC_SCOPE_SELECTED_DISCLOSURE:
+        updates.append("metric_scope_code = ?")
+        params.append(METRIC_SCOPE_SELECTED_DISCLOSURE)
+    if updates:
+        updates.append("updated_at = CURRENT_TIMESTAMP")
+        params.append(cycle["id"])
+        cur.execute(
+            f"""
+            UPDATE ESG_ONBOARDING_CYCLE
+            SET {", ".join(updates)}
+            WHERE id = ?
+              AND delete_yn = 0
+            """,
+            tuple(params),
+        )
+        cycle = resolvePostDmaCycleTx(cur, companyId, reportingYear)
+    cycle["_createdYn"] = False
+    return cycle
+
+
+def resolvePostDmaCycleTx(cur, companyId: int, reportingYear: int) -> dict:
+    cur.execute(
+        """
+        SELECT *
+        FROM ESG_ONBOARDING_CYCLE
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND cycle_type = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (companyId, reportingYear, CYCLE_TYPE_POST_DMA_DISCLOSURE),
+    )
+    return cur.fetchone() or {}
+
+
+def insertPostDmaCycleTx(
+    cur,
+    companyId: int,
+    reportingYear: int,
+    reportBasisType: Optional[str],
+    sourceMaterialityRunId: int,
+    actorUserId: Optional[int],
+) -> None:
+    cur.execute(
+        """
+        INSERT INTO ESG_ONBOARDING_CYCLE (
+            company_id,
+            reporting_year,
+            cycle_name,
+            cycle_type,
+            report_basis_type,
+            required_before_dma_yn,
+            cycle_status,
+            source_materiality_run_id,
+            metric_scope_code,
+            created_by_user_id
+        ) VALUES (?, ?, ?, ?, ?, 0, 'active', ?, ?, ?)
+        """,
+        (
+            companyId,
+            reportingYear,
+            f"POST-DMA Disclosure {reportingYear}",
+            CYCLE_TYPE_POST_DMA_DISCLOSURE,
+            reportBasisType,
+            sourceMaterialityRunId,
+            METRIC_SCOPE_SELECTED_DISCLOSURE,
+            actorUserId,
+        ),
+    )
+
+
+def listMetricScopesTx(cur, cycleId: int, companyId: int) -> list[dict]:
+    cur.execute(
+        """
+        SELECT *
+        FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE
+        WHERE esg_onboarding_cycle_id = ?
+          AND company_id = ?
+          AND active_yn = 1
+          AND delete_yn = 0
+        ORDER BY display_order, metric_id
+        """,
+        (cycleId, companyId),
+    )
+    return cur.fetchall() or []
+
+
+def seedSelectedDisclosureScopeTx(
+    cur,
+    cycleId: int,
+    companyId: int,
+    sourceMaterialityRunId: int,
+    scopeRows: list[dict],
+    actorUserId: Optional[int],
+) -> None:
+    for row in scopeRows:
+        cur.execute(
+            """
+            INSERT INTO ESG_ONBOARDING_CYCLE_METRIC_SCOPE (
+                esg_onboarding_cycle_id,
+                company_id,
+                metric_id,
+                scope_source_type,
+                source_materiality_run_id,
+                source_selected_sub_issue_id,
+                source_sub_issue_code,
+                required_yn,
+                input_required_yn,
+                approval_required_yn,
+                approval_policy_code,
+                rollup_readonly_yn,
+                display_order,
+                active_yn,
+                created_by_user_id,
+                delete_yn
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?, 0, ?, 1, ?, 0)
+            ON DUPLICATE KEY UPDATE
+                scope_source_type = VALUES(scope_source_type),
+                source_materiality_run_id = VALUES(source_materiality_run_id),
+                source_selected_sub_issue_id = VALUES(source_selected_sub_issue_id),
+                source_sub_issue_code = VALUES(source_sub_issue_code),
+                required_yn = 1,
+                input_required_yn = 1,
+                approval_required_yn = 1,
+                approval_policy_code = VALUES(approval_policy_code),
+                rollup_readonly_yn = 0,
+                display_order = VALUES(display_order),
+                active_yn = 1,
+                delete_yn = 0,
+                updated_at = CURRENT_TIMESTAMP
+            """,
+            (
+                cycleId,
+                companyId,
+                row["metricId"],
+                SCOPE_SOURCE_TYPE_MATERIAL_SUB_ISSUE,
+                sourceMaterialityRunId,
+                row["sourceSelectedSubIssueId"],
+                row["sourceSubIssueCode"],
+                row["approvalPolicyCode"],
+                row["displayOrder"],
+                actorUserId,
+            ),
+        )
 
 
 def resolveScopeRunId(cycle: dict, sourceMaterialityRunId: Optional[int]) -> Optional[int]:

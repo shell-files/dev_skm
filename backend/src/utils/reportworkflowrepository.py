@@ -24,7 +24,7 @@ from __future__ import annotations
 from typing import Optional
 from uuid import uuid4
 
-from src.utils.db import addKey, findOne, save
+from src.utils.db import addKey, findAll, findOne, save
 from src.utils.dmafinancialrepository import checkBasisReady
 
 
@@ -84,6 +84,41 @@ def getRun(runId: int) -> dict:
           AND delete_yn = 0
     """
     return findOne(sql, (runId,)) or {}
+
+
+def listProjects(companyId: int) -> list[dict]:
+    sql = """
+        SELECT
+            r.id,
+            r.company_id,
+            r.reporting_year,
+            r.report_basis_type,
+            r.financial_basis_status,
+            r.required_rollup_batch_id,
+            r.run_status
+        FROM ESG_MATERIALITY_RUN r
+        INNER JOIN (
+            SELECT
+                reporting_year,
+                MAX(id) AS latest_id
+            FROM ESG_MATERIALITY_RUN
+            WHERE company_id = ?
+              AND delete_yn = 0
+              AND UPPER(COALESCE(run_status, 'ACTIVE')) NOT IN (
+                  'DELETED',
+                  'CANCELLED',
+                  'CANCELED'
+              )
+            GROUP BY reporting_year
+        ) latest
+          ON latest.latest_id = r.id
+        WHERE r.company_id = ?
+          AND r.delete_yn = 0
+        ORDER BY
+            r.reporting_year DESC,
+            r.id DESC
+    """
+    return findAll(sql, (companyId, companyId)) or []
 
 
 def createRun(companyId: int, reportingYear: int, reportBasisType: str) -> dict:
@@ -293,6 +328,7 @@ def normalizeReportBasisType(value) -> Optional[str]:
 __all__ = [
     "getCurrent",
     "getRun",
+    "listProjects",
     "createRun",
     "updateRunBasis",
     "getBasisStatus",

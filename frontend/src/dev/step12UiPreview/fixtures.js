@@ -30,7 +30,7 @@ export const APPROVAL_PROJECT_PREVIEW_ROWS = [
     reportBasisType: "CONSOLIDATED",
     runStatus: "ACTIVE",
     workflowStep: "G0_ONBOARDING",
-    currentStageLabel: "경영일반 승인",
+    currentStageLabel: "G0 approval",
     pendingCount: 7,
     readOnlyYn: false,
   },
@@ -41,7 +41,7 @@ export const APPROVAL_PROJECT_PREVIEW_ROWS = [
     reportBasisType: "CONSOLIDATED",
     runStatus: "COMPLETED",
     workflowStep: "COMPLETED",
-    currentStageLabel: "전체 승인 완료",
+    currentStageLabel: "All approvals completed",
     pendingCount: 0,
     readOnlyYn: true,
   },
@@ -52,7 +52,7 @@ export const APPROVAL_PROJECT_PREVIEW_ROWS = [
     reportBasisType: "ENTITY",
     runStatus: "COMPLETED",
     workflowStep: "COMPLETED",
-    currentStageLabel: "전체 승인 완료",
+    currentStageLabel: "All approvals completed",
     pendingCount: 0,
     readOnlyYn: true,
   },
@@ -61,17 +61,17 @@ export const APPROVAL_PROJECT_PREVIEW_ROWS = [
 export const ONBOARDING_PREVIEW_ROWS = [
   {
     metricId: "G0-01",
-    metricName: "회사 개요",
+    metricName: "Company overview",
     atomicItems: [],
   },
   {
     metricId: "G0-02",
-    metricName: "재무 기준값",
+    metricName: "Financial basis",
     atomicItems: [],
   },
   {
     metricId: "G0-03",
-    metricName: "조직 구조",
+    metricName: "Organization structure",
     atomicItems: [],
   },
 ];
@@ -80,29 +80,29 @@ export const APPROVAL_PREVIEW_ROWS = [
   {
     id: "G0-01",
     metricId: "G0-01",
-    metricName: "회사 개요",
+    metricName: "Company overview",
     issueDomain: "general",
-    issueGroup: "경영일반",
+    issueGroup: "General",
     actionSupportedYn: false,
-    actionDisabledReason: "현재 MVP에서는 G0-02 승인 처리만 지원합니다.",
+    actionDisabledReason: "MVP approval action is limited to G0-02.",
   },
   {
     id: "G0-02",
     metricId: "G0-02",
-    metricName: "재무 기준값",
+    metricName: "Financial basis",
     issueDomain: "general",
-    issueGroup: "경영일반",
+    issueGroup: "General",
     actionSupportedYn: true,
     actionDisabledReason: null,
   },
   {
     id: "G0-03",
     metricId: "G0-03",
-    metricName: "조직 구조",
+    metricName: "Organization structure",
     issueDomain: "general",
-    issueGroup: "경영일반",
+    issueGroup: "General",
     actionSupportedYn: false,
-    actionDisabledReason: "현재 MVP에서는 G0-02 승인 처리만 지원합니다.",
+    actionDisabledReason: "MVP approval action is limited to G0-02.",
   },
 ];
 
@@ -127,16 +127,16 @@ export const mergeOnboardingFixtureRows = (groupedItems, scenario) => {
       inviteStatus: null,
       selfAssignedYn: false,
       submissionDueDate: null,
-      inputStatus: "미입력",
-      approvalStatus: "미제출",
+      inputStatus: "NOT_STARTED",
+      approvalStatus: "NOT_SUBMITTED",
     };
 
     switch (scenario) {
       case ONBOARDING_SCENARIOS.ASSIGNED:
         mock = {
           ...mock,
-          assigneeName: "최수아",
-          assigneeEmail: "sua@company.com",
+          assigneeName: "Assignee",
+          assigneeEmail: "assignee@company.com",
           assignmentStatus: "ASSIGNED",
           submissionDueDate: "2026-06-30",
         };
@@ -144,8 +144,8 @@ export const mergeOnboardingFixtureRows = (groupedItems, scenario) => {
       case ONBOARDING_SCENARIOS.INVITE_PENDING:
         mock = {
           ...mock,
-          assigneeName: "김하영",
-          assigneeEmail: "hayoung@example.com",
+          assigneeName: "Invited user",
+          assigneeEmail: "invitee@example.com",
           assignmentStatus: "ASSIGNED",
           inviteStatus: "PENDING",
           submissionDueDate: "2026-06-30",
@@ -154,32 +154,32 @@ export const mergeOnboardingFixtureRows = (groupedItems, scenario) => {
       case ONBOARDING_SCENARIOS.SELF_ASSIGNED:
         mock = {
           ...mock,
-          assigneeName: "최수아",
+          assigneeName: "Self assigned",
           selfAssignedYn: true,
           assignmentStatus: "ASSIGNED",
           submissionDueDate: "2026-06-30",
-          inputStatus: "작성중",
+          inputStatus: "IN_PROGRESS",
         };
         break;
       case ONBOARDING_SCENARIOS.CONSULTANT_READONLY:
         mock = {
           ...mock,
-          assigneeName: "최수아",
-          assigneeEmail: "sua@company.com",
+          assigneeName: "Assignee",
+          assigneeEmail: "assignee@company.com",
           assignmentStatus: "ASSIGNED",
           submissionDueDate: "2026-06-30",
-          inputStatus: "제출완료",
-          approvalStatus: "검토대기",
+          inputStatus: "SUBMITTED",
+          approvalStatus: "PENDING_REVIEW",
         };
         break;
       case ONBOARDING_SCENARIOS.DUE_DATE_OVERDUE:
         mock = {
           ...mock,
-          assigneeName: "최수아",
-          assigneeEmail: "sua@company.com",
+          assigneeName: "Assignee",
+          assigneeEmail: "assignee@company.com",
           assignmentStatus: "ASSIGNED",
           submissionDueDate: "2026-06-01",
-          inputStatus: "작성중",
+          inputStatus: "IN_PROGRESS",
         };
         break;
       default:
@@ -200,12 +200,16 @@ export const mergeApprovalFixtureRows = (pagedInputs, scenario) => {
     let mock = {
       id: item.id || item.metricId,
       metricId: item.metricId || item.issueId || item.id,
-      metricName: item.metricName || item.checklistQuestion || item.questionName || "지표명",
+      metricName:
+        item.metricName ||
+        item.checklistQuestion ||
+        item.questionName ||
+        "Metric",
       issueDomain: item.issueDomain || "general",
-      issueGroup: item.issueGroup || "경영일반",
+      issueGroup: item.issueGroup || "General",
       actionSupportedYn: item.actionSupportedYn ?? true,
       actionDisabledReason: item.actionDisabledReason ?? null,
-      assigneeName: item.assigneeName || item.userName || "최수아",
+      assigneeName: item.assigneeName || item.userName || "Assignee",
       inputCompletedCount: item.inputCompletedCount ?? 4,
       inputMissingCount: item.inputMissingCount ?? 1,
       submitStatus: item.submitStatus || "SUBMITTED",
@@ -213,7 +217,7 @@ export const mergeApprovalFixtureRows = (pagedInputs, scenario) => {
       approvalStatus: item.approvalStatus || "PENDING",
       submittedAt: item.submittedAt || "2026-06-02",
       value: item.value ?? "125,000",
-      unit: item.unit ?? "원",
+      unit: item.unit ?? "KRW",
     };
 
     switch (scenario) {
@@ -260,43 +264,25 @@ export const mergeApprovalFixtureRows = (pagedInputs, scenario) => {
 
 export const getFixtureRollupStatus = (scenario) => {
   switch (scenario) {
-    case ROLLUP_SCENARIOS.PARENT_PENDING:
-      return {
-        persona: "PARENT",
-        requestedCount: 3,
-        sentCount: 2,
-        pendingCount: 1,
-        calculateReadyYn: false,
-        dmaReadyYn: false,
-        batchStatus: "PENDING",
-      };
     case ROLLUP_SCENARIOS.PARENT_READY:
       return {
-        persona: "PARENT",
-        requestedCount: 3,
-        sentCount: 3,
-        pendingCount: 0,
-        calculateReadyYn: true,
-        dmaReadyYn: true,
-        batchStatus: "COMPLETED",
+        nextAction: "CALCULATE_ROLLUP",
+        statusLabel: "Ready to calculate",
       };
     case ROLLUP_SCENARIOS.SUB_READY:
       return {
-        persona: "SUBSIDIARY",
-        parentCompanyName: "SKM 지주사",
-        reportingYear: 2026,
-        sendReadyYn: true,
-        missingAtomicMetricIds: [],
+        nextAction: "SEND_SOURCE_DATA",
+        statusLabel: "Ready to send",
       };
     case ROLLUP_SCENARIOS.SUB_MISSING:
       return {
-        persona: "SUBSIDIARY",
-        parentCompanyName: "SKM 지주사",
-        reportingYear: 2026,
-        sendReadyYn: false,
-        missingAtomicMetricIds: ["G0-01", "G0-02"],
+        nextAction: "COMPLETE_INPUTS",
+        statusLabel: "Missing required inputs",
       };
     default:
-      return null;
+      return {
+        nextAction: "WAIT_ROLLUP",
+        statusLabel: "Waiting for subsidiary data",
+      };
   }
 };

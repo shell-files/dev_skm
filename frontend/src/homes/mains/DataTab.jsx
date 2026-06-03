@@ -5,33 +5,27 @@ import UiPreviewPanel from "@/dev/step12UiPreview/UiPreviewPanel";
 import ApprovalDetailModal from "./modal/ApprovalDetailModal";
 import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
 import {
+  APPROVAL_SCENARIOS,
   mergeApprovalFixtureRows,
   ONBOARDING_SCENARIOS,
-  APPROVAL_SCENARIOS,
   ROLLUP_SCENARIOS,
 } from "@/dev/step12UiPreview/fixtures";
 import "@styles/Manager.css";
 import "@styles/TabButton.css";
 
 const PAGE_SIZE = 10;
-
 const DOMAIN_ORDER = ["general", "environmental", "social", "governance"];
-
 const DOMAIN_LABEL = {
-  general: "경영일반",
+  general: "General",
   environmental: "E",
   social: "S",
   governance: "G",
 };
 
-const normalizeIssueDomain = (item = {}) => {
-  const value =
-    item.issueDomain ??
-    item.issue_domain ??
-    item.domain ??
-    "general";
-  return String(value || "general").trim();
-};
+const safeArray = (value) => (Array.isArray(value) ? value : []);
+
+const normalizeIssueDomain = (item = {}) =>
+  String(item.issueDomain ?? item.issue_domain ?? item.domain ?? "general").trim();
 
 const normalizeIssueGroup = (item = {}) => {
   const value = item.issueGroup ?? item.issue_group ?? item.groupName;
@@ -39,7 +33,9 @@ const normalizeIssueGroup = (item = {}) => {
 };
 
 const normalizeApprovalStatus = (item = {}) =>
-  String(item.approvalStatus ?? item.status ?? "NOT_STARTED").trim().toUpperCase();
+  String(item.approvalStatus ?? item.status ?? "NOT_STARTED")
+    .trim()
+    .toUpperCase();
 
 const normalizeSubmitStatus = (item = {}) => {
   if (item.submitStatus) return String(item.submitStatus).toUpperCase();
@@ -55,10 +51,22 @@ const normalizeReviewStatus = (item = {}) => {
   return ["APPROVED", "REJECTED"].includes(status) ? "REVIEWED" : "PENDING";
 };
 
-const actionSupported = (item = {}) => item.actionSupportedYn !== false;
+const isActionSupported = (item = {}, readOnlyYn = false) =>
+  !readOnlyYn && (STEP12_UI_FIXTURE_ENABLED || item.actionSupportedYn !== false);
 
-const actionDisabledTitle = (item = {}) =>
-  item.actionDisabledReason || "현재 항목은 이 단계에서 승인 action을 지원하지 않습니다.";
+const actionDisabledTitle = (item = {}, readOnlyYn = false) =>
+  readOnlyYn
+    ? "Completed projects are read-only."
+    : item.actionDisabledReason ||
+      "This item does not support approval actions in the current step.";
+
+const submitLabel = (status) => (status === "SUBMITTED" ? "Submitted" : "Draft");
+const reviewLabel = (status) => (status === "REVIEWED" ? "Reviewed" : "Pending");
+const approvalLabel = (status) => {
+  if (status === "APPROVED") return "Approved";
+  if (status === "REJECTED") return "Rejected";
+  return "Pending";
+};
 
 const DataTab = ({
   activeService,
@@ -72,27 +80,30 @@ const DataTab = ({
   userRole,
   hasConsultant,
   statusFilter = "all",
+  readOnlyYn = false,
   handleMainCategoryChange,
   setActiveSubCategory,
-  toggleSelect,
   handleBulkAction,
   fetchData,
   setDataPage,
   handleAction,
 }) => {
-  const [previewRole, setPreviewRole] = useState("ESG담당자");
-  const [previewOnboardingScenario, setPreviewOnboardingScenario] = useState(ONBOARDING_SCENARIOS.UNASSIGNED);
-  const [previewApprovalScenario, setPreviewApprovalScenario] = useState(APPROVAL_SCENARIOS.NO_CONSULTANT);
-  const [previewRollupScenario, setPreviewRollupScenario] = useState(ROLLUP_SCENARIOS.PARENT_PENDING);
+  const [previewRole, setPreviewRole] = useState("ESG_MANAGER");
+  const [previewOnboardingScenario, setPreviewOnboardingScenario] = useState(
+    ONBOARDING_SCENARIOS.UNASSIGNED
+  );
+  const [previewApprovalScenario, setPreviewApprovalScenario] = useState(
+    APPROVAL_SCENARIOS.NO_CONSULTANT
+  );
+  const [previewRollupScenario, setPreviewRollupScenario] = useState(
+    ROLLUP_SCENARIOS.PARENT_PENDING
+  );
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedItemForDetail, setSelectedItemForDetail] = useState(null);
   const [isBulkRejectModalOpen, setIsBulkRejectModalOpen] = useState(false);
   const [bulkRejectReason, setBulkRejectReason] = useState("");
 
-  const sourceInputs = useMemo(
-    () => (Array.isArray(pagedInputs) ? pagedInputs : []),
-    [pagedInputs]
-  );
+  const sourceInputs = useMemo(() => safeArray(pagedInputs), [pagedInputs]);
 
   const displayInputs = useMemo(() => {
     if (!STEP12_UI_FIXTURE_ENABLED) return sourceInputs;
@@ -140,13 +151,24 @@ const DataTab = ({
   const filteredInputs = useMemo(() => {
     return displayInputs.filter((item) => {
       const itemService = item.service || "disclosure";
-      if (item.service && activeService && activeService !== "all" && itemService !== activeService) {
+      if (
+        item.service &&
+        activeService &&
+        activeService !== "all" &&
+        itemService !== activeService
+      ) {
         return false;
       }
-      if (activeDataCategory !== "all" && normalizeIssueDomain(item) !== activeDataCategory) {
+      if (
+        activeDataCategory !== "all" &&
+        normalizeIssueDomain(item) !== activeDataCategory
+      ) {
         return false;
       }
-      if (activeSubCategory !== "all" && normalizeIssueGroup(item) !== activeSubCategory) {
+      if (
+        activeSubCategory !== "all" &&
+        normalizeIssueGroup(item) !== activeSubCategory
+      ) {
         return false;
       }
       if (statusFilter !== "all") {
@@ -158,7 +180,13 @@ const DataTab = ({
       }
       return true;
     });
-  }, [displayInputs, activeService, activeDataCategory, activeSubCategory, statusFilter]);
+  }, [
+    activeDataCategory,
+    activeService,
+    activeSubCategory,
+    displayInputs,
+    statusFilter,
+  ]);
 
   const totalDataPages = Math.max(1, Math.ceil(filteredInputs.length / PAGE_SIZE));
   const visibleInputs = useMemo(
@@ -172,35 +200,41 @@ const DataTab = ({
     }
   }, [dataPage, totalDataPages, setDataPage]);
 
-  const effectiveViewerRole = STEP12_UI_FIXTURE_ENABLED ? previewRole : (userRole ?? "guest");
+  const effectiveViewerRole = STEP12_UI_FIXTURE_ENABLED
+    ? previewRole
+    : userRole ?? "guest";
   const isConsultant =
-    effectiveViewerRole.includes("CONSULTANT") ||
-    effectiveViewerRole.includes("컨설턴트");
+    String(effectiveViewerRole).toUpperCase().includes("CONSULTANT") ||
+    String(effectiveViewerRole).includes("consultant");
 
-  const effectiveHasConsultant =
-    STEP12_UI_FIXTURE_ENABLED
-      ? previewApprovalScenario !== APPROVAL_SCENARIOS.NO_CONSULTANT
-      : hasConsultant;
+  const effectiveHasConsultant = STEP12_UI_FIXTURE_ENABLED
+    ? previewApprovalScenario !== APPROVAL_SCENARIOS.NO_CONSULTANT
+    : hasConsultant;
 
   const selectedRows = useMemo(
     () => displayInputs.filter((item) => selectedIds.includes(item.id)),
     [displayInputs, selectedIds]
   );
-  const selectedSupportedRows = selectedRows.filter(actionSupported);
+  const selectedSupportedRows = selectedRows.filter((item) =>
+    isActionSupported(item, readOnlyYn)
+  );
 
   const canBulkApprove =
+    !readOnlyYn &&
     !isConsultant &&
     selectedSupportedRows.length > 0 &&
-    selectedSupportedRows.every((item) => !effectiveHasConsultant || normalizeReviewStatus(item) === "REVIEWED");
+    selectedSupportedRows.every(
+      (item) => !effectiveHasConsultant || normalizeReviewStatus(item) === "REVIEWED"
+    );
 
   const handleBulkReview = () => {
     if (!selectedSupportedRows.length) return;
-    handleBulkAction("reviewed");
+    handleBulkAction("REVIEWED");
   };
 
   const handleBulkApprove = () => {
     if (!canBulkApprove) return;
-    handleBulkAction("approved");
+    handleBulkAction("APPROVED");
   };
 
   const handleBulkReject = () => {
@@ -216,7 +250,8 @@ const DataTab = ({
 
   const handleToggleSelectAll = () => {
     const visibleIds = visibleInputs.map((item) => item.id);
-    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+    const allSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
     setSelectedIds((prev) =>
       allSelected
         ? prev.filter((id) => !visibleIds.includes(id))
@@ -224,8 +259,14 @@ const DataTab = ({
     );
   };
 
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
+    );
+  };
+
   const runAction = (item, status, commentText = "") => {
-    if (!actionSupported(item)) return;
+    if (!isActionSupported(item, readOnlyYn)) return;
     handleAction(item.id, status, commentText);
   };
 
@@ -234,12 +275,17 @@ const DataTab = ({
       <div className="ob-body" style={{ padding: 0 }}>
         <div
           className="data-control-row"
-          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "15px",
+          }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: "20px", flex: 1 }}>
             <TabButton.Category
               tabs={[
-                { label: "전체", value: "all" },
+                { label: "All", value: "all" },
                 ...availableDomains.map((domain) => ({
                   label: DOMAIN_LABEL[domain] || domain,
                   value: domain,
@@ -254,16 +300,35 @@ const DataTab = ({
               selectedCount={selectedIds.length}
               actions={[
                 ...(isConsultant
-                  ? [{ label: "선택 검토 완료", onClick: handleBulkReview, className: "submit", disabled: !selectedSupportedRows.length }]
-                  : [{ label: "선택 최종 승인", onClick: handleBulkApprove, className: "submit", disabled: !canBulkApprove }]),
-                { label: "선택 반려", onClick: handleBulkReject, className: "reject", disabled: !selectedSupportedRows.length },
+                  ? [
+                      {
+                        label: "Mark reviewed",
+                        onClick: handleBulkReview,
+                        className: "submit",
+                        disabled: !selectedSupportedRows.length,
+                      },
+                    ]
+                  : [
+                      {
+                        label: "Approve selected",
+                        onClick: handleBulkApprove,
+                        className: "submit",
+                        disabled: !canBulkApprove,
+                      },
+                    ]),
+                {
+                  label: "Reject selected",
+                  onClick: handleBulkReject,
+                  className: "reject",
+                  disabled: !selectedSupportedRows.length,
+                },
               ]}
             />
           </div>
 
           <div style={{ display: "flex", gap: "8px" }}>
             <button className="btn-primary" onClick={fetchData} disabled={isLoading}>
-              {isLoading ? "로딩 중..." : "데이터 새로고침"}
+              {isLoading ? "Loading..." : "Refresh"}
             </button>
           </div>
         </div>
@@ -273,12 +338,15 @@ const DataTab = ({
             <div style={{ marginBottom: "-1px", position: "relative", zIndex: 2 }}>
               <TabButton.Sub
                 tabs={[
-                  { label: "전체 그룹", value: "all" },
-                  ...availableIssueGroups.map((group) => ({ label: group, value: group })),
+                  { label: "All groups", value: "all" },
+                  ...availableIssueGroups.map((group) => ({
+                    label: group,
+                    value: group,
+                  })),
                 ]}
                 activeTab={activeSubCategory}
                 onTabChange={(value) => setActiveSubCategory(value)}
-                categoryTheme={DOMAIN_LABEL[activeDataCategory] || "경영일반"}
+                categoryTheme={DOMAIN_LABEL[activeDataCategory] || "General"}
                 className="data-sub-tabs"
               />
             </div>
@@ -287,10 +355,13 @@ const DataTab = ({
           {isLoading ? (
             <div className="loading-container">
               <div className="spinner" />
-              <p>데이터를 처리하고 있습니다...</p>
+              <p>Loading approval inbox...</p>
             </div>
           ) : (
-            <div className="ob-table-wrap" style={{ borderTopLeftRadius: activeDataCategory === "all" ? "12px" : "0" }}>
+            <div
+              className="ob-table-wrap"
+              style={{ borderTopLeftRadius: activeDataCategory === "all" ? "12px" : "0" }}
+            >
               <table className="ob-table">
                 <thead>
                   <tr>
@@ -298,29 +369,39 @@ const DataTab = ({
                       <input
                         type="checkbox"
                         className="ob-checkbox"
-                        aria-label="전체 선택"
-                        checked={visibleInputs.length > 0 && visibleInputs.every((item) => selectedIds.includes(item.id))}
+                        aria-label="Select all"
+                        checked={
+                          visibleInputs.length > 0 &&
+                          visibleInputs.every((item) => selectedIds.includes(item.id))
+                        }
                         onChange={handleToggleSelectAll}
                       />
                     </th>
                     <th style={{ width: "100px" }}>Metric ID</th>
-                    <th>지표명</th>
-                    <th style={{ width: "100px" }}>담당자</th>
-                    <th style={{ width: "80px" }}>입력 완료</th>
-                    <th style={{ width: "60px" }}>미입력</th>
-                    <th style={{ width: "90px" }}>제출 상태</th>
-                    <th style={{ width: "90px" }}>검토 상태</th>
-                    <th style={{ width: "90px" }}>승인 상태</th>
-                    <th style={{ width: "110px" }}>제출일</th>
-                    <th style={{ width: "180px" }}>관리</th>
+                    <th>Metric</th>
+                    <th style={{ width: "110px" }}>Assignee</th>
+                    <th style={{ width: "80px" }}>Done</th>
+                    <th style={{ width: "80px" }}>Missing</th>
+                    <th style={{ width: "100px" }}>Submit</th>
+                    <th style={{ width: "100px" }}>Review</th>
+                    <th style={{ width: "100px" }}>Approval</th>
+                    <th style={{ width: "120px" }}>Submitted</th>
+                    <th style={{ width: "190px" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibleInputs.length === 0 ? (
                     <tr>
-                      <td colSpan="11" style={{ padding: "80px 0", color: "#94a3b8", textAlign: "center", background: "#fff" }}>
-                        <div style={{ marginBottom: "8px", fontSize: "24px" }}>-</div>
-                        해당 조건에 맞는 데이터가 없습니다.
+                      <td
+                        colSpan="11"
+                        style={{
+                          padding: "80px 0",
+                          color: "#94a3b8",
+                          textAlign: "center",
+                          background: "#fff",
+                        }}
+                      >
+                        No approval items match the current filters.
                       </td>
                     </tr>
                   ) : (
@@ -328,8 +409,10 @@ const DataTab = ({
                       const reviewStatus = normalizeReviewStatus(item);
                       const approvalStatus = normalizeApprovalStatus(item);
                       const submitStatus = normalizeSubmitStatus(item);
-                      const supported = actionSupported(item);
-                      const unsupportedTitle = supported ? "" : actionDisabledTitle(item);
+                      const supported = isActionSupported(item, readOnlyYn);
+                      const unsupportedTitle = supported
+                        ? ""
+                        : actionDisabledTitle(item, readOnlyYn);
                       const canApprove =
                         supported &&
                         !isConsultant &&
@@ -341,12 +424,12 @@ const DataTab = ({
                             <input
                               type="checkbox"
                               className="ob-checkbox"
-                              aria-label={`${item.metricId || item.id} 선택`}
+                              aria-label={`Select ${item.metricId || item.id}`}
                               checked={selectedIds.includes(item.id)}
                               onChange={() => toggleSelect(item.id)}
                             />
                           </td>
-                          <td style={{ fontSize: "13px", fontWeight: "600", color: "#475569" }}>
+                          <td style={{ fontSize: "13px", fontWeight: 600, color: "#475569" }}>
                             {item.metricId || item.id}
                           </td>
                           <td className="st-left">{item.metricName || item.checklistQuestion || "-"}</td>
@@ -355,24 +438,35 @@ const DataTab = ({
                           <td className="ob-completion-cell">{item.inputMissingCount || 0}</td>
                           <td className="cell-status">
                             <span className={`ob-status ${submitStatus === "SUBMITTED" ? "st-submitted" : "st-draft"}`}>
-                              {submitStatus === "SUBMITTED" ? "제출완료" : "미제출"}
+                              {submitLabel(submitStatus)}
                             </span>
                           </td>
                           <td className="cell-status">
                             <span className={`ob-status ${reviewStatus === "REVIEWED" ? "st-approved" : "st-draft"}`}>
-                              {reviewStatus === "REVIEWED" ? "검토완료" : "검토대기"}
+                              {reviewLabel(reviewStatus)}
                             </span>
                           </td>
                           <td className="cell-status">
-                            <span className={`ob-status ${approvalStatus === "APPROVED" ? "st-approved" : approvalStatus === "REJECTED" ? "st-rejected" : "st-draft"}`}>
-                              {approvalStatus === "APPROVED" ? "승인완료" : approvalStatus === "REJECTED" ? "반려" : "미승인"}
+                            <span
+                              className={`ob-status ${
+                                approvalStatus === "APPROVED"
+                                  ? "st-approved"
+                                  : approvalStatus === "REJECTED"
+                                    ? "st-rejected"
+                                    : "st-draft"
+                              }`}
+                            >
+                              {approvalLabel(approvalStatus)}
                             </span>
                           </td>
                           <td>{item.submittedAt || "-"}</td>
                           <td>
                             <div className="ob-actions">
-                              <button className="ob-act-btn ob-act-draft ob-detail-btn" onClick={() => handleOpenApprovalDetail(item)}>
-                                상세 보기
+                              <button
+                                className="ob-act-btn ob-act-draft ob-detail-btn"
+                                onClick={() => handleOpenApprovalDetail(item)}
+                              >
+                                Detail
                               </button>
                               {isConsultant ? (
                                 <>
@@ -382,16 +476,16 @@ const DataTab = ({
                                     disabled={!supported}
                                     title={unsupportedTitle}
                                   >
-                                    검토 완료
+                                    Review
                                   </button>
                                   <button
                                     type="button"
                                     className="ob-act-btn ob-act-reject"
-                                    onClick={() => handleOpenApprovalDetail(item)}
+                                    onClick={() => runAction(item, "REJECTED")}
                                     disabled={!supported}
                                     title={unsupportedTitle}
                                   >
-                                    반려
+                                    Reject
                                   </button>
                                 </>
                               ) : (
@@ -400,19 +494,25 @@ const DataTab = ({
                                     className="ob-act-btn ob-act-submit"
                                     onClick={() => runAction(item, "APPROVED")}
                                     disabled={!canApprove}
-                                    title={!supported ? unsupportedTitle : !canApprove ? "컨설턴트 검토가 완료되어야 승인할 수 있습니다." : ""}
+                                    title={
+                                      !supported
+                                        ? unsupportedTitle
+                                        : !canApprove
+                                          ? "Consultant review must be completed first."
+                                          : ""
+                                    }
                                     style={!canApprove ? { opacity: 0.5, cursor: "not-allowed" } : {}}
                                   >
-                                    최종 승인
+                                    Approve
                                   </button>
                                   <button
                                     type="button"
                                     className="ob-act-btn ob-act-reject"
-                                    onClick={() => handleOpenApprovalDetail(item)}
+                                    onClick={() => runAction(item, "REJECTED")}
                                     disabled={!supported}
                                     title={unsupportedTitle}
                                   >
-                                    반려
+                                    Reject
                                   </button>
                                 </>
                               )}
@@ -435,7 +535,11 @@ const DataTab = ({
                 key={index}
                 onClick={() => setDataPage(index + 1)}
                 className={`page-btn ${dataPage === index + 1 ? "active" : ""}`}
-                style={dataPage === index + 1 ? { backgroundColor: "#03a94d", color: "#fff", border: "none" } : {}}
+                style={
+                  dataPage === index + 1
+                    ? { backgroundColor: "#03a94d", color: "#fff", border: "none" }
+                    : {}
+                }
               >
                 {index + 1}
               </button>
@@ -450,17 +554,23 @@ const DataTab = ({
         metricItem={selectedItemForDetail}
         viewerRole={effectiveViewerRole}
         hasConsultant={effectiveHasConsultant}
-        onReview={({ metricId, commentText }) => {
-          if (actionSupported(selectedItemForDetail)) runAction(selectedItemForDetail, "REVIEWED", commentText);
+        onReview={({ commentText }) => {
+          if (isActionSupported(selectedItemForDetail, readOnlyYn)) {
+            runAction(selectedItemForDetail, "REVIEWED", commentText);
+          }
           setIsDetailModalOpen(false);
         }}
-        onApprove={({ metricId, commentText }) => {
-          if (actionSupported(selectedItemForDetail)) runAction(selectedItemForDetail, "APPROVED", commentText);
+        onApprove={({ commentText }) => {
+          if (isActionSupported(selectedItemForDetail, readOnlyYn)) {
+            runAction(selectedItemForDetail, "APPROVED", commentText);
+          }
           setIsDetailModalOpen(false);
         }}
-        onReject={({ metricId, commentText }) => {
+        onReject={({ commentText }) => {
           if (!commentText?.trim()) return;
-          if (actionSupported(selectedItemForDetail)) runAction(selectedItemForDetail, "REJECTED", commentText);
+          if (isActionSupported(selectedItemForDetail, readOnlyYn)) {
+            runAction(selectedItemForDetail, "REJECTED", commentText);
+          }
           setIsDetailModalOpen(false);
         }}
       />
@@ -469,24 +579,31 @@ const DataTab = ({
         <div className="modal-overlay">
           <div className="modal-window">
             <div className="modal-header">
-              <h3>선택 항목 반려</h3>
+              <h3>Reject selected items</h3>
               <button
                 type="button"
                 className="close-x"
-                aria-label="일괄 반려 모달 닫기"
+                aria-label="Close bulk reject modal"
                 onClick={() => setIsBulkRejectModalOpen(false)}
               >
                 x
               </button>
             </div>
             <div className="modal-body">
-              <p>선택한 {selectedSupportedRows.length}개 지표를 반려합니다.</p>
+              <p>Reject {selectedSupportedRows.length} selected items.</p>
               <textarea
                 className="reject-textarea"
-                placeholder="반려 사유를 입력해 주세요"
+                placeholder="Enter rejection reason."
                 value={bulkRejectReason}
                 onChange={(event) => setBulkRejectReason(event.target.value)}
-                style={{ width: "100%", height: "120px", padding: "10px", border: "1px solid #ddd", borderRadius: "6px", marginTop: "10px" }}
+                style={{
+                  width: "100%",
+                  height: "120px",
+                  padding: "10px",
+                  border: "1px solid #ddd",
+                  borderRadius: "6px",
+                  marginTop: "10px",
+                }}
               />
             </div>
             <div className="modal-footer">
@@ -494,13 +611,13 @@ const DataTab = ({
                 type="button"
                 className="btn-confirm"
                 disabled={!bulkRejectReason.trim()}
-                title={!bulkRejectReason.trim() ? "반려 사유를 입력해 주세요" : ""}
+                title={!bulkRejectReason.trim() ? "Enter rejection reason." : ""}
                 onClick={() => {
-                  handleBulkAction("rejected", bulkRejectReason.trim());
+                  handleBulkAction("REJECTED", bulkRejectReason.trim());
                   setIsBulkRejectModalOpen(false);
                 }}
               >
-                반려 확정
+                Confirm reject
               </button>
             </div>
           </div>

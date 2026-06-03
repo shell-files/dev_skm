@@ -11,7 +11,7 @@ import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
 import RollupSummaryPanel from "./RollupSummaryPanel";
 import BatchActionBar from "@components/UI/BatchActionBar";
 import MetricAssignmentModal from "./modal/MetricAssignmentModal";
-import Step12UiPreviewPanel from "@/dev/step12UiPreview/UiPreviewPanel";
+import UiPreviewPanel from "@/dev/step12UiPreview/UiPreviewPanel";
 import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
 import { 
   mergeOnboardingFixtureRows, 
@@ -134,6 +134,7 @@ const OnboardingWorkflowCta = ({
   onBasisModalOpen,
   onCalculated,
   onCtaClick,
+  onReqModalOpen,
   onTransferModalOpen,
   rollupScenario,
 }) => {
@@ -179,6 +180,8 @@ const OnboardingWorkflowCta = ({
             batchId={activeBatchId}
             onCalculated={onCalculated}
             rollupScenario={rollupScenario}
+            onManageRequests={() => onReqModalOpen?.()}
+            onSendSource={() => onTransferModalOpen?.()}
           />
         )}
       </>
@@ -432,6 +435,9 @@ const OnBoard = () => {
   const workflowError = workflowErrorPayload?.message || null;
   const g0Error = g0ErrorPayload?.message || null;
 
+  const displayWorkflowError = STEP12_UI_FIXTURE_ENABLED ? null : workflowError;
+  const displayG0Error = STEP12_UI_FIXTURE_ENABLED ? null : g0Error;
+
   const initializeOnboarding = useCallback(async () => {
     if (!companyId) {
       dispatch(resetReportState());
@@ -584,7 +590,7 @@ const OnBoard = () => {
     setSelectedMetricIds([]);
   };
 
-  if (loadingWorkflow && !workflow) {
+  if (!STEP12_UI_FIXTURE_ENABLED && loadingWorkflow && !workflow) {
     return (
       <div id="ob1-page">
         <div className="ob1-state-container">
@@ -616,10 +622,10 @@ const OnBoard = () => {
         </div>
 
         <div className="ob1-main-area">
-          {workflowError && (
+          {displayWorkflowError && (
             <div className="ob1-inline-error">
               <span className="ob1-error-icon">!</span>
-              <span>{workflowError}</span>
+              <span>{displayWorkflowError}</span>
             </div>
           )}
 
@@ -643,6 +649,7 @@ const OnBoard = () => {
                 isNoRunWorkflow={isNoRunWorkflow}
                 onCalculated={() => initializeOnboarding()}
                 onCtaClick={handleCtaClick}
+                onReqModalOpen={() => setIsSubReqModalOpen(true)}
                 onTransferModalOpen={() => setIsSubTransferModalOpen(true)}
                 rollupScenario={previewRollupScenario}
               />
@@ -658,9 +665,9 @@ const OnBoard = () => {
               </div>
 
               <OnboardingMetricTable
-                g0Error={g0Error}
+                g0Error={displayG0Error}
                 g0Items={g0Items}
-                loadingG0={loadingG0}
+                loadingG0={STEP12_UI_FIXTURE_ENABLED ? false : loadingG0}
                 selectedMetricIds={selectedMetricIds}
                 onSelectMetric={handleSelectMetric}
                 onToggleSelectAll={handleToggleSelectAll}
@@ -732,7 +739,7 @@ const OnBoard = () => {
         reportingYear={reportingYear}
       />
 
-      <Step12UiPreviewPanel
+      <UiPreviewPanel
         role={previewRole}
         onboardingScenario={previewOnboardingScenario}
         approvalScenario={previewApprovalScenario}

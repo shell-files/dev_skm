@@ -6,6 +6,7 @@ export default function ApprovalDetailModal({
   onClose,
   metricItem,
   viewerRole,
+  hasConsultant = false,
   onReview,
   onApprove,
   onReject,
@@ -22,16 +23,15 @@ export default function ApprovalDetailModal({
   
   const isConsultant = viewerRole === '컨설턴트' || viewerRole === 'CONSULTANT';
   const isReviewed = metricItem.reviewStatus === 'REVIEWED';
-  // Mocking hasConsultant logic from item, in reality this comes from props
-  const hasConsultant = metricItem.hasConsultant !== false; // assume true for safety or pass from parent
   const canApprove = isConsultant ? false : (!hasConsultant || isReviewed);
+  const metricId = metricItem.metricId || metricItem.id;
   
   return createPortal(
     <div className="ob-modal-overlay" onClick={onClose} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div className="ob-modal-shell ob-approval-modal" onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: '12px', width: '100%', maxWidth: '700px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
         <div className="ob-modal-header" style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 className="ob-modal-title" style={{ fontSize: '1.1rem', margin: 0, color: '#1e293b' }}>데이터 상세 보기</h2>
-          <button type="button" className="ob1-btn-close" onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
+          <button type="button" aria-label="승인 상세 모달 닫기" className="ob1-btn-close" onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
         </div>
         
         <div className="ob-modal-body" style={{ padding: '24px', flex: 1, overflowY: 'auto' }}>
@@ -66,8 +66,8 @@ export default function ApprovalDetailModal({
               <tbody>
                 <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
                   <td style={{ padding: '12px 16px', color: '#1e293b' }}>{metricItem.metricName || '주요 입력값'}</td>
-                  <td style={{ padding: '12px 16px', color: '#1e293b', fontWeight: 600 }}>{metricItem.value || '125,000'}</td>
-                  <td style={{ padding: '12px 16px', color: '#64748b' }}>{metricItem.unit || '명'}</td>
+                  <td style={{ padding: '12px 16px', color: '#1e293b', fontWeight: 600 }}>{metricItem.value ?? "-"}</td>
+                  <td style={{ padding: '12px 16px', color: '#64748b' }}>{metricItem.unit ?? "-"}</td>
                 </tr>
               </tbody>
             </table>
@@ -97,8 +97,10 @@ export default function ApprovalDetailModal({
           <button 
             type="button" 
             className="ob-btn" 
-            style={{ padding: '8px 16px', borderRadius: '6px', background: '#fff', border: '1px solid #fecaca', color: '#dc2626', cursor: 'pointer', fontWeight: 600 }}
-            onClick={() => onReject(metricItem.id || metricItem.metricId, rejectReason)}
+            style={{ padding: '8px 16px', borderRadius: '6px', background: '#fff', border: '1px solid #fecaca', color: '#dc2626', cursor: rejectReason.trim() ? 'pointer' : 'not-allowed', fontWeight: 600, opacity: rejectReason.trim() ? 1 : 0.5 }}
+            onClick={() => onReject?.({ metricId, commentText: rejectReason })}
+            disabled={!rejectReason.trim()}
+            title={!rejectReason.trim() ? "반려 사유를 입력해 주세요." : ""}
           >
             반려
           </button>
@@ -108,7 +110,7 @@ export default function ApprovalDetailModal({
               type="button" 
               className="ob-btn ob-btn-primary" 
               style={{ padding: '8px 16px', borderRadius: '6px', background: '#2563eb', border: 'none', color: '#fff', cursor: 'pointer', fontWeight: 600 }}
-              onClick={() => onReview(metricItem.id || metricItem.metricId)}
+              onClick={() => onReview?.({ metricId, commentText: "" })}
             >
               검토 완료
             </button>
@@ -117,7 +119,7 @@ export default function ApprovalDetailModal({
               type="button" 
               className="ob-btn ob-btn-primary" 
               style={{ padding: '8px 16px', borderRadius: '6px', background: canApprove ? '#059669' : '#94a3b8', border: 'none', color: '#fff', cursor: canApprove ? 'pointer' : 'not-allowed', fontWeight: 600 }}
-              onClick={() => onApprove(metricItem.id || metricItem.metricId)}
+              onClick={() => onApprove?.({ metricId, commentText: "" })}
               disabled={!canApprove}
               title={!canApprove ? '컨설턴트 검토가 완료되어야 승인할 수 있습니다.' : ''}
             >

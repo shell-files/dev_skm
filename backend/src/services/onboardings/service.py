@@ -504,6 +504,7 @@ def listApprovals(
     reportingYear: Optional[int],
     status: Optional[str],
     cycleType: Optional[str],
+    assignedOnlyYn: bool,
     userModel,
 ) -> OnboardingApprovalListResponseDto:
     checkScope(companyId, userModel)
@@ -511,7 +512,13 @@ def listApprovals(
         return OnboardingApprovalListResponseDto(data=OnboardingApprovalListDataDto(items=[]))
     items = [
         itemDto(summary, userModel)
-        for summary in repo.listApprovalSummaries(companyId, reportingYear, status, cycleType)
+        for summary in repo.listCycleApprovalInboxRows(
+            companyId=companyId,
+            reportingYear=reportingYear,
+            status=status,
+            cycleType=cycleType,
+            assignedOnlyYn=assignedOnlyYn,
+        )
     ]
     return OnboardingApprovalListResponseDto(data=OnboardingApprovalListDataDto(items=items))
 

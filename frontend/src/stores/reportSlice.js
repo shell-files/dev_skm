@@ -56,6 +56,10 @@ const initialState = {
     metrics: [],
   },
 
+  approval: {
+    items: [],
+  },
+
   rollup: {
     subsidiaries: [],
     requests: [],
@@ -67,6 +71,7 @@ const initialState = {
     workflow: false,
     onboarding: false,
     saveMetric: false,
+    approvals: false,
     subsidiaries: false,
     createBatch: false,
     requests: false,
@@ -79,6 +84,7 @@ const initialState = {
     workflow: null,
     onboarding: null,
     saveMetric: null,
+    approvals: null,
     subsidiaries: null,
     createBatch: null,
     requests: null,
@@ -213,6 +219,38 @@ export const saveOnboardingMetric = createAsyncThunk(
       return rejectWithValue({
         status: false,
         message: "온보딩 지표 저장 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const fetchApprovalItems = createAsyncThunk(
+  "report/fetchApprovalItems",
+  async (
+    {
+      companyId,
+      reportingYear = DEFAULT_REPORTING_YEAR,
+      cycleType = "PRE_DMA_G0",
+      status,
+      assignedOnlyYn = true,
+    },
+    { rejectWithValue }
+  ) => {
+    const params = {
+      companyId,
+      reportingYear,
+      cycleType,
+      assignedOnlyYn,
+    };
+    if (status) params.status = status;
+    try {
+      const res = await GET("/onboardingApproval", params);
+      return rejectIfFailed(res, rejectWithValue, "승인 작업함 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "승인 작업함 조회 중 오류가 발생했습니다.",
       });
     }
   }
@@ -397,6 +435,18 @@ const reportSlice = createSlice({
         state.error.saveMetric = null;
       })
       .addCase(saveOnboardingMetric.rejected, (state, action) => setRejected(state, "saveMetric", action));
+
+    builder
+      .addCase(fetchApprovalItems.pending, (state) => setPending(state, "approvals"))
+      .addCase(fetchApprovalItems.fulfilled, (state, action) => {
+        state.loading.approvals = false;
+        state.error.approvals = null;
+        state.approval.items = itemsOf(action.payload);
+      })
+      .addCase(fetchApprovalItems.rejected, (state, action) => {
+        setRejected(state, "approvals", action);
+        state.approval.items = [];
+      });
 
     builder
       .addCase(fetchRollupSubsidiaries.pending, (state) => setPending(state, "subsidiaries"))

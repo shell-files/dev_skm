@@ -1214,6 +1214,272 @@ def getLatestHistory(companyId: int, reportingYear: int, metricId: str) -> dict:
     ) or {}
 
 
+def listCycleApprovalInboxRows(
+    companyId: int,
+    reportingYear: Optional[int] = None,
+    status: Optional[str] = None,
+    cycleType: Optional[str] = None,
+    assignedOnlyYn: bool = True,
+) -> list[dict]:
+    normalizedCycleType = str(cycleType or CYCLE_TYPE_PRE_DMA_G0).strip().upper()
+    if normalizedCycleType != CYCLE_TYPE_PRE_DMA_G0:
+        return []
+
+    year = resolveReportingYear(companyId, reportingYear)
+    cycle = getCycle(companyId, year, normalizedCycleType)
+    if not cycle or str(cycle.get("cycle_status") or "").strip().lower() != "active":
+        return []
+
+    cycleId = int(cycle["id"])
+    scopes = listMetricScopes(cycleId, companyId)
+    if not scopes:
+        return []
+
+    metricIds = [row["metric_id"] for row in scopes if row.get("metric_id")]
+    masterRows = listAtomicMaster(metricIds)
+    inputRows = listApprovalInputRows(companyId, year, metricIds)
+    factRows = listApprovalFactRows(companyId, year, metricIds)
+    assignmentRows = listAssignmentRows(cycleId, companyId)
+    historyRows = listLatestApprovalHistories(companyId, year, metricIds, cycleId)
+
+    masterByMetric = groupRows(masterRows, "metric_id")
+    inputByMetric = groupRows(inputRows, "metric_id")
+    factByMetric = groupRows(factRows, "metric_id")
+    assignmentByMetric = {row.get("metric_id"): row for row in assignmentRows}
+    historyByMetric = {row.get("metric_id"): row for row in historyRows}
+    statusFilter = str(status or "").strip().upper()
+
+    items = []
+    for scope in scopes:
+        metricId = scope.get("metric_id")
+        if not metricId:
+            continue
+
+        metricInputRows = inputByMetric.get(metricId, [])
+        metricFactRows = factByMetric.get(metricId, [])
+        assignment = assignmentByMetric.get(metricId) or {}
+        latestHistory = historyByMetric.get(metricId) or {}
+
+        if assignedOnlyYn and not assignment and not metricInputRows and not latestHistory:
+            continue
+
+        requiredAtomicIds = [
+            row["atomic_metric_id"]
+            for row in masterByMetric.get(metricId, [])
+            if row.get("atomic_metric_id") and truthy(row.get("onboarding_input_yn"))
+        ]
+        requiredAtomicSet = set(requiredAtomicIds)
+        completedAtomicIds = {
+            row.get("atomic_metric_id")
+            for row in metricInputRows
+            if row.get("atomic_metric_id") in requiredAtomicSet and hasMetricValue(row)
+        }
+        completedAtomicIds.update(
+            row.get("atomic_metric_id")
+            for row in metricFactRows
+            if row.get("atomic_metric_id") in requiredAtomicSet and hasMetricValue(row)
+        )
+        submittedAtomicIds = {
+            row.get("atomic_metric_id")
+            for row in metricInputRows
+            if row.get("atomic_metric_id") in requiredAtomicSet
+            and hasMetricValue(row)
+            and str(row.get("input_status") or "").strip().lower() in {"submitted", "reviewed", "approved"}
+        }
+        approvedAtomicIds = {
+            row.get("atomic_metric_id")
+            for row in metricFactRows
+            if row.get("atomic_metric_id") in requiredAtomicSet and hasMetricValue(row)
+        }
+        approvedAtomicIds.update(
+            row.get("atomic_metric_id")
+            for row in metricInputRows
+            if row.get("atomic_metric_id") in requiredAtomicSet
+            and hasMetricValue(row)
+            and str(row.get("input_status") or "").strip().lower() == "approved"
+        )
+
+        approvalStatus = resolveCycleApprovalStatus(
+            requiredAtomicCount=len(requiredAtomicSet),
+            completedAtomicCount=len(completedAtomicIds),
+            submittedAtomicCount=len(submittedAtomicIds),
+            approvedAtomicCount=len(approvedAtomicIds),
+            inputRows=metricInputRows,
+            latestHistory=latestHistory,
+        )
+        if statusFilter and approvalStatus != statusFilter:
+            continue
+
+        actionSupportedYn = metricId == METRIC_ID_G0_02
+        items.append(
+            {
+                "companyId": companyId,
+                "reportingYear": year,
+                "metricId": metricId,
+                "metricName": scope.get("metric_name_kr") or getMetricName(metricId),
+                "cycleType": cycle.get("cycle_type") or CYCLE_TYPE_PRE_DMA_G0,
+                "issueDomain": scope.get("issue_domain") or "general",
+                "issueGroup": scope.get("issue_group") or "경영일반",
+                "approvalStatus": approvalStatus,
+                "inputUserId": firstNonNull([row.get("input_user_id") for row in metricInputRows]),
+                "assigneeUserId": assignment.get("assignee_user_id"),
+                "cycleId": cycleId,
+                "assignmentId": int(assignment["assignment_id"]) if assignment.get("assignment_id") is not None else None,
+                "requiredAtomicCount": len(requiredAtomicSet),
+                "completedAtomicCount": len(completedAtomicIds),
+                "submittedAtomicCount": len(submittedAtomicIds),
+                "approvedAtomicCount": len(approvedAtomicIds),
+                "missingAtomicMetricIds": [
+                    atomicId for atomicId in requiredAtomicIds if atomicId not in completedAtomicIds
+                ],
+                "submittedAt": formatDatetime(submittedAt(metricInputRows, latestHistory)),
+                "approvedAt": formatDatetime(approvedAt(metricInputRows, metricFactRows, latestHistory)),
+                "commentText": latestHistory.get("comment_text"),
+                "selfSubmittedYn": False,
+                "actionSupportedYn": actionSupportedYn,
+                "actionDisabledReason": None
+                if actionSupportedYn
+                else "현재 MVP에서는 G0-02 승인 처리만 지원합니다.",
+            }
+        )
+    return items
+
+
+def listApprovalInputRows(companyId: int, reportingYear: int, metricIds: list[str]) -> list[dict]:
+    if not metricIds:
+        return []
+    placeholders = ", ".join(["?"] * len(metricIds))
+    return findAll(
+        f"""
+        SELECT
+            metric_id,
+            atomic_metric_id,
+            value_text,
+            value_numeric,
+            unit,
+            input_status,
+            input_user_id,
+            approved_at,
+            updated_at
+        FROM ESG_ONBOARDING_INPUT_VALUE
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND metric_id IN ({placeholders})
+          AND delete_yn = 0
+        ORDER BY metric_id, atomic_metric_id
+        """,
+        (companyId, reportingYear, *metricIds),
+    ) or []
+
+
+def listApprovalFactRows(companyId: int, reportingYear: int, metricIds: list[str]) -> list[dict]:
+    if not metricIds:
+        return []
+    placeholders = ", ".join(["?"] * len(metricIds))
+    return findAll(
+        f"""
+        SELECT
+            metric_id,
+            atomic_metric_id,
+            value_text,
+            value_numeric,
+            unit,
+            approval_status AS input_status,
+            approved_at,
+            updated_at
+        FROM ESG_KPI_FACT
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND metric_id IN ({placeholders})
+          AND LOWER(COALESCE(approval_status, '')) = 'approved'
+          AND delete_yn = 0
+        ORDER BY metric_id, atomic_metric_id
+        """,
+        (companyId, reportingYear, *metricIds),
+    ) or []
+
+
+def listLatestApprovalHistories(
+    companyId: int,
+    reportingYear: int,
+    metricIds: list[str],
+    cycleId: Optional[int] = None,
+) -> list[dict]:
+    if not metricIds:
+        return []
+    placeholders = ", ".join(["?"] * len(metricIds))
+    params = [companyId, reportingYear, *metricIds]
+    cycleFilter = ""
+    if cycleId is not None:
+        cycleFilter = "AND esg_onboarding_cycle_id = ?"
+        params.append(cycleId)
+    return findAll(
+        f"""
+        SELECT h.*
+        FROM ESG_ONBOARDING_APPROVAL_HISTORY h
+        JOIN (
+            SELECT metric_id, MAX(id) AS latest_id
+            FROM ESG_ONBOARDING_APPROVAL_HISTORY
+            WHERE company_id = ?
+              AND reporting_year = ?
+              AND metric_id IN ({placeholders})
+              {cycleFilter}
+              AND delete_yn = 0
+            GROUP BY metric_id
+        ) latest
+          ON latest.latest_id = h.id
+        ORDER BY h.metric_id
+        """,
+        tuple(params),
+    ) or []
+
+
+def hasMetricValue(row: dict) -> bool:
+    if row.get("value_numeric") is not None:
+        return True
+    return str(row.get("value_text") or "").strip() != ""
+
+
+def truthy(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    try:
+        return int(value) != 0
+    except (TypeError, ValueError):
+        return str(value).strip().lower() in {"y", "yes", "true", "1"}
+
+
+def groupRows(rows: list[dict], key: str) -> dict[str, list[dict]]:
+    grouped = {}
+    for row in rows:
+        grouped.setdefault(row.get(key), []).append(row)
+    return grouped
+
+
+def resolveCycleApprovalStatus(
+    *,
+    requiredAtomicCount: int,
+    completedAtomicCount: int,
+    submittedAtomicCount: int,
+    approvedAtomicCount: int,
+    inputRows: list[dict],
+    latestHistory: dict,
+) -> str:
+    if requiredAtomicCount > 0 and approvedAtomicCount >= requiredAtomicCount:
+        return "APPROVED"
+    latestStatus = str(latestHistory.get("action_status") or "").strip().lower()
+    inputStatuses = {str(row.get("input_status") or "").strip().lower() for row in inputRows}
+    if latestStatus == "rejected" or "rejected" in inputStatuses:
+        return "REJECTED"
+    if completedAtomicCount > 0 and submittedAtomicCount >= completedAtomicCount:
+        return "SUBMITTED"
+    if completedAtomicCount > 0:
+        return "DRAFT"
+    return "NOT_STARTED"
+
+
 def listApprovalSummaries(
     companyId: int,
     reportingYear: Optional[int] = None,

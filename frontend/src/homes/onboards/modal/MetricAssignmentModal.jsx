@@ -60,7 +60,7 @@ export default function MetricAssignmentModal({
       <div className="ob-modal-shell ob-assignment-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
         <div className="ob-modal-header" style={{ padding: '20px 24px' }}>
           <h2 className="ob-modal-title" style={{ fontSize: '1.1rem' }}>담당자 지정</h2>
-          <button type="button" className="ob1-btn-close" onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
+          <button type="button" aria-label="담당자 지정 모달 닫기" className="ob1-btn-close" onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>×</button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

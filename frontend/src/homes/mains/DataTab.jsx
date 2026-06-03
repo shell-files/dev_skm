@@ -27,9 +27,21 @@ const safeArray = (value) => (Array.isArray(value) ? value : []);
 const normalizeIssueDomain = (item = {}) =>
   String(item.issueDomain ?? item.issue_domain ?? item.domain ?? "general").trim();
 
-const normalizeIssueGroup = (item = {}) => {
-  const value = item.issueGroup ?? item.issue_group ?? item.groupName;
+const normalizeSubIssueCode = (item = {}) => {
+  const value =
+    item.subIssueCode ??
+    item.sub_issue_code ??
+    item.sourceSubIssueCode ??
+    item.source_sub_issue_code;
   return value ? String(value).trim() : "";
+};
+
+const normalizeSubIssueName = (item = {}) => {
+  const value =
+    item.subIssueName ??
+    item.sub_issue_name ??
+    item.displaySubIssueName;
+  return value ? String(value).trim() : normalizeSubIssueCode(item);
 };
 
 const normalizeApprovalStatus = (item = {}) =>
@@ -118,16 +130,22 @@ const DataTab = ({
     [displayInputs]
   );
 
-  const availableIssueGroups = useMemo(() => {
+  const availableSubIssues = useMemo(() => {
     if (activeDataCategory === "all") return [];
-    return [
-      ...new Set(
-        displayInputs
-          .filter((item) => normalizeIssueDomain(item) === activeDataCategory)
-          .map((item) => normalizeIssueGroup(item))
-          .filter(Boolean)
-      ),
-    ];
+    const subIssueMap = new Map();
+    displayInputs
+      .filter((item) => normalizeIssueDomain(item) === activeDataCategory)
+      .forEach((item) => {
+        const code = normalizeSubIssueCode(item);
+        if (!code || subIssueMap.has(code)) return;
+        subIssueMap.set(code, {
+          value: code,
+          label: normalizeSubIssueName(item),
+        });
+      });
+    return [...subIssueMap.values()].sort((a, b) =>
+      String(a.label || a.value).localeCompare(String(b.label || b.value))
+    );
   }, [displayInputs, activeDataCategory]);
 
   useEffect(() => {
@@ -142,11 +160,11 @@ const DataTab = ({
   useEffect(() => {
     if (
       activeSubCategory !== "all" &&
-      !availableIssueGroups.includes(activeSubCategory)
+      !availableSubIssues.some((subIssue) => subIssue.value === activeSubCategory)
     ) {
       setActiveSubCategory("all");
     }
-  }, [activeSubCategory, availableIssueGroups, setActiveSubCategory]);
+  }, [activeSubCategory, availableSubIssues, setActiveSubCategory]);
 
   const filteredInputs = useMemo(() => {
     return displayInputs.filter((item) => {
@@ -167,7 +185,7 @@ const DataTab = ({
       }
       if (
         activeSubCategory !== "all" &&
-        normalizeIssueGroup(item) !== activeSubCategory
+        normalizeSubIssueCode(item) !== activeSubCategory
       ) {
         return false;
       }
@@ -338,15 +356,12 @@ const DataTab = ({
         </div>
 
         <div className="ob-table-main-container" style={{ marginTop: "30px" }}>
-          {activeDataCategory !== "all" && availableIssueGroups.length > 0 && (
+          {activeDataCategory !== "all" && availableSubIssues.length > 0 && (
             <div style={{ marginBottom: "-1px", position: "relative", zIndex: 2 }}>
               <TabButton.Sub
                 tabs={[
-                  { label: "All groups", value: "all" },
-                  ...availableIssueGroups.map((group) => ({
-                    label: group,
-                    value: group,
-                  })),
+                  { label: "All Sub-Issues", value: "all" },
+                  ...availableSubIssues,
                 ]}
                 activeTab={activeSubCategory}
                 onTabChange={(value) => setActiveSubCategory(value)}

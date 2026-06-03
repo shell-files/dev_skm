@@ -91,6 +91,7 @@ def statusForValueError(error: ValueError) -> int:
             "PRE_DMA_G0_SCOPE_NOT_READY",
             "POST_DMA_DISCLOSURE_CYCLE_NOT_READY",
             "POST_DMA_DISCLOSURE_SCOPE_NOT_READY",
+            "POST_DMA_SUB_ISSUE_METADATA_NOT_READY",
         )
     ):
         return 409

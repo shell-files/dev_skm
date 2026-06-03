@@ -196,22 +196,21 @@ const Survey = () => {
   /* =========================
      FUNCTIONS
   ========================= */
+  const [isCreatingUrl, setIsCreatingUrl] = useState(false);
   const createSurveyUrl = async () => {
+    if (isCreatingUrl) return;
+
+    setIsCreatingUrl(true);
+
     try {
       if (!selectedCompany?.company_id) {
-        showDefaultAlert(
-          "오류",
-          "선택된 회사가 없습니다.",
-          "error"
-        );
+        showDefaultAlert("오류", "선택된 회사가 없습니다.", "error");
         return;
       }
 
       const result = await POST("/survey", {
         companyId: selectedCompany.company_id.toString(),
       });
-
-      console.log(result);
 
       setSurveyUrls({
         emp: result.urls.emp,
@@ -221,19 +220,12 @@ const Survey = () => {
 
       setIsUrlCreated(true);
 
-      showDefaultAlert(
-        "생성 완료",
-        "설문 URL 생성 완료",
-        "success"
-      );
+      showDefaultAlert("생성 완료", "설문 URL 생성 완료", "success");
     } catch (err) {
       console.error(err);
-
-      showDefaultAlert(
-        "실패",
-        "설문 생성 실패",
-        "error"
-      );
+      showDefaultAlert("실패", "설문 생성 실패", "error");
+    } finally {
+      setIsCreatingUrl(false);
     }
   };
   const createParticles = () => {
@@ -436,18 +428,13 @@ const Survey = () => {
             각 이해관계자 그룹별 설문 발송 관리 및
             실시간 집계 결과를 매핑합니다.
           </p>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: "12px",
-            }}
-          >
+          <div style={{display: "flex", justifyContent: "space-between", marginBottom: "12px",}}>
             <button
               className="survey-btn"
               onClick={createSurveyUrl}
+              disabled={isCreatingUrl}
             >
-              URL 생성
+              {isCreatingUrl ? "URL 생성 중..." : "URL 생성"}
             </button>
           </div>
           {/* =====================================================

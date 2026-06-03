@@ -1,4 +1,5 @@
-import { STEP12_UI_FIXTURE_ENABLED, ONBOARDING_SCENARIOS, APPROVAL_SCENARIOS, ROLLUP_SCENARIOS } from '../../mocks/step12UiFixtures';
+import { STEP12_UI_FIXTURE_ENABLED } from '@/dev/step12UiPreview/config';
+import { ONBOARDING_SCENARIOS, APPROVAL_SCENARIOS, ROLLUP_SCENARIOS } from '@/dev/step12UiPreview/fixtures';
 
 const Step12UiPreviewPanel = ({
   role,

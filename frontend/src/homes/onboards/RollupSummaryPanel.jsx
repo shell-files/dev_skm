@@ -6,9 +6,10 @@ import {
 } from "@stores/reportSlice";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 import "@styles/onboarding1.css";
-import { STEP12_UI_FIXTURE_ENABLED, getFixtureRollupStatus } from "../../mocks/step12UiFixtures";
+import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
+import { getFixtureRollupStatus } from "@/dev/step12UiPreview/fixtures";
 
-const RollupSummaryPanel = ({ batchId, onCalculated, rollupScenario }) => {
+const RollupSummaryPanel = ({ batchId, onCalculated, rollupScenario, onManageRequests, onSendSource, onCalculate }) => {
   const dispatch = useDispatch();
   const reduxStatusInfo = useSelector((state) => state.report.rollup.batchStatus);
   const loading = useSelector((state) => state.report.loading.batchStatus);
@@ -31,6 +32,11 @@ const RollupSummaryPanel = ({ batchId, onCalculated, rollupScenario }) => {
   };
 
   const handleCalc = async () => {
+    if (onCalculate) {
+      onCalculate(batchId);
+      return;
+    }
+
     const activeStatus = STEP12_UI_FIXTURE_ENABLED && getFixtureRollupStatus(rollupScenario) 
       ? getFixtureRollupStatus(rollupScenario) 
       : reduxStatusInfo;
@@ -59,6 +65,36 @@ const RollupSummaryPanel = ({ batchId, onCalculated, rollupScenario }) => {
       showDefaultAlert("오류", err?.message || "계산에 실패했습니다.", "error");
     } finally {
       setCalculating(false);
+    }
+  };
+
+  const handleManageRequests = () => {
+    if (onManageRequests) {
+      onManageRequests();
+      return;
+    }
+  
+    if (STEP12_UI_FIXTURE_ENABLED) {
+      showDefaultAlert(
+        "관리",
+        "자회사 요청 관리 모달이 호출됩니다.",
+        "info"
+      );
+    }
+  };
+
+  const handleSendSource = () => {
+    if (onSendSource) {
+      onSendSource(batchId);
+      return;
+    }
+  
+    if (STEP12_UI_FIXTURE_ENABLED) {
+      showDefaultAlert(
+        "전송",
+        "지주사 전송 기능은 Backend 연결 시 구현됩니다.",
+        "info"
+      );
     }
   };
 
@@ -117,7 +153,7 @@ const RollupSummaryPanel = ({ batchId, onCalculated, rollupScenario }) => {
           )}
           <button
             className={`ob1-rollup-btn ${sendReadyYn ? 'primary' : ''}`}
-            onClick={() => showDefaultAlert("전송", "지주사 전송 기능은 백엔드 연결 시 구현됩니다.", "info")}
+            onClick={handleSendSource}
             disabled={!sendReadyYn}
             title={!sendReadyYn ? "필수값이 누락되어 전송할 수 없습니다." : ""}
           >
@@ -147,7 +183,7 @@ const RollupSummaryPanel = ({ batchId, onCalculated, rollupScenario }) => {
       <div className="ob1-rollup-actions" style={{ display: 'flex', alignItems: 'center' }}>
         <button
           className="ob1-rollup-btn secondary"
-          onClick={() => showDefaultAlert("관리", "자회사 요청 관리 모달이 호출됩니다.", "info")}
+          onClick={handleManageRequests}
           style={{ marginRight: '8px' }}
         >
           요청 관리

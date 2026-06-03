@@ -235,7 +235,7 @@ export default function OnboardingModalShell({
 
     const isAssigned = assignmentStatus === 'ASSIGNED';
     const isInvitePending = inviteStatus === 'PENDING';
-    const isOverdue = dueDate && dueDate < '2026-06-03';
+    const isOverdue = dueDate && dueDate < new Date().toISOString().slice(0, 10);
 
     return (
       <div className="ob-side-card ob-assignment-card">

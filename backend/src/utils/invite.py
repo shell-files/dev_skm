@@ -83,6 +83,16 @@ def inviteSignUp(inviteId: str, inviteSignUpUserInfo: inviteSignUpUserInfo):
   userRoleSqlParam = (userId, companyId, roleId)
   save(userRoleSql, userRoleSqlParam)
 
+  assignmentSql = """
+      UPDATE ESG_METRIC_ASSIGNMENT
+      SET assignee_user_id = ?,
+          assignment_status = 'assigned',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE invite_id = ?
+        AND delete_yn = 0
+  """
+  save(assignmentSql, (userId, inviteId))
+
   # 부서담당자 회원가입인 경우, ISSUE_DETAIL 테이블에 이슈 그룹 정보 저장
   if roleId == 4:
     issueGroup = payload.get("issueGroup", [])

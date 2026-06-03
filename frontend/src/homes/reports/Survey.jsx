@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import "@styles/survey.css";
+import { useAuth } from "@hooks/AuthContext";
 
 import robot from "@assets/images/robot/robot_servey_t.png";
 import {
@@ -90,6 +91,8 @@ const DUMMY_SUMMARY =
 const Survey = () => {
   const navigate = useNavigate();
   const particleRef = useRef(null);
+  const { selectedCompany } = useAuth();
+  const companyId = selectedCompany?.company_id;
 
   const activeIndex = 2;
 
@@ -110,8 +113,13 @@ const Survey = () => {
     exec: 20,
     ext: 80,
   });
+  const [surveyUrls, setSurveyUrls] = useState({
+    emp: "",
+    exec: "",
+    ext: "",
+  });
 
-  const [surveyUrls, setSurveyUrls] = useState(DUMMY_URLS);
+  const [isUrlCreated, setIsUrlCreated] = useState(false);
   const [liveData, setLiveData] = useState({ emp: 0, exec: 0, ext: 0 });
   const [topIssues, setTopIssues] = useState([]);
   const [surveyResult, setSurveyResult] = useState(null);
@@ -152,6 +160,9 @@ const Survey = () => {
       if (IS_DUMMY) return { success: true };
       return await POST("/survey/analyze");
     },
+    createSurvey: async (payload) => {
+      return await POST("/survey", payload);
+    },
   };
 
   /* =========================
@@ -185,7 +196,46 @@ const Survey = () => {
   /* =========================
      FUNCTIONS
   ========================= */
+  const createSurveyUrl = async () => {
+    try {
+      if (!selectedCompany?.company_id) {
+        showDefaultAlert(
+          "오류",
+          "선택된 회사가 없습니다.",
+          "error"
+        );
+        return;
+      }
 
+      const result = await POST("/survey", {
+        companyId: selectedCompany.company_id.toString(),
+      });
+
+      console.log(result);
+
+      setSurveyUrls({
+        emp: result.urls.emp,
+        exec: result.urls.exec,
+        ext: result.urls.ext,
+      });
+
+      setIsUrlCreated(true);
+
+      showDefaultAlert(
+        "생성 완료",
+        "설문 URL 생성 완료",
+        "success"
+      );
+    } catch (err) {
+      console.error(err);
+
+      showDefaultAlert(
+        "실패",
+        "설문 생성 실패",
+        "error"
+      );
+    }
+  };
   const createParticles = () => {
     if (!particleRef.current) return;
 
@@ -217,9 +267,23 @@ const Survey = () => {
 
   const copyUrl = async (url) => {
     try {
-      await navigator.clipboard.writeText(url);
+      if (!url) throw new Error("empty url");
+
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // fallback (구형 브라우저 대응)
+        const textarea = document.createElement("textarea");
+        textarea.value = url;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+
       showDefaultAlert("복사 완료", "클립보드 복사 완료", "success");
-    } catch {
+    } catch (e) {
+      console.error("clipboard error:", e);
       showDefaultAlert("복사 실패", "오류 발생", "error");
     }
   };
@@ -228,7 +292,14 @@ const Survey = () => {
     const data = await api.getLiveKpi();
     setLiveData(data);
     setAggregationDone(true);
-
+    if (!isUrlCreated) {
+      showDefaultAlert(
+        "필요",
+        "먼저 설문 URL을 생성하세요.",
+        "warning"
+      );
+      return;
+    }
     setSummaryText(
       IS_DUMMY
         ? DUMMY_SUMMARY
@@ -244,8 +315,12 @@ const Survey = () => {
 
   const runSurveyAnalysis = async () => {
     if (isAnalyzing) return;
-    if (!aggregationDone) {
-      showDefaultAlert("필요", "집계 먼저 실행", "warning");
+    if (!isUrlCreated) {
+      showDefaultAlert(
+        "필요",
+        "먼저 설문 URL을 생성하세요.",
+        "warning"
+      );
       return;
     }
 
@@ -361,7 +436,20 @@ const Survey = () => {
             각 이해관계자 그룹별 설문 발송 관리 및
             실시간 집계 결과를 매핑합니다.
           </p>
-
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginBottom: "12px",
+            }}
+          >
+            <button
+              className="survey-btn"
+              onClick={createSurveyUrl}
+            >
+              URL 생성
+            </button>
+          </div>
           {/* =====================================================
               설문 영역
           ====================================================== */}
@@ -369,6 +457,7 @@ const Survey = () => {
             {/* =================================================
                 설문 URL / KPI 관리
             ================================================== */}
+
             <div className="survey-wrapper">
               <div className="survey-badge white-badge">
                 설문 URL & 발송 관리
@@ -390,11 +479,7 @@ const Survey = () => {
 
                       <button
                         className="btn-url-copy"
-                        onClick={() =>
-                          copyUrl(
-                            "https://forms.gle/emp_sample_skm"
-                          )
-                        }
+                        onClick={() => copyUrl(surveyUrls.emp)}
                       >
                         복사
                       </button>
@@ -433,11 +518,7 @@ const Survey = () => {
 
                       <button
                         className="btn-url-copy"
-                        onClick={() =>
-                          copyUrl(
-                            "https://forms.gle/exec_sample_skm"
-                          )
-                        }
+                        onClick={() => copyUrl(surveyUrls.exec)}
                       >
                         복사
                       </button>
@@ -476,11 +557,7 @@ const Survey = () => {
 
                       <button
                         className="btn-url-copy"
-                        onClick={() =>
-                          copyUrl(
-                            "https://forms.gle/ext_sample_skm"
-                          )
-                        }
+                        onClick={() => copyUrl(surveyUrls.ext)}
                       >
                         복사
                       </button>

@@ -7,6 +7,7 @@ export default function ApprovalDetailModal({
   metricItem,
   viewerRole,
   hasConsultant = false,
+  readOnlyYn = false,
   onReview,
   onApprove,
   onReject,
@@ -26,6 +27,8 @@ export default function ApprovalDetailModal({
     String(viewerRole || "").toUpperCase().includes("CONSULTANT");
   const isReviewed = metricItem.reviewStatus === "REVIEWED";
   const canApprove = isConsultant ? false : !hasConsultant || isReviewed;
+  const rejectDisabled = readOnlyYn || !rejectReason.trim();
+  const approveDisabled = readOnlyYn || !canApprove;
   const metricId = metricItem.metricId || metricItem.id;
 
   return createPortal(
@@ -53,6 +56,12 @@ export default function ApprovalDetailModal({
         </div>
 
         <div className="ob-modal-body" style={bodyStyle}>
+          {readOnlyYn && (
+            <div className="alert alert-info" style={readOnlyAlertStyle}>
+              Completed projects are read-only.
+            </div>
+          )}
+
           <div style={summaryStyle}>
             <InfoRow label="Metric" value={metricItem.metricName || metricItem.checklistQuestion || "-"} />
             <InfoRow label="Metric ID" value={metricItem.metricId || metricItem.id || "-"} />
@@ -90,6 +99,7 @@ export default function ApprovalDetailModal({
               style={textareaStyle}
               placeholder="Enter rejection reason."
               value={rejectReason}
+              disabled={readOnlyYn}
               onChange={(event) => setRejectReason(event.target.value)}
             />
           </div>
@@ -105,12 +115,18 @@ export default function ApprovalDetailModal({
             className="ob-btn"
             style={{
               ...rejectButtonStyle,
-              cursor: rejectReason.trim() ? "pointer" : "not-allowed",
-              opacity: rejectReason.trim() ? 1 : 0.5,
+              cursor: rejectDisabled ? "not-allowed" : "pointer",
+              opacity: rejectDisabled ? 0.5 : 1,
             }}
             onClick={() => onReject?.({ metricId, commentText: rejectReason })}
-            disabled={!rejectReason.trim()}
-            title={!rejectReason.trim() ? "Enter rejection reason." : ""}
+            disabled={rejectDisabled}
+            title={
+              readOnlyYn
+                ? "Completed projects are read-only."
+                : !rejectReason.trim()
+                  ? "Enter rejection reason."
+                  : ""
+            }
           >
             Reject
           </button>
@@ -119,8 +135,14 @@ export default function ApprovalDetailModal({
             <button
               type="button"
               className="ob-btn ob-btn-primary"
-              style={primaryButtonStyle}
+              style={{
+                ...primaryButtonStyle,
+                cursor: readOnlyYn ? "not-allowed" : "pointer",
+                opacity: readOnlyYn ? 0.5 : 1,
+              }}
               onClick={() => onReview?.({ metricId, commentText: "" })}
+              disabled={readOnlyYn}
+              title={readOnlyYn ? "Completed projects are read-only." : ""}
             >
               Mark reviewed
             </button>
@@ -130,12 +152,18 @@ export default function ApprovalDetailModal({
               className="ob-btn ob-btn-primary"
               style={{
                 ...primaryButtonStyle,
-                background: canApprove ? "#059669" : "#94a3b8",
-                cursor: canApprove ? "pointer" : "not-allowed",
+                background: approveDisabled ? "#94a3b8" : "#059669",
+                cursor: approveDisabled ? "not-allowed" : "pointer",
               }}
               onClick={() => onApprove?.({ metricId, commentText: "" })}
-              disabled={!canApprove}
-              title={!canApprove ? "Consultant review must be completed first." : ""}
+              disabled={approveDisabled}
+              title={
+                readOnlyYn
+                  ? "Completed projects are read-only."
+                  : !canApprove
+                    ? "Consultant review must be completed first."
+                    : ""
+              }
             >
               Approve
             </button>
@@ -209,6 +237,10 @@ const summaryStyle = {
   padding: "16px",
   borderRadius: "8px",
   border: "1px solid #e2e8f0",
+};
+
+const readOnlyAlertStyle = {
+  marginBottom: "12px",
 };
 
 const infoLabelStyle = {

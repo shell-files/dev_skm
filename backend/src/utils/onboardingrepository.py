@@ -205,36 +205,6 @@ def listValueRows(companyId: int, reportingYear: int, metricIds: list[str]) -> l
     ) or []
 
 
-def listAssignmentRows(cycleId: int, companyId: int) -> list[dict]:
-    return findAll(
-        f"""
-        SELECT
-            a.id AS assignment_id,
-            a.metric_id,
-            a.assignment_status,
-            a.assignee_user_id,
-            a.assignee_email,
-            a.due_date,
-            a.invite_id,
-            i.state AS invite_status,
-            i.email AS invite_email,
-            aes_d(u.email, '{settings.maria_db_key}') AS user_email
-        FROM ESG_METRIC_ASSIGNMENT a
-        LEFT JOIN INVITE i
-          ON i.id = a.invite_id
-         AND i.delete_yn = 0
-        LEFT JOIN `with`.`USER` u
-          ON u.id = a.assignee_user_id
-         AND u.delete_yn = 0
-        WHERE a.esg_onboarding_cycle_id = ?
-          AND a.company_id = ?
-          AND a.delete_yn = 0
-        ORDER BY a.metric_id
-        """,
-        (cycleId, companyId),
-    ) or []
-
-
 def resolveAssignmentId(cycleId: int, companyId: int, metricId: str) -> Optional[int]:
     row = findOne(
         """
@@ -770,6 +740,8 @@ def listCycleApprovalInboxRows(
     masterRows = listAtomicMaster(metricIds)
     inputRows = listApprovalInputRows(companyId, year, metricIds)
     factRows = listApprovalFactRows(companyId, year, metricIds)
+    from src.utils.onboardingassignmentrepository import listAssignmentRows
+
     assignmentRows = listAssignmentRows(cycleId, companyId)
     historyRows = listLatestApprovalHistories(companyId, year, metricIds, cycleId)
 

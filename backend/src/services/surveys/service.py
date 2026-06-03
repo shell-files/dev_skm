@@ -193,3 +193,8 @@ async def exportCsvProcess(sheet_id, token):
             "status": "error",
             "message": str(e)
         }
+# =========================
+# 템플릿 조회 
+# =========================
+def getRawProcess():
+    return loadSurveyTemplate()

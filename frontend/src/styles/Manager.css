@@ -924,7 +924,7 @@
    Approval Project Context & Select UI
 ========================================================================= */
 
-.approval-project-context-bar {
+#manager_page .approval-project-context-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -936,34 +936,34 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
-.approval-project-context-main {
+#manager_page .approval-project-context-main {
   display: flex;
   flex-direction: column;
   gap: 8px;
   flex: 1;
 }
 
-.approval-project-context-label {
+#manager_page .approval-project-context-label {
   font-size: 0.85rem;
   color: #64748b;
   margin: 0;
   font-weight: 600;
 }
 
-.approval-project-context-title {
+#manager_page .approval-project-context-title {
   font-size: 1.5rem;
   font-weight: 700;
   color: #1e293b;
   margin: 0;
 }
 
-.approval-project-context-meta {
+#manager_page .approval-project-context-meta {
   font-size: 0.95rem;
   color: #475569;
   margin: 0;
 }
 
-.approval-project-context-stage {
+#manager_page .approval-project-context-stage {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -973,18 +973,18 @@
   margin-right: 32px;
 }
 
-.approval-project-context-stage strong {
+#manager_page .approval-project-context-stage strong {
   font-size: 1.1rem;
   color: #03a94d;
 }
 
-.approval-project-context-actions {
+#manager_page .approval-project-context-actions {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.approval-project-readonly-chip {
+#manager_page .approval-project-readonly-chip {
   padding: 6px 12px;
   background: #f1f5f9;
   color: #64748b;
@@ -994,7 +994,7 @@
   border: 1px solid #e2e8f0;
 }
 
-.approval-project-change-btn {
+#manager_page .approval-project-change-btn {
   padding: 10px 20px;
   background: #fff;
   border: 1px solid #cbd5e1;
@@ -1005,7 +1005,7 @@
   transition: all 0.2s;
 }
 
-.approval-project-change-btn:hover {
+#manager_page .approval-project-change-btn:hover:not(:disabled) {
   background: #f8fafc;
   border-color: #94a3b8;
 }

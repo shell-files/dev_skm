@@ -175,7 +175,7 @@ const ManagerData = () => {
 
   const fallbackApprovalProject = {
     runId: null,
-    reportingYear: 2026,
+    reportingYear,
     reportBasisType: selectedCompany?.report_basis_type ?? selectedCompany?.reportBasisType ?? null,
     runStatus: "ACTIVE",
     workflowStep: "G0_ONBOARDING",
@@ -314,39 +314,45 @@ const ManagerData = () => {
           <div className="page-title-area">
             <h2 className="page-title">ESG 통합 관리 시스템</h2>
           </div>
-
-          <section className="approval-project-context-bar">
-            <div className="approval-project-context-main">
-              <p className="approval-project-context-label">현재 보고서 프로젝트</p>
-              <h3 className="approval-project-context-title">
-                {displayApprovalProject.reportingYear} 지속가능경영보고서
-              </h3>
-              <p className="approval-project-context-meta">
-                {displayApprovalProject.reportBasisType === "CONSOLIDATED" ? "연결 기준" : "개별 기준"}
-                {" · "}
-                {displayApprovalProject.runStatus === "COMPLETED" ? "완료" : "진행 중"}
-              </p>
-            </div>
-
-            <div className="approval-project-context-stage">
-              <p className="approval-project-context-label">현재 단계</p>
-              <strong>{displayApprovalProject.currentStageLabel}</strong>
-            </div>
-
-            <div className="approval-project-context-actions">
-              {displayApprovalProject.readOnlyYn && (
-                <span className="approval-project-readonly-chip">읽기 전용</span>
-              )}
-              <button
-                type="button"
-                className="approval-project-change-btn"
-                onClick={() => setIsApprovalProjectModalOpen(true)}
-              >
-                프로젝트 변경
-              </button>
-            </div>
-          </section>
         </div>
+
+        <section className="approval-project-context-bar">
+          <div className="approval-project-context-main">
+            <p className="approval-project-context-label">현재 보고서 프로젝트</p>
+            <h3 className="approval-project-context-title">
+              {displayApprovalProject.reportingYear} 지속가능경영보고서
+            </h3>
+            <p className="approval-project-context-meta">
+              {displayApprovalProject.reportBasisType === "CONSOLIDATED" ? "연결 기준" : "개별 기준"}
+              {" · "}
+              {displayApprovalProject.runStatus === "COMPLETED" ? "완료" : "진행 중"}
+            </p>
+          </div>
+
+          <div className="approval-project-context-stage">
+            <p className="approval-project-context-label">현재 단계</p>
+            <strong>{displayApprovalProject.currentStageLabel}</strong>
+          </div>
+
+          <div className="approval-project-context-actions">
+            {displayApprovalProject.readOnlyYn && (
+              <span className="approval-project-readonly-chip">읽기 전용</span>
+            )}
+            <button
+              type="button"
+              className="approval-project-change-btn"
+              disabled={!STEP12_UI_FIXTURE_ENABLED}
+              title={
+                !STEP12_UI_FIXTURE_ENABLED
+                  ? "프로젝트 목록 API 연결 후 활성화됩니다."
+                  : ""
+              }
+              onClick={() => setIsApprovalProjectModalOpen(true)}
+            >
+              프로젝트 변경
+            </button>
+          </div>
+        </section>
 
         {approvalError && (
           <div className="alert alert-warning" style={{ marginBottom: "12px" }}>

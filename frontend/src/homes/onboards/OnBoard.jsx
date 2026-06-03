@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
+import { useDispatch, useSelector } from "react-redux";
 import "@styles/onboarding1.css";
 import { useAuth } from "@hooks/AuthContext.jsx";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
@@ -20,14 +21,13 @@ import {
 } from "./onboardingUtils";
 import {
   DEFAULT_REPORTING_YEAR,
-  getCurrent,
-  getOnboardingMetrics,
-  saveOnboardingMetricValues,
-  listRequests,
-} from "@/apis/report";
-
-const isApiFailed = (res) =>
-  res?.status === false || res?.success === false || !res?.data;
+  fetchCurrentWorkflow,
+  fetchOnboardingMetrics,
+  fetchRollupRequests,
+  resetReportState,
+  saveOnboardingMetric,
+  setActiveBatchId,
+} from "@stores/reportSlice";
 
 const isNoRunWorkflow = (workflow) => workflow?.workflowStep === "NO_RUN";
 
@@ -130,9 +130,9 @@ const OnboardingWorkflowCta = ({
       <>
         <div className="ob1-empty-state">
           <div className="ob1-empty-icon">G0</div>
-          <p className="ob1-empty-title">보고서 발행 기준 선택이 필요합니다</p>
+          <p className="ob1-empty-title">보고서 발행 기준 선택이 필요합니다.</p>
           <p className="ob1-empty-desc">
-            G0 입력을 시작하려면 먼저 독립기준 또는 연결기준 보고서 워크플로우를 생성해 주세요.
+            G0 입력을 시작하려면 먼저 별도 또는 연결 기준 보고서 워크플로우를 생성해 주세요.
           </p>
           <button type="button" className="ob1-btn-cta" onClick={onBasisModalOpen}>
             발행 기준 선택
@@ -140,7 +140,7 @@ const OnboardingWorkflowCta = ({
         </div>
         <div className="ob1-cta-container">
           <button className="ob1-btn-cta" onClick={onCtaClick} disabled={loadingWorkflow}>
-            {loadingWorkflow ? "로딩중..." : "발행 기준 선택"}
+            {loadingWorkflow ? "로딩 중..." : "발행 기준 선택"}
           </button>
         </div>
       </>
@@ -180,7 +180,7 @@ const OnboardingWorkflowCta = ({
         disabled={loadingWorkflow}
       >
         {loadingWorkflow
-          ? "로딩중..."
+          ? "로딩 중..."
           : !workflow
             ? "워크플로우 상태 확인 필요"
             : workflow.nextAction === "START_DMA"
@@ -208,7 +208,7 @@ const OnboardingMetricTable = ({
         <span className="ob1-error-icon">!</span>
         <span>{g0Error}</span>
         <button type="button" className="ob1-btn-retry" onClick={onRetry}>
-          다시 시도
+          ?ㅼ떆 ?쒕룄
         </button>
       </div>
     );
@@ -218,7 +218,7 @@ const OnboardingMetricTable = ({
     return (
       <div className="ob1-table-loading">
         <div className="ob1-spinner" />
-        <p>G0 프로필 데이터를 불러오고 있습니다...</p>
+        <p>G0 ?꾨줈???곗씠?곕? 遺덈윭?ㅺ퀬 ?덉뒿?덈떎...</p>
       </div>
     );
   }
@@ -227,8 +227,8 @@ const OnboardingMetricTable = ({
     return (
       <div className="ob1-empty-state">
         <div className="ob1-empty-icon">G0</div>
-        <p className="ob1-empty-title">G0 지표가 없습니다</p>
-        <p className="ob1-empty-desc">보고서 워크플로우를 먼저 시작해 주세요.</p>
+        <p className="ob1-empty-title">G0 吏?쒓? ?놁뒿?덈떎</p>
+        <p className="ob1-empty-desc">蹂닿퀬???뚰겕?뚮줈?곕? 癒쇱? ?쒖옉??二쇱꽭??</p>
       </div>
     );
   }
@@ -240,11 +240,11 @@ const OnboardingMetricTable = ({
           <tr>
             <th style={{ width: "12%" }}>Metric ID</th>
             <th style={{ width: "15%" }}>Atomic ID</th>
-            <th style={{ width: "35%" }}>지표명</th>
-            <th style={{ width: "10%" }}>입력 유형</th>
-            <th style={{ width: "10%" }}>단위</th>
-            <th style={{ width: "10%" }}>상태</th>
-            <th style={{ width: "8%" }}>데이터 입력</th>
+            <th style={{ width: "35%" }}>吏?쒕챸</th>
+            <th style={{ width: "10%" }}>?낅젰 ?좏삎</th>
+            <th style={{ width: "10%" }}>?⑥쐞</th>
+            <th style={{ width: "10%" }}>?곹깭</th>
+            <th style={{ width: "8%" }}>?곗씠???낅젰</th>
           </tr>
         </thead>
         <tbody>
@@ -259,7 +259,7 @@ const OnboardingMetricTable = ({
             return (
               <tr key={item.metricId}>
                 <td>{item.metricId}</td>
-                <td>{subMetrics.length > 1 ? `(${subMetrics.length}개 항목)` : atomicId || "-"}</td>
+                <td>{subMetrics.length > 1 ? `(${subMetrics.length}媛???ぉ)` : atomicId || "-"}</td>
                 <td className="ob1-td-name">{item.metricName || item.atomicName || "-"}</td>
                 <td>
                   <span className={`ob1-type-badge ${typeBadge.cls || ""}`}>
@@ -278,7 +278,7 @@ const OnboardingMetricTable = ({
                     className="ob1-btn-input"
                     onClick={() => onOpenMetric(item, subMetrics)}
                   >
-                    입력
+                    ?낅젰
                   </button>
                 </td>
               </tr>
@@ -292,118 +292,63 @@ const OnboardingMetricTable = ({
 
 const OnBoard = () => {
   const navigate = useNavigate(); 
+  const dispatch = useDispatch();
   const { selectedCompany } = useAuth();
   const location = useLocation();
   const companyId = selectedCompany?.company_id ?? selectedCompany?.companyId;
   const reportingYearQuery = new URLSearchParams(location.search).get("reportingYear");
   const reportingYear = reportingYearQuery ? parseInt(reportingYearQuery, 10) : DEFAULT_REPORTING_YEAR;
 
-  const [workflow, setWorkflow] = useState(null);
-  const [loadingWorkflow, setLoadingWorkflow] = useState(true);
-  const [workflowError, setWorkflowError] = useState(null);
-  const [g0Items, setG0Items] = useState([]);
-  const [g0ProfileStatus, setG0ProfileStatus] = useState(null);
-  const [loadingG0, setLoadingG0] = useState(true);
-  const [g0Error, setG0Error] = useState(null);
+  const workflow = useSelector((state) => state.report.workflow.current);
+  const rawMetrics = useSelector((state) => state.report.onboarding.metrics);
+  const activeBatchId = useSelector((state) => state.report.rollup.activeBatchId);
+  const requests = useSelector((state) => state.report.rollup.requests);
+  const loadingWorkflow = useSelector((state) => state.report.loading.workflow);
+  const loadingG0 = useSelector((state) => state.report.loading.onboarding);
+  const workflowErrorPayload = useSelector((state) => state.report.error.workflow);
+  const g0ErrorPayload = useSelector((state) => state.report.error.onboarding);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
   const [isSubReqModalOpen, setIsSubReqModalOpen] = useState(false);
   const [isSubTransferModalOpen, setIsSubTransferModalOpen] = useState(false);
-  const [activeBatchId, setActiveBatchId] = useState(null);
-  const [hasPendingSubsidiaryRequest, setHasPendingSubsidiaryRequest] = useState(false);
-
-  const refreshPendingSubsidiaryRequests = useCallback(async (nextWorkflow) => {
-    if (
-      !companyId ||
-      !nextWorkflow ||
-      isNoRunWorkflow(nextWorkflow) ||
-      nextWorkflow.reportBasisType !== "CONSOLIDATED"
-    ) {
-      setHasPendingSubsidiaryRequest(false);
-      return;
-    }
-
-    try {
-      const res = await listRequests();
-      const items = Array.isArray(res?.data?.items)
-        ? res.data.items
-        : Array.isArray(res?.data)
-          ? res.data
-          : Array.isArray(res?.items)
-            ? res.items
-            : [];
-      setHasPendingSubsidiaryRequest(items.some(isPendingSubsidiaryRequest));
-    } catch (error) {
-      console.error("Failed to refresh subsidiary request state", error);
-      setHasPendingSubsidiaryRequest(false);
-    }
-  }, [companyId]);
+  const g0Items = useMemo(() => flattenOnboardingItems(rawMetrics), [rawMetrics]);
+  const g0ProfileStatus = useMemo(() => getProfileStatusFromItems(g0Items), [g0Items]);
+  const hasPendingSubsidiaryRequest = useMemo(
+    () => requests.some(isPendingSubsidiaryRequest),
+    [requests]
+  );
+  const workflowError = workflowErrorPayload?.message || null;
+  const g0Error = g0ErrorPayload?.message || null;
 
   const initializeOnboarding = useCallback(async () => {
     if (!companyId) {
-      setWorkflow(null);
-      setG0Items([]);
-      setG0ProfileStatus(null);
-      setWorkflowError("회사를 먼저 선택해 주세요.");
-      setG0Error(null);
-      setLoadingWorkflow(false);
-      setLoadingG0(false);
-      setHasPendingSubsidiaryRequest(false);
+      dispatch(resetReportState());
       return;
     }
 
-    setLoadingWorkflow(true);
-    setLoadingG0(true);
-    setWorkflowError(null);
-    setG0Error(null);
-
     try {
-      const workflowRes = await getCurrent(companyId, reportingYear);
-      if (isApiFailed(workflowRes)) {
-        setWorkflow(null);
-        setG0Items([]);
-        setG0ProfileStatus(null);
-        setHasPendingSubsidiaryRequest(false);
-        setWorkflowError(workflowRes?.error?.message || "보고서 워크플로우 조회에 실패했습니다.");
-        return;
-      }
-
-      const nextWorkflow = workflowRes.data;
-      setWorkflow(nextWorkflow);
+      const workflowRes = await dispatch(
+        fetchCurrentWorkflow({ companyId, reportingYear })
+      ).unwrap();
+      const nextWorkflow = workflowRes?.data || workflowRes;
 
       if (isNoRunWorkflow(nextWorkflow)) {
-        setG0Items([]);
-        setG0ProfileStatus("NOT_STARTED");
-        setHasPendingSubsidiaryRequest(false);
         setIsBasisModalOpen(true);
         return;
       }
 
-      await refreshPendingSubsidiaryRequests(nextWorkflow);
-
-      const profileRes = await getOnboardingMetrics(companyId, reportingYear, "PRE_DMA_G0");
-      if (isApiFailed(profileRes)) {
-        setG0Items([]);
-        setG0ProfileStatus(null);
-        setG0Error(profileRes?.error?.message || profileRes?.detail || "G0 프로필 조회에 실패했습니다.");
-        return;
+      if (nextWorkflow?.reportBasisType === "CONSOLIDATED") {
+        await dispatch(fetchRollupRequests()).unwrap();
       }
 
-      const flattenedItems = flattenOnboardingItems(profileRes.data.items || []);
-      setG0Items(flattenedItems);
-      setG0ProfileStatus(getProfileStatusFromItems(flattenedItems));
+      await dispatch(
+        fetchOnboardingMetrics({ companyId, reportingYear, cycleType: "PRE_DMA_G0" })
+      ).unwrap();
     } catch (error) {
       console.error(error);
-      setWorkflow(null);
-      setG0Items([]);
-      setG0ProfileStatus(null);
-      setWorkflowError("온보딩 데이터를 불러오는 중 오류가 발생했습니다.");
-    } finally {
-      setLoadingWorkflow(false);
-      setLoadingG0(false);
     }
-  }, [companyId, refreshPendingSubsidiaryRequests, reportingYear]);
+  }, [companyId, dispatch, reportingYear]);
 
   useEffect(() => {
     initializeOnboarding();
@@ -414,7 +359,7 @@ const OnBoard = () => {
     workflow?.reportBasisType === "CONSOLIDATED"
       ? "연결기준"
       : workflow?.reportBasisType === "ENTITY"
-        ? "독립기준"
+        ? "별도기준"
         : "미확정";
 
   const handleCtaClick = () => {
@@ -473,11 +418,7 @@ const OnBoard = () => {
           }),
       };
 
-      const res = await saveOnboardingMetricValues(metricId, payload);
-      if (isApiFailed(res)) {
-        showDefaultAlert("오류", res?.error?.message || res?.detail || "저장에 실패했습니다.", "error");
-        return;
-      }
+      await dispatch(saveOnboardingMetric({ metricId, payload })).unwrap();
 
       showDefaultAlert(
         "완료",
@@ -517,9 +458,9 @@ const OnBoard = () => {
 
       <div className="ob1-content-layout">
         <div className="ob1-sidebar-panel">
-          <div className="ob1-sidebar-title">할당 항목</div>
+          <div className="ob1-sidebar-title">?좊떦 ??ぉ</div>
           <ul className="ob1-sidebar-menu">
-            <li className="ob1-sidebar-menu-item active">1. 경영일반 - G0</li>
+            <li className="ob1-sidebar-menu-item active">1. 寃쎌쁺?쇰컲 - G0</li>
           </ul>
         </div>
 
@@ -594,7 +535,7 @@ const OnBoard = () => {
         onClose={() => setIsSubReqModalOpen(false)}
         runId={workflow?.runId}
         onRequested={async (batch) => {
-          setActiveBatchId(batch.batchId);
+          dispatch(setActiveBatchId(batch.batchId));
           setIsSubReqModalOpen(false);
           await initializeOnboarding();
         }}
@@ -604,9 +545,9 @@ const OnBoard = () => {
         isOpen={isSubTransferModalOpen}
         onClose={() => setIsSubTransferModalOpen(false)}
         onTransferred={async (batchId) => {
-          setActiveBatchId(batchId);
+          dispatch(setActiveBatchId(batchId));
           await initializeOnboarding();
-          console.log("전송 완료된 배치", batchId);
+          console.log("?꾩넚 ?꾨즺??諛곗튂", batchId);
         }}
       />
 
@@ -621,3 +562,4 @@ const OnBoard = () => {
 };
 
 export default OnBoard;
+

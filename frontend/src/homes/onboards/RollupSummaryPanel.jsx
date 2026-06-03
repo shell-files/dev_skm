@@ -1,5 +1,9 @@
-import { useState, useEffect } from "react";
-import { getBatchStatus, calcBatch } from "@/apis/report";
+﻿import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  calculateRollupBatch,
+  fetchRollupBatchStatus,
+} from "@stores/reportSlice";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 import "@styles/onboarding1.css";
 
@@ -10,12 +14,13 @@ import "@styles/onboarding1.css";
  *   requestedCount, sentCount, pendingCount,
  *   calculateReadyYn, dmaReadyYn, batchStatus
  *
- * calculateReadyYn=false → 계산 버튼 비활성화
+ * calculateReadyYn=false ??怨꾩궛 踰꾪듉 鍮꾪솢?깊솕
  */
 const RollupSummaryPanel = ({ batchId, onCalculated }) => {
-  const [statusInfo, setStatusInfo] = useState(null);
+  const dispatch = useDispatch();
+  const statusInfo = useSelector((state) => state.report.rollup.batchStatus);
+  const loading = useSelector((state) => state.report.loading.batchStatus);
   const [calculating, setCalculating] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -24,25 +29,12 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
   }, [batchId]);
 
   const fetchStatus = async () => {
-    setLoading(true);
     setError(null);
     try {
-      const res = await getBatchStatus(batchId);
-      const isFailed =
-        res?.status === false || res?.success === false || !res?.data;
-
-      if (isFailed) {
-        setStatusInfo(null);
-        setError(res?.error?.message || "배치 상태 조회에 실패했습니다.");
-        return;
-      }
-      setStatusInfo(res.data);
+      await dispatch(fetchRollupBatchStatus({ batchId })).unwrap();
     } catch (err) {
       console.error(err);
-      setStatusInfo(null);
-      setError("배치 상태 조회에 실패했습니다.");
-    } finally {
-      setLoading(false);
+      setError(err?.message || "배치 상태 조회에 실패했습니다.");
     }
   };
 
@@ -58,25 +50,17 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
 
     setCalculating(true);
     try {
-      const res = await calcBatch(batchId);
-      const isFailed =
-        res?.status === false || res?.success === false;
-
-      if (!isFailed) {
-        showDefaultAlert("성공", "롤업 계산이 완료되었습니다.", "success");
-        fetchStatus();
-        onCalculated?.();
-      } else {
-        showDefaultAlert("오류", res?.error?.message || "계산에 실패했습니다.", "error");
-      }
+      await dispatch(calculateRollupBatch({ batchId })).unwrap();
+      showDefaultAlert("성공", "롤업 계산이 완료되었습니다.", "success");
+      fetchStatus();
+      onCalculated?.();
     } catch (err) {
       console.error(err);
-      showDefaultAlert("오류", "계산에 실패했습니다.", "error");
+      showDefaultAlert("오류", err?.message || "계산에 실패했습니다.", "error");
     } finally {
       setCalculating(false);
     }
   };
-
   /* loading */
   if (loading) {
     return (
@@ -94,7 +78,7 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
     return (
       <div className="ob1-rollup-panel">
         <div className="ob1-inline-error">
-          <span className="ob1-error-icon">⚠</span>
+          <span className="ob1-error-icon">!</span>
           <span>{error}</span>
           <button type="button" className="ob1-btn-retry" onClick={fetchStatus}>
             다시 시도
@@ -115,8 +99,8 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
       <div className="ob1-rollup-info">
         <h3 className="ob1-rollup-title">자회사 G0 데이터 롤업 현황</h3>
         <span className="ob1-rollup-detail">
-          전송 완료: {sentCount} / {requestedCount} 개사
-          {pendingCount > 0 && ` (대기: ${pendingCount})`}
+          전송 완료: {sentCount} / {requestedCount}개사
+          {pendingCount > 0 && ` (대기 ${pendingCount})`}
         </span>
         {dmaReadyYn === true && (
           <span className="ob1-rollup-badge ready">DMA 준비 완료</span>
@@ -138,7 +122,7 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
           className={`ob1-rollup-btn ${isCalculated ? "calculated" : ""}`}
           onClick={handleCalc}
           disabled={calculating || !calculateReadyYn || isCalculated}
-          title={!calculateReadyYn ? "모든 자회사 데이터가 수집되어야 계산 가능합니다" : ""}
+          title={!calculateReadyYn ? "모든 자회사 데이터가 수집되어야 계산 가능합니다." : ""}
         >
           {calculating
             ? "계산 중..."
@@ -152,3 +136,5 @@ const RollupSummaryPanel = ({ batchId, onCalculated }) => {
 };
 
 export default RollupSummaryPanel;
+
+

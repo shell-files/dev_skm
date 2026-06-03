@@ -1,8 +1,14 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
+import { useDispatch } from "react-redux";
 import "@styles/reportBasisSelectModal.css";
-import { DEFAULT_REPORTING_YEAR, startWorkflow, getCurrent, resumeWorkflow } from "@/apis/report";
+import {
+  DEFAULT_REPORTING_YEAR,
+  fetchCurrentWorkflow,
+  resumeReportWorkflow,
+  startReportWorkflow,
+} from "@stores/reportSlice";
 
 // ── Illustrations (카드 대표 일러스트 132×132)
 import entityCardImg from "@assets/reportbasis/illustrations/entity-card.png";
@@ -52,6 +58,7 @@ const ReportBasisSelectModal = ({
   reportingYear = DEFAULT_REPORTING_YEAR
 }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [selected, setSelected] = useState(null); // null | 'ENTITY' | 'CONSOLIDATED'
   const [selectedYear, setSelectedYear] = useState(reportingYear);
   const [workflowStatus, setWorkflowStatus] = useState(null); // 'NO_RUN' | 'EXISTS'
@@ -76,7 +83,9 @@ const ReportBasisSelectModal = ({
       setLoading(true);
       setError(null);
       try {
-        const res = await getCurrent(companyId, selectedYear);
+        const res = await dispatch(
+          fetchCurrentWorkflow({ companyId, reportingYear: selectedYear })
+        ).unwrap();
         if (isMounted) {
           if (res?.status === false || res?.success === false || !res?.data) {
              setError(res?.error?.message || "워크플로우 조회 실패");
@@ -119,7 +128,9 @@ const ReportBasisSelectModal = ({
       setLoading(true);
       setError(null);
       try {
-        const res = await resumeWorkflow(currentRunId);
+        const res = await dispatch(
+          resumeReportWorkflow({ runId: currentRunId })
+        ).unwrap();
         const isFailed = res?.status === false || res?.success === false || !res?.data;
         if (isFailed) {
           setError(res?.error?.message || res?.detail || "기존 프로젝트 재개에 실패했습니다.");
@@ -153,11 +164,13 @@ const ReportBasisSelectModal = ({
     setError(null);
 
     try {
-      const res = await startWorkflow({
-        companyId,
-        reportingYear: selectedYear,
-        reportBasisType: selected
-      });
+      const res = await dispatch(
+        startReportWorkflow({
+          companyId,
+          reportingYear: selectedYear,
+          reportBasisType: selected
+        })
+      ).unwrap();
 
       const isFailed = res?.status === false || res?.success === false || !res?.data;
       if (isFailed) {

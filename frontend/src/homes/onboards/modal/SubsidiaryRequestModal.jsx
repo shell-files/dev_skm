@@ -1,18 +1,23 @@
-import { useState, useEffect } from "react";
+﻿import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { listSubsidiaries, saveBatch } from "@/apis/report";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  createRollupBatch,
+  fetchRollupSubsidiaries,
+} from "@stores/reportSlice";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
 /**
  * SubsidiaryRequestModal
  *
- * G0 데이터 요청 자회사 선택 modal.
- * DTO: res.data.items → { companyId, companyCode, companyName }
+ * G0 ?곗씠???붿껌 ?먰쉶???좏깮 modal.
+ * DTO: res.data.items ??{ companyId, companyCode, companyName }
  */
 const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
-  const [subsidiaries, setSubsidiaries] = useState([]);
+  const dispatch = useDispatch();
+  const subsidiaries = useSelector((state) => state.report.rollup.subsidiaries);
+  const loading = useSelector((state) => state.report.loading.subsidiaries);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState(null);
 
@@ -26,30 +31,18 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
   }, [isOpen]);
 
   const loadSubsidiaries = async () => {
-    setLoading(true);
     setError(null);
     try {
-      const res = await listSubsidiaries(runId);
-      const isFailed =
-        res?.status === false || res?.success === false || !res?.data;
-
-      if (isFailed) {
-        setSubsidiaries([]);
-        setError(res?.error?.message || "자회사 목록 조회에 실패했습니다.");
-        return;
-      }
-
-      const items = res.data.items || res.data || [];
-      setSubsidiaries(items);
-      setSelectedIds(
-        items.map((item) => item.companyId)
-      );
+      const res = await dispatch(fetchRollupSubsidiaries({ runId })).unwrap();
+      const items = Array.isArray(res?.data?.items)
+        ? res.data.items
+        : Array.isArray(res?.data)
+          ? res.data
+          : [];
+      setSelectedIds(items.map((item) => item.companyId));
     } catch (err) {
       console.error(err);
-      setSubsidiaries([]);
-      setError("자회사 목록 조회에 실패했습니다.");
-    } finally {
-      setLoading(false);
+      setError(err?.message || "자회사 목록 조회에 실패했습니다.");
     }
   };
 
@@ -66,29 +59,21 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
 
     setRequesting(true);
     try {
-      const res = await saveBatch({
+      const res = await dispatch(createRollupBatch({
         runId,
         sourceCompanyIds: selectedIds,
-      });
+      })).unwrap();
 
-      const isFailed =
-        res?.status === false || res?.success === false || !res?.data;
-
-      if (!isFailed) {
-        showDefaultAlert("완료", "자회사 데이터 요청이 완료되었습니다.", "success");
-        onRequested?.(res.data);
-        onClose();
-      } else {
-        showDefaultAlert("오류", res?.error?.message || "요청에 실패했습니다.", "error");
-      }
+      showDefaultAlert("완료", "자회사 데이터 요청이 완료되었습니다.", "success");
+      onRequested?.(res.data || res);
+      onClose();
     } catch (err) {
       console.error(err);
-      showDefaultAlert("오류", "요청에 실패했습니다.", "error");
+      showDefaultAlert("오류", err?.message || "요청에 실패했습니다.", "error");
     } finally {
       setRequesting(false);
     }
   };
-
   if (!isOpen) return null;
 
   return createPortal(
@@ -96,7 +81,7 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
       <div className="ob1-modal-content" style={{ width: 480 }}>
         <div className="ob1-modal-header">
           <h2>G0 데이터 요청 자회사 선택</h2>
-          <button className="ob1-btn-close" onClick={onClose}>×</button>
+          <button className="ob1-btn-close" onClick={onClose}>횞</button>
         </div>
         <div className="ob1-modal-body">
           <p style={{ marginBottom: 16, fontSize: "0.9rem", color: "#475569" }}>
@@ -114,7 +99,7 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
           {/* error */}
           {!loading && error && (
             <div className="ob1-inline-error" style={{ margin: "16px 0" }}>
-              <span className="ob1-error-icon">⚠</span>
+              <span className="ob1-error-icon">!</span>
               <span>{error}</span>
               <button type="button" className="ob1-btn-retry" onClick={loadSubsidiaries}>
                 다시 시도
@@ -232,3 +217,5 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
 };
 
 export default SubsidiaryRequestModal;
+
+

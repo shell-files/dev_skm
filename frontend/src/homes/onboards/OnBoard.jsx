@@ -9,6 +9,16 @@ import OnboardingModalShell from "./modal/OnboardingModalShell";
 import SubsidiaryRequestModal from "./modal/SubsidiaryRequestModal";
 import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
 import RollupSummaryPanel from "./RollupSummaryPanel";
+import BatchActionBar from "@components/UI/BatchActionBar";
+import MetricAssignmentModal from "./modal/MetricAssignmentModal";
+import Step12UiPreviewPanel from "@components/dev/Step12UiPreviewPanel";
+import { 
+  STEP12_UI_FIXTURE_ENABLED, 
+  mergeOnboardingFixtureRows, 
+  ONBOARDING_SCENARIOS, 
+  APPROVAL_SCENARIOS, 
+  ROLLUP_SCENARIOS 
+} from "../../mocks/step12UiFixtures";
 import {
   calculateMetricStatus,
   calculateProfileStats,
@@ -124,6 +134,7 @@ const OnboardingWorkflowCta = ({
   onCalculated,
   onCtaClick,
   onTransferModalOpen,
+  rollupScenario,
 }) => {
   if (variant === "noRun" || isNoRunWorkflow(workflow)) {
     return (
@@ -162,10 +173,11 @@ const OnboardingWorkflowCta = ({
           </div>
         )}
 
-        {activeBatchId && (
+        {(activeBatchId || STEP12_UI_FIXTURE_ENABLED) && (
           <RollupSummaryPanel
             batchId={activeBatchId}
             onCalculated={onCalculated}
+            rollupScenario={rollupScenario}
           />
         )}
       </>
@@ -199,8 +211,13 @@ const OnboardingMetricTable = ({
   g0Error,
   g0Items,
   loadingG0,
+  selectedMetricIds,
+  onSelectMetric,
+  onToggleSelectAll,
+  onRowAssignRequested,
   onOpenMetric,
   onRetry,
+  viewerRole,
 }) => {
   if (g0Error) {
     return (
@@ -233,53 +250,119 @@ const OnboardingMetricTable = ({
     );
   }
 
+  const groupedItems = groupByMetric(g0Items);
+  const isAllSelected = groupedItems.length > 0 && selectedMetricIds.length === groupedItems.length;
+
   return (
     <div className="ob1-table-container">
       <table className="ob1-table">
         <thead>
           <tr>
-            <th style={{ width: "12%" }}>Metric ID</th>
-            <th style={{ width: "15%" }}>Atomic ID</th>
-            <th style={{ width: "35%" }}>지표명</th>
-            <th style={{ width: "10%" }}>입력 유형</th>
-            <th style={{ width: "10%" }}>단위</th>
-            <th style={{ width: "10%" }}>상태</th>
-            <th style={{ width: "8%" }}>데이터 입력</th>
+            <th style={{ width: "44px" }}>
+              <input 
+                type="checkbox" 
+                className="ob1-checkbox" 
+                checked={isAllSelected}
+                onChange={() => onToggleSelectAll(groupedItems.map(i => i.metricId))}
+              />
+            </th>
+            <th style={{ width: "90px" }}>Metric ID</th>
+            <th style={{ width: "auto" }}>지표명</th>
+            <th style={{ width: "170px" }}>담당자</th>
+            <th style={{ width: "110px" }}>제출 기한</th>
+            <th style={{ width: "90px" }}>입력 상태</th>
+            <th style={{ width: "90px" }}>승인 상태</th>
+            <th style={{ width: "180px" }}>관리</th>
           </tr>
         </thead>
         <tbody>
-          {groupByMetric(g0Items).map((item) => {
+          {groupedItems.map((item) => {
             const subMetrics = g0Items.filter((sub) => sub.metricId === item.metricId);
             const statusInfo = calculateMetricStatus(subMetrics);
-            const typeBadge = getInputTypeBadge(
-              subMetrics.find((sub) => isEditableItem(sub)) || subMetrics[0] || item
-            );
-            const atomicId = getAtomicId(item);
+            
+            const inputStatusLabel = item.inputStatus || statusInfo.label;
+            const inputStatusCls = inputStatusLabel === '작성중' ? 'draft' : inputStatusLabel === '제출완료' ? 'submitted' : inputStatusLabel === '입력 완료' ? 'approved' : 'not-started';
+            
+            const approvalStatusLabel = item.approvalStatus || '미제출';
+            let approvalStatusCls = 'not-started';
+            if (approvalStatusLabel === '검토대기') approvalStatusCls = 'draft';
+            else if (approvalStatusLabel === '검토완료') approvalStatusCls = 'reviewed';
+            else if (approvalStatusLabel === '승인완료') approvalStatusCls = 'approved';
+            else if (approvalStatusLabel === '반려') approvalStatusCls = 'rejected';
+
+            const isSelected = selectedMetricIds.includes(item.metricId);
+            const isConsultant = viewerRole === '컨설턴트' || viewerRole === 'CONSULTANT';
+            const isAssigned = item.assignmentStatus === 'ASSIGNED';
+            const isInvitePending = item.inviteStatus === 'PENDING';
+            const isSelfAssigned = item.selfAssignedYn === true;
+            
+            // Mock Date validation for UI-only
+            const todayStr = '2026-06-03';
+            const isOverdue = item.submissionDueDate && item.submissionDueDate < todayStr;
 
             return (
-              <tr key={item.metricId}>
+              <tr key={item.metricId} className={isSelected ? "selected" : ""}>
+                <td>
+                  <input 
+                    type="checkbox" 
+                    className="ob1-checkbox"
+                    checked={isSelected}
+                    onChange={() => onSelectMetric(item.metricId)}
+                  />
+                </td>
                 <td>{item.metricId}</td>
-                <td>{subMetrics.length > 1 ? `(${subMetrics.length}개 항목)` : atomicId || "-"}</td>
                 <td className="ob1-td-name">{item.metricName || item.atomicName || "-"}</td>
+                
                 <td>
-                  <span className={`ob1-type-badge ${typeBadge.cls || ""}`}>
-                    {typeBadge.label}
+                  <div className="ob1-assignee-cell">
+                    {isSelfAssigned ? (
+                      <><span className="ob1-assignee-name">{item.assigneeName}</span><span className="ob1-assignee-status">본인 입력</span></>
+                    ) : isInvitePending ? (
+                      <><span className="ob1-assignee-name">{item.assigneeName}</span><span className="ob1-assignee-email">{item.assigneeEmail}</span><span className="ob1-assignee-status pending">초대 대기</span></>
+                    ) : isAssigned ? (
+                      <><span className="ob1-assignee-name">{item.assigneeName}</span><span className="ob1-assignee-email">{item.assigneeEmail}</span></>
+                    ) : (
+                      <span className="ob1-assignee-status unassigned">미지정</span>
+                    )}
+                  </div>
+                </td>
+
+                <td>
+                  {item.submissionDueDate ? (
+                    <div style={{ color: isOverdue ? '#ef4444' : '#334155', fontWeight: isOverdue ? 600 : 400 }}>
+                      {item.submissionDueDate}
+                      {isOverdue && <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>기한 초과</div>}
+                    </div>
+                  ) : (
+                    <span style={{ color: '#94a3b8' }}>미설정</span>
+                  )}
+                </td>
+
+                <td>
+                  <span className={`ob1-status-pill ${inputStatusCls}`}>
+                    {inputStatusLabel}
                   </span>
                 </td>
-                <td>{item.unit || "-"}</td>
+
                 <td>
-                  <span className={`ob1-status-pill ${statusInfo.cls}`}>
-                    {statusInfo.label}
+                  <span className={`ob1-status-pill ${approvalStatusCls}`}>
+                    {approvalStatusLabel}
                   </span>
                 </td>
+
                 <td>
-                  <button
-                    type="button"
-                    className="ob1-btn-input"
-                    onClick={() => onOpenMetric(item, subMetrics)}
-                  >
-                    입력
-                  </button>
+                  <div className="ob1-td-actions" style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                    {isConsultant ? (
+                      <button type="button" className="ob1-btn-input" onClick={() => onOpenMetric(item, subMetrics)}>상세 보기</button>
+                    ) : (
+                      <>
+                        <button type="button" className="ob1-btn-input" onClick={() => onOpenMetric(item, subMetrics)}>입력</button>
+                        <button type="button" className="ob1-btn-input" style={{ borderColor: '#cbd5e1', color: '#475569' }} onClick={() => onRowAssignRequested(item.metricId)}>
+                          {isAssigned ? '담당자 변경' : isInvitePending ? '재지정' : '담당자 지정'}
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             );
@@ -293,11 +376,19 @@ const OnboardingMetricTable = ({
 const OnBoard = () => {
   const navigate = useNavigate(); 
   const dispatch = useDispatch();
-  const { selectedCompany } = useAuth();
+  const { selectedCompany, user } = useAuth();
   const location = useLocation();
   const companyId = selectedCompany?.company_id ?? selectedCompany?.companyId;
   const reportingYearQuery = new URLSearchParams(location.search).get("reportingYear");
   const reportingYear = reportingYearQuery ? parseInt(reportingYearQuery, 10) : DEFAULT_REPORTING_YEAR;
+
+  // Preview States
+  const [previewRole, setPreviewRole] = useState("ESG 담당자");
+  const [previewOnboardingScenario, setPreviewOnboardingScenario] = useState(ONBOARDING_SCENARIOS.UNASSIGNED);
+  const [previewApprovalScenario, setPreviewApprovalScenario] = useState(APPROVAL_SCENARIOS.NO_CONSULTANT);
+  const [previewRollupScenario, setPreviewRollupScenario] = useState(ROLLUP_SCENARIOS.PARENT_PENDING);
+
+  const viewerRole = STEP12_UI_FIXTURE_ENABLED ? previewRole : (selectedCompany?.role ?? user?.role ?? "guest");
 
   const workflow = useSelector((state) => state.report.workflow.current);
   const rawMetrics = useSelector((state) => state.report.onboarding.metrics);
@@ -307,12 +398,27 @@ const OnBoard = () => {
   const loadingG0 = useSelector((state) => state.report.loading.onboarding);
   const workflowErrorPayload = useSelector((state) => state.report.error.workflow);
   const g0ErrorPayload = useSelector((state) => state.report.error.onboarding);
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
   const [isSubReqModalOpen, setIsSubReqModalOpen] = useState(false);
   const [isSubTransferModalOpen, setIsSubTransferModalOpen] = useState(false);
-  const g0Items = useMemo(() => flattenOnboardingItems(rawMetrics), [rawMetrics]);
+  
+  // New States for UI-1 & UI-2
+  const [selectedMetricIds, setSelectedMetricIds] = useState([]);
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [assignmentMode, setAssignmentMode] = useState('single');
+  const [assignmentTargetIds, setAssignmentTargetIds] = useState([]);
+
+  const g0Items = useMemo(() => {
+    const flattened = flattenOnboardingItems(rawMetrics);
+    if (STEP12_UI_FIXTURE_ENABLED) {
+      return mergeOnboardingFixtureRows(flattened, previewOnboardingScenario);
+    }
+    return flattened;
+  }, [rawMetrics, previewOnboardingScenario]);
+
   const g0ProfileStatus = useMemo(() => getProfileStatusFromItems(g0Items), [g0Items]);
   const hasPendingSubsidiaryRequest = useMemo(
     () => requests.some(isPendingSubsidiaryRequest),
@@ -438,6 +544,41 @@ const OnBoard = () => {
     }
   };
 
+  // Callbacks for Phase UI-1 & UI-2
+  const handleSelectMetric = (metricId) => {
+    setSelectedMetricIds(prev => 
+      prev.includes(metricId) ? prev.filter(id => id !== metricId) : [...prev, metricId]
+    );
+  };
+
+  const handleToggleSelectAll = (allMetricIds) => {
+    if (selectedMetricIds.length === allMetricIds.length) {
+      setSelectedMetricIds([]);
+    } else {
+      setSelectedMetricIds(allMetricIds);
+    }
+  };
+
+  const handleBulkAssignRequested = () => {
+    if (selectedMetricIds.length === 0) return;
+    setAssignmentMode('bulk');
+    setAssignmentTargetIds(selectedMetricIds);
+    setIsAssignmentModalOpen(true);
+  };
+
+  const handleRowAssignRequested = (metricId) => {
+    setAssignmentMode('single');
+    setAssignmentTargetIds([metricId]);
+    setIsAssignmentModalOpen(true);
+  };
+
+  const handleSubmitAssignment = (payload) => {
+    console.log("Assignment Payload:", payload);
+    showDefaultAlert("담당자 지정", "담당자 지정 모달 콜백 확인 완료.", "success");
+    setIsAssignmentModalOpen(false);
+    setSelectedMetricIds([]);
+  };
+
   if (loadingWorkflow && !workflow) {
     return (
       <div id="ob1-page">
@@ -495,18 +636,30 @@ const OnBoard = () => {
                 loadingWorkflow={loadingWorkflow}
                 workflow={workflow}
                 isNoRunWorkflow={isNoRunWorkflow}
-                onCalculated={() => {
-                  initializeOnboarding();
-                }}
+                onCalculated={() => initializeOnboarding()}
                 onCtaClick={handleCtaClick}
                 onTransferModalOpen={() => setIsSubTransferModalOpen(true)}
+                rollupScenario={previewRollupScenario}
               />
+
+              <div className="ob1-batch-bar" style={{ padding: '0 16px', marginTop: '16px' }}>
+                <BatchActionBar 
+                  selectedCount={selectedMetricIds.length}
+                  actions={[
+                    { label: '선택 지표 담당자 지정', onClick: handleBulkAssignRequested, className: 'submit' },
+                    { label: '선택 해제', onClick: () => setSelectedMetricIds([]), className: 'reject' }
+                  ]}
+                />
+              </div>
 
               <OnboardingMetricTable
                 g0Error={g0Error}
                 g0Items={g0Items}
                 loadingG0={loadingG0}
-                onRetry={initializeOnboarding}
+                selectedMetricIds={selectedMetricIds}
+                onSelectMetric={handleSelectMetric}
+                onToggleSelectAll={handleToggleSelectAll}
+                onRowAssignRequested={handleRowAssignRequested}
                 onOpenMetric={(item, subMetrics) => {
                   setSelectedItem({
                     parent: item,
@@ -514,6 +667,8 @@ const OnBoard = () => {
                   });
                   setIsModalOpen(true);
                 }}
+                onRetry={initializeOnboarding}
+                viewerRole={viewerRole}
               />
 
               <OnboardingWorkflowCta
@@ -533,6 +688,16 @@ const OnBoard = () => {
         metricItem={selectedItem?.parent}
         subMetrics={selectedItem?.metrics || []}
         onSaveAndSubmit={handleSaveAndSubmit}
+        viewerRole={viewerRole}
+        onOpenAssignment={() => handleRowAssignRequested(selectedItem?.parent?.metricId)}
+      />
+
+      <MetricAssignmentModal
+        isOpen={isAssignmentModalOpen}
+        mode={assignmentMode}
+        selectedMetricIds={assignmentTargetIds}
+        onClose={() => setIsAssignmentModalOpen(false)}
+        onSubmit={handleSubmitAssignment}
       />
 
       <SubsidiaryRequestModal
@@ -552,7 +717,6 @@ const OnBoard = () => {
         onTransferred={async (batchId) => {
           dispatch(setActiveBatchId(batchId));
           await initializeOnboarding();
-          console.log("전송 완료 배치", batchId);
         }}
       />
 
@@ -562,9 +726,19 @@ const OnBoard = () => {
         companyId={companyId}
         reportingYear={reportingYear}
       />
+
+      <Step12UiPreviewPanel
+        role={previewRole}
+        onboardingScenario={previewOnboardingScenario}
+        approvalScenario={previewApprovalScenario}
+        rollupScenario={previewRollupScenario}
+        onRoleChange={setPreviewRole}
+        onOnboardingScenarioChange={setPreviewOnboardingScenario}
+        onApprovalScenarioChange={setPreviewApprovalScenario}
+        onRollupScenarioChange={setPreviewRollupScenario}
+      />
     </div>
   );
 };
 
 export default OnBoard;
-

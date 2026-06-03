@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useAuth } from '@hooks/AuthContext.jsx';
 import ReportBasisSelectModal from "@components/UI/ReportBasisSelectModal.jsx";
-import { DEFAULT_REPORTING_YEAR } from "@/apis/report";
+import { DEFAULT_REPORTING_YEAR } from "@stores/reportSlice";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
 const Sidebarnav = ({ isOpen, setIsOpen }) => {

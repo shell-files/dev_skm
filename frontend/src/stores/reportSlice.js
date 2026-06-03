@@ -1,0 +1,451 @@
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { GET, POST, PATCH } from "@utils/Network";
+
+export const DEFAULT_REPORTING_YEAR = new Date().getFullYear();
+
+const normalizeDirectDtoResponse = (res) => {
+  if (!res || res?.status === false || res?.success === false) {
+    return res;
+  }
+  if (res?.data) {
+    return res;
+  }
+  return {
+    success: true,
+    data: res,
+  };
+};
+
+const isApiFailed = (res) =>
+  !res || res?.status === false || res?.success === false;
+
+const toApiError = (res, fallbackMessage) => ({
+  status: false,
+  message:
+    res?.error?.message ||
+    res?.error?.detail ||
+    res?.detail ||
+    res?.message ||
+    fallbackMessage,
+  error: res?.error || null,
+});
+
+const rejectIfFailed = (res, rejectWithValue, fallbackMessage) => {
+  if (isApiFailed(res)) {
+    return rejectWithValue(toApiError(res, fallbackMessage));
+  }
+  return res;
+};
+
+const dataOf = (payload) => payload?.data ?? payload;
+
+const itemsOf = (payload) => {
+  const data = dataOf(payload);
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data)) return data;
+  return [];
+};
+
+const initialState = {
+  workflow: {
+    current: null,
+    g0Status: null,
+  },
+
+  onboarding: {
+    metrics: [],
+  },
+
+  rollup: {
+    subsidiaries: [],
+    requests: [],
+    activeBatchId: null,
+    batchStatus: null,
+  },
+
+  loading: {
+    workflow: false,
+    onboarding: false,
+    saveMetric: false,
+    subsidiaries: false,
+    createBatch: false,
+    requests: false,
+    sendSource: false,
+    batchStatus: false,
+    calculateBatch: false,
+  },
+
+  error: {
+    workflow: null,
+    onboarding: null,
+    saveMetric: null,
+    subsidiaries: null,
+    createBatch: null,
+    requests: null,
+    sendSource: null,
+    batchStatus: null,
+    calculateBatch: null,
+  },
+};
+
+export const fetchCurrentWorkflow = createAsyncThunk(
+  "report/fetchCurrentWorkflow",
+  async (
+    { companyId, reportingYear = DEFAULT_REPORTING_YEAR } = {},
+    { rejectWithValue }
+  ) => {
+    const params = companyId == null ? undefined : { companyId, reportingYear };
+    try {
+      const res = await GET("/reportWorkflow/current", params);
+      return rejectIfFailed(res, rejectWithValue, "보고서 워크플로우 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "보고서 워크플로우 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const startReportWorkflow = createAsyncThunk(
+  "report/startReportWorkflow",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = await POST("/reportWorkflow/start", payload);
+      return rejectIfFailed(res, rejectWithValue, "보고서 워크플로우 시작에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "보고서 워크플로우 시작 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const resumeReportWorkflow = createAsyncThunk(
+  "report/resumeReportWorkflow",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = await POST(`/reportWorkflow/${runId}/resume`);
+      return rejectIfFailed(res, rejectWithValue, "기존 프로젝트 재개에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "기존 프로젝트 재개 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const fetchG0Status = createAsyncThunk(
+  "report/fetchG0Status",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = await GET(`/reportWorkflow/${runId}/g0-status`);
+      return rejectIfFailed(res, rejectWithValue, "G0 상태 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "G0 상태 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const fetchOnboardingMetrics = createAsyncThunk(
+  "report/fetchOnboardingMetrics",
+  async (
+    {
+      companyId,
+      reportingYear = DEFAULT_REPORTING_YEAR,
+      cycleType = "PRE_DMA_G0",
+      metricId,
+    },
+    { rejectWithValue }
+  ) => {
+    const params = { companyId, reportingYear, cycleType };
+    if (metricId) params.metricId = metricId;
+    try {
+      const res = normalizeDirectDtoResponse(await GET("/onboarding", params));
+      return rejectIfFailed(res, rejectWithValue, "G0 프로필 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "G0 프로필 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const saveOnboardingMetric = createAsyncThunk(
+  "report/saveOnboardingMetric",
+  async ({ metricId, payload }, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(await PATCH(`/onboarding/${metricId}`, payload));
+      return rejectIfFailed(res, rejectWithValue, "온보딩 지표 저장에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "온보딩 지표 저장 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const fetchRollupSubsidiaries = createAsyncThunk(
+  "report/fetchRollupSubsidiaries",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = await GET("/rollup/subsidiaries", { runId });
+      return rejectIfFailed(res, rejectWithValue, "자회사 목록 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "자회사 목록 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const createRollupBatch = createAsyncThunk(
+  "report/createRollupBatch",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = await POST("/rollup/batches", payload);
+      return rejectIfFailed(res, rejectWithValue, "자회사 데이터 요청에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "자회사 데이터 요청 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const fetchRollupRequests = createAsyncThunk(
+  "report/fetchRollupRequests",
+  async (_, { rejectWithValue }) => {
+    try {
+      const res = await GET("/rollup/requests");
+      return rejectIfFailed(res, rejectWithValue, "자회사 요청 목록 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "자회사 요청 목록 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const sendRollupSource = createAsyncThunk(
+  "report/sendRollupSource",
+  async ({ batchId }, { rejectWithValue }) => {
+    try {
+      const res = await POST(`/rollup/batches/${batchId}/sources/send`);
+      return rejectIfFailed(res, rejectWithValue, "자회사 데이터 전송에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "자회사 데이터 전송 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const fetchRollupBatchStatus = createAsyncThunk(
+  "report/fetchRollupBatchStatus",
+  async ({ batchId }, { rejectWithValue }) => {
+    try {
+      const res = await GET(`/rollup/batches/${batchId}/status`);
+      return rejectIfFailed(res, rejectWithValue, "롤업 배치 상태 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "롤업 배치 상태 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const calculateRollupBatch = createAsyncThunk(
+  "report/calculateRollupBatch",
+  async ({ batchId }, { rejectWithValue }) => {
+    try {
+      const res = await POST(`/rollup/batches/${batchId}/calculate`);
+      return rejectIfFailed(res, rejectWithValue, "롤업 계산에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "롤업 계산 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+const setPending = (state, key) => {
+  state.loading[key] = true;
+  state.error[key] = null;
+};
+
+const setRejected = (state, key, action) => {
+  state.loading[key] = false;
+  state.error[key] = action.payload || action.error || null;
+};
+
+const reportSlice = createSlice({
+  name: "report",
+  initialState,
+  reducers: {
+    setActiveBatchId: (state, action) => {
+      state.rollup.activeBatchId = action.payload ?? null;
+    },
+
+    clearReportError: (state, action) => {
+      const key = action.payload;
+      if (key && Object.prototype.hasOwnProperty.call(state.error, key)) {
+        state.error[key] = null;
+      }
+    },
+
+    resetReportState: () => initialState,
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchCurrentWorkflow.pending, (state) => setPending(state, "workflow"))
+      .addCase(fetchCurrentWorkflow.fulfilled, (state, action) => {
+        state.loading.workflow = false;
+        state.error.workflow = null;
+        state.workflow.current = dataOf(action.payload);
+      })
+      .addCase(fetchCurrentWorkflow.rejected, (state, action) => setRejected(state, "workflow", action));
+
+    builder
+      .addCase(startReportWorkflow.pending, (state) => setPending(state, "workflow"))
+      .addCase(startReportWorkflow.fulfilled, (state, action) => {
+        state.loading.workflow = false;
+        state.error.workflow = null;
+        state.workflow.current = dataOf(action.payload);
+      })
+      .addCase(startReportWorkflow.rejected, (state, action) => setRejected(state, "workflow", action));
+
+    builder
+      .addCase(resumeReportWorkflow.pending, (state) => setPending(state, "workflow"))
+      .addCase(resumeReportWorkflow.fulfilled, (state, action) => {
+        state.loading.workflow = false;
+        state.error.workflow = null;
+        state.workflow.current = dataOf(action.payload);
+      })
+      .addCase(resumeReportWorkflow.rejected, (state, action) => setRejected(state, "workflow", action));
+
+    builder
+      .addCase(fetchG0Status.pending, (state) => setPending(state, "workflow"))
+      .addCase(fetchG0Status.fulfilled, (state, action) => {
+        state.loading.workflow = false;
+        state.error.workflow = null;
+        state.workflow.g0Status = dataOf(action.payload);
+      })
+      .addCase(fetchG0Status.rejected, (state, action) => setRejected(state, "workflow", action));
+
+    builder
+      .addCase(fetchOnboardingMetrics.pending, (state) => setPending(state, "onboarding"))
+      .addCase(fetchOnboardingMetrics.fulfilled, (state, action) => {
+        state.loading.onboarding = false;
+        state.error.onboarding = null;
+        state.onboarding.metrics = dataOf(action.payload)?.items || [];
+      })
+      .addCase(fetchOnboardingMetrics.rejected, (state, action) => {
+        setRejected(state, "onboarding", action);
+        state.onboarding.metrics = [];
+      });
+
+    builder
+      .addCase(saveOnboardingMetric.pending, (state) => setPending(state, "saveMetric"))
+      .addCase(saveOnboardingMetric.fulfilled, (state) => {
+        state.loading.saveMetric = false;
+        state.error.saveMetric = null;
+      })
+      .addCase(saveOnboardingMetric.rejected, (state, action) => setRejected(state, "saveMetric", action));
+
+    builder
+      .addCase(fetchRollupSubsidiaries.pending, (state) => setPending(state, "subsidiaries"))
+      .addCase(fetchRollupSubsidiaries.fulfilled, (state, action) => {
+        state.loading.subsidiaries = false;
+        state.error.subsidiaries = null;
+        state.rollup.subsidiaries = itemsOf(action.payload);
+      })
+      .addCase(fetchRollupSubsidiaries.rejected, (state, action) => {
+        setRejected(state, "subsidiaries", action);
+        state.rollup.subsidiaries = [];
+      });
+
+    builder
+      .addCase(createRollupBatch.pending, (state) => setPending(state, "createBatch"))
+      .addCase(createRollupBatch.fulfilled, (state, action) => {
+        state.loading.createBatch = false;
+        state.error.createBatch = null;
+        state.rollup.activeBatchId = dataOf(action.payload)?.batchId ?? state.rollup.activeBatchId;
+      })
+      .addCase(createRollupBatch.rejected, (state, action) => setRejected(state, "createBatch", action));
+
+    builder
+      .addCase(fetchRollupRequests.pending, (state) => setPending(state, "requests"))
+      .addCase(fetchRollupRequests.fulfilled, (state, action) => {
+        state.loading.requests = false;
+        state.error.requests = null;
+        state.rollup.requests = itemsOf(action.payload);
+      })
+      .addCase(fetchRollupRequests.rejected, (state, action) => {
+        setRejected(state, "requests", action);
+        state.rollup.requests = [];
+      });
+
+    builder
+      .addCase(sendRollupSource.pending, (state) => setPending(state, "sendSource"))
+      .addCase(sendRollupSource.fulfilled, (state) => {
+        state.loading.sendSource = false;
+        state.error.sendSource = null;
+      })
+      .addCase(sendRollupSource.rejected, (state, action) => setRejected(state, "sendSource", action));
+
+    builder
+      .addCase(fetchRollupBatchStatus.pending, (state) => setPending(state, "batchStatus"))
+      .addCase(fetchRollupBatchStatus.fulfilled, (state, action) => {
+        state.loading.batchStatus = false;
+        state.error.batchStatus = null;
+        state.rollup.batchStatus = dataOf(action.payload);
+      })
+      .addCase(fetchRollupBatchStatus.rejected, (state, action) => {
+        setRejected(state, "batchStatus", action);
+        state.rollup.batchStatus = null;
+      });
+
+    builder
+      .addCase(calculateRollupBatch.pending, (state) => setPending(state, "calculateBatch"))
+      .addCase(calculateRollupBatch.fulfilled, (state, action) => {
+        state.loading.calculateBatch = false;
+        state.error.calculateBatch = null;
+        state.rollup.batchStatus = dataOf(action.payload) || state.rollup.batchStatus;
+      })
+      .addCase(calculateRollupBatch.rejected, (state, action) => setRejected(state, "calculateBatch", action));
+  },
+});
+
+export const {
+  clearReportError,
+  resetReportState,
+  setActiveBatchId,
+} = reportSlice.actions;
+
+export default reportSlice.reducer;

@@ -20,14 +20,12 @@ from src.models.onboarding import (
     OnboardingAssignmentListResponseDto,
     OnboardingAssignmentPatchRequestDto,
     OnboardingAtomicItemDto,
-    OnboardingInviteActionResponseDto,
-    OnboardingInviteListItemDto,
-    OnboardingInviteListResponseDto,
     OnboardingMetricItemDto,
     OnboardingMetricsResponseDto,
     OnboardingMetricValuesRequestDto,
     OnboardingMetricValuesResponseDto,
 )
+from src.utils import onboardingassignmentrepository as assignmentRepo
 from src.utils import onboardingrepository as repo
 from src.utils.companyscope import checkScope
 
@@ -42,8 +40,6 @@ STRUCTURED_LOOKUP_IDS = {"G0-05__QL0002", "G0-06__QL0001"}
 EDITABLE_INPUT_MODES = {"MANUAL_NUMBER", "MANUAL_TEXTAREA", "YEAR_RANGE"}
 SUPPORTED_CYCLE_TYPE = "PRE_DMA_G0"
 SUPPORTED_INPUT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
-SUPPORTED_TARGET_ROLE = "EMPLOYEE"
-INVITE_EXPIRE_DAYS = 7
 ASSIGNMENT_MANAGER_ROLES = {"ADMIN", "ESG"}
 ASSIGNMENT_MANAGER_ROLE_NAMES = {"관리자", "ESG담당자"}
 PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE = "PRE_DMA_G0_CYCLE_NOT_READY: 기존 PRE_DMA_G0 workflow를 먼저 시작해 주세요."
@@ -384,7 +380,7 @@ def bulkAssign(request: OnboardingAssignmentBulkAssignRequestDto, userModel) -> 
     checkCycleType(request.cycleType)
     cycle = requirePreDmaG0Cycle(request.companyId, request.reportingYear)
     metricIds = repo.validateCycleMetricIds(int(cycle["id"]), request.companyId, request.metricIds)
-    result = repo.bulkAssignMetrics(
+    result = assignmentRepo.bulkAssignMetrics(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
         cycle=cycle,
@@ -421,7 +417,7 @@ def listAssignmentItems(
     checkManager(userModel)
     checkCycleType(cycleType)
     cycle = repo.resolvePreDmaG0Cycle(companyId=companyId, reportingYear=reportingYear)
-    items = [OnboardingAssignmentItemDto(**item) for item in repo.listAssignments(companyId, reportingYear, cycle)]
+    items = [OnboardingAssignmentItemDto(**item) for item in assignmentRepo.listAssignments(companyId, reportingYear, cycle)]
     return OnboardingAssignmentListResponseDto(
         companyId=companyId,
         reportingYear=reportingYear,
@@ -448,7 +444,7 @@ def getAssignmentItem(
         reportingYear=reportingYear,
         cycleId=int(cycle["id"]),
         cycleType=SUPPORTED_CYCLE_TYPE,
-        items=[OnboardingAssignmentItemDto(**item) for item in repo.listAssignments(companyId, reportingYear, cycle)],
+        items=[OnboardingAssignmentItemDto(**item) for item in assignmentRepo.listAssignments(companyId, reportingYear, cycle)],
     )
     for item in response.items:
         if item.metricId == metricIds[0]:
@@ -481,7 +477,7 @@ def bulkUnassign(request: OnboardingAssignmentBulkUnassignRequestDto, userModel)
     checkCycleType(request.cycleType)
     cycle = requirePreDmaG0Cycle(request.companyId, request.reportingYear)
     metricIds = repo.validateCycleMetricIds(int(cycle["id"]), request.companyId, request.metricIds)
-    result = repo.bulkUnassignMetrics(
+    result = assignmentRepo.bulkUnassignMetrics(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
         cycle=cycle,
@@ -667,46 +663,6 @@ def checkSelfSubmitted(summary: dict, userModel) -> bool:
     actorUserId = getActorUserId(userModel)
     inputUserId = summary.get("inputUserId")
     return actorUserId is not None and inputUserId is not None and int(actorUserId) == int(inputUserId)
-
-
-def listInviteItems(companyId: int, cycleId: Optional[int], status: Optional[str], userModel) -> OnboardingInviteListResponseDto:
-    checkScope(companyId, userModel)
-    checkManager(userModel)
-    return OnboardingInviteListResponseDto(
-        companyId=companyId,
-        cycleId=cycleId,
-        items=[
-            OnboardingInviteListItemDto(**item)
-            for item in repo.listInvites(companyId, cycleId, status)
-        ],
-    )
-
-
-def resendInviteMail(inviteId: int, companyId: int, userModel) -> OnboardingInviteActionResponseDto:
-    checkScope(companyId, userModel)
-    checkManager(userModel)
-    result = repo.resendInvite(inviteId, companyId)
-    mailQueuedYn, warning = publishMailEvent(result.get("mailEvent"))
-    return OnboardingInviteActionResponseDto(
-        companyId=companyId,
-        inviteId=inviteId,
-        inviteStatus=result["inviteStatus"],
-        mailQueuedYn=mailQueuedYn,
-        warning=warning,
-    )
-
-
-def revokeInviteMail(inviteId: int, companyId: int, userModel) -> OnboardingInviteActionResponseDto:
-    checkScope(companyId, userModel)
-    checkManager(userModel)
-    result = repo.revokeInvite(inviteId, companyId)
-    return OnboardingInviteActionResponseDto(
-        companyId=companyId,
-        inviteId=inviteId,
-        inviteStatus=result["inviteStatus"],
-        mailQueuedYn=False,
-        warning=None,
-    )
 
 
 def getActorUserId(userModel) -> Optional[int]:

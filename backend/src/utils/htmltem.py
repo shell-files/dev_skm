@@ -1,8 +1,8 @@
-from src.utils.settings import settings
-# html1: 사내 직원 초대
-# html2: 컨설턴트 초대 (신규: type 2, 기존: type 3)
-# html3: 임시 비밀번호 발송
-# html4: 협력사 초대 메일 발송
+﻿from src.utils.settings import settings
+# html1: ?щ궡 吏곸썝 珥덈?
+# html2: 而⑥꽕?댄듃 珥덈? (?좉퇋: type 2, 湲곗〈: type 3)
+# html3: ?꾩떆 鍮꾨?踰덊샇 諛쒖넚
+# html4: ?묐젰??珥덈? 硫붿씪 諛쒖넚
 
 def html1(companyName, uuid):
     return f"""
@@ -10,7 +10,7 @@ def html1(companyName, uuid):
       <html>
       <head>
           <meta charset="UTF-8">
-          <title>WITH 서비스 알림</title>
+          <title>WITH ?쒕퉬???뚮┝</title>
       </head>
       <table width="100%" border="0" cellpadding="0" cellspacing="0" style="padding: 40px 0;">
         <tr>
@@ -21,34 +21,34 @@ def html1(companyName, uuid):
               <tr>
                 <td style="padding: 40px; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;">
                   <h1 style="font-size:24px; color:#333333; margin-bottom:24px; text-align:center;">
-                      ESG 플랫폼 초대 안내
+                      ESG ?뚮옯??珥덈? ?덈궡
                   </h1>
                   
                   <p style="font-size:16px; color:#333333; line-height:1.6; margin-bottom:20px;">
-                    안녕하세요!<br>
-                    <strong>{companyName}</strong>의 ESG 데이터 관리 및 협업을 위한<br>
-                    <strong>WITH ESG 플랫폼</strong>에 초대되셨습니다.<br>
-                    아래 버튼을 클릭하여 회원가입을 완료하고 ESG 업무를 시작해 보세요.
+                    ?덈뀞?섏꽭??<br>
+                    <strong>{companyName}</strong>??ESG ?곗씠??愿由?諛??묒뾽???꾪븳<br>
+                    <strong>WITH ESG ?뚮옯??/strong>??珥덈??섏뀲?듬땲??<br>
+                    ?꾨옒 踰꾪듉???대┃?섏뿬 ?뚯썝媛?낆쓣 ?꾨즺?섍퀬 ESG ?낅Т瑜??쒖옉??蹂댁꽭??
                   </p>
                   <div style="background-color:#f8f9fa; border:1px dashed #03a94d; padding:15px; border-radius:8px; margin:25px 0; text-align:center;">
                     <ul style="margin-bottom: 20px; padding: 0; list-style: none; font-size: 14px; color: #666666;">
                       <li style="margin-bottom: 20px;">
-                        <p style="font-size:14px; color:#03a94d; margin-top:0; margin-bottom:10px;"> 소속 회사</p>
+                        <p style="font-size:14px; color:#03a94d; margin-top:0; margin-bottom:10px;"> ?뚯냽 ?뚯궗</p>
                         <span style="font-size:20px; font-weight:bold; letter-spacing:4px; color:#333333; font-family:monospace;"> {companyName}</span>
                       </li>
-                      <li style="margin-bottom: 8px;">✔️ 이용 범위: ESG 데이터 관리 및 협업 기능 제공</li>
-                      <li>✔️ 가입 절차: 이름, 비밀번호 설정 후 즉시 이용 가능</li>
+                      <li style="margin-bottom: 8px;">?뷂툘 ?댁슜 踰붿쐞: ESG ?곗씠??愿由?諛??묒뾽 湲곕뒫 ?쒓났</li>
+                      <li>?뷂툘 媛???덉감: ?대쫫, 鍮꾨?踰덊샇 ?ㅼ젙 ??利됱떆 ?댁슜 媛??/li>
                     </ul>
                   </div>
                   <div style="text-align: center;">
                     <a href="{settings.host_ip}/invite/{uuid}" style="background-color: #28a745; color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
-                      회원가입 하러가기
+                      ?뚯썝媛???섎윭媛湲?
                     </a>
                   </div>
                   
                   <p style="font-size: 13px; color: #999999; margin-top: 30px; text-align: center;">
-                    본 메일은 초대받은 분께만 발송되었습니다.<br>
-                    로그인이 되지 않거나 문제가 발생하면 관리자에게 문의해 주세요.
+                    蹂?硫붿씪? 珥덈?諛쏆? 遺꾧퍡留?諛쒖넚?섏뿀?듬땲??<br>
+                    濡쒓렇?몄씠 ?섏? ?딄굅??臾몄젣媛 諛쒖깮?섎㈃ 愿由ъ옄?먭쾶 臾몄쓽??二쇱꽭??
                   </p>
                 </td>
               </tr>
@@ -64,10 +64,10 @@ def html2(type, companyName, uuid):
         consultantHtml = f"""
           <div style="background-color:#ffffff; border:3px solid #03a94d; border-radius:8px; padding:20px;">
               <h3 style="margin:0 0 10px 0; font-size:16px; color:#03a94d;">
-                  ✔ 신규 사용자
+                  ???좉퇋 ?ъ슜??
               </h3>
               <p style="margin:0; font-size:12px; color:#333333; line-height:1.6;">
-                  <strong>회원가입 후 ESG 플랫폼에 접속하여</strong> 협업을 시작하실 수 있습니다.
+                  <strong>?뚯썝媛????ESG ?뚮옯?쇱뿉 ?묒냽?섏뿬</strong> ?묒뾽???쒖옉?섏떎 ???덉뒿?덈떎.
               </p>
           </div>
         """
@@ -76,10 +76,10 @@ def html2(type, companyName, uuid):
         consultantHtml = f"""
           <div style="background-color:#fff; border:3px solid #03a94d; border-radius:8px; padding:20px; margin-bottom:15px;">
               <h3 style="margin:0 0 10px 0; font-size:16px; color:#03a94d;">
-                  ✔ 기존 계정 사용자
+                  ??湲곗〈 怨꾩젙 ?ъ슜??
               </h3>
               <p style="margin:0; font-size:12px; color:#333333; line-height:1.6;">
-                  로그인하면 <strong>ESG 프로젝트 및 데이터 접근 권한이 자동으로 연결됩니다.</strong>
+                  濡쒓렇?명븯硫?<strong>ESG ?꾨줈?앺듃 諛??곗씠???묎렐 沅뚰븳???먮룞?쇰줈 ?곌껐?⑸땲??</strong>
               </p>
           </div>
         """
@@ -89,7 +89,7 @@ def html2(type, companyName, uuid):
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>WITH 서비스 협업 초대</title>
+    <title>WITH ?쒕퉬???묒뾽 珥덈?</title>
 </head>
 
 <body style="margin:0; padding:40px 0; background-color:#ffffff;">
@@ -101,7 +101,7 @@ def html2(type, companyName, uuid):
             <table width="600" border="0" cellpadding="0" cellspacing="0"
                 style="background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px; overflow:hidden;">
 
-                <!-- 상단 포인트 -->
+                <!-- ?곷떒 ?ъ씤??-->
                 <tr>
                     <td height="5" style="background-color:#03a94d;"></td>
                 </tr>
@@ -110,18 +110,18 @@ def html2(type, companyName, uuid):
                     <td style="padding:40px; font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
 
                         <h1 style="font-size:22px; color:#333333; margin-bottom:24px; text-align:center;">
-                            ESG 플랫폼 협업 초대 안내
+                            ESG ?뚮옯???묒뾽 珥덈? ?덈궡
                         </h1>
 
                         <p style="font-size:16px; color:#333333; line-height:1.6; margin-bottom:20px;">
-                            귀사를 <strong>{companyName}</strong>의 ESG 프로젝트 협업을 위한<br>
-                            <strong>WITH ESG 플랫폼</strong>에 공식 협력사(컨설턴트)로 초대하였습니다.
+                            洹?щ? <strong>{companyName}</strong>??ESG ?꾨줈?앺듃 ?묒뾽???꾪븳<br>
+                            <strong>WITH ESG ?뚮옯??/strong>??怨듭떇 ?묐젰??而⑥꽕?댄듃)濡?珥덈??섏??듬땲??
                         </p>
 
-                        <!-- 안내 박스 -->
+                        <!-- ?덈궡 諛뺤뒪 -->
                         <div style="background-color:#f8f9fa; border:1px dashed #03a94d; padding:15px; border-radius:8px; margin:25px 0; text-align:center;">
                             <h3 style="margin-top:0; font-size:15px; color:#333333;">
-                                [ESG 플랫폼 이용 안내]
+                                [ESG ?뚮옯???댁슜 ?덈궡]
                             </h3>
                             <ul style="margin:10px 0 0 0; padding:0; list-style:none; font-size:14px; color:#333333; line-height:1.8;">
                                 {consultantHtml}
@@ -129,32 +129,32 @@ def html2(type, companyName, uuid):
                         </div>
 
                         <p style="font-size:14px; color:#333333; text-align:center; margin-bottom:25px;">
-                            원활한 업무 협업을 위해 아래 버튼을 클릭하여 시스템에 접속해 주십시오.
+                            ?먰솢???낅Т ?묒뾽???꾪빐 ?꾨옒 踰꾪듉???대┃?섏뿬 ?쒖뒪?쒖뿉 ?묒냽??二쇱떗?쒖삤.
                         </p>
 
-                        <!-- 버튼 -->
+                        <!-- 踰꾪듉 -->
                         <div style="text-align:center;">
                             <a href="{url}"
                                 style="background-color:#03a94d; color:#ffffff; padding:16px 40px; text-decoration:none; border-radius:6px; font-weight:bold; display:inline-block; font-size:16px;">
-                                ESG 플랫폼 접속하기
+                                ESG ?뚮옯???묒냽?섍린
                             </a>
                         </div>
                         
-                        <!-- 안내문 -->
+                        <!-- ?덈궡臾?-->
                         <div style="margin-top:40px; padding-top:20px; border-top:1px solid #eeeeee;">
                             <p style="font-size:12px; color:#777777; line-height:1.4; text-align:left;">
-                                * 본 메일은 업무 목적으로 발송된 보안 메일입니다.<br>
-                                * 시스템 이용 관련 문의: platformanagers@gmail.com
+                                * 蹂?硫붿씪? ?낅Т 紐⑹쟻?쇰줈 諛쒖넚??蹂댁븞 硫붿씪?낅땲??<br>
+                                * ?쒖뒪???댁슜 愿??臾몄쓽: platformanagers@gmail.com
                             </p>
                         </div>
 
                     </td>
                 </tr>
 
-                <!-- 푸터 -->
+                <!-- ?명꽣 -->
                 <tr>
                     <td style="padding:20px; background-color:#f8f9fa; text-align:center; font-size:12px; color:#888888;">
-                        © 2026 WITH Platform. All rights reserved.
+                        짤 2026 WITH Platform. All rights reserved.
                     </td>
                 </tr>
 
@@ -174,7 +174,7 @@ def html3(tempPwd):
   <html>
   <head>
       <meta charset="UTF-8">
-      <title>WITH 서비스 알림</title>
+      <title>WITH ?쒕퉬???뚮┝</title>
   </head>
 
   <body style="margin:0; padding:40px 0; background-color:#ffffff;">
@@ -186,7 +186,7 @@ def html3(tempPwd):
         <table width="600" border="0" cellpadding="0" cellspacing="0"
           style="background-color:#ffffff; border:1px solid #eeeeee; border-radius:12px; overflow:hidden;">
 
-          <!-- 상단 포인트 -->
+          <!-- ?곷떒 ?ъ씤??-->
           <tr>
             <td height="5" style="background-color:#03a94d;"></td>
           </tr>
@@ -195,18 +195,18 @@ def html3(tempPwd):
             <td style="padding:40px; font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;">
 
               <h1 style="font-size:22px; color:#333333; margin-bottom:20px; text-align:center;">
-                임시 비밀번호 발급 안내
+                ?꾩떆 鍮꾨?踰덊샇 諛쒓툒 ?덈궡
               </h1>
               
               <p style="font-size:15px; color:#333333; line-height:1.6; text-align:center;">
-                안녕하세요<br>
-                요청하신 비밀번호 찾기에 따른 임시 비밀번호를 안내해 드립니다.
+                ?덈뀞?섏꽭??br>
+                ?붿껌?섏떊 鍮꾨?踰덊샇 李얘린???곕Ⅸ ?꾩떆 鍮꾨?踰덊샇瑜??덈궡???쒕┰?덈떎.
               </p>
 
-              <!-- 비밀번호 박스 -->
+              <!-- 鍮꾨?踰덊샇 諛뺤뒪 -->
               <div style="background-color:#f8f9fa; border:1px dashed #03a94d; padding:30px; border-radius:8px; margin:25px 0; text-align:center;">
                 <p style="font-size:14px; color:#03a94d; margin-top:0; margin-bottom:10px;">
-                  임시 비밀번호
+                  ?꾩떆 鍮꾨?踰덊샇
                 </p>
                 <span style="font-size:28px; font-weight:bold; letter-spacing:4px; color:#333333; font-family:monospace;">
                   {tempPwd}
@@ -214,32 +214,32 @@ def html3(tempPwd):
               </div>
 
               <p style="font-size:14px; color:#333333; line-height:1.6; text-align:center; margin-bottom:30px;">
-                안전을 위해 로그인 후 <strong>마이페이지 &gt; 비밀번호 변경</strong> 메뉴에서<br>
-                반드시 새로운 비밀번호로 변경해 주시기 바랍니다.
+                ?덉쟾???꾪빐 濡쒓렇????<strong>留덉씠?섏씠吏 &gt; 鍮꾨?踰덊샇 蹂寃?/strong> 硫붾돱?먯꽌<br>
+                諛섎뱶???덈줈??鍮꾨?踰덊샇濡?蹂寃쏀빐 二쇱떆湲?諛붾엻?덈떎.
               </p>
 
-              <!-- 버튼 -->
+              <!-- 踰꾪듉 -->
               <div style="text-align:center;">
                 <a href="http://{settings.host_ip}/login"
                   style="background-color:#03a94d; color:#ffffff; padding:16px 40px; text-decoration:none; border-radius:6px; font-weight:bold; display:inline-block; font-size:16px;">
-                  로그인 하러가기
+                  濡쒓렇???섎윭媛湲?
                 </a>
               </div>
               
-              <!-- 안내문 -->
+              <!-- ?덈궡臾?-->
               <div style="margin-top:40px; padding-top:20px; border-top:1px solid #eeeeee;">
                 <p style="font-size:12px; color:#777777; line-height:1.4; text-align:left;">
-                  * 본인이 요청하지 않았음에도 이 메일을 받으셨다면, 타인에 의해 계정이 도용되었을 가능성이 있으니 즉시 고객센터로 문의해 주세요.
+                  * 蹂몄씤???붿껌?섏? ?딆븯?뚯뿉????硫붿씪??諛쏆쑝?⑤떎硫? ??몄뿉 ?섑빐 怨꾩젙???꾩슜?섏뿀??媛?μ꽦???덉쑝??利됱떆 怨좉컼?쇳꽣濡?臾몄쓽??二쇱꽭??
                 </p>
               </div>
 
             </td>
           </tr>
           
-          <!-- 푸터 -->
+          <!-- ?명꽣 -->
           <tr>
             <td style="padding:20px; background-color:#f8f9fa; text-align:center; font-size:12px; color:#888888;">
-              © 2026 WITH. All rights reserved.
+              짤 2026 WITH. All rights reserved.
             </td>
           </tr>
 
@@ -260,7 +260,7 @@ def html3(tempPwd):
 #   type = data.get("type")
 #   email = data.get("email")
 #   if type == 4:
-#     subject = "임시 비밀번호 발송"
+#     subject = "?꾩떆 鍮꾨?踰덊샇 諛쒖넚"
 #     body = html3(tempPwd)
 #   return subject, body, email
 
@@ -269,13 +269,16 @@ def getHtml(data):
     email = data.get("email")
     uuid = data.get("uuid")
 
+    if type == 1:
+        return "ESG 플랫폼 초대 안내", html1(data.get("companyName") or "회사", uuid), email
+
     if type == 2:
-        return "컨설턴트 초대", html2(2, "A_GROUP", uuid), email
+        return "而⑥꽕?댄듃 珥덈?", html2(2, "A_GROUP", uuid), email
 
     if type == 3:
-        return "기존 사용자 초대", html2(3, "A_GROUP", uuid), email
+        return "湲곗〈 ?ъ슜??珥덈?", html2(3, "A_GROUP", uuid), email
 
     if type == 4:
-        return "임시 비밀번호 발송", html3(data.get("tempPwd")), email
+        return "?꾩떆 鍮꾨?踰덊샇 諛쒖넚", html3(data.get("tempPwd")), email
 
     return None, None, email

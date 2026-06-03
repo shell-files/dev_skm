@@ -15,7 +15,8 @@ ASSIGNMENT_STATUS_INVITED = "invited"
 ASSIGNMENT_STATUS_UNASSIGNED = "unassigned"
 ASSIGNABLE_ROLE_CODES = {"EMPLOYEE", "ESG", "ADMIN"}
 INVITE_STATE_PENDING = "승인대기"
-INVITE_STATE_REVOKED = "취소"
+INVITE_STATE_COMPLETED = "승인완료"
+INVITE_STATE_REVOKED = "승인취소"
 
 
 def normalizeEmail(email: str) -> str:
@@ -89,6 +90,7 @@ def bulkAssignMetrics(
             oldInviteIds = listAssignmentInviteIdsTx(cur, cycleId, companyId, metricIds)
             if assigneeUserId is None:
                 roleId = resolveRoleIdTx(cur, SUPPORTED_TARGET_ROLE)
+                companyName = getCompanyName(companyId)
                 inviteId = insertCommonInviteTx(
                     cur,
                     companyId=companyId,
@@ -99,16 +101,16 @@ def bulkAssignMetrics(
                 inviteCreatedYn = True
                 token, inviteUuid = generateInviteTokenWithUuid(
                     [],
-                    getCompanyName(companyId),
+                    companyName,
                     normalizedEmail,
                     roleId,
                     0,
                     inviteId,
                     companyId,
                 )
-                setInviteRedis(inviteUuid, token)
+                setInviteRedis(inviteUuid, token, inviteExpireSeconds())
                 if sendInviteYn:
-                    mailEvent = buildCommonInviteMailEvent(normalizedEmail, inviteUuid)
+                    mailEvent = buildCommonInviteMailEvent(normalizedEmail, inviteUuid, companyName)
 
             for metricId in metricIds:
                 upsertAssignmentTx(
@@ -173,12 +175,17 @@ def insertCommonInviteTx(
     return int(cur.lastrowid)
 
 
-def buildCommonInviteMailEvent(email: str, inviteUuid: str) -> dict:
+def buildCommonInviteMailEvent(email: str, inviteUuid: str, companyName: str) -> dict:
     return {
         "type": 1,
         "email": email,
         "uuid": inviteUuid,
+        "companyName": companyName,
     }
+
+
+def inviteExpireSeconds() -> int:
+    return max(1, int(settings.invite_token_expire_days)) * 24 * 60 * 60
 
 
 def resolveRoleIdTx(cur, roleCode: str) -> int:
@@ -253,34 +260,7 @@ def upsertAssignmentTx(
 def listAssignments(companyId: int, reportingYear: int, cycle: dict) -> list[dict]:
     cycleId = int(cycle["id"]) if cycle else None
     metricRows = listCycleMetricScope(cycleId, companyId) if cycleId is not None else []
-    assignmentRows = []
-    if cycleId is not None:
-        assignmentRows = findAll(
-            f"""
-            SELECT
-                a.metric_id,
-                a.assignment_status,
-                a.assignee_user_id,
-                a.assignee_email,
-                a.due_date,
-                a.invite_id,
-                i.state AS invite_status,
-                i.email AS invite_email,
-                aes_d(u.email, '{settings.maria_db_key}') AS user_email
-            FROM ESG_METRIC_ASSIGNMENT a
-            LEFT JOIN INVITE i
-              ON i.id = a.invite_id
-             AND i.delete_yn = 0
-            LEFT JOIN `with`.`USER` u
-              ON u.id = a.assignee_user_id
-             AND u.delete_yn = 0
-            WHERE a.esg_onboarding_cycle_id = ?
-              AND a.company_id = ?
-              AND a.delete_yn = 0
-            ORDER BY a.metric_id
-            """,
-            (cycleId, companyId),
-        ) or []
+    assignmentRows = listAssignmentRows(cycleId, companyId) if cycleId is not None else []
     assignmentByMetric = {row["metric_id"]: row for row in assignmentRows}
     items = []
     for metric in metricRows:
@@ -302,6 +282,36 @@ def listAssignments(companyId: int, reportingYear: int, cycle: dict) -> list[dic
             }
         )
     return items
+
+
+def listAssignmentRows(cycleId: int, companyId: int) -> list[dict]:
+    return findAll(
+        f"""
+        SELECT
+            a.id AS assignment_id,
+            a.metric_id,
+            a.assignment_status,
+            a.assignee_user_id,
+            a.assignee_email,
+            a.due_date,
+            a.invite_id,
+            i.state AS invite_status,
+            i.email AS invite_email,
+            aes_d(u.email, '{settings.maria_db_key}') AS user_email
+        FROM ESG_METRIC_ASSIGNMENT a
+        LEFT JOIN INVITE i
+          ON i.id = a.invite_id
+         AND i.delete_yn = 0
+        LEFT JOIN `with`.`USER` u
+          ON u.id = a.assignee_user_id
+         AND u.delete_yn = 0
+        WHERE a.esg_onboarding_cycle_id = ?
+          AND a.company_id = ?
+          AND a.delete_yn = 0
+        ORDER BY a.metric_id
+        """,
+        (cycleId, companyId),
+    ) or []
 
 
 def listAssignmentInviteIdsTx(cur, cycleId: int, companyId: int, metricIds: list[str]) -> list[int]:

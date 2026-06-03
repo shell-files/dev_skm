@@ -71,7 +71,7 @@ def listMetrics(
     metricIds = [row["metric_id"] for row in scopes]
     masterRows = repo.listAtomicMaster(metricIds)
     valueRows = repo.listValueRows(companyId, year, metricIds)
-    assignmentRows = repo.listAssignmentRows(int(cycle["id"]), companyId)
+    assignmentRows = assignmentRepo.listAssignmentRows(int(cycle["id"]), companyId)
     assignmentByMetric = {row["metric_id"]: buildAssignment(row) for row in assignmentRows}
     atomicRowsByMetric = groupBy(masterRows, "metric_id")
 

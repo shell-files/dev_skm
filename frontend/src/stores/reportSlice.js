@@ -108,6 +108,26 @@ export const fetchCurrentWorkflow = createAsyncThunk(
   }
 );
 
+export const probeCurrentWorkflow = createAsyncThunk(
+  "report/probeCurrentWorkflow",
+  async (
+    { companyId, reportingYear = DEFAULT_REPORTING_YEAR } = {},
+    { rejectWithValue }
+  ) => {
+    const params = companyId == null ? undefined : { companyId, reportingYear };
+    try {
+      const res = await GET("/reportWorkflow/current", params);
+      return rejectIfFailed(res, rejectWithValue, "보고서 워크플로우 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "보고서 워크플로우 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
 export const startReportWorkflow = createAsyncThunk(
   "report/startReportWorkflow",
   async (payload, { rejectWithValue }) => {

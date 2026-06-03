@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import "@styles/onboarding1.css";
@@ -208,7 +208,7 @@ const OnboardingMetricTable = ({
         <span className="ob1-error-icon">!</span>
         <span>{g0Error}</span>
         <button type="button" className="ob1-btn-retry" onClick={onRetry}>
-          ?ㅼ떆 ?쒕룄
+          다시 시도
         </button>
       </div>
     );
@@ -218,7 +218,7 @@ const OnboardingMetricTable = ({
     return (
       <div className="ob1-table-loading">
         <div className="ob1-spinner" />
-        <p>G0 ?꾨줈???곗씠?곕? 遺덈윭?ㅺ퀬 ?덉뒿?덈떎...</p>
+        <p>G0 프로필 데이터를 불러오고 있습니다...</p>
       </div>
     );
   }
@@ -227,8 +227,8 @@ const OnboardingMetricTable = ({
     return (
       <div className="ob1-empty-state">
         <div className="ob1-empty-icon">G0</div>
-        <p className="ob1-empty-title">G0 吏?쒓? ?놁뒿?덈떎</p>
-        <p className="ob1-empty-desc">蹂닿퀬???뚰겕?뚮줈?곕? 癒쇱? ?쒖옉??二쇱꽭??</p>
+        <p className="ob1-empty-title">G0 지표가 없습니다</p>
+        <p className="ob1-empty-desc">보고서 워크플로우를 먼저 시작해 주세요.</p>
       </div>
     );
   }
@@ -240,11 +240,11 @@ const OnboardingMetricTable = ({
           <tr>
             <th style={{ width: "12%" }}>Metric ID</th>
             <th style={{ width: "15%" }}>Atomic ID</th>
-            <th style={{ width: "35%" }}>吏?쒕챸</th>
-            <th style={{ width: "10%" }}>?낅젰 ?좏삎</th>
-            <th style={{ width: "10%" }}>?⑥쐞</th>
-            <th style={{ width: "10%" }}>?곹깭</th>
-            <th style={{ width: "8%" }}>?곗씠???낅젰</th>
+            <th style={{ width: "35%" }}>지표명</th>
+            <th style={{ width: "10%" }}>입력 유형</th>
+            <th style={{ width: "10%" }}>단위</th>
+            <th style={{ width: "10%" }}>상태</th>
+            <th style={{ width: "8%" }}>데이터 입력</th>
           </tr>
         </thead>
         <tbody>
@@ -259,7 +259,7 @@ const OnboardingMetricTable = ({
             return (
               <tr key={item.metricId}>
                 <td>{item.metricId}</td>
-                <td>{subMetrics.length > 1 ? `(${subMetrics.length}媛???ぉ)` : atomicId || "-"}</td>
+                <td>{subMetrics.length > 1 ? `(${subMetrics.length}개 항목)` : atomicId || "-"}</td>
                 <td className="ob1-td-name">{item.metricName || item.atomicName || "-"}</td>
                 <td>
                   <span className={`ob1-type-badge ${typeBadge.cls || ""}`}>
@@ -278,7 +278,7 @@ const OnboardingMetricTable = ({
                     className="ob1-btn-input"
                     onClick={() => onOpenMetric(item, subMetrics)}
                   >
-                    ?낅젰
+                    입력
                   </button>
                 </td>
               </tr>
@@ -351,8 +351,13 @@ const OnBoard = () => {
   }, [companyId, dispatch, reportingYear]);
 
   useEffect(() => {
+    dispatch(resetReportState());
     initializeOnboarding();
-  }, [initializeOnboarding, location.state?.workflowStartedAt]);
+  }, [
+    dispatch,
+    initializeOnboarding,
+    location.state?.workflowStartedAt,
+  ]);
 
   const profileStats = calculateProfileStats(g0Items);
   const basisLabel =
@@ -433,7 +438,7 @@ const OnBoard = () => {
     }
   };
 
-  if (loadingWorkflow && loadingG0) {
+  if (loadingWorkflow && !workflow) {
     return (
       <div id="ob1-page">
         <div className="ob1-state-container">
@@ -458,9 +463,9 @@ const OnBoard = () => {
 
       <div className="ob1-content-layout">
         <div className="ob1-sidebar-panel">
-          <div className="ob1-sidebar-title">?좊떦 ??ぉ</div>
+          <div className="ob1-sidebar-title">할당 항목</div>
           <ul className="ob1-sidebar-menu">
-            <li className="ob1-sidebar-menu-item active">1. 寃쎌쁺?쇰컲 - G0</li>
+            <li className="ob1-sidebar-menu-item active">1. 경영일반 - G0</li>
           </ul>
         </div>
 
@@ -547,7 +552,7 @@ const OnBoard = () => {
         onTransferred={async (batchId) => {
           dispatch(setActiveBatchId(batchId));
           await initializeOnboarding();
-          console.log("?꾩넚 ?꾨즺??諛곗튂", batchId);
+          console.log("전송 완료 배치", batchId);
         }}
       />
 

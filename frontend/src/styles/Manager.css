@@ -890,4 +890,33 @@
   background: #fff;
   color: #475569;
   border: 1px solid #cbd5e1;
-}
+}
+
+/* =========================================================================
+   Phase UI-4 DataTab 보완 스타일
+========================================================================= */
+
+#datatap_page .ob-detail-btn {
+  background: #f8fafc;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+}
+
+#datatap_page .ob-detail-btn:hover {
+  background: #f1f5f9;
+}
+
+#datatap_page .ob-completion-cell {
+  font-weight: 600;
+  color: #334155;
+  background-color: #f8fafc;
+}
+
+/* ApprovalDetailModal용 추가 class */
+.ob-approval-modal .ob-modal-header {
+  border-bottom: 1px solid #e2e8f0;
+}
+.ob-approval-modal .ob-modal-footer {
+  border-top: 1px solid #e2e8f0;
+}
+

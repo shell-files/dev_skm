@@ -326,7 +326,7 @@ const DataTab = ({
                 ...(isConsultant
                   ? [
                       {
-                        label: "Mark reviewed",
+                        label: "검토 완료 상태로 변경",
                         onClick: handleBulkReview,
                         className: "submit",
                         disabled: !selectedSupportedRows.length,
@@ -334,14 +334,14 @@ const DataTab = ({
                     ]
                   : [
                       {
-                        label: "Approve selected",
+                        label: "선택 항목 최종 승인",
                         onClick: handleBulkApprove,
                         className: "submit",
                         disabled: !canBulkApprove,
                       },
                     ]),
                 {
-                  label: "Reject selected",
+                  label: "선택 항목 반려",
                   onClick: handleBulkReject,
                   className: "reject",
                   disabled: !selectedSupportedRows.length,
@@ -352,7 +352,7 @@ const DataTab = ({
 
           <div style={{ display: "flex", gap: "8px" }}>
             <button className="btn-primary" onClick={fetchData} disabled={isLoading}>
-              {isLoading ? "Loading..." : "Refresh"}
+              {isLoading ? "Loading..." : "데이터 새로고침"}
             </button>
           </div>
         </div>
@@ -400,23 +400,23 @@ const DataTab = ({
                       />
                     </th>
                     <th style={{ width: "100px" }}>Metric ID</th>
-                    <th>Metric</th>
+                    <th>지표명</th>
                     <th style={{ width: "120px" }}>Sub-Issue</th>
-                    <th style={{ width: "110px" }}>Assignee</th>
-                    <th style={{ width: "80px" }}>Done</th>
-                    <th style={{ width: "80px" }}>Missing</th>
-                    <th style={{ width: "100px" }}>Submit</th>
-                    <th style={{ width: "100px" }}>Review</th>
-                    <th style={{ width: "100px" }}>Approval</th>
-                    <th style={{ width: "120px" }}>Submitted</th>
-                    <th style={{ width: "190px" }}>Actions</th>
+                    <th style={{ width: "110px" }}>담당자</th>
+                    <th style={{ width: "80px" }}>입력 완료</th>
+                    <th style={{ width: "80px" }}>미입력</th>
+                    <th style={{ width: "100px" }}>제출 상태</th>
+                    <th style={{ width: "100px" }}>검토 상태</th>
+                    <th style={{ width: "100px" }}>승인 상태</th>
+                    <th style={{ width: "120px" }}>제출일</th>
+                    <th style={{ width: "190px" }}>관리</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibleInputs.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="11"
+                        colSpan="12"
                         style={{
                           padding: "80px 0",
                           color: "#94a3b8",
@@ -424,7 +424,7 @@ const DataTab = ({
                           background: "#fff",
                         }}
                       >
-                        No approval items match the current filters.
+                        조건에 맞는 데이터가 없습니다.
                       </td>
                     </tr>
                   ) : (
@@ -491,7 +491,7 @@ const DataTab = ({
                                 className="ob-act-btn ob-act-draft ob-detail-btn"
                                 onClick={() => handleOpenApprovalDetail(item)}
                               >
-                                Detail
+                                상세 확인
                               </button>
                               {isConsultant ? (
                                 <>
@@ -501,7 +501,7 @@ const DataTab = ({
                                     disabled={!supported}
                                     title={unsupportedTitle}
                                   >
-                                    Review
+                                    검토 완료
                                   </button>
                                   <button
                                     type="button"
@@ -510,7 +510,7 @@ const DataTab = ({
                                     disabled={!supported}
                                     title={unsupportedTitle}
                                   >
-                                    Reject
+                                    반려
                                   </button>
                                 </>
                               ) : (
@@ -528,7 +528,7 @@ const DataTab = ({
                                     }
                                     style={!canApprove ? { opacity: 0.5, cursor: "not-allowed" } : {}}
                                   >
-                                    Approve
+                                    최종 승인
                                   </button>
                                   <button
                                     type="button"
@@ -537,7 +537,7 @@ const DataTab = ({
                                     disabled={!supported}
                                     title={unsupportedTitle}
                                   >
-                                    Reject
+                                    반려
                                   </button>
                                 </>
                               )}

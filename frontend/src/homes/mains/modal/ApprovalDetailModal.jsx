@@ -42,6 +42,7 @@ export default function ApprovalDetailModal({
   const isApproveMode = modalActionMode === "approve";
 
   const atomicItems = metricItem.atomicItems || FIXTURE_ATOMIC_ITEMS;
+  const totalEvidenceCount = atomicItems.reduce((sum, item) => sum + (item.evidenceCount || 0), 0);
 
   const handleApproveClick = () => {
     showDefaultAlert("안내", "최종 승인 API 연결은 후속 단계에서 진행됩니다.", "info");
@@ -93,6 +94,7 @@ export default function ApprovalDetailModal({
           <div style={summaryStyle}>
             <InfoRow label="Metric" value={metricItem.metricName || metricItem.checklistQuestion || "-"} />
             <InfoRow label="Metric ID" value={metricItem.metricId || metricItem.id || "-"} />
+            <InfoRow label="Sub-Issue" value={metricItem.subIssueName || metricItem.sub_issue_name || metricItem.subIssueCode || "-"} />
             <InfoRow label="Assignee" value={metricItem.assigneeName || metricItem.userName || "-"} />
             <InfoRow label="Submitted" value={metricItem.submittedAt || "-"} />
           </div>
@@ -142,7 +144,14 @@ export default function ApprovalDetailModal({
 
           <div style={{ marginBottom: "24px" }}>
             <h4 style={sectionTitleStyle}>Evidence</h4>
-            <div style={emptyEvidenceStyle}>No attached evidence.</div>
+            {totalEvidenceCount > 0 ? (
+              <div style={{ padding: "16px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.85rem", color: "#334155" }}>
+                첨부 증빙 {totalEvidenceCount}건<br />
+                <span style={{ color: "#64748b", fontSize: "0.8rem", marginTop: "4px", display: "inline-block" }}>상세 파일 목록은 API 연결 후 표시됩니다.</span>
+              </div>
+            ) : (
+              <div style={emptyEvidenceStyle}>첨부된 증빙이 없습니다.</div>
+            )}
           </div>
 
           <div style={{ marginBottom: "8px" }}>

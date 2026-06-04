@@ -270,6 +270,7 @@ const OnboardingMetricTable = ({
             </th>
             <th style={{ width: "90px" }}>Metric ID</th>
             <th style={{ width: "auto" }}>지표명</th>
+            <th style={{ width: "120px" }}>Sub-Issue</th>
             <th style={{ width: "170px" }}>담당자</th>
             <th style={{ width: "110px" }}>제출 기한</th>
             <th style={{ width: "90px" }}>입력 상태</th>
@@ -315,6 +316,7 @@ const OnboardingMetricTable = ({
                 </td>
                 <td>{item.metricId}</td>
                 <td className="ob1-td-name">{item.metricName || item.atomicName || "-"}</td>
+                <td style={{ fontSize: "12px", color: "#64748b" }}>{item.subIssueName || item.sub_issue_name || item.subIssueCode || "-"}</td>
                 
                 <td>
                   <div className="ob1-assignee-cell">

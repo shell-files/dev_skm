@@ -21,6 +21,7 @@ const FIXTURE_INVITATION_HISTORY = [
   { id: 1, type: 'CONSULTANT', email: 'consult1@naver.com', status: '승인완료', sentDate: '2026-05-01' },
   { id: 2, type: 'SUBSIDIARY_RELATION', email: 'partner@greentec.com', status: '대기중', sentDate: '2026-05-15' },
   { id: 3, type: 'CONSULTANT', email: 'expert@esg.co.kr', status: '만료', sentDate: '2026-04-20' },
+  { id: 4, type: 'EMPLOYEE', email: 'dept_manager@skm.com', status: '승인완료', sentDate: '2026-05-25' },
 ];
 
 const FIXTURE_RELATION_REQUESTS = [

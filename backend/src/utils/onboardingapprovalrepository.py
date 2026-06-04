@@ -134,6 +134,25 @@ def listCycleApprovalInboxRows(
             continue
 
         actionSupportedYn, disabledReason = resolveActionSupport(scope)
+        approvalPolicyCode = str(scope.get("approval_policy_code") or scopeRepo.APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
+        promotedQuantAtomicIds = (
+            [
+                row["atomic_metric_id"]
+                for row in masterByMetric.get(metricId, [])
+                if isQuantInputMasterRow(row)
+            ]
+            if approvalPolicyCode in {
+                scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
+                scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
+            }
+            else []
+        )
+        promotedQuantAtomicSet = set(promotedQuantAtomicIds)
+        approvedFactAtomicIds = {
+            row.get("atomic_metric_id")
+            for row in metricFactRows
+            if row.get("atomic_metric_id")
+        }
         items.append(
             {
                 "companyId": companyId,
@@ -158,6 +177,10 @@ def listCycleApprovalInboxRows(
                 "missingAtomicMetricIds": [
                     atomicId for atomicId in requiredAtomicIds if atomicId not in completedAtomicIds
                 ],
+                "approvalPolicyCode": approvalPolicyCode,
+                "rollupReadonlyYn": inputRepo.truthy(scope.get("rollup_readonly_yn")),
+                "promotedQuantAtomicCount": len(promotedQuantAtomicSet),
+                "approvedPromotedFactCount": len(approvedFactAtomicIds.intersection(promotedQuantAtomicSet)),
                 "submittedAt": inputRepo.formatDatetime(inputRepo.submittedAt(metricInputRows, latestHistory)),
                 "approvedAt": inputRepo.formatDatetime(inputRepo.approvedAt(metricInputRows, metricFactRows, latestHistory)),
                 "commentText": latestHistory.get("comment_text"),
@@ -167,6 +190,19 @@ def listCycleApprovalInboxRows(
             }
         )
     return items
+
+
+def isQuantInputMasterRow(row: dict) -> bool:
+    dataValueType = str(row.get("data_value_type") or "").strip().upper()
+    atomicRole = str(row.get("atomic_data_role") or "").strip().upper()
+    return (
+        inputRepo.truthy(row.get("onboarding_input_yn"))
+        and atomicRole == "INPUT"
+        and (
+            dataValueType in {"QUANT", "NUMBER", "NUMERIC"}
+            or row.get("data_value_type") == "정량"
+        )
+    )
 
 
 def resolveActionSupport(scope: dict) -> tuple[bool, Optional[str]]:

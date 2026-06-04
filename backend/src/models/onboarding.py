@@ -181,8 +181,8 @@ ApprovalActionStatus = Literal[
 class OnboardingApprovalRequestDto(BaseModel):
     companyId: int
     reportingYear: int
+    metricId: str
     cycleType: str = "PRE_DMA_G0"
-    metricId: str = "G0-02"
 
 
 class OnboardingApprovalDecisionRequestDto(OnboardingApprovalRequestDto):

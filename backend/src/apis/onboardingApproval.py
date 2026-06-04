@@ -92,7 +92,7 @@ async def getApprovalStatusRoute(
     companyId: int = Query(...),
     reportingYear: int = Query(...),
     cycleType: str = Query(default="PRE_DMA_G0"),
-    metricId: str = Query(default="G0-02"),
+    metricId: str = Query(...),
     userModel=Depends(get_token),
 ):
     try:

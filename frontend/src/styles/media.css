@@ -713,7 +713,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 18px 24px;
-    background: #f0fdf4;
+    background: #ffffff;
     border: 1px solid #bbf7d0;
     border-radius: 14px;
 }
@@ -724,7 +724,7 @@
     align-items: center;
     text-align: center;
 }
-.result-banner-title { font-size: 1.05rem; font-weight: 850; color: #03A94D; margin-bottom: 6px; }
+.result-banner-title { font-size: 1.05rem; font-weight: 850; color: #1e293b ; margin-bottom: 6px; }
 .result-banner-desc { font-size: 0.82rem; color: #475569; line-height: 1.65; margin: 0; }
 .result-banner-robot { width: 90px; flex-shrink: 0; margin-left: 20px; }
 
@@ -862,13 +862,11 @@
   right: 0;
   height: 45px;
   background: #fff;
-  border-top: 1px solid var(--media-border);
+  border-top: 1px solid;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 100;
   box-shadow: 0 -10px 40px rgba(0,0,0,0.06);
 }
-
-
 

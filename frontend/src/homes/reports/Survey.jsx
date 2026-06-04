@@ -10,7 +10,6 @@ import {
 } from "@components/UI/ServiceAlert";
 
 import { GET, POST } from "@utils/Network";
-import { useAuth } from "@hooks/AuthContext";
 
 const IS_DUMMY = true;
 

@@ -258,6 +258,46 @@
   gap: 8px;
 }
 
+.ob-assignment-card-btn {
+  width: 100%;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ob-assignment-card-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.ob-assignment-card-status {
+  display: inline-block;
+  padding: 4px 10px;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  align-self: flex-start;
+}
+
+.ob-assignment-card-status.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.ob-assignment-card-status.assigned {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
 .ob-file-upload-btn {
   width: 100%;
   padding: 12px;

@@ -10,7 +10,7 @@ import Benchmk from "@assets/icons/steps/benchmarking.png";
 import Resu from "@assets/icons/steps/Result.png";
 import Survey from "@assets/icons/steps/survey.png";
 import Analyze from "@assets/icons/steps/analyzing.png";
-import Draft from "@assets/icons/steps/draft.png";
+import Report from "@assets/icons/steps/draft.png";
 
 
 import "@styles/result.css";
@@ -526,7 +526,7 @@ const Result = () => {
     { id: 2, title: "미디어 분석",     icon: <img src={Analyze}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/media" },
     { id: 3, title: "이해관계자 설문",  icon: <img src={Survey}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>,path: "/survey" },
     { id: 4, title: "전체 결과",       icon: <img src={Resu}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/result" },
-    { id: 5, title: "보고서 초안",     icon: <img src={Draft}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/draft" },
+    { id: 5, title: "보고서 초안",     icon: <img src={Report}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/draft" },
   ];
 
   const [leftTab, setLeftTab]           = useState(0);

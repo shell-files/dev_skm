@@ -245,16 +245,6 @@ const Media = () => {
   const today = new Date().toISOString().split("T")[0];
 
   return (
-<<<<<<< HEAD
-    <>
-      <div className="media-container">
-        {/* --- STEPPER HEADER --- */}
-        <header className="media-header">
-          <h1 className="media-title">지속가능경영보고서 AI 자동 생성</h1>
-          <div className="media-stepper-row">
-            {STEPS.map((step, index) => (
-              <Fragment key={step.id}>
-=======
     <div className="draft-container">
       <header className="draft-header">
         <h1 className="draft-title">
@@ -282,7 +272,6 @@ const Media = () => {
                   {step.icon}
                 </div>
 
->>>>>>> b2238b82c66fe55db540ba93d2b617278955a664
                 <div
                   className={`step-box ${index === activeIndex ? "active" : ""}`}
                   onClick={() => moveStep(index)}
@@ -463,12 +452,6 @@ const Media = () => {
               </div>
             </div>
 
-<<<<<<< HEAD
-            <div className="action-container">
-              <button className="media-btn" onClick={startMediaCollection} style={{ marginBottom: "50px" }}>
-                실시간 AI 분석 시작
-              </button>
-=======
           <div className="action-container">
             <button
               className="draft-btn"
@@ -544,7 +527,6 @@ const Media = () => {
                   ? "AI 기반 외부 데이터 수집 엔진이 ESG 관련 미디어 및 기관 데이터를 분석하고 있습니다."
                   : "상단의 분석 시작 버튼을 누르면 AI 기반 외부 데이터 분석이 시작됩니다."}
               </p>
->>>>>>> b2238b82c66fe55db540ba93d2b617278955a664
             </div>
           </div>
         </main>

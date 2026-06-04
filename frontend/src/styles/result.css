@@ -923,20 +923,25 @@
   padding: 0 18px 16px 18px;
 }
 .accordion-body#priority-body {
-  padding: 16px 18px;
+  padding: 10px 14px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  align-items: center;
 }
 
 /* 우선순위 행 */
 .priority-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 10px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  width: 300px;
+  text-align: center;
 }
 .priority-name {
-  flex: 1;
   font-size: 0.82rem;
   font-weight: 600;
   color: #1e293b;
@@ -969,7 +974,7 @@
 #onboarding-table th.left,
 #missing-table th:first-child {
   text-align: left;
-  padding: 10px 8px;
+  
 }
 #onboarding-table tbody tr,
 #missing-table tbody tr {

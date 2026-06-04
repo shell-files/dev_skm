@@ -1,8 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import Analyze from "@assets/icons/result_page/analyze.png";
+import Score from "@assets/icons/result_page/score.png";
 import VChain from "@assets/icons/result_page/value-chain.png";
 import SHolder from "@assets/icons/result_page/stakeholder.png";
+import Observing from "@assets/icons/result_page/observing.png";
+import Considering from "@assets/icons/result_page/considering.png";
+
+import Benchmk from "@assets/icons/steps/benchmarking.png";
+import Resu from "@assets/icons/steps/Result.png";
+import Survey from "@assets/icons/steps/survey.png";
+import Analyze from "@assets/icons/steps/analyzing.png";
+import Draft from "@assets/icons/steps/draft.png";
+
+
 import "@styles/result.css";
 import "@styles/benchmarking.css";
 import "@styles/media.css";
@@ -512,11 +522,11 @@ const Result = () => {
   const activeIndex = 3;
 
   const steps = [
-    { id: 1, title: "벤치마킹 분석",   icon: "🎯", path: "/benchmk" },
-    { id: 2, title: "미디어 분석",     icon: "📺", path: "/media" },
-    { id: 3, title: "이해관계자 설문", icon: "👥", path: "/survey" },
-    { id: 4, title: "전체 결과",       icon: "📊", path: "/result" },
-    { id: 5, title: "보고서 초안",     icon: "📄", path: "/draft" },
+    { id: 1, title: "벤치마킹 분석",   icon: <img src={Benchmk}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/benchmk" },
+    { id: 2, title: "미디어 분석",     icon: <img src={Analyze}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/media" },
+    { id: 3, title: "이해관계자 설문",  icon: <img src={Survey}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>,path: "/survey" },
+    { id: 4, title: "전체 결과",       icon: <img src={Resu}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/result" },
+    { id: 5, title: "보고서 초안",     icon: <img src={Draft}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/draft" },
   ];
 
   const [leftTab, setLeftTab]           = useState(0);
@@ -688,19 +698,19 @@ const Result = () => {
         </div>
 
         {/* 선정 기준 */}
-        <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "14px", padding: "20px 22px", alignSelf: "stretch" }}>
+        <div style={{ flex: 1, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "14px", padding: "20px 22px", alignSelf: "stretch", display: "flex", flexDirection: "column" }}>
           <div style={{ fontSize: "1.5em", fontWeight: 850, color: "#03A94D", marginBottom: "16px" }}>선정 기준</div>
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px", flex: 1, justifyContent: "space-between" }}>
             {[
-              { icon: "🎯", text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
-              { icon: <img src={Analyze}  width="20" height="20" alt="" style={{ objectFit: "contain" }} />, text: "2개 이상 분석축에서 반복 관측" },
-              { icon: <img src={VChain}  width="20" height="20" alt="" style={{ objectFit: "contain" }} />, text: "가치사슬 관련성 높음" },
-              { icon: <img src={SHolder}  width="20" height="20" alt="" style={{ objectFit: "contain" }} />, text: "이해관계자 관심도 높음" }, 
-              { icon: "🛡️", text: "리스크/기회 요인으로서의 중요성 고려" },
+              { icon: <img src={Score}  width="40" height="40" alt="" style={{ objectFit: "contain" }}></img>, text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
+              { icon: <img src={Observing}  width="40" height="40" alt="" style={{ objectFit: "contain" }} />, text: "2개 이상 분석축에서 반복 관측" },
+              { icon: <img src={VChain}  width="40" height="40" alt="" style={{ objectFit: "contain" }} />, text: "가치사슬 관련성 높음" },
+              { icon: <img src={SHolder}  width="40" height="40" alt="" style={{ objectFit: "contain" }} />, text: "이해관계자 관심도 높음" }, 
+              { icon: <img src={Considering}  width="40" height="40" alt="" style={{ objectFit: "contain" }} />, text: "리스크/기회 요인으로서의 중요성 고려" },
             ].map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-                <div style={{ flexShrink: 0, width: "32px", height: "32px", background: "#dcfce7", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem" }}>{item.icon}</div>
-                <div style={{ fontSize: "1.rem", color: "#334155", lineHeight: 1.6 }}>
+                <div style={{ flexShrink: 0, width: "32px", height: "32px", background: "#dcfce7", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.95rem" }}>{item.icon}</div>
+                <div style={{ fontSize: "0.88rem", color: "#334155", lineHeight: 1.6 }}>
                   {item.text}{item.sub && <><br /><span style={{ color: "#64748b" }}>{item.sub}</span></>}
                 </div>
               </div>

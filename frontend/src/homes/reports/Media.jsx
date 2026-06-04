@@ -92,7 +92,7 @@ const Media = () => {
   const [selectedPress, setSelectedPress] = useState([]);
   const [selectedReg, setSelectedReg] = useState([]);
   const [selectedAge, setSelectedAge] = useState([]);
-  
+
 
 
 
@@ -207,6 +207,20 @@ const Media = () => {
 
     setProgress(0);
     showDefaultAlert("분석 시작", "실시간 미디어 및 외부 데이터 수집을 시작합니다.", "success");
+<<<<<<< HEAD
+=======
+
+    // 2.5초 뒤 완료 시뮬레이션
+    timerRef.current = setTimeout(() => {
+      setStatus({
+        press: "complete",
+        reg: "complete",
+        expert: "complete",
+      });
+      setShowResult(true);
+      setIsAnalyzing(false);
+    }, 2500);
+>>>>>>> ccbd141e237e16c434471318fb9fbbe43ff2f643
   };
 
   const getStatusText = (type) => {
@@ -258,7 +272,11 @@ const Media = () => {
       <div className="media-container">
         {/* --- STEPPER HEADER --- */}
         <header className="media-header">
+<<<<<<< HEAD
           <h1 className="media-title">지속가능경영보고서 AI 자동 생성</h1>
+=======
+        
+>>>>>>> ccbd141e237e16c434471318fb9fbbe43ff2f643
           <div className="media-stepper-row">
             {STEPS.map((step, index) => (
               <Fragment key={step.id}>
@@ -327,9 +345,15 @@ const Media = () => {
                   <label>수집 희망 기간</label>
                   <div className="date-range-group">
                     {/* 시작 날짜 - 2023-01-01 이후만 선택 가능 */}
+<<<<<<< HEAD
                     <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" max={today} />
                     <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
                     <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} min="2023-01-01" max={today} />
+=======
+                    <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" max = {new Date().toISOString().split("T")[0]} />
+                    <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
+                    <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} min = "2023-01-01" max={new Date().toISOString().split("T")[0]} />
+>>>>>>> ccbd141e237e16c434471318fb9fbbe43ff2f643
                   </div>
                 </div>
                 <div className="status-container">
@@ -462,7 +486,11 @@ const Media = () => {
               {isAnalyzing
                 ? "AI 파이프라인 수집 가동 중..."
                 : showResult
+<<<<<<< HEAD
                   ? "분석 완료 - 결과 요약 확인"
+=======
+                  ? "분석 완료 - 결과 요약 확인 (클릭)"
+>>>>>>> ccbd141e237e16c434471318fb9fbbe43ff2f643
                   : "빅데이터 연동 현황 확인하기"}
             </div>
           </div>
@@ -480,6 +508,7 @@ const Media = () => {
                 <div style={{ textAlign: "center" }}>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: 850, margin: "0 0 4px 0" }}>{loadingTitle}</h3>
                   <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>{loadingDesc}</p>
+<<<<<<< HEAD
                   {isAnalyzing && (
                     <div className="progress-section" style={{ margin: "12px auto 0" }}>
                       <div className="progress-bar-wrap">
@@ -490,6 +519,8 @@ const Media = () => {
                       </div>
                     </div>
                   )}
+=======
+>>>>>>> ccbd141e237e16c434471318fb9fbbe43ff2f643
                 </div>
               )}
 

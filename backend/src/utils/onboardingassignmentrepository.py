@@ -108,7 +108,9 @@ def bulkAssignMetrics(
                     inviteId,
                     companyId,
                 )
-                setInviteRedis(inviteUuid, token, inviteExpireSeconds())
+                redisResult = setInviteRedis(inviteUuid, token, inviteExpireSeconds())
+                if not redisResult.get("status"):
+                    raise RuntimeError("Invite token Redis save failed")
                 if sendInviteYn:
                     mailEvent = buildCommonInviteMailEvent(normalizedEmail, inviteUuid, companyName)
 

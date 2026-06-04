@@ -89,16 +89,15 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
           </p>
 
           {/* loading */}
-          {loading && (
+          {loading && subsidiaries.length === 0 && (
             <div className="ob1-table-loading" style={{ padding: "24px" }}>
               <div className="ob1-spinner" />
-              <p>자회사 목록을 불러오는 중...</p>
+              <p>자회사 목록을 불러오고 있습니다...</p>
             </div>
           )}
 
-          {/* error */}
           {!loading && error && (
-            <div className="ob1-inline-error" style={{ margin: "16px 0" }}>
+            <div className="ob1-inline-error" style={{ margin: "24px" }}>
               <span className="ob1-error-icon">!</span>
               <span>{error}</span>
               <button type="button" className="ob1-btn-retry" onClick={loadSubsidiaries}>
@@ -107,15 +106,13 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
             </div>
           )}
 
-          {/* empty */}
           {!loading && !error && subsidiaries.length === 0 && (
             <div style={{ padding: "24px", textAlign: "center", color: "#64748b" }}>
               등록된 자회사가 없습니다.
             </div>
           )}
 
-          {/* list */}
-          {!loading && !error && subsidiaries.length > 0 && (
+          {((loading && subsidiaries.length > 0) || (!loading && !error && subsidiaries.length > 0)) && (
             <ul
               className="sub-list"
               style={{

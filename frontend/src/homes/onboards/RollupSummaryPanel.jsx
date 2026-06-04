@@ -177,7 +177,7 @@ const RollupSummaryPanel = ({ batchId, onCalculated, rollupScenario, onManageReq
         <div className="ob1-rollup-step completed">수집 시작</div>
         <div className={`ob1-rollup-step ${calculateReadyYn ? 'completed' : 'active'}`}>전송 대기</div>
         <div className={`ob1-rollup-step ${isCalculated ? 'completed' : (calculateReadyYn ? 'active' : '')}`}>롤업 계산</div>
-        <div className={`ob1-rollup-step ${dmaReadyYn ? 'completed' : ''}`}>DMA 준비</div>
+        <div className={`ob1-rollup-step ${dmaReadyYn ? 'completed' : ''}`}>DMA 준비 완료</div>
       </div>
 
       <div className="ob1-rollup-actions" style={{ display: 'flex', alignItems: 'center' }}>

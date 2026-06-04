@@ -557,10 +557,10 @@ const Result = () => {
   };
 
   return (
-    <div className="result-container">
-      <header className="result-header">
-        <h1 className="result-title">지속가능경영보고서 AI 자동 생성</h1>
-        <div className="result-stepper-row">
+    <div className="sr-container">
+      <header className="sr-header">
+        
+        <div className="sr-stepper-row">
           {steps.map((step, index) => (
             <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
               <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>

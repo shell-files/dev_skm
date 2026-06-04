@@ -703,6 +703,7 @@ def countRequiredMetrics(subIssueCodes: list[str]) -> int:
         SELECT COUNT(DISTINCT atomic_metric_id) AS cnt
         FROM ESG_SUB_ISSUE_ATOMIC_MAP
         WHERE sub_issue_code IN ({placeholders})
+          AND map_scope = 'MVP_SELECTED'
           AND required_yn = 1
           AND delete_yn = 0
     """
@@ -724,11 +725,14 @@ def countMissingMetrics(runId: int, subIssueCodes: list[str]) -> int:
         SELECT COUNT(DISTINCT sam.atomic_metric_id) AS cnt
         FROM ESG_SUB_ISSUE_ATOMIC_MAP sam
         LEFT JOIN ESG_KPI_FACT kf
-          ON kf.atomic_metric_id = sam.atomic_metric_id
+          ON kf.metric_id = sam.metric_id
+         AND kf.atomic_metric_id = sam.atomic_metric_id
          AND kf.company_id = ?
          AND kf.reporting_year = ?
+         AND LOWER(COALESCE(kf.approval_status, '')) = 'approved'
          AND kf.delete_yn = 0
         WHERE sam.sub_issue_code IN ({placeholders})
+          AND sam.map_scope = 'MVP_SELECTED'
           AND sam.required_yn = 1
           AND sam.delete_yn = 0
           AND kf.id IS NULL

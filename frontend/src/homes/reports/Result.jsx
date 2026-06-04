@@ -597,7 +597,7 @@ const Result = () => {
                 <div className="card-container">
                   <div className="card-title-row">
                     <span className="card-title">최종 선정 요약</span>
-                    <span className="info-mark">ⓘ</span>
+                    
                   </div>
                   <div id="result-summary-grid" className="summary-grid">
                     {[
@@ -655,7 +655,7 @@ const Result = () => {
             )}
           
               {leftTab === 1 && (
-              <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              <div className="result-tab-pane" style={{ gap: "24px" }}>
 
     {/* 후보군 최종 선정 과정 */}
     <div style={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: "16px", padding: "24px" }}>
@@ -845,34 +845,26 @@ const Result = () => {
 
                 {/* 섹션 1: 보고서 반영 우선순위 */}
                 <div className="accordion">
-                  <div className="accordion-head" onClick={() => toggleSection(1)}>
-                    <div id="accordion-title-wrap">
-                      <span className="accordion-title">1. 보고서 반영 우선순위</span>
-                      {/* <span className="info-mark sm">ⓘ</span> */}
-                    </div>
-                    <span className="accordion-arrow">{openSections[1] ? "∧" : "∨"}</span>
+                  <div className="accordion-head static">
+                    <span className="accordion-title">1. 보고서 반영 우선순위</span>
                   </div>
-                  {openSections[1] && (
-                    <div className="accordion-body" id="priority-body">
-                      {PRIORITY_ITEMS.map((item) => (
-                        <div key={item.rank} className="priority-row">
-                          <span className="priority-name">{item.name}</span>
-                          <span className="priority-score">중요도 <strong>{item.score}</strong></span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div className="accordion-body" id="priority-body">
+                    {PRIORITY_ITEMS.map((item) => (
+                      <div key={item.rank} className="priority-row">
+                        <span className="priority-name">{item.name}</span>
+                        <span className="priority-score">중요도 <strong>{item.score}</strong></span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* 섹션 2: 필요 온보딩 지표 */}
                 <div className="accordion">
-                  <div className="accordion-head" onClick={() => toggleSection(2)}>
+                  <div className="accordion-head static">
                     <span className="accordion-title">2. 필요 온보딩 지표</span>
-                    <span className="accordion-arrow">{openSections[2] ? "∧" : "∨"}</span>
                   </div>
-                  {openSections[2] && (
-                    <div className="accordion-body">
-                      <table id="onboarding-table">
+                  <div className="accordion-body">
+                    <table id="onboarding-table">
                         <thead>
                           <tr>
                             {["이슈", "환경(E)", "사회(S)", "지배구조(G)", "필요 지표 수", "온보딩 완료"].map(h => (
@@ -894,7 +886,6 @@ const Result = () => {
                         </tbody>
                       </table>
                     </div>
-                  )}
                 </div>
 
                 {/* 섹션 3: 부족 데이터 현황 */}
@@ -959,7 +950,7 @@ const Result = () => {
                           <div className="shortcut-title">{item.title}</div>
                           <div className="shortcut-desc">{item.desc}</div>
                         </div>
-                        <span className="shortcut-arrow">›</span>
+                        
                       </div>
                     ))}
                   </div>
@@ -970,12 +961,7 @@ const Result = () => {
 
           {/* ── 오른쪽 패널 ── */}
           <section id="result-right-panel">
-            <div className="result-tab-bar">
-              <button className={`result-tab-button ${rightTab === 0 ? "active" : ""}`} onClick={() => setRightTab(0)}>전체</button>
-              {/* [TODO-동작] 빈 라벨 — 의도한 텍스트를 채우세요 */}
-              <button className={`result-tab-button ${rightTab === 1 ? "active" : ""}`} onClick={() => setRightTab(1)}></button>
-            </div>
-
+          
             {rightTab === 0 && (
               <div className="result-tab-pane">
                 <div className="matrix-card">

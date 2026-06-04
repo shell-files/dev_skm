@@ -32,31 +32,12 @@ def listEffectiveSourceCompanies(parentCompanyId: int, reportingYear: int, rollu
     ]
 
 def listBatchRules(metricIds: list[str]) -> list[dict]:
-    if not metricIds:
-        return []
-    placeholders = ", ".join(["?"] * len(metricIds))
-    sql = f"""
-        SELECT *
-        FROM ESG_CALCULATION_RULE
-        WHERE target_metric_id IN ({placeholders})
-          AND UPPER(COALESCE(execution_scope, '')) = 'CONSOLIDATED'
-          AND active_yn = 1
-          AND delete_yn = 0
-        ORDER BY sort_order, calculation_rule_code
-    """
-    return findAll(sql, tuple(metricIds)) or []
+    from src.utils.calculationrepository import listActiveRules
+    return listActiveRules(executionScope="CONSOLIDATED", metricIds=metricIds)
 
 def listBatchRuleSources(ruleCodes: list[str]) -> list[dict]:
-    if not ruleCodes:
-        return []
-    placeholders = ", ".join(["?"] * len(ruleCodes))
-    sql = f"""
-        SELECT *
-        FROM ESG_CALCULATION_RULE_SOURCE
-        WHERE calculation_rule_code IN ({placeholders})
-          AND delete_yn = 0
-    """
-    return findAll(sql, tuple(ruleCodes)) or []
+    from src.utils.calculationrepository import listRuleSources
+    return listRuleSources(ruleCodes)
 
 def saveScopeFromRulesTx(cur, batchId: int, rules: list[dict], sources: list[dict], scopeReason: str) -> None:
     sourceMap = {}
@@ -64,25 +45,6 @@ def saveScopeFromRulesTx(cur, batchId: int, rules: list[dict], sources: list[dic
         ruleCode = source["calculation_rule_code"]
         sourceMap.setdefault(ruleCode, []).append(source)
 
-    sql = """
-        INSERT INTO ESG_ROLLUP_BATCH_ATOMIC_SCOPE (
-            esg_rollup_batch_id,
-            metric_id,
-            group_atomic_metric_id,
-            source_atomic_metric_ids,
-            required_yn,
-            scope_reason,
-            delete_yn,
-            created_at,
-            updated_at
-        ) VALUES (?, ?, ?, ?, 1, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-        ON DUPLICATE KEY UPDATE
-            source_atomic_metric_ids = VALUES(source_atomic_metric_ids),
-            required_yn = VALUES(required_yn),
-            scope_reason = VALUES(scope_reason),
-            delete_yn = 0,
-            updated_at = CURRENT_TIMESTAMP
-    """
     import json
     for rule in rules:
         ruleCode = rule["calculation_rule_code"]
@@ -93,16 +55,47 @@ def saveScopeFromRulesTx(cur, batchId: int, rules: list[dict], sources: list[dic
             sourceId = norm.get("sourceAtomicMetricId")
             if sourceId and sourceId not in sourceIds:
                 sourceIds.append(sourceId)
+                
+        payloadStr = json.dumps(sourceIds) if sourceIds else None
         
-        cur.execute(sql, (
-            batchId,
-            rule["target_metric_id"],
-            rule["target_atomic_metric_id"],
-            json.dumps(sourceIds) if sourceIds else None,
-            scopeReason
-        ))
+        cur.execute(
+            """
+            SELECT id, source_atomic_metric_ids
+            FROM ESG_ROLLUP_BATCH_ATOMIC_SCOPE
+            WHERE esg_rollup_batch_id = ? AND group_atomic_metric_id = ?
+            """,
+            (batchId, rule["target_atomic_metric_id"])
+        )
+        existing = cur.fetchone()
+        if existing:
+            existingPayload = existing["source_atomic_metric_ids"]
+            if existingPayload != payloadStr:
+                raise ValueError("ROLLUP_BATCH_SCOPE_IMMUTABLE")
+        else:
+            cur.execute(
+                """
+                INSERT INTO ESG_ROLLUP_BATCH_ATOMIC_SCOPE (
+                    esg_rollup_batch_id,
+                    metric_id,
+                    group_atomic_metric_id,
+                    source_atomic_metric_ids,
+                    required_yn,
+                    scope_reason,
+                    delete_yn,
+                    created_at,
+                    updated_at
+                ) VALUES (?, ?, ?, ?, 1, ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """,
+                (
+                    batchId,
+                    rule.get("metric_id"),
+                    rule["target_atomic_metric_id"],
+                    payloadStr,
+                    scopeReason
+                )
+            )
 
-def listScope(batchId: int) -> list[dict]:
+def listScopeTx(cur, batchId: int) -> list[dict]:
     sql = """
         SELECT
             s.metric_id,
@@ -121,11 +114,34 @@ def listScope(batchId: int) -> list[dict]:
         ORDER BY s.group_atomic_metric_id
     """
     import json
-    rows = findAll(sql, (batchId,)) or []
+    cur.execute(sql, (batchId,))
+    rows = cur.fetchall()
     for row in rows:
         val = row.get("source_atomic_metric_ids")
-        row["sourceAtomicMetricIds"] = json.loads(val) if val else []
+        try:
+            row["sourceAtomicMetricIds"] = json.loads(val) if val else []
+            if not isinstance(row["sourceAtomicMetricIds"], list):
+                row["sourceAtomicMetricIds"] = [str(row["sourceAtomicMetricIds"])]
+        except Exception:
+            row["sourceAtomicMetricIds"] = [s.strip() for s in str(val).split(",")] if val else []
     return rows
+
+def listScope(batchId: int) -> list[dict]:
+    from src.utils.db import getConn
+    conn = getConn()
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            return listScopeTx(cur, batchId)
+    finally:
+        conn.close()
+
+def resolveRequiredSourceAtomicIdsTx(cur, batchId: int) -> list[str]:
+    scopes = listScopeTx(cur, batchId)
+    atomicIds = set()
+    for s in scopes:
+        for a in s.get("sourceAtomicMetricIds", []):
+            atomicIds.add(a)
+    return sorted(list(atomicIds))
 
 def resolveRequiredSourceAtomicIds(batchId: int) -> list[str]:
     scopes = listScope(batchId)
@@ -135,19 +151,37 @@ def resolveRequiredSourceAtomicIds(batchId: int) -> list[str]:
             atomicIds.add(a)
     return sorted(list(atomicIds))
 
+def resolveRequiredGroupAtomicIdsTx(cur, batchId: int) -> list[str]:
+    scopes = listScopeTx(cur, batchId)
+    return sorted([s["group_atomic_metric_id"] for s in scopes if s.get("group_atomic_metric_id")])
+
 def resolveRequiredGroupAtomicIds(batchId: int) -> list[str]:
     scopes = listScope(batchId)
     return sorted([s["group_atomic_metric_id"] for s in scopes if s.get("group_atomic_metric_id")])
 
+def normalizeFact(row: dict) -> dict:
+    return {
+        "companyId": int(row["company_id"]),
+        "reportingYear": int(row["reporting_year"]),
+        "atomicMetricId": row["atomic_metric_id"],
+        "metricId": row.get("metric_id"),
+        "valueNumeric": row.get("value_numeric"),
+        "valueText": row.get("value_text"),
+        "unit": row.get("unit"),
+        "approvalStatus": row.get("approval_status"),
+    }
+
 def listApprovedFactsByCompany(companyIds: list[int], reportingYear: int, atomicMetricIds: list[str]) -> list[dict]:
     if not companyIds or not atomicMetricIds:
         return []
-    return listApprovedEntityFacts(companyIds, reportingYear, atomicMetricIds)
+    rows = listApprovedEntityFacts(companyIds, reportingYear, atomicMetricIds)
+    return [normalizeFact(r) for r in rows]
 
 def listPriorYearApprovedFactsByCompany(companyIds: list[int], reportingYear: int, atomicMetricIds: list[str]) -> list[dict]:
     if not companyIds or not atomicMetricIds:
         return []
-    return listApprovedEntityFacts(companyIds, reportingYear - 1, atomicMetricIds)
+    rows = listApprovedEntityFacts(companyIds, reportingYear - 1, atomicMetricIds)
+    return [normalizeFact(r) for r in rows]
 
 def buildSourceReadiness(batchId: int, sourceCompanyIds: list[int], reportingYear: int) -> dict:
     requiredAtomicIds = resolveRequiredSourceAtomicIds(batchId)

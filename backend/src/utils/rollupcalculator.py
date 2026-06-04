@@ -1,5 +1,7 @@
 from __future__ import annotations
 from typing import Any
+from collections import defaultdict, deque
+
 from src.utils.calculationengine import (
     normalizeSources,
     groupSourcesByRule,
@@ -34,8 +36,6 @@ def _aggregateSum(factsByCompany: dict[int, float|int|str]) -> float|int:
     return float(total)
 
 def _aggregateReference(factsByCompany: dict[int, Any], ruleCode: str) -> Any:
-    # If all companies have the same value, copy it.
-    # If they differ, it's CALCULATION_REFERENCE_VALUE_AMBIGUOUS
     distinct_values = set()
     first_val = None
     for val in factsByCompany.values():
@@ -55,16 +55,95 @@ def buildMultiCompanyFactMap(
     atomicMetricIds: list[str],
     facts: list[dict],
 ) -> dict[tuple[int, str], dict]:
-    # Returns (companyId, atomicMetricId) -> fact dict
     factMap = {}
     for fact in facts:
         key = (int(fact["companyId"]), fact["atomicMetricId"])
         factMap[key] = fact
     return factMap
 
-def calculateConsolidatedRule(
-    rule: dict,
+def calculateConsolidatedRules(
+    rules: list[dict],
     sources: list[dict],
+    currentFactsMap: dict[tuple[int, str], dict],
+    priorFactsMap: dict[tuple[int, str], dict],
+    companyIds: list[int]
+) -> tuple[list[dict], list[dict], bool]:
+    
+    # Group rules by code
+    ruleMap = {r["calculation_rule_code"]: r for r in rules}
+    normalizedSources = normalizeSources(sources)
+    groupedSources = groupSourcesByRule(normalizedSources)
+    
+    # Topo sort
+    inDegree = defaultdict(int)
+    graph = defaultdict(list)
+    
+    atomicToRuleCode = {r["target_atomic_metric_id"]: r["calculation_rule_code"] for r in rules}
+    
+    for ruleCode, ruleSources in groupedSources.items():
+        if ruleCode not in inDegree:
+            inDegree[ruleCode] = 0
+            
+        for src in ruleSources:
+            srcAtomic = src["sourceAtomicMetricId"]
+            if srcAtomic in atomicToRuleCode:
+                parentRule = atomicToRuleCode[srcAtomic]
+                graph[parentRule].append(ruleCode)
+                inDegree[ruleCode] += 1
+
+    for rCode in ruleMap:
+        if rCode not in inDegree:
+            inDegree[rCode] = 0
+
+    queue = deque([r for r, deg in inDegree.items() if deg == 0])
+    sortedRuleCodes = []
+    
+    while queue:
+        curr = queue.popleft()
+        sortedRuleCodes.append(curr)
+        for child in graph[curr]:
+            inDegree[child] -= 1
+            if inDegree[child] == 0:
+                queue.append(child)
+                
+    if len(sortedRuleCodes) != len(ruleMap):
+        # Cycle detected
+        return [], [{"ruleCode": "CYCLE", "error": "Dependency cycle detected in rules"}], False
+
+    results = []
+    warnings = []
+    allSuccess = True
+    
+    # Calculate in order
+    for ruleCode in sortedRuleCodes:
+        rule = ruleMap[ruleCode]
+        ruleSources = groupedSources.get(ruleCode) or []
+        try:
+            res = _calculateConsolidatedRule(rule, ruleSources, currentFactsMap, priorFactsMap, companyIds)
+            results.append(res)
+            # Update currentFactsMap with result for dependent rules?
+            # Wait, consolidated result is at the group level!
+            # If a dependent rule is also consolidated, it actually reads from the group level?
+            # BUT getCompanyValues looks at companyIds (subsidiaries).
+            # The calculationengine actually does NOT support inter-group-metric dependency for generic consolidated unless it's calculated.
+            # For this context, standard dependency is supported if the graph is properly fed. We feed it to all companyIds so the dependent rule sees the same value for all companies.
+            for cid in companyIds:
+                currentFactsMap[(cid, rule["target_atomic_metric_id"])] = {
+                    "companyId": cid,
+                    "atomicMetricId": rule["target_atomic_metric_id"],
+                    "valueNumeric": res.get("valueNumeric"),
+                    "valueText": res.get("valueText")
+                }
+        except CalculationError as e:
+            warnings.append({"ruleCode": ruleCode, "error": e.code, "message": str(e)})
+            allSuccess = False
+            break # Fail fast for batch
+            
+    return results, warnings, allSuccess
+
+def _calculateConsolidatedRule(
+    rule: dict,
+    ruleSources: list[dict],
     currentFactsMap: dict[tuple[int, str], dict],
     priorFactsMap: dict[tuple[int, str], dict],
     companyIds: list[int]
@@ -73,15 +152,9 @@ def calculateConsolidatedRule(
     formula = str(rule.get("formula_type")).upper()
     targetAtomicId = rule["target_atomic_metric_id"]
     
-    # 1. Normalize and dedupe sources for the rule
-    normalizedSources = normalizeSources(sources)
-    grouped = groupSourcesByRule(normalizedSources)
-    ruleSources = grouped.get(ruleCode) or []
-    
     sourceAtomicIds = [s["sourceAtomicMetricId"] for s in ruleSources]
     
-    # 2. Extract company values per source atomic ID
-    def getCompanyValues(atomicId: str, fmap: dict) -> dict[int, Any]:
+    def getCompanyValues(atomicId: str, fmap: dict, isPrior: bool = False) -> dict[int, Any]:
         cv = {}
         for cid in companyIds:
             f = fmap.get((cid, atomicId))
@@ -89,6 +162,10 @@ def calculateConsolidatedRule(
                 cv[cid] = f["valueNumeric"]
             elif f and f.get("valueText") is not None:
                 cv[cid] = f["valueText"]
+            else:
+                # HIGH: strict prior readiness
+                # ANY missing source -> Exception
+                raise CalculationError("CALCULATION_SOURCE_NOT_READY", f"Rule {ruleCode} missing source {atomicId} for company {cid} (prior={isPrior})")
         return cv
 
     if formula == FORMULA_ROLLUP_REFERENCE_COPY:
@@ -105,6 +182,7 @@ def calculateConsolidatedRule(
             
         is_numeric = isinstance(val, (int, float))
         return {
+            "groupMetricId": rule.get("metric_id"),
             "groupAtomicMetricId": targetAtomicId,
             "sourceAtomicMetricIds": sourceAtomicIds,
             "formulaType": formula,
@@ -113,9 +191,6 @@ def calculateConsolidatedRule(
             "sourceCompanyValues": {str(k): v for k,v in cv.items()},
         }
 
-    # All other formulas are numeric aggregations
-    # Build pre-aggregated engine map for calculationengine.py
-    # Since calculationengine expects atomicId -> fact
     engineFactMap = {}
     sourceCompanyValuesTrace = {}
     
@@ -123,21 +198,18 @@ def calculateConsolidatedRule(
         atomicId = s["sourceAtomicMetricId"]
         cv = getCompanyValues(atomicId, currentFactsMap)
         sumVal = _aggregateSum(cv)
-        engineFactMap[atomicId] = {"valueNumeric": sumVal}
-        # Keep trace of first source for simple trace (or we can combine them, but MVP keep it simple)
+        engineFactMap[atomicId] = {"value_numeric": sumVal}
         if atomicId not in sourceCompanyValuesTrace:
             sourceCompanyValuesTrace[atomicId] = cv
             
-    # For YoY, we need prior pre-aggregated values
     enginePriorFactMap = {}
     if formula in (FORMULA_ROLLUP_YOY_DIFF, FORMULA_ROLLUP_YOY_RATE):
         for s in ruleSources:
             atomicId = s["sourceAtomicMetricId"]
-            cv_prior = getCompanyValues(atomicId, priorFactsMap)
+            cv_prior = getCompanyValues(atomicId, priorFactsMap, isPrior=True)
             sumValPrior = _aggregateSum(cv_prior)
-            enginePriorFactMap[atomicId] = {"valueNumeric": sumValPrior}
+            enginePriorFactMap[atomicId] = {"value_numeric": sumValPrior}
 
-    # 3. Delegate to Calculation Engine
     try:
         engineResult = calculateRule(rule, ruleSources, engineFactMap, enginePriorFactMap)
         
@@ -148,6 +220,7 @@ def calculateConsolidatedRule(
             )
             
         return {
+            "groupMetricId": rule.get("metric_id"),
             "groupAtomicMetricId": targetAtomicId,
             "sourceAtomicMetricIds": sourceAtomicIds,
             "formulaType": formula,
@@ -162,4 +235,4 @@ def calculateConsolidatedRule(
     except Exception as e:
         raise CalculationError("CALCULATION_ENGINE_ERROR", str(e))
 
-__all__ = ["buildMultiCompanyFactMap", "calculateConsolidatedRule", "CalculationError"]
+__all__ = ["buildMultiCompanyFactMap", "calculateConsolidatedRules", "CalculationError"]

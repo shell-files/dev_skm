@@ -256,12 +256,11 @@ def updateSourceStatusTx(cur, batchId: int, requiredAtomicCount: int) -> None:
         (requiredAtomicCount, batchId),
     )
 
-def finalizeDmaPrecheckTx(cur, batchId: int, runId: int, results: list[dict], actorUserId: Optional[int] = None) -> None:
+def finalizeDmaPrecheckTx(cur, batchId: int, runId: int, actorUserId: Optional[int] = None) -> None:
     cur.execute(
         """
         UPDATE ESG_ROLLUP_BATCH
         SET batch_status = ?,
-            dma_ready_yn = 1,
             approved_by_user_id = ?,
             approved_at = CURRENT_TIMESTAMP,
             completed_at = CURRENT_TIMESTAMP,
@@ -275,7 +274,6 @@ def finalizeDmaPrecheckTx(cur, batchId: int, runId: int, results: list[dict], ac
     tracePayload = {
         "batchId": batchId,
         "metricScopeCode": "G0_02_FINANCIAL_BASIS",
-        "resultCount": len(results),
         "calculatedAt": "CURRENT_TIMESTAMP",
     }
     cur.execute(
@@ -283,12 +281,24 @@ def finalizeDmaPrecheckTx(cur, batchId: int, runId: int, results: list[dict], ac
         UPDATE ESG_MATERIALITY_RUN
         SET financial_basis_status = 'CONSOLIDATED_READY',
             financial_basis_trace_json = ?,
-            dma_ready_yn = 1,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
           AND delete_yn = 0
         """,
         (json.dumps(tracePayload), runId),
+    )
+
+def updateBatchStatusTx(cur, batchId: int, status: str, dmaReadyYn: bool, reportReadyYn: bool) -> None:
+    cur.execute(
+        """
+        UPDATE ESG_ROLLUP_BATCH
+        SET batch_status = ?,
+            dma_ready_yn = ?,
+            report_ready_yn = ?,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = ? AND delete_yn = 0
+        """,
+        (status, 1 if dmaReadyYn else 0, 1 if reportReadyYn else 0, batchId)
     )
 
 def finalizeReportDisclosureTx(cur, batchId: int, actorUserId: Optional[int] = None) -> None:

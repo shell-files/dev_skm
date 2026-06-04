@@ -1110,4 +1110,129 @@ __all__ = [
     "listQuantInputAtomicIdsTx",
     "checkConsolidatedCalculationSourceTx",
     "resolveDefaultApprovalPolicyTx",
+    "listMetricScopesTx",
+    "ensureRollupCycleTx",
+    "resolveRollupMetricScopeRowsTx",
+    "seedRollupMetricScopeTx",
 ]
+
+def listMetricScopesTx(cur, cycleId: int, companyId: int, metricId: Optional[str] = None) -> list[dict]:
+    params = [cycleId, companyId]
+    metricFilter = ""
+    if metricId:
+        metricFilter = "AND s.metric_id = ?"
+        params.append(metricId)
+    cur.execute(
+        f"""
+        SELECT
+            s.*,
+            m.metric_name_kr,
+            selected.id AS sub_issue_id,
+            s.source_sub_issue_code AS sub_issue_code,
+            sub_master.sub_issue_name_kr AS sub_issue_name,
+            sub_master.issue_group_code AS sub_issue_domain
+        FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE s
+        LEFT JOIN (
+            SELECT metric_id, MIN(metric_name_kr) AS metric_name_kr
+            FROM ESG_ATOMIC_METRIC_MASTER
+            WHERE delete_yn = 0
+              AND active_yn = 1
+            GROUP BY metric_id
+        ) m
+          ON m.metric_id = s.metric_id
+        LEFT JOIN ESG_MATERIALITY_SELECTED_SUB_ISSUE selected
+          ON selected.id = s.source_selected_sub_issue_id
+         AND selected.esg_materiality_run_id = s.source_materiality_run_id
+         AND selected.sub_issue_code = s.source_sub_issue_code
+         AND selected.delete_yn = 0
+        LEFT JOIN ESG_SUB_ISSUE_MASTER sub_master
+          ON sub_master.sub_issue_code = s.source_sub_issue_code
+         AND sub_master.delete_yn = 0
+         AND sub_master.active_yn = 1
+        WHERE s.esg_onboarding_cycle_id = ?
+          AND s.company_id = ?
+          AND s.active_yn = 1
+          AND s.delete_yn = 0
+          {metricFilter}
+        ORDER BY s.display_order, s.metric_id
+        """,
+        tuple(params),
+    )
+    return cur.fetchall() or []
+
+def ensureRollupCycleTx(cur, companyId: int, reportingYear: int, batchId: int) -> int:
+    cur.execute(
+        """
+        SELECT id FROM ESG_ONBOARDING_CYCLE 
+        WHERE company_id = ? AND reporting_year = ? AND cycle_type = 'ROLLUP' AND delete_yn = 0
+        """,
+        (companyId, reportingYear)
+    )
+    cycle = cur.fetchone()
+    if cycle:
+        cur.execute(
+            """
+            UPDATE ESG_ONBOARDING_CYCLE 
+            SET esg_rollup_batch_id = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+            """,
+            (batchId, cycle["id"])
+        )
+        return int(cycle["id"])
+    else:
+        from datetime import datetime, timezone
+        ts = datetime.now(timezone.utc).strftime("%y%m%d%H%M")
+        cycleName = f"ROLLUP_{reportingYear}_{ts}"
+        cur.execute(
+            """
+            INSERT INTO ESG_ONBOARDING_CYCLE (
+                cycle_type, company_id, reporting_year, cycle_name, cycle_status, 
+                esg_rollup_batch_id, delete_yn, created_at, updated_at
+            ) VALUES ('ROLLUP', ?, ?, ?, 'draft', ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """,
+            (companyId, reportingYear, cycleName, batchId)
+        )
+        return cur.lastrowid
+
+def resolveRollupMetricScopeRowsTx(cur, batchId: int) -> list[dict]:
+    cur.execute(
+        """
+        SELECT metric_id
+        FROM ESG_ROLLUP_BATCH_ATOMIC_SCOPE
+        WHERE esg_rollup_batch_id = ? AND delete_yn = 0
+        GROUP BY metric_id
+        """,
+        (batchId,)
+    )
+    return cur.fetchall() or []
+
+def seedRollupMetricScopeTx(cur, companyId: int, reportingYear: int, actorUserId: Optional[int] = None) -> None:
+    cur.execute(
+        """
+        SELECT id, esg_rollup_batch_id FROM ESG_ONBOARDING_CYCLE
+        WHERE company_id = ? AND reporting_year = ? AND cycle_type = 'ROLLUP' AND delete_yn = 0
+        """,
+        (companyId, reportingYear)
+    )
+    cycle = cur.fetchone()
+    if not cycle or not cycle["esg_rollup_batch_id"]:
+        return
+        
+    cycleId = cycle["id"]
+    batchId = cycle["esg_rollup_batch_id"]
+    
+    metrics = resolveRollupMetricScopeRowsTx(cur, batchId)
+    
+    for m in metrics:
+        metricId = m["metric_id"]
+        cur.execute(
+            """
+            INSERT INTO ESG_ONBOARDING_CYCLE_METRIC_SCOPE (
+                esg_onboarding_cycle_id, company_id, metric_scope_type, 
+                metric_id, scope_source_type,
+                approval_policy_code, active_yn, delete_yn, display_order, created_at, updated_at
+            ) VALUES (?, ?, 'ROLLUP_SCOPE', ?, 'ROLLUP', 'ROLLUP_READONLY', 1, 0, 999, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON DUPLICATE KEY UPDATE delete_yn = 0, updated_at = CURRENT_TIMESTAMP
+            """,
+            (cycleId, companyId, metricId)
+        )

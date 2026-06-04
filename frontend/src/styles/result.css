@@ -40,6 +40,7 @@
   border-radius: 16px;
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  flex-shrink: 0;
 }
 
 /* 데이터 테이블 공통 디자인 표준화 */
@@ -137,7 +138,7 @@
 /* ── 레이아웃 ── */
 #result-content   { display: flex; flex-direction: column; gap: 20px; padding: 20px; overflow-y: auto; justify-content: flex-start; }
 #result-panels-row { display: flex; flex-direction: row; gap: 20px; align-items: stretch; flex: 1; min-height: 0; overflow: hidden; }
-#result-left-panel  { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto; }
+#result-left-panel  { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 #result-right-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-y: auto; }
 
 /* ── 탭 콘텐츠 래퍼 ── */
@@ -446,6 +447,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* ───── 탭 ───── */
@@ -453,6 +455,7 @@
   display: flex;
   border-bottom: 2px solid #e2e8f0;
   margin-bottom: 16px;
+  flex-shrink: 0;
 }
 .result-tab-button {
   padding: 8px 20px;
@@ -472,6 +475,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* 점수 해석 탭은 섹션 간 간격이 더 넓음 */
@@ -516,11 +522,7 @@
 
 /* ───── 탭 0: 선정 사유 요약 ───── */
 /* #result-summary-grid: summary-grid 클래스로 기존 스타일 적용. id는 영역 식별용 */
-<<<<<<< HEAD
-/* #result-summary-grid { hook for future overrides } */
-=======
-#result-summary-grid { /* hook for future overrides */ }
->>>>>>> b2238b82c66fe55db540ba93d2b617278955a664
+#result-summary-grid { grid-template-columns: repeat(4, 1fr); }
 
 #result-reason-list {
   display: flex;
@@ -891,6 +893,7 @@
   border-radius: 12px;
   margin-bottom: 14px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 .accordion-head {
   display: flex;
@@ -1223,3 +1226,12 @@
 .matrix-card svg *:focus {
   outline: none !important;
 }
+
+
+#result-next-steps .accordion-body {
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+#result-next-steps .accordion-body { display: block; }
+#result-next-steps .accordion-body#priority-body { display: flex; }

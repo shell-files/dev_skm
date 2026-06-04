@@ -328,7 +328,7 @@ const DoubleMaterialityMatrix = () => {
               tickLine={false}
             />
 
-            <Tooltip content={<MatrixTooltip />} cursor={false} />
+            <Tooltip content={<MatrixTooltip />} cursor={false} isAnimationActive={false} />
 
           
             {activeCats.map((cat) => (

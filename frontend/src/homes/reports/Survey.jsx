@@ -743,8 +743,14 @@ const Survey = () => {
           Result Dashboard
       ========================================================== */}
       <div
+<<<<<<< HEAD
         className={`survey-result-dashboard ${dashboardOpen ? "open" : ""
           }`}
+=======
+        className={`survey-result-dashboard ${
+          dashboardOpen ? "open" : ""
+        }`}
+>>>>>>> b2238b82c66fe55db540ba93d2b617278955a664
       >
         {/* Dashboard Handle */}
         <div
@@ -785,8 +791,13 @@ const Survey = () => {
               <div className="survey-stage">
                 <div className="survey-float-wrap">
                   <img
+<<<<<<< HEAD
                     src={robot}
                     className="survey-main-img"
+=======
+                    surveyc={robot}
+                    className="robot-main-img"
+>>>>>>> b2238b82c66fe55db540ba93d2b617278955a664
                     alt="robot"
                   />
                 </div>

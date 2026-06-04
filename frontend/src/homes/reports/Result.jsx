@@ -1,17 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import Score from "@assets/icons/result_page/score.png";
-import VChain from "@assets/icons/result_page/value-chain.png";
-import SHolder from "@assets/icons/result_page/stakeholder.png";
-import Observing from "@assets/icons/result_page/observing.png";
-import Considering from "@assets/icons/result_page/considering.png";
-
-import Benchmk from "@assets/icons/steps/benchmarking.png";
-import Resu from "@assets/icons/steps/Result.png";
-import Survey from "@assets/icons/steps/survey.png";
-import Analyze from "@assets/icons/steps/analyzing.png";
-import Report from "@assets/icons/steps/draft.png";
-
+import Observing from "@assets/icons/result_page/observe.png";
+import Chain from "@assets/icons/result_page/valuechain.png";
 
 import "@styles/result.css";
 import "@styles/benchmarking.css";
@@ -522,11 +512,12 @@ const Result = () => {
   const activeIndex = 3;
 
   const steps = [
-    { id: 1, title: "벤치마킹 분석",   icon: <img src={Benchmk}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/benchmk" },
-    { id: 2, title: "미디어 분석",     icon: <img src={Analyze}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/media" },
-    { id: 3, title: "이해관계자 설문",  icon: <img src={Survey}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>,path: "/survey" },
-    { id: 4, title: "전체 결과",       icon: <img src={Resu}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/result" },
-    { id: 5, title: "보고서 초안",     icon: <img src={Report}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/draft" },
+    { id: 1, title: "벤치마킹 분석",   icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><line x1="15.5" y1="15.5" x2="21" y2="21"/><line x1="7" y1="13" x2="7" y2="11"/><line x1="10" y1="13" x2="10" y2="8.5"/><line x1="13" y1="13" x2="13" y2="7"/><line x1="6" y1="13" x2="14" y2="13"/></svg>, path: "/benchmk" },
+    { id: 2, title: "미디어 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><polyline points="5,13 8,10 11,12 14,8 19,6"/></svg>, path: "/media" },
+    { id: 3, title: "이해관계자 설문", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><polyline points="9,11 10.5,12.5 13,10"/><polyline points="9,16 10.5,17.5 13,15"/><line x1="13" y1="11" x2="16" y2="11"/><line x1="13" y1="16" x2="16" y2="16"/></svg>, path: "/survey" },
+    { id: 4, title: "전체 결과", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="20" x2="21" y2="20"/><line x1="3" y1="4" x2="3" y2="20"/><rect x="5" y="13" width="3" height="7"/><rect x="10" y="10" width="3" height="10"/><rect x="15" y="8" width="3" height="12"/><circle cx="19" cy="4" r="3"/><polyline points="17.5,4 18.5,5 21,2.5"/></svg>, path: "/result" },
+    { id: 5, title: "보고서 초안", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>, path: "/draft" },
+
   ];
 
   const [leftTab, setLeftTab]           = useState(0);
@@ -702,11 +693,11 @@ const Result = () => {
           <div style={{ fontSize: "1.5em", fontWeight: 850, color: "#03A94D", marginBottom: "16px" }}>선정 기준</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "14px", flex: 1, justifyContent: "space-between" }}>
             {[
-              { icon: <img src={Score}  width="40" height="40" alt="" style={{ objectFit: "contain" }}></img>, text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
-              { icon: <img src={Observing}  width="40" height="40" alt="" style={{ objectFit: "contain" }} />, text: "2개 이상 분석축에서 반복 관측" },
-              { icon: <img src={VChain}  width="40" height="40" alt="" style={{ objectFit: "contain" }} />, text: "가치사슬 관련성 높음" },
-              { icon: <img src={SHolder}  width="40" height="40" alt="" style={{ objectFit: "contain" }} />, text: "이해관계자 관심도 높음" }, 
-              { icon: <img src={Considering}  width="40" height="40" alt="" style={{ objectFit: "contain" }} />, text: "리스크/기회 요인으로서의 중요성 고려" },
+              { icon: <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="4,6 5.5,7.5 8,5"/><line x1="10" y1="6" x2="20" y2="6"/><polyline points="4,12 5.5,13.5 8,11"/><line x1="10" y1="12" x2="20" y2="12"/><polyline points="4,18 5.5,19.5 8,17"/><line x1="10" y1="18" x2="18" y2="18"/></svg>, text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
+              { icon: <img src={Observing} width="80" height="80" alt="" style={{ objectFit: "contain" }} />, text: "2개 이상 분석축에서 반복 관측" },
+              { icon: <img src={Chain} width="45" height="45" alt="" style={{ objectFit: "contain" }} />, text: "가치사슬 관련성 높음" },
+              { icon: <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="20" cy="16" r="2"/><circle cx="4" cy="16" r="2"/><line x1="12" y1="6" x2="12" y2="10"/><line x1="18.3" y1="15" x2="13.7" y2="13"/><line x1="5.7" y1="15" x2="10.3" y2="13"/></svg>, text: "이해관계자 관심도 높음" },
+              { icon: <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><line x1="12" y1="3" x2="12" y2="21"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>, text: "리스크/기회 요인으로서의 중요성 고려" },
             ].map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
                 <div style={{ flexShrink: 0, width: "32px", height: "32px", background: "#dcfce7", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.95rem" }}>{item.icon}</div>

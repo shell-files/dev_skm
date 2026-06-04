@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+﻿import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import "@styles/onboarding1.css";
@@ -31,6 +31,9 @@ import {
 } from "./onboardingUtils";
 import {
   DEFAULT_REPORTING_YEAR,
+  bulkAssignOnboardingMetrics,
+  bulkUnassignOnboardingMetrics,
+  fetchOnboardingAssignments,
   fetchCurrentWorkflow,
   fetchOnboardingMetrics,
   fetchRollupRequests,
@@ -84,6 +87,47 @@ const flattenOnboardingItems = (metrics = []) =>
       assignment: metric.assignment,
     }))
   );
+
+const normalizeAssignmentStatus = (status) => String(status || "").trim().toUpperCase();
+
+const normalizeInviteStatus = (status) => {
+  const normalized = String(status || "").trim().toUpperCase();
+  if (normalized === "승인대기" || normalized === "PENDING") return "PENDING";
+  if (normalized === "승인완료" || normalized === "COMPLETED" || normalized === "ACCEPTED") return "COMPLETED";
+  if (normalized === "승인취소" || normalized === "REVOKED" || normalized === "CANCELLED") return "REVOKED";
+  return normalized;
+};
+
+const resolveOnboardingCycleType = (workflow) => {
+  const value = String(
+    workflow?.cycleType ||
+    workflow?.onboardingCycleType ||
+    workflow?.currentCycleType ||
+    ""
+  ).trim().toUpperCase();
+  return value === "POST_DMA_DISCLOSURE" ? "POST_DMA_DISCLOSURE" : "PRE_DMA_G0";
+};
+
+const mergeAssignmentIntoItems = (items = [], assignments = []) => {
+  const assignmentByMetric = new Map((assignments || []).map((item) => [item.metricId, item]));
+  return items.map((item) => {
+    const assignment = assignmentByMetric.get(item.metricId) || item.assignment || {};
+    const assignmentStatus = normalizeAssignmentStatus(assignment.assignmentStatus);
+    const inviteStatus = normalizeInviteStatus(assignment.inviteStatus);
+    const assigneeEmail = assignment.assigneeEmailMasked || item.assigneeEmail || null;
+
+    return {
+      ...item,
+      assignment,
+      assignmentStatus,
+      inviteStatus,
+      assigneeUserId: assignment.assigneeUserId ?? item.assigneeUserId,
+      assigneeEmail,
+      assigneeName: assigneeEmail || item.assigneeName,
+      submissionDueDate: assignment.dueDate || item.submissionDueDate || item.dueDate,
+    };
+  });
+};
 
 const getProfileStatusFromItems = (items = []) => {
   const editableItems = items.filter((item) => isEditableItem(item));
@@ -397,14 +441,17 @@ const OnBoard = () => {
 
   const workflow = useSelector((state) => state.report.workflow.current);
   const rawMetrics = useSelector((state) => state.report.onboarding.metrics);
+  const rawAssignments = useSelector((state) => state.report.onboarding.assignments);
   const activeBatchId = useSelector((state) => state.report.rollup.activeBatchId);
   const requests = useSelector((state) => state.report.rollup.requests);
   const loadingWorkflow = useSelector((state) => state.report.loading.workflow);
   const loadingG0 = useSelector((state) => state.report.loading.onboarding);
+  const assigningMetrics = useSelector((state) => state.report.loading.assignMetrics);
   const workflowErrorPayload = useSelector((state) => state.report.error.workflow);
   const g0ErrorPayload = useSelector((state) => state.report.error.onboarding);
   
   const displayWorkflow = STEP12_UI_FIXTURE_ENABLED ? PREVIEW_WORKFLOW : workflow;
+  const activeCycleType = useMemo(() => resolveOnboardingCycleType(displayWorkflow), [displayWorkflow]);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -419,12 +466,12 @@ const OnBoard = () => {
   const [assignmentTargetIds, setAssignmentTargetIds] = useState([]);
 
   const g0Items = useMemo(() => {
-    const flattened = flattenOnboardingItems(rawMetrics);
+    const flattened = mergeAssignmentIntoItems(flattenOnboardingItems(rawMetrics), rawAssignments);
     if (STEP12_UI_FIXTURE_ENABLED) {
       return mergeOnboardingFixtureRows(flattened, previewOnboardingScenario);
     }
     return flattened;
-  }, [rawMetrics, previewOnboardingScenario]);
+  }, [rawMetrics, rawAssignments, previewOnboardingScenario]);
 
   const g0ProfileStatus = useMemo(() => getProfileStatusFromItems(g0Items), [g0Items]);
   const hasPendingSubsidiaryRequest = useMemo(
@@ -458,8 +505,12 @@ const OnBoard = () => {
         await dispatch(fetchRollupRequests()).unwrap();
       }
 
+      const nextCycleType = resolveOnboardingCycleType(nextWorkflow);
       await dispatch(
-        fetchOnboardingMetrics({ companyId, reportingYear, cycleType: "PRE_DMA_G0" })
+        fetchOnboardingMetrics({ companyId, reportingYear, cycleType: nextCycleType })
+      ).unwrap();
+      await dispatch(
+        fetchOnboardingAssignments({ companyId, reportingYear, cycleType: nextCycleType })
       ).unwrap();
     } catch (error) {
       console.error(error);
@@ -517,7 +568,7 @@ const OnBoard = () => {
       const payload = {
         companyId,
         reportingYear,
-        cycleType: "PRE_DMA_G0",
+        cycleType: activeCycleType,
         values: selectedItem.metrics
           .filter((item) => isEditableItem(item))
           .map((item) => {
@@ -582,16 +633,80 @@ const OnBoard = () => {
     setIsAssignmentModalOpen(true);
   };
 
-  const handleSubmitAssignment = (payload) => {
-    console.log("Assignment Payload:", payload);
-    showDefaultAlert("안내", "담당자 지정 API 연결은 다음 단계에서 진행됩니다.", "info");
-    setIsAssignmentModalOpen(false);
-    setSelectedMetricIds([]);
+  const handleSubmitAssignment = async (payload) => {
+    if (STEP12_UI_FIXTURE_ENABLED) {
+      showDefaultAlert("안내", "프리뷰 모드에서는 담당자 지정 API를 호출하지 않습니다.", "info");
+      setIsAssignmentModalOpen(false);
+      setSelectedMetricIds([]);
+      return;
+    }
+
+    const metricIds = payload?.metricIds || assignmentTargetIds;
+    if (!companyId || metricIds.length === 0) {
+      showDefaultAlert("오류", "담당자를 지정할 metric_id를 선택해 주세요.", "error");
+      return;
+    }
+
+    try {
+      const response = await dispatch(
+        bulkAssignOnboardingMetrics({
+          companyId,
+          reportingYear,
+          cycleType: activeCycleType,
+          metricIds,
+          assigneeEmail: payload.assigneeEmail,
+          dueDate: payload.submissionDueDate || null,
+          sendInviteYn: true,
+        })
+      ).unwrap();
+      const result = response?.data || response;
+
+      await dispatch(fetchOnboardingMetrics({ companyId, reportingYear, cycleType: activeCycleType })).unwrap();
+      await dispatch(fetchOnboardingAssignments({ companyId, reportingYear, cycleType: activeCycleType })).unwrap();
+
+      setSelectedMetricIds([]);
+      setAssignmentTargetIds([]);
+      setIsAssignmentModalOpen(false);
+
+      if (result?.warning) {
+        showDefaultAlert("완료", `담당자 지정은 완료됐지만 메일 큐 처리 경고가 있습니다. ${result.warning}`, "warning");
+      } else if (result?.inviteCreatedYn && result?.mailQueuedYn) {
+        showDefaultAlert("완료", "담당자 지정 및 초대 메일 발송 요청이 완료되었습니다.", "success");
+      } else {
+        showDefaultAlert("완료", "담당자 지정이 완료되었습니다.", "success");
+      }
+    } catch (error) {
+      console.error(error);
+      showDefaultAlert("오류", error?.message || "담당자 지정 중 오류가 발생했습니다.", "error");
+    }
   };
 
-  const handleBulkUnassignRequested = () => {
+  const handleBulkUnassignRequested = async () => {
     if (selectedMetricIds.length === 0) return;
-    showDefaultAlert("안내", "담당자 해제 API 연결은 다음 단계에서 진행됩니다.", "info");
+    if (STEP12_UI_FIXTURE_ENABLED) {
+      showDefaultAlert("안내", "프리뷰 모드에서는 담당자 해제 API를 호출하지 않습니다.", "info");
+      return;
+    }
+
+    try {
+      await dispatch(
+        bulkUnassignOnboardingMetrics({
+          companyId,
+          reportingYear,
+          cycleType: activeCycleType,
+          metricIds: selectedMetricIds,
+        })
+      ).unwrap();
+
+      await dispatch(fetchOnboardingMetrics({ companyId, reportingYear, cycleType: activeCycleType })).unwrap();
+      await dispatch(fetchOnboardingAssignments({ companyId, reportingYear, cycleType: activeCycleType })).unwrap();
+
+      setSelectedMetricIds([]);
+      showDefaultAlert("완료", "선택한 지표의 담당자 지정이 해제되었습니다.", "success");
+    } catch (error) {
+      console.error(error);
+      showDefaultAlert("오류", error?.message || "담당자 해제 중 오류가 발생했습니다.", "error");
+    }
   };
 
   if (!STEP12_UI_FIXTURE_ENABLED && loadingWorkflow && !workflow) {
@@ -713,6 +828,7 @@ const OnBoard = () => {
         isOpen={isAssignmentModalOpen}
         mode={assignmentMode}
         selectedMetricIds={assignmentTargetIds}
+        isSubmitting={!STEP12_UI_FIXTURE_ENABLED && assigningMetrics}
         onClose={() => setIsAssignmentModalOpen(false)}
         onSubmitAssignment={handleSubmitAssignment}
       />

@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { GET, POST, PATCH } from "@utils/Network";
 
 export const DEFAULT_REPORTING_YEAR = new Date().getFullYear();
+const ONBOARDING_ASSIGNMENT_ROOT = "/onboardingAssignment";
 
 const normalizeDirectDtoResponse = (res) => {
   if (!res || res?.status === false || res?.success === false) {
@@ -54,6 +55,7 @@ const initialState = {
 
   onboarding: {
     metrics: [],
+    assignments: [],
   },
 
   approval: {
@@ -73,6 +75,9 @@ const initialState = {
     workflow: false,
     onboarding: false,
     saveMetric: false,
+    assignmentList: false,
+    assignMetrics: false,
+    unassignMetrics: false,
     approvalProjects: false,
     approvals: false,
     subsidiaries: false,
@@ -87,6 +92,9 @@ const initialState = {
     workflow: null,
     onboarding: null,
     saveMetric: null,
+    assignmentList: null,
+    assignMetrics: null,
+    unassignMetrics: null,
     approvalProjects: null,
     approvals: null,
     subsidiaries: null,
@@ -223,6 +231,71 @@ export const saveOnboardingMetric = createAsyncThunk(
       return rejectWithValue({
         status: false,
         message: "온보딩 지표 저장 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const fetchOnboardingAssignments = createAsyncThunk(
+  "report/fetchOnboardingAssignments",
+  async (
+    {
+      companyId,
+      reportingYear = DEFAULT_REPORTING_YEAR,
+      cycleType = "PRE_DMA_G0",
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const res = normalizeDirectDtoResponse(
+        await GET(ONBOARDING_ASSIGNMENT_ROOT, {
+          companyId,
+          reportingYear,
+          cycleType,
+        })
+      );
+      return rejectIfFailed(res, rejectWithValue, "온보딩 담당자 목록 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "온보딩 담당자 목록 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const bulkAssignOnboardingMetrics = createAsyncThunk(
+  "report/bulkAssignOnboardingMetrics",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(
+        await POST(`${ONBOARDING_ASSIGNMENT_ROOT}/bulk-assign`, payload)
+      );
+      return rejectIfFailed(res, rejectWithValue, "온보딩 담당자 지정에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "온보딩 담당자 지정 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const bulkUnassignOnboardingMetrics = createAsyncThunk(
+  "report/bulkUnassignOnboardingMetrics",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(
+        await POST(`${ONBOARDING_ASSIGNMENT_ROOT}/bulk-unassign`, payload)
+      );
+      return rejectIfFailed(res, rejectWithValue, "온보딩 담당자 해제에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "온보딩 담당자 해제 중 오류가 발생했습니다.",
       });
     }
   }
@@ -465,6 +538,34 @@ const reportSlice = createSlice({
         state.error.saveMetric = null;
       })
       .addCase(saveOnboardingMetric.rejected, (state, action) => setRejected(state, "saveMetric", action));
+
+    builder
+      .addCase(fetchOnboardingAssignments.pending, (state) => setPending(state, "assignmentList"))
+      .addCase(fetchOnboardingAssignments.fulfilled, (state, action) => {
+        state.loading.assignmentList = false;
+        state.error.assignmentList = null;
+        state.onboarding.assignments = itemsOf(action.payload);
+      })
+      .addCase(fetchOnboardingAssignments.rejected, (state, action) => {
+        setRejected(state, "assignmentList", action);
+        state.onboarding.assignments = [];
+      });
+
+    builder
+      .addCase(bulkAssignOnboardingMetrics.pending, (state) => setPending(state, "assignMetrics"))
+      .addCase(bulkAssignOnboardingMetrics.fulfilled, (state) => {
+        state.loading.assignMetrics = false;
+        state.error.assignMetrics = null;
+      })
+      .addCase(bulkAssignOnboardingMetrics.rejected, (state, action) => setRejected(state, "assignMetrics", action));
+
+    builder
+      .addCase(bulkUnassignOnboardingMetrics.pending, (state) => setPending(state, "unassignMetrics"))
+      .addCase(bulkUnassignOnboardingMetrics.fulfilled, (state) => {
+        state.loading.unassignMetrics = false;
+        state.error.unassignMetrics = null;
+      })
+      .addCase(bulkUnassignOnboardingMetrics.rejected, (state, action) => setRejected(state, "unassignMetrics", action));
 
     builder
       .addCase(fetchApprovalProjects.pending, (state) => setPending(state, "approvalProjects"))

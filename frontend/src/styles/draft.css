@@ -1,11 +1,11 @@
  :root {
-            --draft-primary: #03A94D;
-            --draft-primary-vibrant: linear-gradient(135deg, #03A94D, #017E3F);
-            --draft-bg: #f4f7f6;
-            --draft-border: #e2e8f0;
-            --draft-text: #334155;
-            --draft-sub: #64748b;
-            --draft-radius: 20px;
+            --sr-primary: #03A94D;
+            --sr-primary-vibrant: linear-gradient(135deg, #03A94D, #017E3F);
+            --sr-bg: #f4f7f6;
+            --sr-border: #e2e8f0;
+            --sr-text: #334155;
+            --sr-sub: #64748b;
+            --sr-radius: 20px;
         }
 
 
@@ -29,22 +29,22 @@
         .header-action:hover { color: #03a94d; }
 
         /* 중앙 컨텐츠 영역 */
-        .draft-container { display: flex; flex-direction: column; height: calc(100vh - 60px); position: relative; overflow: hidden; }
-        .draft-header {
+        .sr-container { display: flex; flex-direction: column; height: calc(100vh - 60px); position: relative; overflow: hidden; }
+        .sr-header {
             background: #fff;
             padding: 20px 40px;
-            border-bottom: 1px solid var(--draft-border);
+            border-bottom: 1px solid var(--sr-border);
             flex-shrink: 0;
             width: 100%; /* 좌우로 무조건 꽉 차게 */
         }
-        .draft-title { font-size: 1.3rem; font-weight: 850; margin: 0 0 15px 0; color: #1e293b; }
-        .draft-stepper-row { display: flex; align-items: center; justify-content: space-between; max-width: 900px; margin: 0 auto; position: relative; }
+        .sr-title { font-size: 1.3rem; font-weight: 850; margin: 0 0 15px 0; color: #1e293b; }
+        .sr-stepper-row { display: flex; align-items: center; justify-content: space-between; max-width: 900px; margin: 0 auto; position: relative; }
         .step-box { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; opacity: 0.35; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2; }
         .step-box.active { opacity: 1; transform: translateY(-1px); }
         .step-icon-circle { width: 38px; height: 38px; background: #fff; border: 2px solid #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; transition: 0.3s; }
-        .step-box.active .step-icon-circle { background: var(--draft-primary-vibrant); color: #fff; border: none; box-shadow: 0 4px 10px rgba(3, 169, 77, 0.2); }
+        .step-box.active .step-icon-circle { background: var(--sr-primary-vibrant); color: #fff; border: none; box-shadow: 0 4px 10px rgba(3, 169, 77, 0.2); }
         .step-line { flex: 1; height: 2px; background: #e2e8f0; margin: -20px 15px 0; }
-        .main-container, .draft-container {
+        .main-container, .sr-container {
             flex: 1;
             display: flex;
             flex-direction: column;
@@ -69,7 +69,7 @@
         .input-card { 
             background: #fff; 
             padding: 25px 30px; 
-            border-radius: var(--draft-radius); 
+            border-radius: var(--sr-radius); 
             width: 100%; 
             text-align: center;
             display: flex;
@@ -161,28 +161,28 @@
         .chart-status-card .value { font-size: 0.95rem; font-weight: 850; color: #1e293b; }
         .chart-status-card .value span { font-size: 0.75rem; color: #94a3b8; font-weight: 500; }
         .api-progress-container { background-color: #f1f5f9; border-radius: 10px; height: 6px; width: 100%; overflow: hidden; }
-        .api-progress-bar { background: var(--draft-primary-vibrant); height: 100%; border-radius: 10px; }
+        .api-progress-bar { background: var(--sr-primary-vibrant); height: 100%; border-radius: 10px; }
         .ai-message-box { background: #f8fafc; border-radius: 10px; padding: 12px 14px; border: 1px solid #e2e8f0; font-size: 0.8rem; line-height: 1.5; text-align: left; }
 
         /* 메인 작업 버튼 그룹 */
         .action-btn-group { display: flex; justify-content: center; gap: 15px; margin-top: 10px; }
-        .draft-btn { 
+        .sr-btn { 
             padding: 12px 35px; border-radius: 10px; border: none; font-weight: 850; font-size: 0.95rem; cursor: pointer; 
-            background: var(--draft-primary-vibrant); color: #fff; transition: 0.3s; box-shadow: 0 4px 12px rgba(3, 169, 77, 0.15); 
+            background: var(--sr-primary-vibrant); color: #fff; transition: 0.3s; box-shadow: 0 4px 12px rgba(3, 169, 77, 0.15); 
         }
-        .draft-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(3, 169, 77, 0.25); }
-        .draft-btn.secondary { background: #334155; box-shadow: 0 4px 12px rgba(51, 65, 85, 0.15); }
+        .sr-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(3, 169, 77, 0.25); }
+        .sr-btn.secondary { background: #334155; box-shadow: 0 4px 12px rgba(51, 65, 85, 0.15); }
 
         /* ========================================================
            [UI 통일] 벤치마킹 대시보드 구조 동기화 (클래스명 및 핸들 알약 스타일 고도화)
         ======================================================== */
-        .draft-result-dashboard {
+        .sr-result-dashboard {
             position: absolute; 
             bottom: 0; 
             left: 0; 
             right: 0; 
             background: #fff; 
-            border-top: 1px solid var(--draft-border);
+            border-top: 1px solid var(--sr-border);
             height: 45px; /* 초기 높이 benchmarking과 동일하게 고정 */
             transition: height 0.6s cubic-bezier(0.19, 1, 0.22, 1); /* 트랜스폼 제거하고 높이 애니메이션 적용 */
             display: flex; 
@@ -190,7 +190,7 @@
             z-index: 100;
             box-shadow: 0 -10px 40px rgba(0,0,0,0.06);
         }
-        .draft-result-dashboard.open { 
+        .sr-result-dashboard.open { 
             height: 400px; 
         }
 
@@ -213,7 +213,7 @@
             color: #64748b; 
             letter-spacing: normal;
         }
-        .draft-result-dashboard.open .handle-pill { background: #f1f5f9; }
+        .sr-result-dashboard.open .handle-pill { background: #f1f5f9; }
         .robot-view-container { 
             flex: 1; 
             padding: 30px 50px; /* 여백 크기를 benchmarking의 오리지널 값으로 수정 */
@@ -260,7 +260,7 @@
             text-align: center; 
         }
         .progress-bar-wrap { width: 100%; height: 6px; background: #e2e8f0; border-radius: 10px; overflow: hidden; }
-        .progress-bar-fill { height: 100%; width: 0%; background: var(--draft-primary-vibrant); transition: width 0.05s linear; }
+        .progress-bar-fill { height: 100%; width: 0%; background: var(--sr-primary-vibrant); transition: width 0.05s linear; }
 
         /* 대시보드 내부 우측: 설문 분석 대시보드 레이아웃 */
         .result-layout { display: flex; flex-direction: column; gap: 14px; width: 100%; animation: fadeIn 0.4s ease-out; overflow-y: auto; }
@@ -478,7 +478,7 @@
     margin-top: 6px;
     font-weight: 700;
     font-size: 0.85rem;
-    color: var(--draft-primary);
+    color: var(--sr-primary);
 }
 
 

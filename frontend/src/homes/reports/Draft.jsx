@@ -253,10 +253,10 @@ const Draft = () => {
   const metric = data ? data.metrics[0] : null;
 
   return (
-    <div className="draft-container">
-      <header className="draft-header">
-        <h1 className="draft-title">지속가능경영보고서 AI 자동 생성</h1>
-        <div className="draft-stepper-row">
+    <div className="sr-container">
+      <header className="sr-header">
+        <h1 className="sr-title">지속가능경영보고서 AI 자동 생성</h1>
+        <div className="sr-stepper-row">
           {steps.map((step, index) => (
             <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
               <div

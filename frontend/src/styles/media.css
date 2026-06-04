@@ -258,7 +258,7 @@
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.06);
 }
 
-    .media-result-dashboard.open {
+.media-result-dashboard.open {
     height: 400px;
     }
 

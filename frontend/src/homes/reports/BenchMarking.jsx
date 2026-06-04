@@ -1,3 +1,15 @@
+/* ============================================================================
+ *  [병합 작업 요약]  benchmarking.jsx(소문자) → BenchMarking.jsx(대문자) 통합
+ * ----------------------------------------------------------------------------
+ *  - 베이스: 대문자 BenchMarking.jsx (정상 동작하는 React 컴포넌트) 유지
+ *  - 이식:   소문자 파일의 "통계카드 4개 + 3패널"만 React 문법으로 변환해 추가
+ *  - 숫자:   현재는 더미. 백엔드 연동 시 dashboardData 한 곳만 교체하면 됨
+ *
+ *  ▶ 코드에서 [병합-추가] = 이번에 새로 들어간 부분
+ *             [병합-수정] = 기존 코드를 살짝 손본 부분
+ *             (주석 없는 부분은 대문자 원본 그대로)
+ * ========================================================================== */
+
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -263,6 +275,9 @@ const Benchmarking = () => {
         });
         if (response && response.status !== false) {
           setRawRows(response.data || []);
+          // [병합-추가/백엔드 TODO] 통계카드 + 3패널 데이터도 응답에서 주입.
+          //   응답이 DUMMY_RESULT_DASHBOARD와 같은 형태라면 아래 한 줄이면 됨:
+          // setDashboardData(response.data.dashboard);
         } else {
           showDefaultAlert("데이터 분석 오류", "네트워크 통신 중 에러가 발생했습니다.", "error");
         }

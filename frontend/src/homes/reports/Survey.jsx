@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+<<<<<<< HEAD
 import "@styles/survey.css";
 import { useAuth } from "@hooks/AuthContext";
+=======
+// import "@styles/survey.css"; 
+import "@styles/sr.css";
+import "@styles/survey.css";
+>>>>>>> ea4795c (css&페이지 수정)
 
 import robot from "@assets/images/robot/robot_servey_t.png";
 import {
@@ -742,8 +748,14 @@ const Survey = () => {
           Result Dashboard
       ========================================================== */}
       <div
+<<<<<<< HEAD
         className={`survey-result-dashboard ${dashboardOpen ? "open" : ""
           }`}
+=======
+        className={`survey-result-dashboard ${
+          dashboardOpen ? "open" : ""
+        }`}
+>>>>>>> ea4795c (css&페이지 수정)
       >
         {/* Dashboard Handle */}
         <div
@@ -784,8 +796,13 @@ const Survey = () => {
               <div className="survey-stage">
                 <div className="survey-float-wrap">
                   <img
+<<<<<<< HEAD
                     src={robot}
                     className="survey-main-img"
+=======
+                    surveyc={robot}
+                    className="robot-main-img"
+>>>>>>> ea4795c (css&페이지 수정)
                     alt="robot"
                   />
                 </div>

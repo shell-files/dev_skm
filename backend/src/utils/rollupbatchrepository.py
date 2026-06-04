@@ -40,6 +40,7 @@ def listRequests(sourceCompanyId: int, rollupPurposeCode: str, metricScopeCode: 
     sql = """
         SELECT
             s.esg_rollup_batch_id AS batchId,
+            b.rollup_batch_code AS batchCode,
             s.parent_company_id AS parentCompanyId,
             p.company_code AS parentCompanyCode,
             COALESCE(p.company_code, CAST(s.parent_company_id AS CHAR)) AS parentCompanyName,
@@ -48,6 +49,8 @@ def listRequests(sourceCompanyId: int, rollupPurposeCode: str, metricScopeCode: 
             s.rollup_purpose_code AS rollupPurposeCode,
             s.metric_scope_code AS metricScopeCode,
             s.request_status AS requestStatus,
+            s.input_status AS inputStatus,
+            s.approval_status AS approvalStatus,
             s.transfer_status AS transferStatus
         FROM ESG_ROLLUP_SOURCE_STATUS s
         JOIN ESG_ROLLUP_BATCH b
@@ -117,17 +120,13 @@ def saveBatchTx(
 ) -> int:
     batchCode = buildBatchCode(parentCompanyId, reportingYear, rollupPurposeCode)
     
-    # Notice: we dynamically check for source_cycle_id column existance just in case DDL isn't updated.
-    # The requirement says we shouldn't execute DB ALTER but should just use existing.
-    # But for MVP let's assume we can add it or just ignore if it's missing. Wait, I shouldn't alter DDL.
-    # If source_cycle_id is not in DDL, then just drop it. We'll use try-except or check columns first.
-    
     cur.execute(
         """
         INSERT INTO ESG_ROLLUP_BATCH (
             rollup_batch_code,
             parent_company_id,
             reporting_year,
+            source_cycle_id,
             report_scope_type,
             included_company_ids_json,
             batch_status,
@@ -136,12 +135,13 @@ def saveBatchTx(
             dma_ready_yn,
             report_ready_yn,
             requested_by_user_id
-        ) VALUES (?, ?, ?, 'CONSOLIDATED', ?, ?, ?, ?, 0, 0, ?)
+        ) VALUES (?, ?, ?, ?, 'CONSOLIDATED', ?, ?, ?, ?, 0, 0, ?)
         """,
         (
             batchCode,
             parentCompanyId,
             reportingYear,
+            sourceCycleId,
             json.dumps(includedCompanyIds),
             BATCH_STATUS_PENDING,
             rollupPurposeCode,
@@ -261,6 +261,7 @@ def finalizeDmaPrecheckTx(cur, batchId: int, runId: int, actorUserId: Optional[i
         """
         UPDATE ESG_ROLLUP_BATCH
         SET batch_status = ?,
+            dma_ready_yn = 1,
             approved_by_user_id = ?,
             approved_at = CURRENT_TIMESTAMP,
             completed_at = CURRENT_TIMESTAMP,
@@ -288,17 +289,15 @@ def finalizeDmaPrecheckTx(cur, batchId: int, runId: int, actorUserId: Optional[i
         (json.dumps(tracePayload), runId),
     )
 
-def updateBatchStatusTx(cur, batchId: int, status: str, dmaReadyYn: bool, reportReadyYn: bool) -> None:
+def updateBatchStatusTx(cur, batchId: int, status: str) -> None:
     cur.execute(
         """
         UPDATE ESG_ROLLUP_BATCH
         SET batch_status = ?,
-            dma_ready_yn = ?,
-            report_ready_yn = ?,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ? AND delete_yn = 0
         """,
-        (status, 1 if dmaReadyYn else 0, 1 if reportReadyYn else 0, batchId)
+        (status, batchId)
     )
 
 def finalizeReportDisclosureTx(cur, batchId: int, actorUserId: Optional[int] = None) -> None:
@@ -396,8 +395,9 @@ def resultParams(
     actorUserId: Optional[int],
 ) -> tuple:
     resultCode = buildResultCode(int(batch["id"]), result["groupAtomicMetricId"])
-    # group_metric_id is determined from the result payload, defaulting to G0-02 if missing
-    groupMetricId = result.get("groupMetricId") or "G0-02"
+    groupMetricId = result.get("groupMetricId")
+    if not groupMetricId:
+        raise ValueError("ROLLUP_GROUP_METRIC_ID_REQUIRED")
     baseParams = (
         int(batch["id"]),
         resultCode,

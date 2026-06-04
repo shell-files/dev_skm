@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from fastapi.responses import JSONResponse
 from src.utils.auth import get_token
@@ -49,7 +51,7 @@ async def listSubsidiariesRoute(
 @_actionRouter.post(
     "/batches",
     response_model=RollupBatchResponseDto,
-    summary="Create DMA precheck G0-02 rollup batch",
+    summary="Create rollup batch",
 )
 async def saveBatchRoute(
     request: RollupBatchRequestDto,
@@ -68,7 +70,7 @@ async def saveBatchRoute(
 @_actionRouter.post(
     "/batches/{batchId}/calculate",
     response_model=RollupCalculateResponseDto,
-    summary="Calculate DMA precheck G0-02 rollup batch",
+    summary="Calculate rollup batch",
 )
 async def calcBatchRoute(batchId: int, userModel=Depends(get_token)):
     try:
@@ -104,7 +106,7 @@ async def listRequestsRoute(
 @_actionRouter.post(
     "/batches/{batchId}/sources/send",
     response_model=RollupSourceSendResponseDto,
-    summary="Send approved G0-02 source data to parent rollup batch",
+    summary="Send approved source data",
 )
 async def sendSourceRoute(batchId: int, userModel=Depends(get_token)):
     try:
@@ -120,7 +122,7 @@ async def sendSourceRoute(batchId: int, userModel=Depends(get_token)):
 @_actionRouter.get(
     "/batches/{batchId}/status",
     response_model=RollupBatchSummaryResponseDto,
-    summary="Get DMA precheck rollup batch source transfer status",
+    summary="Get rollup batch source transfer status",
 )
 async def getStatusRoute(batchId: int, userModel=Depends(get_token)):
     try:

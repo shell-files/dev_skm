@@ -98,14 +98,18 @@ const normalizeInviteStatus = (status) => {
   return normalized;
 };
 
-const resolveOnboardingCycleType = (workflow) => {
-  const value = String(
+const resolveOnboardingCycleType = (workflow, requestedCycleType) => {
+  const requested = String(requestedCycleType || "").trim().toUpperCase();
+  if (requested === "POST_DMA_DISCLOSURE") return "POST_DMA_DISCLOSURE";
+  if (requested === "PRE_DMA_G0") return "PRE_DMA_G0";
+
+  const workflowValue = String(
     workflow?.cycleType ||
     workflow?.onboardingCycleType ||
     workflow?.currentCycleType ||
     ""
   ).trim().toUpperCase();
-  return value === "POST_DMA_DISCLOSURE" ? "POST_DMA_DISCLOSURE" : "PRE_DMA_G0";
+  return workflowValue === "POST_DMA_DISCLOSURE" ? "POST_DMA_DISCLOSURE" : "PRE_DMA_G0";
 };
 
 const mergeAssignmentIntoItems = (items = [], assignments = []) => {
@@ -428,7 +432,9 @@ const OnBoard = () => {
   const { selectedCompany, user } = useAuth();
   const location = useLocation();
   const companyId = selectedCompany?.company_id ?? selectedCompany?.companyId;
-  const reportingYearQuery = new URLSearchParams(location.search).get("reportingYear");
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const reportingYearQuery = searchParams.get("reportingYear");
+  const cycleTypeQuery = searchParams.get("cycleType");
   const reportingYear = reportingYearQuery ? parseInt(reportingYearQuery, 10) : DEFAULT_REPORTING_YEAR;
 
   // Preview States
@@ -451,7 +457,10 @@ const OnBoard = () => {
   const g0ErrorPayload = useSelector((state) => state.report.error.onboarding);
   
   const displayWorkflow = STEP12_UI_FIXTURE_ENABLED ? PREVIEW_WORKFLOW : workflow;
-  const activeCycleType = useMemo(() => resolveOnboardingCycleType(displayWorkflow), [displayWorkflow]);
+  const activeCycleType = useMemo(
+    () => resolveOnboardingCycleType(displayWorkflow, cycleTypeQuery),
+    [displayWorkflow, cycleTypeQuery]
+  );
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -505,7 +514,7 @@ const OnBoard = () => {
         await dispatch(fetchRollupRequests()).unwrap();
       }
 
-      const nextCycleType = resolveOnboardingCycleType(nextWorkflow);
+      const nextCycleType = resolveOnboardingCycleType(nextWorkflow, cycleTypeQuery);
       await dispatch(
         fetchOnboardingMetrics({ companyId, reportingYear, cycleType: nextCycleType })
       ).unwrap();
@@ -515,7 +524,7 @@ const OnBoard = () => {
     } catch (error) {
       console.error(error);
     }
-  }, [companyId, dispatch, reportingYear]);
+  }, [companyId, cycleTypeQuery, dispatch, reportingYear]);
 
   useEffect(() => {
     dispatch(resetReportState());

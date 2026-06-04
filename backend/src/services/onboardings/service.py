@@ -28,6 +28,7 @@ from src.models.onboarding import (
 from src.utils import onboardingassignmentrepository as assignmentRepo
 from src.utils import onboardingrepository as repo
 from src.utils.companyscope import checkScope
+from src.services.onboardings import approval_service as approvalService
 
 
 CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
@@ -528,24 +529,39 @@ def checkManager(userModel) -> None:
 
 def submitApproval(request: OnboardingApprovalRequestDto, userModel) -> OnboardingApprovalActionResponseDto:
     checkScope(request.companyId, userModel)
-    checkSupportedMetric(request.metricId)
-    summary = repo.submitG002Approval(
+    summary = approvalService.submitMetricApproval(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
-        reportBasisType=None,
-        sourceMaterialityRunId=None,
+        cycleType=request.cycleType,
+        metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
+        commentText=getattr(request, "commentText", None),
     )
     return actionResponse(summary, "Submitted")
 
 
-def approveApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
+def reviewApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
     checkScope(request.companyId, userModel)
-    checkSupportedMetric(request.metricId)
     checkApprover(userModel)
-    summary = repo.approveG002Approval(
+    summary = approvalService.reviewMetricApproval(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
+        cycleType=request.cycleType,
+        metricId=request.metricId,
+        actorUserId=getActorUserId(userModel),
+        commentText=getattr(request, "commentText", None),
+    )
+    return actionResponse(summary, "Reviewed")
+
+
+def approveApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
+    checkScope(request.companyId, userModel)
+    checkApprover(userModel)
+    summary = approvalService.approveMetricApproval(
+        companyId=request.companyId,
+        reportingYear=request.reportingYear,
+        cycleType=request.cycleType,
+        metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
         commentText=getattr(request, "commentText", None),
     )
@@ -554,14 +570,15 @@ def approveApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
 
 def rejectApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
     checkScope(request.companyId, userModel)
-    checkSupportedMetric(request.metricId)
     checkApprover(userModel)
     commentText = (getattr(request, "commentText", None) or "").strip()
     if not commentText:
         raise ValueError("commentText is required for rejection")
-    summary = repo.rejectG002Approval(
+    summary = approvalService.rejectMetricApproval(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
+        cycleType=request.cycleType,
+        metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
         commentText=commentText,
     )
@@ -577,8 +594,6 @@ def listApprovals(
     userModel,
 ) -> OnboardingApprovalListResponseDto:
     checkScope(companyId, userModel)
-    if cycleType and str(cycleType).upper() != repo.CYCLE_TYPE_PRE_DMA_G0:
-        return OnboardingApprovalListResponseDto(data=OnboardingApprovalListDataDto(items=[]))
     items = [
         itemDto(summary, userModel)
         for summary in repo.listCycleApprovalInboxRows(
@@ -597,10 +612,10 @@ def getApprovalStatus(
     reportingYear: int,
     metricId: str,
     userModel,
+    cycleType: str = CYCLE_TYPE_PRE_DMA_G0,
 ) -> OnboardingApprovalStatusResponseDto:
     checkScope(companyId, userModel)
-    checkSupportedMetric(metricId)
-    summary = repo.buildApprovalSummary(companyId, reportingYear, metricId)
+    summary = approvalService.buildMetricApprovalSummary(companyId, reportingYear, metricId, cycleType)
     return OnboardingApprovalStatusResponseDto(data=statusDto(summary, userModel))
 
 
@@ -647,16 +662,17 @@ def itemDto(summary: dict, userModel) -> OnboardingApprovalItemDto:
 def statusDto(summary: dict, userModel) -> OnboardingApprovalStatusDataDto:
     payload = dict(summary)
     payload.pop("selfSubmittedYn", None)
+    requiredAtomicCount = int(summary.get("requiredAtomicCount") or 0)
+    approvedAtomicCount = int(summary.get("approvedAtomicCount") or 0)
     return OnboardingApprovalStatusDataDto(
         **payload,
         selfSubmittedYn=checkSelfSubmitted(summary, userModel),
-        rollupReadyYn=int(summary.get("approvedAtomicCount") or 0) >= len(repo.REQUIRED_ATOMIC_IDS),
+        rollupReadyYn=requiredAtomicCount > 0 and approvedAtomicCount >= requiredAtomicCount,
     )
 
 
 def checkSupportedMetric(metricId: str) -> None:
-    if metricId != repo.METRIC_ID_G0_02:
-        raise ValueError("Only G0-02 approval is supported in MVP")
+    return None
 
 
 def checkApprover(userModel) -> None:
@@ -664,7 +680,7 @@ def checkApprover(userModel) -> None:
     roleName = str(readUserField(userModel, "role_name") or "").strip()
     if role in APPROVER_ROLES or roleName in APPROVER_ROLE_NAMES:
         return
-    raise PermissionError("Only ESG담당자 or 관리자 can approve/reject G0-02 inputs")
+    raise PermissionError("Only ESG담당자 or 관리자 can approve/reject onboarding inputs")
 
 
 def checkSelfSubmitted(summary: dict, userModel) -> bool:

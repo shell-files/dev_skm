@@ -114,6 +114,7 @@ const DataTab = ({
   const [selectedItemForDetail, setSelectedItemForDetail] = useState(null);
   const [isBulkRejectModalOpen, setIsBulkRejectModalOpen] = useState(false);
   const [bulkRejectReason, setBulkRejectReason] = useState("");
+  const [modalActionMode, setModalActionMode] = useState(null);
 
   const sourceInputs = useMemo(() => safeArray(pagedInputs), [pagedInputs]);
 
@@ -261,8 +262,9 @@ const DataTab = ({
     setIsBulkRejectModalOpen(true);
   };
 
-  const handleOpenApprovalDetail = (item) => {
+  const handleOpenApprovalDetail = (item, actionMode = null) => {
     setSelectedItemForDetail(item);
+    setModalActionMode(actionMode);
     setIsDetailModalOpen(true);
   };
 
@@ -399,6 +401,7 @@ const DataTab = ({
                     </th>
                     <th style={{ width: "100px" }}>Metric ID</th>
                     <th>Metric</th>
+                    <th style={{ width: "120px" }}>Sub-Issue</th>
                     <th style={{ width: "110px" }}>Assignee</th>
                     <th style={{ width: "80px" }}>Done</th>
                     <th style={{ width: "80px" }}>Missing</th>
@@ -454,6 +457,7 @@ const DataTab = ({
                             {item.metricId || item.id}
                           </td>
                           <td className="st-left">{item.metricName || item.checklistQuestion || "-"}</td>
+                          <td style={{ fontSize: "12px", color: "#64748b" }}>{normalizeSubIssueName(item) || "-"}</td>
                           <td>{item.assigneeName || item.userName || "-"}</td>
                           <td className="ob-completion-cell">{item.inputCompletedCount || 0}</td>
                           <td className="ob-completion-cell">{item.inputMissingCount || 0}</td>
@@ -513,7 +517,7 @@ const DataTab = ({
                                 <>
                                   <button
                                     className="ob-act-btn ob-act-submit"
-                                    onClick={() => runAction(item, "APPROVED")}
+                                    onClick={() => handleOpenApprovalDetail(item, "approve")}
                                     disabled={!canApprove}
                                     title={
                                       !supported
@@ -571,22 +575,25 @@ const DataTab = ({
 
       <ApprovalDetailModal
         isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
+        onClose={() => { setIsDetailModalOpen(false); setModalActionMode(null); }}
         metricItem={selectedItemForDetail}
         viewerRole={effectiveViewerRole}
         hasConsultant={effectiveHasConsultant}
         readOnlyYn={readOnlyYn}
+        modalActionMode={modalActionMode}
         onReview={({ commentText }) => {
           if (isActionSupported(selectedItemForDetail, readOnlyYn)) {
             runAction(selectedItemForDetail, "REVIEWED", commentText);
           }
           setIsDetailModalOpen(false);
+          setModalActionMode(null);
         }}
         onApprove={({ commentText }) => {
           if (isActionSupported(selectedItemForDetail, readOnlyYn)) {
             runAction(selectedItemForDetail, "APPROVED", commentText);
           }
           setIsDetailModalOpen(false);
+          setModalActionMode(null);
         }}
         onReject={({ commentText }) => {
           if (!commentText?.trim()) return;
@@ -594,6 +601,7 @@ const DataTab = ({
             runAction(selectedItemForDetail, "REJECTED", commentText);
           }
           setIsDetailModalOpen(false);
+          setModalActionMode(null);
         }}
       />
 

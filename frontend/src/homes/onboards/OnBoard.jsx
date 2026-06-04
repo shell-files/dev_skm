@@ -582,9 +582,14 @@ const OnBoard = () => {
 
   const handleSubmitAssignment = (payload) => {
     console.log("Assignment Payload:", payload);
-    showDefaultAlert("담당자 지정", "담당자 지정 모달 콜백 확인 완료.", "success");
+    showDefaultAlert("안내", "담당자 지정 API 연결은 다음 단계에서 진행됩니다.", "info");
     setIsAssignmentModalOpen(false);
     setSelectedMetricIds([]);
+  };
+
+  const handleBulkUnassignRequested = () => {
+    if (selectedMetricIds.length === 0) return;
+    showDefaultAlert("안내", "담당자 해제 API 연결은 다음 단계에서 진행됩니다.", "info");
   };
 
   if (!STEP12_UI_FIXTURE_ENABLED && loadingWorkflow && !workflow) {
@@ -656,6 +661,7 @@ const OnBoard = () => {
                   selectedCount={selectedMetricIds.length}
                   actions={[
                     { label: '선택 지표 담당자 지정', onClick: handleBulkAssignRequested, className: 'submit' },
+                    { label: '선택 지표 담당자 해제', onClick: handleBulkUnassignRequested, className: 'reject' },
                     { label: '선택 해제', onClick: () => setSelectedMetricIds([]), className: 'reject' }
                   ]}
                 />

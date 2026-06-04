@@ -198,6 +198,7 @@ def inviteConsultantProcess(inviteConsultantModel, userModel):
                     "type": 3 if userExists else 2,
                     "email": email,
                     "uuid": inviteUuid,
+                    "companyName": company["company_name"],
                 }
             )
 

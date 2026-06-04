@@ -9,6 +9,7 @@ STATUS_CALCULATED = "CALCULATED"
 STATUS_SOURCE_NOT_READY = "CALCULATION_SOURCE_NOT_READY"
 STATUS_ZERO_DIVISION = "CALCULATION_ZERO_DIVISION"
 STATUS_NOT_APPLICABLE = "NOT_APPLICABLE"
+STATUS_REFERENCE_SOURCE_AMBIGUOUS = "CALCULATION_REFERENCE_SOURCE_AMBIGUOUS"
 
 FORMULA_REFERENCE_COPY = "REFERENCE_COPY"
 FORMULA_ENTITY_SUM = "ENTITY_SUM"
@@ -101,6 +102,15 @@ def calculateRule(
 
 
 def calculateReferenceCopy(base: dict, sources: list[dict], currentFactMap: dict[str, dict]) -> dict:
+    if len(sources) >= 2:
+        return {
+            **base,
+            "valueNumeric": None,
+            "valueText": None,
+            "calculationStatus": STATUS_REFERENCE_SOURCE_AMBIGUOUS,
+            "calculationTrace": {"sourceAtomicMetricIds": [s["sourceAtomicMetricId"] for s in sources]},
+            "warning": STATUS_REFERENCE_SOURCE_AMBIGUOUS,
+        }
     source = sources[0]
     fact = currentFactMap.get(source["sourceAtomicMetricId"])
     if fact is None:
@@ -296,11 +306,25 @@ def buildFactMap(facts: list[dict]) -> dict[str, dict]:
     return result
 
 
+def semanticSourceKey(source: dict) -> tuple[str, str, str, str]:
+    return (
+        source["ruleCode"],
+        source["sourceAtomicMetricId"],
+        source["sourceRole"],
+        source["sourceScope"],
+    )
+
+
 def groupSourcesByRule(sources: list[dict]) -> dict[str, list[dict]]:
     grouped = defaultdict(list)
+    seen = set()
     for source in sources or []:
         normalized = normalizeSource(source)
         if normalized["ruleCode"]:
+            key = semanticSourceKey(normalized)
+            if key in seen:
+                continue
+            seen.add(key)
             grouped[normalized["ruleCode"]].append(normalized)
     for ruleSources in grouped.values():
         ruleSources.sort(key=lambda source: source["sourceOrder"])
@@ -308,7 +332,16 @@ def groupSourcesByRule(sources: list[dict]) -> dict[str, list[dict]]:
 
 
 def normalizeSources(sources: list[dict]) -> list[dict]:
-    return [normalizeSource(source) for source in sources or []]
+    seen = set()
+    deduped = []
+    for source in sources or []:
+        normalized = normalizeSource(source)
+        key = semanticSourceKey(normalized)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(normalized)
+    return deduped
 
 
 def normalizeSource(source: dict) -> dict:
@@ -316,6 +349,7 @@ def normalizeSource(source: dict) -> dict:
         "ruleCode": str(source.get("calculation_rule_code") or source.get("ruleCode") or "").strip(),
         "sourceAtomicMetricId": str(source.get("source_atomic_metric_id") or source.get("sourceAtomicMetricId") or "").strip(),
         "sourceRole": str(source.get("source_role") or source.get("sourceRole") or "SOURCE").strip().upper(),
+        "sourceScope": str(source.get("source_scope") or source.get("sourceScope") or "").strip().upper(),
         "sourceOrder": int(source.get("source_order") or source.get("sourceOrder") or source.get("id") or 0),
     }
 
@@ -447,4 +481,5 @@ __all__ = [
     "allResultsCalculated",
     "buildFactMap",
     "groupSourcesByRule",
+    "STATUS_REFERENCE_SOURCE_AMBIGUOUS",
 ]

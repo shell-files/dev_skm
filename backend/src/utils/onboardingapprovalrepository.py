@@ -319,6 +319,16 @@ def buildApprovalSummary(
     requiredAtomicSet = set(requiredAtomicIds)
     inputs = inputRepo.listMetricInputs(companyId, reportingYear, metricId)
     facts = inputRepo.listMetricKpiFacts(companyId, reportingYear, metricId)
+    approvalPolicyCode = str(scope.get("approval_policy_code") or scopeRepo.APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
+    promotedQuantAtomicIds = (
+        inputRepo.listQuantInputAtomicIds(metricId)
+        if approvalPolicyCode in {
+            scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
+            scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
+        }
+        else []
+    )
+    promotedQuantAtomicSet = set(promotedQuantAtomicIds)
     assignment = {}
     if cycleId is not None:
         assignment = findOne(
@@ -335,7 +345,8 @@ def buildApprovalSummary(
             (cycleId, companyId, metricId),
         ) or {}
     latestHistory = getLatestHistory(companyId, reportingYear, metricId, cycleId)
-    approvedAtomicIds = {row["atomic_metric_id"] for row in facts}
+    approvedFactAtomicIds = {row["atomic_metric_id"] for row in facts}
+    approvedAtomicIds = set(approvedFactAtomicIds)
     inputByAtomic = {row["atomic_metric_id"]: row for row in inputs}
     completedAtomicIds = {
         atomicId
@@ -374,6 +385,10 @@ def buildApprovalSummary(
         "subIssueCode": scope.get("sub_issue_code"),
         "subIssueName": scope.get("sub_issue_name"),
         "approvalStatus": inputRepo.resolveApprovalStatus(inputs, facts, requiredAtomicIds),
+        "approvalPolicyCode": approvalPolicyCode,
+        "rollupReadonlyYn": inputRepo.truthy(scope.get("rollup_readonly_yn")),
+        "promotedQuantAtomicCount": len(promotedQuantAtomicSet),
+        "approvedPromotedFactCount": len(approvedFactAtomicIds.intersection(promotedQuantAtomicSet)),
         "inputUserId": inputRepo.firstNonNull([row.get("input_user_id") for row in inputs]),
         "assigneeUserId": assignment.get("assignee_user_id"),
         "cycleId": cycleId,
@@ -475,3 +490,24 @@ def rejectG002Approval(companyId: int, reportingYear: int, actorUserId: Optional
         actorUserId=actorUserId,
         commentText=commentText,
     )
+
+__all__ = [
+    "CYCLE_TYPE_PRE_DMA_G0",
+    "CYCLE_TYPE_POST_DMA_DISCLOSURE",
+    "APPROVAL_POLICY_ROLLUP_READONLY",
+    "APPROVAL_POLICY_NO_APPROVAL_REQUIRED",
+    "METRIC_ID_G0_02",
+    "getLatestHistory",
+    "listCycleApprovalInboxRows",
+    "resolveActionSupport",
+    "listApprovalInputRows",
+    "listApprovalFactRows",
+    "listLatestApprovalHistories",
+    "resolveCycleApprovalStatus",
+    "listApprovalSummaries",
+    "buildApprovalSummary",
+    "insertHistory",
+    "submitG002Approval",
+    "approveG002Approval",
+    "rejectG002Approval",
+]

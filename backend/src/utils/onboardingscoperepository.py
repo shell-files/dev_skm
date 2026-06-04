@@ -1021,17 +1021,20 @@ def listQuantInputAtomicIdsTx(cur, metricId: str) -> list[str]:
 def checkConsolidatedCalculationSourceTx(cur, atomicMetricIds: list[str]) -> bool:
     if not atomicMetricIds:
         return False
-    conditions = " OR ".join(["source_atomic_metric_ids LIKE ?" for _ in atomicMetricIds])
-    params = [f"%{atomicId}%" for atomicId in atomicMetricIds]
+    placeholders = ", ".join(["?"] * len(atomicMetricIds))
     cur.execute(
         f"""
         SELECT COUNT(*) AS source_count
-        FROM ESG_CALCULATION_RULE
-        WHERE delete_yn = 0
-          AND UPPER(COALESCE(execution_scope, '')) = 'CONSOLIDATED'
-          AND ({conditions})
+        FROM ESG_CALCULATION_RULE cr
+        JOIN ESG_CALCULATION_RULE_SOURCE src
+          ON src.calculation_rule_code = cr.calculation_rule_code
+         AND src.delete_yn = 0
+        WHERE cr.delete_yn = 0
+          AND cr.active_yn = 1
+          AND UPPER(COALESCE(cr.execution_scope, '')) = 'CONSOLIDATED'
+          AND src.source_atomic_metric_id IN ({placeholders})
         """,
-        tuple(params),
+        tuple(atomicMetricIds),
     )
     row = cur.fetchone() or {}
     return int(row.get("source_count") or 0) > 0
@@ -1045,3 +1048,60 @@ def resolveDefaultApprovalPolicyTx(cur, metricId: str) -> str:
         return APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP
     return APPROVAL_POLICY_PROMOTE_TO_KPI_FACT
 
+__all__ = [
+    "CYCLE_TYPE_PRE_DMA_G0",
+    "CYCLE_TYPE_POST_DMA_DISCLOSURE",
+    "METRIC_SCOPE_PRE_DMA_G0_PROFILE",
+    "METRIC_SCOPE_G0_02_FINANCIAL_BASIS",
+    "METRIC_SCOPE_SELECTED_DISCLOSURE",
+    "SCOPE_SOURCE_TYPE_PRE_DMA_G0",
+    "SCOPE_SOURCE_TYPE_MATERIAL_SUB_ISSUE",
+    "MAP_SCOPE_MVP_SELECTED",
+    "APPROVAL_POLICY_INPUT_APPROVAL_ONLY",
+    "APPROVAL_POLICY_PROMOTE_TO_KPI_FACT",
+    "APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP",
+    "APPROVAL_POLICY_ROLLUP_READONLY",
+    "APPROVAL_POLICY_NO_APPROVAL_REQUIRED",
+    "METRIC_ID_G0_02",
+    "SUPPORTED_CYCLE_TYPE",
+    "resolveReportingYear",
+    "getCycle",
+    "listMetricScopes",
+    "listAtomicMaster",
+    "listG0MetricMaster",
+    "validateG0MetricIds",
+    "getCompanyName",
+    "getCompanyNameFromCompanyTable",
+    "getCompanyTableInfo",
+    "ensurePreDmaG0Cycle",
+    "ensurePostDmaDisclosureCycle",
+    "resolvePreDmaG0Cycle",
+    "listPreDmaG0MetricMaster",
+    "listCycleMetricScope",
+    "validateCycleMetricIds",
+    "cycleTypeFilter",
+    "resolveCycle",
+    "ensureCycleTx",
+    "ensurePostDmaDisclosureCycleTx",
+    "listSelectedSubIssueRowsTx",
+    "listSelectedDisclosureMappingRowsTx",
+    "buildSelectedDisclosureScopeRows",
+    "resolvePostDmaApprovalPolicy",
+    "ensurePostDmaCycleTx",
+    "resolvePostDmaCycleTx",
+    "insertPostDmaCycleTx",
+    "listMetricScopesTx",
+    "resolveCycleMetricScopeRowsTx",
+    "listPreDmaMetricScopeRowsTx",
+    "listPostDmaMetricScopeRowsTx",
+    "seedCycleMetricScopeTx",
+    "seedSelectedDisclosureScopeTx",
+    "resolveScopeRunId",
+    "seedPreDmaG0ScopeTx",
+    "listPreDmaG0MetricMasterTx",
+    "normalizeCycleTx",
+    "insertCycle",
+    "listQuantInputAtomicIdsTx",
+    "checkConsolidatedCalculationSourceTx",
+    "resolveDefaultApprovalPolicyTx",
+]

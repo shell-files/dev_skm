@@ -50,7 +50,12 @@ def submitMetricApproval(
             requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
-            inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_DRAFT, STATE_REJECTED, STATE_SUBMITTED, STATE_APPROVED})
+            if checkRowsAllStatus(rows, requiredAtomicIds, STATE_SUBMITTED):
+                conn.commit()
+                return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
+            if checkRowsAnyStatus(rows, requiredAtomicIds, {STATE_REVIEWED, STATE_APPROVED}):
+                raise ValueError(f"Cannot resubmit {metricId} from reviewed or approved status")
+            inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_DRAFT, STATE_REJECTED, STATE_SUBMITTED})
             setMetricInputStatusTx(
                 cur,
                 cycleId=int(cycle["id"]),
@@ -157,10 +162,20 @@ def approveMetricApproval(
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             policy = str(scope.get("approval_policy_code") or APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
-            requireKpiFactYn = policy in {
+            promotedQuantAtomicIds = (
+                inputRepo.listQuantInputAtomicIdsTx(cur, metricId)
+                if policy in {
+                    APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
+                    APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
+                }
+                else []
+            )
+            requireKpiFactYn = bool(promotedQuantAtomicIds)
+            if policy in {
                 APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
                 APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
-            }
+            } and not promotedQuantAtomicIds:
+                raise ValueError(f"No quantitative INPUT atomic metrics are available for KPI promotion: {metricId}")
             if inputRepo.checkAlreadyApprovedTx(
                 cur,
                 rows,
@@ -168,13 +183,13 @@ def approveMetricApproval(
                 reportingYear,
                 metricId,
                 requiredAtomicIds,
-                requireKpiFactYn=requireKpiFactYn,
+                expectedPromotedAtomicIds=promotedQuantAtomicIds,
             ):
                 conn.commit()
                 return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED, STATE_REVIEWED})
             if requireKpiFactYn:
-                quantAtomicIds = set(inputRepo.listQuantInputAtomicIdsTx(cur, metricId))
+                quantAtomicIds = set(promotedQuantAtomicIds)
                 for row in rows:
                     if row.get("atomic_metric_id") in quantAtomicIds:
                         inputRepo.upsertKpiFact(cur, row, actorUserId)
@@ -368,3 +383,24 @@ def normalizeCycleType(cycleType: str) -> str:
     if normalizedCycleType not in {scopeRepo.CYCLE_TYPE_PRE_DMA_G0, scopeRepo.CYCLE_TYPE_POST_DMA_DISCLOSURE}:
         raise ValueError(f"Unsupported cycleType: {normalizedCycleType}")
     return normalizedCycleType
+
+
+def checkRowsAllStatus(rows: list[dict], requiredAtomicIds: list[str], status: str) -> bool:
+    if not requiredAtomicIds:
+        return False
+    rowByAtomic = {row.get("atomic_metric_id"): row for row in rows}
+    return all(
+        atomicId in rowByAtomic
+        and inputRepo.hasMetricValue(rowByAtomic[atomicId])
+        and str(rowByAtomic[atomicId].get("input_status") or "").strip().lower() == status
+        for atomicId in requiredAtomicIds
+    )
+
+
+def checkRowsAnyStatus(rows: list[dict], requiredAtomicIds: list[str], statuses: set[str]) -> bool:
+    rowByAtomic = {row.get("atomic_metric_id"): row for row in rows}
+    return any(
+        atomicId in rowByAtomic
+        and str(rowByAtomic[atomicId].get("input_status") or "").strip().lower() in statuses
+        for atomicId in requiredAtomicIds
+    )

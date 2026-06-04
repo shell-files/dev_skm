@@ -818,7 +818,7 @@ const Draft = () => {
                             <span className="metric-row-val">{metric.atomicId}</span>
                           </div>
                           <div className="metric-row">
-                            <span className="metric-row-key">지표명</span>
+                            <span className="metric-row-key">입력 데이터 설명</span>
                             <span className="metric-row-val">{metric.name}</span>
                           </div>
                           <div className="metric-row">

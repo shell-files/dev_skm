@@ -114,11 +114,6 @@ const Invite = () => {
           </div>
         </div>
 
-        {/* Employee 안내 */}
-        <div style={{ padding: '12px 16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '20px', fontSize: '13px', color: '#64748b', textAlign: 'center' }}>
-          부서담당자 지정은 온보딩 페이지에서 metric 단위로 관리합니다.
-        </div>
-
         {/* 2. Company 탭 — 자회사 관계 관리 */}
         {selectedRole === "Company" && (
           <div className="invite-form-card">

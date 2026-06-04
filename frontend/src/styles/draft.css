@@ -25,9 +25,7 @@
             font-weight: normal; 
             margin-left: 6px; 
         }
-        .header-action { cursor: pointer; font-size: 13px; color: #555; position: relative; }
-        .header-action:hover { color: #03a94d; }
-
+        
         /* 중앙 컨텐츠 영역 */
         .draft-container { display: flex; flex-direction: column; height: calc(100vh - 60px); position: relative; overflow: hidden; }
         .draft-header {
@@ -537,51 +535,29 @@
   border-color: #e11d48 !important;
 }
 
-/* 수정모드 내부 에디팅 텍스트필드 스타일 정돈 */
+/* 수정모드 — .dp-text와 완전히 동일한 레이아웃, 테두리만 투명 처리 */
 .edit-para-textarea {
   width: 100%;
   box-sizing: border-box;
-  min-height: 80px;
-  padding: 10px 12px;
+  display: block;
   font-family: inherit;
   font-size: 13.5px;
   line-height: 1.75;
   color: #334155;
-  border: 2px solid #cbd5e1;
+  padding: 10px 12px;
+  border: 2px solid transparent;
   border-radius: 8px;
-  background-color: #f8fafc;
-  resize: vertical;
+  background-color: transparent;
+  resize: none;
+  overflow: hidden;
   outline: none;
-  margin-top: 4px;
+  margin: 0;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.edit-para-textarea {
-  width: 100% !important;
-  box-sizing: border-box !important;
-  
-  /* 실제 본문 글자 스타일(.dp-text)과 완전히 일치시켜 이질감 최소화 */
-  font-family: inherit !important;
-  font-size: 0.95rem !important;
-  line-height: 1.7 !important;
-  color: #1e293b !important;
-  
-  /* 테두리 및 배경 디자인 */
-  padding: 12px 14px !important;
-  border: 1px solid #cbd5e1 !important;
-  border-radius: 8px !important;
-  background-color: #f8fafc !important;
-  
-  /* 영역 자동 확장 및 스크롤 방지 */
-  resize: none !important; /* 사용자가 수동으로 늘리지 않아도 자동으로 늘어나도록 설정 */
-  overflow: hidden !important;
-  margin: 6px 0 12px 0 !important;
-  display: block !important;
-}
-
-/* 포커스 되었을 때 초록색 포인트 하이라이트 */
+/* 클릭(포커스) 시에만 초록 테두리로 강조 */
 .edit-para-textarea:focus {
-  border-color: #03A94D !important;
-  background-color: #ffffff !important;
-  box-shadow: 0 0 0 3px rgba(3, 169, 77, 0.12) !important;
-  outline: none !important;
+  border-color: #03A94D;
+  background-color: #f0fdf4;
+  outline: none;
 }

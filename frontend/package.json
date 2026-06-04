@@ -15,12 +15,16 @@
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "chart.js": "^4.5.1",
+    "docx": "^9.7.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-redux": "^9.3.0",
     "react-router": "^7.15.0",
     "recharts": "^3.8.1",
-    "sweetalert2": "^11.26.24"
+    "sweetalert2": "^11.26.24",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

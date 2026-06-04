@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import "@styles/draft.css";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
+import * as XLSX from "xlsx";
+
+
+
 
 // (paragraphData, paragraphTexts, TrendChart 등 상단 데이터 정의는 기존과 동일합니다)
 const paragraphData = {
@@ -139,15 +146,228 @@ const paragraphData = {
     aiDesc: "제품 품질과 안전 관리 수준을 정량적으로 보여주는 핵심 리스크 지표입니다.",
     related: { id: "AP-S-01", label: "제품안전 정책" },
   },
+  p7: {
+    tag: "기후 리스크", tagType: "blue", id: "TCFD-01",
+    tooltipTitle: "● TCFD 기후 리스크",
+    tooltipRows: [
+      { key: "전환 리스크", val: "탄소세·규제 강화" },
+      { key: "물리적 리스크", val: "홍수·가뭄" },
+      { key: "시나리오", val: "1.5°C / 2°C / 4°C" },
+    ],
+    preview: "TCFD 프레임워크 기반 기후 리스크 및 기회 요인 식별·평가·관리...",
+    metricCount: 1,
+    metrics: [{
+      name: "기후 전환 비용 추산", badge: "리스크 지표", badgeType: "blue",
+      metricId: "TCFD-01__G0001", atomicId: "TCFD-01__G0002", unit: "억 KRW", dataType: "정량(추산)",
+      desc: "2°C 시나리오 기준 2030년 탄소 비용 및 규제 대응 추가 비용",
+      latest: "연간 약 850억 KRW",
+      trend: [{ y: 2022, v: 520 }, { y: 2023, v: 680 }, { y: 2024, v: 850 }],
+      breakdown: [{ l: "탄소세 비용", v: "420억" }, { l: "규제 대응 비용", v: "280억" }, { l: "전환 투자", v: "150억" }],
+      formula: "시나리오별 탄소 가격 × 배출량 + 규제 준수 비용",
+    }],
+    aiDesc: "기후변화 시나리오 분석을 통해 도출한 재무적 영향 추산치로, 리스크 관리 투자 우선순위를 제시합니다.",
+    related: { id: "P-03-01", label: "전략 및 방향" },
+  },
+  p8: {
+    tag: "이해관계자", tagType: "green", id: "S-IH-01",
+    tooltipTitle: "● 이해관계자 소통",
+    tooltipRows: [
+      { key: "ESG 인식 긍정률", val: "81.2%" },
+      { key: "사회공헌 투자", val: "320억 KRW" },
+      { key: "IR 미팅", val: "연 4회" },
+    ],
+    preview: "이중 중요성 평가 기반 이해관계자 소통 및 사회공헌 활동...",
+    metricCount: 1,
+    metrics: [{
+      name: "사회공헌 투자액", badge: "사회 지표", badgeType: "green",
+      metricId: "S-IH-01__G0001", atomicId: "S-IH-01__G0003", unit: "억 KRW", dataType: "정량",
+      desc: "연결 기준 사회공헌 투자액 및 매출 대비 비율",
+      latest: "320억 KRW (매출 0.18%)",
+      trend: [{ y: 2022, v: 260 }, { y: 2023, v: 290 }, { y: 2024, v: 320 }],
+      breakdown: [{ l: "청소년 교육", v: "120억" }, { l: "이동 지원", v: "90억" }, { l: "환경 복원", v: "110억" }],
+      formula: "사회공헌 투자액 / 연결 매출 × 100",
+    }],
+    aiDesc: "이해관계자 신뢰 구축을 위한 사회적 책임 이행 수준을 정량적으로 보여주는 지표입니다.",
+    related: { id: "S3-01", label: "인재 개발 전략" },
+  },
+  p9: {
+    tag: "환경경영", tagType: "blue", id: "E-WM-01",
+    tooltipTitle: "● 환경경영 현황",
+    tooltipRows: [
+      { key: "ISO 14001 인증", val: "21/22개 사업장" },
+      { key: "용수 취수량", val: "2,340,000 m³" },
+      { key: "재이용수 비율", val: "21.7%" },
+      { key: "VOCs 감소율", val: "9.4%" },
+    ],
+    preview: "ISO 14001 기반 환경경영시스템 운영, 용수·대기오염물질 관리...",
+    metricCount: 1,
+    metrics: [{
+      name: "용수 재이용률", badge: "환경 지표", badgeType: "green",
+      metricId: "E-WM-01__G0001", atomicId: "E-WM-01__G0002", unit: "%", dataType: "정량",
+      desc: "연결 기준 용수 재이용수 비율",
+      latest: "21.7%",
+      trend: [{ y: 2022, v: 15.4 }, { y: 2023, v: 18.6 }, { y: 2024, v: 21.7 }],
+      breakdown: [{ l: "냉각수 재이용", v: "12.3%" }, { l: "공정수 재이용", v: "6.8%" }, { l: "빗물 활용", v: "2.6%" }],
+      formula: "재이용수 사용량 / 총 용수 취수량 × 100",
+    }],
+    aiDesc: "물 부족 리스크 대응 수준을 보여주는 핵심 환경 지표로, 절수 목표 달성도를 정량화합니다.",
+    related: { id: "P-03-02", label: "핵심 데이터" },
+  },
+  p10: {
+    tag: "안전보건", tagType: "orange", id: "S-SH-01",
+    tooltipTitle: "● 안전보건 현황",
+    tooltipRows: [
+      { key: "LTIR", val: "0.38" },
+      { key: "사망사고", val: "0건" },
+      { key: "협력사 LTIR", val: "0.61" },
+      { key: "CAP 완료율", val: "89.4%" },
+    ],
+    preview: "ISO 45001 기반 안전보건 경영, LTIR 0.38 달성...",
+    metricCount: 1,
+    metrics: [{
+      name: "재해율 (LTIR)", badge: "안전 지표", badgeType: "blue",
+      metricId: "S-SH-01__G0001", atomicId: "S-SH-01__G0002", unit: "건/100만 시간", dataType: "정량",
+      desc: "연결 기준 임직원 재해율(Lost Time Injury Rate)",
+      latest: "0.38",
+      trend: [{ y: 2022, v: 0.61 }, { y: 2023, v: 0.45 }, { y: 2024, v: 0.38 }],
+      breakdown: [{ l: "임직원 LTIR", v: "0.38" }, { l: "협력사 LTIR", v: "0.61" }, { l: "사망사고", v: "0건" }],
+      formula: "재해 건수 / 총 근로시간 × 1,000,000",
+    }],
+    aiDesc: "안전보건 경영 성과를 정량화하는 핵심 지표로, 중대재해 예방 수준을 보여줍니다.",
+    related: { id: "AP-S-01", label: "제품안전 정책" },
+  },
+  p11: {
+    tag: "정보보안", tagType: "blue", id: "G-IS-01",
+    tooltipTitle: "● 정보보안 현황",
+    tooltipRows: [
+      { key: "보안 투자 증가율", val: "21.3%" },
+      { key: "침해 신고 사례", val: "0건" },
+      { key: "교육 이수율", val: "97.8%" },
+      { key: "피싱 클릭률 감소", val: "41%" },
+    ],
+    preview: "ISO 27001 기반 정보보안 관리, OT 보안 강화 및 AI 기반 이상 탐지...",
+    metricCount: 1,
+    metrics: [{
+      name: "정보보안 교육 이수율", badge: "거버넌스 지표", badgeType: "blue",
+      metricId: "G-IS-01__G0001", atomicId: "G-IS-01__G0002", unit: "%", dataType: "정량",
+      desc: "전 임직원 대상 정보보안 교육 연간 이수율",
+      latest: "97.8%",
+      trend: [{ y: 2022, v: 91.3 }, { y: 2023, v: 95.7 }, { y: 2024, v: 97.8 }],
+      breakdown: [{ l: "임직원 이수율", v: "97.8%" }, { l: "피싱 클릭률", v: "전년比 -41%" }, { l: "침해 사례", v: "0건" }],
+      formula: "교육 이수 인원 / 전체 임직원 수 × 100",
+    }],
+    aiDesc: "디지털 전환 가속화에 따른 사이버 보안 관리 수준을 정량적으로 보여주는 지표입니다.",
+    related: { id: "P-03-01", label: "전략 및 방향" },
+  },
+  p12: {
+    tag: "지배구조", tagType: "green", id: "G-BD-01",
+    tooltipTitle: "● 이사회 구성",
+    tooltipRows: [
+      { key: "사외이사 비율", val: "66.7%" },
+      { key: "여성 이사 비율", val: "22.2%" },
+      { key: "이사회 출석률", val: "96.4%" },
+      { key: "내부신고 건수", val: "47건" },
+    ],
+    preview: "이사회 독립성·다양성 강화, ESG 연계 보상 체계 및 윤리경영...",
+    metricCount: 1,
+    metrics: [{
+      name: "이사회 사외이사 비율", badge: "거버넌스 지표", badgeType: "green",
+      metricId: "G-BD-01__G0001", atomicId: "G-BD-01__G0002", unit: "%", dataType: "정량",
+      desc: "전체 이사 중 사외이사 비율",
+      latest: "66.7%",
+      trend: [{ y: 2022, v: 55.6 }, { y: 2023, v: 62.5 }, { y: 2024, v: 66.7 }],
+      breakdown: [{ l: "사내이사", v: "3명" }, { l: "사외이사", v: "6명" }, { l: "여성 이사", v: "2명" }],
+      formula: "사외이사 수 / 전체 이사 수 × 100",
+    }],
+    aiDesc: "이사회 독립성과 다양성 수준을 보여주는 핵심 거버넌스 지표로, 경영 감독 역량을 반영합니다.",
+    related: { id: "S3-01", label: "인재 개발 전략" },
+  },
 };
 
 const paragraphTexts = {
-  p1: "A_GROUP의 자동차 부품과 전동화 부품 사업을 총괄하는 지주회사로, 국내외 자회사와 함께 모빌리티 부품 사업을 이룬다. 보고기간은 2024.01.01~2024.12.31이며, 연결 공시 범위는 A_GROUP 본인 사업장과 B_SUB_KR, C_SUB_EU, D_SUB_US를 포함한다. 연결 매출액은 17,800,000,000,000 KRW, 연결 사업장 수는 22개이다.",
-  p2: "A_GROUP의 2045년 넷제로립과 2040년 재생에너지 100% 전환을 목표로 Scope 1·2 배출 감축과 전환계획을 관리한다. 기준연도는 2019이며 기준연도 연결 Scope 1·2 배출량은 130,890 tCO₂eq이다. 보고연도 연결 Scope 1·2 배출량은 112,500 tCO₂eq, 전년 대비 감축량은 4,402 tCO₂eq, 감축률은 3.91%이다. 재생에너지 전환율은 9.49%이다.",
-  p3: "A_GROUP의 주요 협력사의 환경·인권·윤리 리스크가 조달 안정성과 브랜드 신뢰에 미치는 영향을 고려해 공급망 지속가능성 리스크를 관리한다. 연결 기준 공급업체 감사 이행률은 71.90%, 고위험 공급업체 수는 64개사이다. 공급망 CAP 완료율은 68.09%이다.",
-  p4: "전동화·자율주행·디지털화 전환에 대응하기 위해 미래 모빌리티 기술 인재 확보와 내부 역량 강화가 중요하다. 연결 임직원 수는 8,367명이며, 1인당 교육시간은 33.42시간/명, 핵심직무 교육 달성률은 72.01%이다.",
-  p5: "전동화 부품과 경량화·고효율 부품은 제품 사용 단계의 온실가스 감축과 환경영향 저감에 기여한다. 연결 친환경 제품 매출액은 4,298,000,000,000 KRW이며, 연결 매출 대비 비중은 24.15%이다. 회피 배출량은 1,245,000 tCO₂eq, 재화적 비용 절감 효과는 68,973,000,000 KRW로 추산된다.",
-  p6: "제품 품질과 안전은 고객 신뢰 확보와 규제 대응, 리콜 리스크 관리와 직접 연결되는 핵심 주제다. 연결 기준 리콜 건수는 10건, 리콜 건수는 3건이며, 제품안전 CAP 완료율은 70.37%이다.",
+  p1: `A_GROUP의 자동차 부품과 전동화 부품 사업을 총괄하는 지주회사로, 국내외 자회사와 함께 모빌리티 부품 사업을 이룬다. 보고기간은 2024.01.01~2024.12.31이며, 연결 공시 범위는 A_GROUP 본인 사업장과 B_SUB_KR, C_SUB_EU, D_SUB_US를 포함한다. 연결 매출액은 17,800,000,000,000 KRW, 연결 사업장 수는 22개이다.
+
+SKM은 과학기반 감축목표 이니셔티브(SBTi)의 1.5°C 시나리오에 부합하는 넷제로 목표를 수립하고, 이를 달성하기 위한 중·단기 전환 계획을 체계적으로 운영하고 있다. 2030년까지 Scope 1·2 온실가스 배출량을 2022년 대비 42% 감축하고, 2045년까지 Scope 1·2·3 전 범위에 걸쳐 넷제로를 달성한다는 목표를 공식화하였다. 이를 위해 에너지 효율 개선, 재생에너지 전환, 공정 혁신 등 3대 전략 축을 중심으로 사업장별 감축 로드맵을 수립하였으며, 매년 이행 현황을 검증·공시하고 있다.
+
+사업 전략 측면에서 SKM은 전통적인 내연기관 부품 중심의 포트폴리오에서 탈피하여, 전기차(EV) 및 하이브리드 차량용 전동화 부품, 경량화 소재, 첨단 운전자 지원 시스템(ADAS) 관련 부품 등으로 사업 구조를 재편하고 있다. 2024년 기준 전동화 부품 매출 비중은 전체 연결 매출의 약 31%에 달하며, 2027년까지 45% 이상으로 확대할 계획이다. 주요 고객사인 완성차 업체들의 전동화 전환 로드맵과 긴밀히 연계하여 신규 수주 파이프라인을 확충하고 있으며, 유럽·북미·아시아 시장에서의 현지화 생산 체계를 강화하고 있다.
+
+지배구조 측면에서는 이사회 산하에 ESG위원회를 설치하고, ESG 전략 방향 수립과 주요 성과 지표 모니터링을 이사회 차원에서 직접 감독하는 구조를 구축하였다. CEO 및 임원진의 성과 평가 지표에 탄소 감축 목표 달성률, 안전사고 지표, 공급망 ESG 평가 결과 등을 반영함으로써 경영진의 책임성을 강화하였다. 또한 글로벌 ESG 공시 기준인 ISSB(IFRS S1·S2) 및 CSRD에 대응하기 위한 내부 데이터 수집·검증 체계를 정비하고 있으며, 2025년 보고서부터 제3자 검증 범위를 연결 기준 전체로 확대할 예정이다.`,
+
+  p2: `A_GROUP의 2045년 넷제로 달성과 2040년 재생에너지 100% 전환을 목표로 Scope 1·2 배출 감축과 전환계획을 관리한다. 기준연도는 2019이며 기준연도 연결 Scope 1·2 배출량은 130,890 tCO₂eq이다. 보고연도 연결 Scope 1·2 배출량은 112,500 tCO₂eq, 전년 대비 감축량은 4,402 tCO₂eq, 감축률은 3.91%이다. 재생에너지 전환율은 9.49%이다.
+
+2024년 온실가스 배출 감축 성과를 분석하면, Scope 1 직접 배출량은 38,200 tCO₂eq으로 전년 대비 2.1% 감소하였으며, Scope 2 간접 배출량은 74,300 tCO₂eq으로 전년 대비 4.8% 감소하였다. Scope 1 감축은 주로 생산 공정 내 연료 전환(천연가스 → 바이오가스 혼합 연료)과 설비 효율 개선을 통해 달성되었으며, Scope 2 감축은 국내외 사업장의 재생에너지 전력 구매 확대(PPA, REC)를 통해 이루어졌다.
+
+사업장별 감축 현황을 살펴보면, 국내 A_GROUP 본사 사업장은 태양광 발전 설비 추가 설치(5.2MW)와 LED 조명 전면 교체를 통해 연간 2,100 tCO₂eq를 추가 감축하였다. B_SUB_KR은 압축공기 시스템 최적화 및 폐열 회수 장치 도입으로 1,200 tCO₂eq을 감축하였으며, C_SUB_EU는 독일 및 체코 사업장에서 그린 전력 구매 계약 체결을 통해 800 tCO₂eq의 Scope 2 감축을 달성하였다. D_SUB_US는 미국 텍사스 사업장에 ESS(에너지저장시스템)를 도입하여 피크 수요를 관리하고 300 tCO₂eq를 절감하였다.
+
+2025년에는 재생에너지 전환율을 15% 이상으로 확대하고, 주요 사업장 대상 에너지 진단을 실시하여 추가 감축 기회를 발굴할 계획이다. 또한 탄소 감축 실적을 내부 탄소 가격(Internal Carbon Price, ICP)에 연계하여 사업 부문별 감축 인센티브 구조를 정비하고, 장기적으로는 탄소 포집·활용·저장(CCUS) 기술 적용 가능성을 검토하고 있다.`,
+
+  p3: `A_GROUP의 주요 협력사의 환경·인권·윤리 리스크가 조달 안정성과 브랜드 신뢰에 미치는 영향을 고려해 공급망 지속가능성 리스크를 관리한다. 연결 기준 공급업체 감사 이행률은 71.90%, 고위험 공급업체 수는 64개사이다. 공급망 CAP 완료율은 68.09%이다.
+
+SKM의 공급망 지속가능성 관리 체계는 협력사 등록 단계의 ESG 적격성 심사부터 거래 중 정기 감사, 리스크 발견 시 시정조치 계획(CAP) 수립 및 이행 지원, 우수 협력사 인센티브 제공에 이르는 전 주기 관리 프로세스로 구성되어 있다. 2024년에는 1차 협력사 전체(약 890개사)를 대상으로 서면 자기평가(Self-Assessment Questionnaire, SAQ)를 실시하고, 고위험으로 분류된 64개사에 대해 현장 감사를 진행하였다.
+
+감사 결과, 환경 분야에서는 폐수 처리 기준 미달과 화학물질 관리 부적합이 주요 이슈로 식별되었으며, 노동 분야에서는 초과 근무 한도 초과 및 안전 교육 미이수가 빈번하게 지적되었다. 지배구조 분야에서는 부패·뇌물 방지 정책 부재 및 내부 신고 채널 미구축이 주요 개선 과제로 도출되었다. 이에 SKM은 각 협력사와 함께 6개월~12개월 단위의 CAP를 수립하고, 전담 컨설턴트를 통한 이행 지원 프로그램을 운영하고 있다.
+
+공급망 환경 리스크 측면에서는 기후변화로 인한 원자재 수급 불안정, 탄소 국경 조정 메커니즘(CBAM) 도입에 따른 비용 증가 리스크도 별도로 평가하고 있다. 주요 원자재(희토류, 알루미늄, 구리)의 공급 집중 리스크를 완화하기 위해 복수 공급처 확보 및 재활용 소재 사용 비율 확대 전략을 병행하고 있으며, 2024년 기준 재활용 알루미늄 사용 비율은 전체 알루미늄 사용량의 18.3%에 달한다.`,
+
+  p4: `전동화·자율주행·디지털화 전환에 대응하기 위해 미래 모빌리티 기술 인재 확보와 내부 역량 강화가 중요하다. 연결 임직원 수는 8,367명이며, 1인당 교육시간은 33.42시간/명, 핵심직무 교육 달성률은 72.01%이다.
+
+SKM은 2024년 인재 전략의 핵심 방향으로 '미래 모빌리티 전문 인력 육성'과 '다양성·포용성 기반 조직 문화 강화'를 설정하였다. 전동화 및 소프트웨어 역량을 보유한 전문 인력 채용을 위해 국내외 주요 대학 및 연구기관과 산학협력 프로그램을 운영하고, 자체 기술 아카데미를 통해 기존 임직원의 직무 전환 교육을 지원하고 있다. 2024년 한 해 동안 전동화·소프트웨어 관련 신규 채용 인원은 전체 신규 채용의 34%를 차지하였다.
+
+교육 프로그램 측면에서는 직무별 핵심역량 맵(Competency Map)을 기반으로 개인 맞춤형 학습 경로를 제공하는 디지털 학습 플랫폼(e-Learning LMS)을 운영하고 있으며, 연간 이수 기준은 직급별로 차등 적용된다. 2024년 전체 교육 투자액은 전년 대비 12.7% 증가하였으며, 리더십 프로그램 참여율은 관리직 기준 88.3%에 달하였다. 또한 글로벌 사업장 간 순환 근무 프로그램을 통해 임직원의 글로벌 역량 개발을 지원하고 있으며, 2024년 해외 파견 및 순환 근무 인원은 전년 대비 23% 증가하였다.
+
+다양성·포용성 측면에서는 여성 관리직 비율을 2027년까지 20%로 확대하는 목표를 수립하고, 채용·승진·평가 전 과정에서의 다양성 제고 방안을 시행하고 있다. 2024년 기준 여성 관리직 비율은 14.2%로 전년 대비 1.8%p 상승하였다. 장애인 고용률은 3.1%로 법정 의무 고용률(3.1%)을 충족하였으며, 청년·고령자·경력단절 여성 등 취약계층 채용 지원 프로그램도 지속 운영 중이다.`,
+
+  p5: `전동화 부품과 경량화·고효율 부품은 제품 사용 단계의 온실가스 감축과 환경영향 저감에 기여한다. 연결 친환경 제품 매출액은 4,298,000,000,000 KRW이며, 연결 매출 대비 비중은 24.15%이다. 회피 배출량은 1,245,000 tCO₂eq, 재화적 비용 절감 효과는 68,973,000,000 KRW로 추산된다.
+
+SKM의 친환경 제품 포트폴리오는 전기차용 구동 모터·인버터 시스템, 하이브리드 변속기 모듈, 경량 알루미늄 구조 부품, 열 관리 시스템, 수소연료전지 부품 등으로 구성되어 있다. 2024년 전기차 플랫폼 전용 구동 모터 시스템은 신규 수주량이 전년 대비 41% 증가하였으며, 주요 완성차 고객사 5개사로부터 2026~2030년 물량 공급 계약을 체결하였다. 경량 알루미늄 부품은 차량 중량을 평균 8.3% 절감하여 연비 향상 및 주행거리 확대에 기여하고 있다.
+
+제품 전과정 평가(LCA, Life Cycle Assessment)를 통해 친환경 제품의 환경 편익을 정량화하고 있다. 2024년 기준 SKM의 친환경 부품을 탑재한 차량이 동급 내연기관 차량 대비 회피한 온실가스 배출량은 1,245,000 tCO₂eq으로 산출되었으며, 이는 소나무 약 1억 8천만 그루가 1년간 흡수하는 탄소량에 해당하는 규모이다. 이러한 제품 환경 편익 데이터는 고객사의 Scope 3 배출량 산정에 활용될 수 있도록 제품 탄소발자국 인증(PCF) 취득을 순차적으로 진행하고 있으며, 2024년 기준 총 23개 제품 모델에 대한 PCF 인증을 완료하였다.
+
+순환경제 측면에서는 제품 설계 단계부터 재활용 가능성을 고려한 DfE(Design for Environment) 가이드라인을 적용하고 있으며, 폐기 부품의 재제조(Remanufacturing) 및 소재 재활용 비율 확대를 위한 역물류 체계를 구축하고 있다. 2024년 제조 공정 내 발생한 폐기물 재활용률은 87.4%로 전년 대비 3.2%p 상승하였다.`,
+
+  p6: `제품 품질과 안전은 고객 신뢰 확보와 규제 대응, 리콜 리스크 관리와 직접 연결되는 핵심 주제다. 연결 기준 리콜 건수는 10건, 리콜 건수는 3건이며, 제품안전 CAP 완료율은 70.37%이다.
+
+SKM은 제품 개발 초기 단계부터 양산·출하·애프터서비스에 이르는 전 주기에 걸쳐 체계적인 제품 안전 관리 프로세스를 운영하고 있다. 설계 단계에서는 DFMEA(Design Failure Mode and Effects Analysis)와 DRBFM(Design Review Based on Failure Mode)을 의무 적용하고, 양산 단계에서는 PFMEA 및 관리계획서 기반의 공정 모니터링을 실시한다. 고객 인도 후에는 현장 품질 데이터를 실시간으로 수집·분석하는 VOR(Vehicle Off Road) 대응 시스템을 통해 초기 품질 이슈를 신속하게 탐지하고 있다.
+
+2024년 발생한 리콜 3건은 모두 납품 완성차 업체와의 공동 원인 분석(Joint 8D) 과정을 거쳐 설계 변경 및 공정 개선 조치가 완료되었다. 리콜 비용은 제품책임보험을 통해 일부 보전하였으며, 장기적으로는 디지털 트윈 기반 선행 품질 예측 시스템 구축을 통해 리콜 발생 가능성을 사전에 차단하는 역량을 강화할 계획이다. 2025년에는 AI 기반 불량 예측 모델을 주요 3개 사업장에 시범 적용하고, 결과에 따라 전 사업장으로 확대할 예정이다.
+
+고객 만족 측면에서는 연간 고객사 품질 만족도 조사를 실시하고 있으며, 2024년 종합 만족도 점수는 100점 만점에 84.7점으로 전년(82.1점) 대비 2.6점 상승하였다. 불만 처리 평균 응답 시간은 4.2시간으로 목표치(6시간 이내)를 초과 달성하였으며, 품질 클레임 건수는 전년 대비 18.3% 감소하였다.`,
+
+  p7: `SKM은 기후 관련 재무정보공개 협의체(TCFD) 프레임워크에 기반하여 기후 리스크 및 기회 요인을 체계적으로 식별·평가·관리하고 있다. 전환 리스크 측면에서는 탄소세 확대, 내연기관 규제 강화, 저탄소 기술 전환 비용 증가 등을 핵심 리스크로 선정하였으며, 물리적 리스크 측면에서는 홍수·가뭄 등 극단적 기상 현상으로 인한 사업장 및 공급망 피해 가능성을 분석하였다.
+
+2024년 기후 시나리오 분석(1.5°C, 2°C, 4°C)을 통해 도출한 재무 영향 추산 결과, 2°C 시나리오 하에서 2030년까지 탄소 비용 및 규제 대응 비용으로 연간 약 850억 KRW의 추가 비용이 발생할 수 있으며, 4°C 시나리오에서는 주요 사업장의 홍수 피해로 인한 생산 차질 비용이 연간 최대 1,200억 KRW에 달할 수 있는 것으로 분석되었다. 이에 대응하여 주요 사업장의 기후 적응 투자(방재 시설, 냉각 시스템 효율화, 대체 생산 거점 확보)를 2025~2027년 중기 투자 계획에 반영하였다.
+
+기후 기회 요인으로는 전동화 전환 가속에 따른 신규 시장 창출, 재생에너지 직접 구매(PPA)를 통한 전력 비용 안정화, 친환경 제품 프리미엄 가격 실현 가능성 등이 식별되었다. 특히 EU의 배터리 규정(EU Battery Regulation) 및 탄소발자국 공시 의무화는 SKM의 LCA 기반 제품 환경 성능 데이터 경쟁력을 강화하는 기회로 작용할 것으로 전망된다.`,
+
+  p8: `SKM은 임직원, 고객, 지역사회, 공급망, 투자자 등 다양한 이해관계자와의 소통을 통해 지속가능성 우선순위를 주기적으로 점검하고, 이를 전략과 공시에 반영하는 이중 중요성 평가 프로세스를 운영하고 있다. 2024년 이중 중요성 평가에서는 기후변화 대응, 제품 환경성, 인권 및 노동 관행, 공급망 관리, 정보보안·개인정보보호, 지배구조 투명성이 최우선 중요 주제로 선정되었다.
+
+이해관계자별 소통 채널을 살펴보면, 임직원과는 연 2회 전사 타운홀 미팅, 상시 익명 제안 채널, 사업장별 노사 협의회를 통해 소통하고 있으며, 2024년 전임직원 대상 ESG 인식도 조사에서 응답률 78.3%, 전반적 ESG 경영에 대한 긍정 인식률 81.2%를 기록하였다. 투자자와는 연 4회 실적 발표 및 IR 미팅, 전용 ESG 투자자 설명회(2회), 지속가능성 보고서 발간을 통해 정보를 제공하고 있다.
+
+지역사회와의 관계 측면에서는 사업장 인근 지역의 환경·안전 이슈에 대한 주민 설명회를 연 1회 이상 실시하고, 지역 고용 창출 및 중소 협력사 동반성장 프로그램을 운영하고 있다. 2024년 사회공헌 투자액은 연결 매출액 대비 0.18%인 약 320억 KRW이며, 주요 프로그램으로는 미래 모빌리티 청소년 교육, 소외계층 이동 지원, 사업장 인근 환경 복원 활동 등이 있다.`,
+
+  p9: `SKM의 환경경영 체계는 ISO 14001 기반의 환경경영시스템(EMS)을 전 사업장에 적용하고, 연간 내부·외부 감사를 통해 준수 수준을 점검하는 구조로 운영된다. 2024년 기준 연결 기준 전체 22개 사업장 중 21개 사업장이 ISO 14001 인증을 취득하였으며, 신규 해외 사업장 1개소는 2025년 상반기 인증 취득을 목표로 시스템을 구축 중이다.
+
+용수 관리 측면에서는 물 부족 지역(Water-Stressed Area)에 위치한 사업장을 중심으로 용수 절감 목표를 설정하고, 폐수 재이용률 확대 및 냉각수 순환 시스템 개선을 추진하고 있다. 2024년 연결 기준 총 용수 취수량은 2,340,000 m³이며, 이 중 재이용수 비율은 21.7%로 전년 대비 3.1%p 향상되었다. 폐수 방류 기준 초과 사례는 보고기간 중 발생하지 않았다.
+
+대기오염물질 관리 측면에서는 VOCs(휘발성 유기화합물), NOx, 분진 등 주요 오염물질의 배출량을 사업장별로 측정·관리하고, 관련 규제 기준 대비 여유도를 확보하는 선제적 저감 투자를 실시하고 있다. 2024년 VOCs 배출량은 전년 대비 9.4% 감소하였으며, 이는 도장 공정의 수용성 도료 전환 및 배기가스 처리 설비 개선에 기인한다. 화학물질 안전관리 측면에서는 REACH, RoHS, ELV 등 글로벌 화학물질 규제 대응을 위한 물질 데이터베이스를 구축·운영하고 있다.`,
+
+  p10: `SKM의 안전보건 경영 체계는 ISO 45001 기반으로 운영되며, '중대재해 제로' 달성을 최우선 목표로 설정하고 있다. 2024년 연결 기준 LTIR(Lost Time Injury Rate, 재해율)은 0.38로 전년(0.45) 대비 15.6% 개선되었으며, 산업재해 사망사고는 발생하지 않았다. 안전 선행 지표(Leading Indicator)로는 아차사고 보고 건수, 안전 관찰 활동 참여율, 위험성 평가 이행률 등을 관리하고 있으며, 2024년 임직원 1인당 아차사고 보고 건수는 1.82건으로 전년 대비 34% 증가하였다. 이는 안전 문화 성숙도가 향상되어 임직원의 자발적 위험 신고 의식이 높아졌음을 반영한다.
+
+협력사 안전 관리 측면에서는 구내 작업 협력사 전체를 대상으로 안전보건 교육을 연 2회 이상 실시하고, 원청 책임 하에 협력사 안전 점검을 분기별로 수행하고 있다. 2024년 협력사 LTIR은 0.61로 전년(0.79) 대비 22.8% 개선되었다. 또한 중대재해처벌법 대응을 위해 안전보건 관리 체계 적합성 진단을 외부 전문기관에 의뢰하여 실시하였으며, 도출된 개선 과제 142건 중 2024년 말 기준 89.4%인 127건을 완료하였다.
+
+정신건강 및 직원 웰빙 측면에서는 EAP(Employee Assistance Program)를 전 임직원에게 제공하고, 주요 사업장에 심리상담실을 설치·운영하고 있다. 2024년 EAP 이용률은 전체 임직원의 11.3%로 전년 대비 2.8%p 상승하였으며, 심리상담 만족도는 88.2점(100점 기준)을 기록하였다.`,
+
+  p11: `SKM의 정보보안 및 개인정보보호 체계는 ISO 27001 기반의 정보보안 관리 시스템(ISMS)을 그룹 통합 적용하고, 연간 내부 감사와 외부 침투 테스트를 통해 보안 수준을 점검하는 구조로 운영된다. 2024년 정보보안 투자액은 전년 대비 21.3% 증가하였으며, 주요 투자 항목은 제로트러스트(Zero Trust) 아키텍처 전환, OT(Operational Technology) 보안 강화, AI 기반 이상 행위 탐지 시스템 구축 등이다.
+
+제조 현장의 디지털화 가속에 따라 OT 환경과 IT 환경의 통합(IT/OT Convergence)이 진행되면서, 산업 제어 시스템(ICS) 및 스카다(SCADA) 시스템에 대한 사이버 위협이 증가하고 있다. SKM은 OT 전용 보안 아키텍처를 수립하고, 주요 생산 설비에 대한 네트워크 분리 및 접근 통제 강화 조치를 2024년 중 완료하였다. 또한 전 임직원 대상 연간 정보보안 교육을 의무화하고, 피싱 메일 모의 훈련을 분기별로 실시하고 있으며, 2024년 피싱 클릭률은 전년 대비 41% 감소하였다.
+
+개인정보보호 측면에서는 GDPR(유럽 일반개인정보보호법) 및 국내 개인정보보호법 준수를 위한 데이터 처리 활동 기록(ROPA)을 유지하고, 개인정보 영향평가(DPIA)를 신규 서비스 출시 시 의무 실시하고 있다. 2024년 개인정보 침해 신고 사례는 발생하지 않았으며, 개인정보보호 관련 임직원 교육 이수율은 97.8%로 전년 대비 2.1%p 상승하였다.`,
+
+  p12: `SKM은 투명하고 책임있는 지배구조를 구축하기 위해 이사회 구성의 다양성과 독립성 강화, 경영진 보상의 ESG 연계, 윤리경영 및 반부패 체계 고도화를 지속 추진하고 있다. 2024년 기준 이사회는 사내이사 3명, 사외이사 6명으로 구성되어 있으며, 사외이사 비율은 66.7%로 코드(Code) 권고 기준(과반수)을 초과 달성하였다. 이사회 내 여성 이사 비율은 22.2%(사외이사 2명)이며, 평균 재임 기간은 4.3년이다.
+
+이사회 전문성 측면에서는 모빌리티·기술, 재무·회계, 법률·규제, ESG·환경 등 다양한 분야의 전문성을 보유한 이사진을 구성하고, 연간 이사회 역량 평가(Board Effectiveness Review)를 통해 전문성 갭을 분석하고 보완하고 있다. 2024년 이사회 평균 출석률은 96.4%이며, 이사회 결의 안건 126건 중 8건은 소수 의견이 부기된 것으로 나타나 충실한 심의 문화를 반영한다.
+
+윤리경영 및 반부패 측면에서는 '윤리강령' 및 '부패방지 정책'을 전 임직원과 협력사에 적용하고, 내부신고 시스템(Whistleblowing)을 통한 익명 제보 채널을 24시간 운영하고 있다. 2024년 내부신고 접수 건수는 47건이며, 이 중 27건이 실질적 조사 대상으로 분류되어 관련 징계 조치 및 프로세스 개선이 이루어졌다. 협력사를 포함한 이해관계자 대상 반부패 교육 이수율은 94.1%로 전년 대비 3.3%p 상승하였다.`,
 };
 
 const TrendChart = ({ trend }) => {
@@ -203,6 +423,16 @@ const Draft = () => {
   ];
   const activeIndex = 4;
 
+  // 수정 모드 진입 시 모든 textarea 높이를 내용에 맞게 재계산
+  useEffect(() => {
+    if (!isEditing) return;
+    const textareas = document.querySelectorAll(".edit-para-textarea");
+    textareas.forEach((el) => {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    });
+  }, [isEditing]);
+
   // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -214,21 +444,158 @@ const Draft = () => {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  // 파일 다운로드 처리 함수
-  const handleExport = (type) => {
-    setExportMenuOpen(false);
-    alert(`${type} 형식으로 다운로드를 시작합니다.`);
-    if (type === "JSON") {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ info: paragraphData, contents: texts }, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", "sustainability_draft.json");
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
+  const handleExport = async (type) => {
+  setExportMenuOpen(false);
+
+  if (type === "PDF") {
+    const target = document.querySelector("#draftDoc .doc-content");
+
+    const clone = target.cloneNode(true);
+    clone.style.position  = "fixed";
+    clone.style.top       = "-99999px";
+    clone.style.left      = "0";
+    clone.style.width     = target.offsetWidth + "px";
+    clone.style.height    = "auto";
+    clone.style.overflow  = "visible";
+    clone.style.background = "#fff";
+    document.body.appendChild(clone);
+
+    // 레이아웃 확정 후 각 섹션/목차 아이템 위치 측정
+    await new Promise(r => setTimeout(r, 80));
+    const cloneRect = clone.getBoundingClientRect();
+
+    const sectionTops = {};
+    const tocItemRects = {};
+    Object.keys(paragraphData).forEach((pid) => {
+      const secEl = clone.querySelector(`#section-${pid}`);
+      if (secEl) {
+        const r = secEl.getBoundingClientRect();
+        sectionTops[pid] = r.top - cloneRect.top;
+      }
+      const tocEl = clone.querySelector(`#toc-item-${pid}`);
+      if (tocEl) {
+        const r = tocEl.getBoundingClientRect();
+        tocItemRects[pid] = { top: r.top - cloneRect.top, h: r.height, w: r.width };
+      }
+    });
+
+    const canvas = await html2canvas(clone, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      scrollX: 0,
+      scrollY: 0,
+      width:  clone.offsetWidth,
+      height: clone.scrollHeight,
+      backgroundColor: "#ffffff",
+    });
+
+    document.body.removeChild(clone);
+
+    const pdf        = new jsPDF("l", "mm", "a4");
+    const pageWidth  = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgData    = canvas.toDataURL("image/png");
+    const imgWidth   = pageWidth;
+    const imgHeight  = (canvas.height * imgWidth) / canvas.width;
+
+    // clone px → PDF mm 변환 계수 (canvas는 scale:2 적용)
+    const mmPerPx = pageWidth / (canvas.width / 2);
+
+    let position = 0;
+    let totalPages = 1;
+    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+
+    let remaining = imgHeight - pageHeight;
+    while (remaining > 0) {
+      position -= pageHeight;
+      pdf.addPage();
+      totalPages++;
+      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
+      remaining -= pageHeight;
     }
-    // PDF, Word, Excel 백엔드/라이브러리 연동 인터페이스 배치 공간
+
+    // 목차 항목 → 해당 섹션으로 이동하는 내부 링크 삽입
+    Object.keys(paragraphData).forEach((pid) => {
+      const tocR = tocItemRects[pid];
+      const secTop = sectionTops[pid];
+      if (!tocR || secTop == null) return;
+
+      const tocPdfY    = tocR.top * mmPerPx;
+      const tocPage    = Math.floor(tocPdfY / pageHeight) + 1;
+      const tocYOnPage = tocPdfY - (tocPage - 1) * pageHeight;
+
+      const secPdfY  = secTop * mmPerPx;
+      const secPage  = Math.min(Math.floor(secPdfY / pageHeight) + 1, totalPages);
+
+      if (tocPage >= 1 && tocPage <= totalPages) {
+        pdf.setPage(tocPage);
+        pdf.link(4, tocYOnPage, pageWidth - 8, Math.max(tocR.h * mmPerPx, 5), { pageNumber: secPage });
+      }
+    });
+
+    pdf.save("sustainability_report.pdf");
+    return;
+  }
+
+  if (type === "Word") {
+    const children = [
+      new Paragraph({ text: "기후목표·전환계획", heading: HeadingLevel.HEADING_1 }),
+      new Paragraph({ text: "전환 리스크에 선제적으로 대응하는 넷제로 로드맵", heading: HeadingLevel.HEADING_2 }),
+      new Paragraph({ text: "" }),
+    ];
+
+    Object.keys(paragraphData).forEach((pid) => {
+      const d = paragraphData[pid];
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: d.tag, bold: true, color: "03A94D" })],
+          spacing: { before: 200 },
+        }),
+        new Paragraph({
+          children: [new TextRun({ text: texts[pid], size: 22 })],
+          spacing: { after: 160 },
+        })
+      );
+    });
+
+    const doc = new Document({ sections: [{ children }] });
+    const blob = await Packer.toBlob(doc);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sustainability_draft.docx";
+    a.click();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
+  if (type === "Excel") {
+    const rows = [["태그", "단락 ID", "본문 내용"]];
+    Object.keys(paragraphData).forEach((pid) => {
+      rows.push([paragraphData[pid].tag, paragraphData[pid].id, texts[pid]]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws["!cols"] = [{ wch: 14 }, { wch: 12 }, { wch: 80 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "본문");
+    XLSX.writeFile(wb, "sustainability_draft.xlsx");
+    return;
+  }
+
+  if (type === "JSON") {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(
+      JSON.stringify({ info: paragraphData, contents: texts }, null, 2)
+    );
+    const a = document.createElement("a");
+    a.setAttribute("href", dataStr);
+    a.setAttribute("download", "sustainability_draft.json");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
+};
+
 
   // 문단 선택 핸들러
   const selectParagraph = (pid) => {
@@ -323,11 +690,54 @@ const Draft = () => {
                 <h1 className="doc-title">기후목표·전환계획</h1>
                 <p className="doc-subtitle">전환 리스크에 선제적으로 대응하는 넷제로 로드맵</p>
 
+                {/* 목차 */}
+                <div id="toc-section" style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "24px 32px", marginBottom: "32px" }}>
+                  <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", marginBottom: "16px", paddingBottom: "10px", borderBottom: "2px solid #03A94D", display: "flex", alignItems: "center", gap: "8px" }}>
+                    <span>📋</span> 목차
+                  </h2>
+                  <ol style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "4px" }}>
+                    {Object.keys(paragraphData).map((pid, idx) => {
+                      const d = paragraphData[pid];
+                      return (
+                        <li key={pid} id={`toc-item-${pid}`}>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`#section-${pid}`);
+                              document.getElementById(`section-${pid}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }}
+                            style={{
+                              display: "flex", alignItems: "center", gap: "8px",
+                              width: "100%", background: "none", border: "none",
+                              cursor: "pointer", padding: "7px 8px", borderRadius: "6px",
+                              textAlign: "left", transition: "background 0.15s",
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = "#e2e8f0"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
+                          >
+                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, minWidth: "20px" }}>
+                              {String(idx + 1).padStart(2, "0")}
+                            </span>
+                            <span className={`para-chip ${d.tagType}`} style={{ fontSize: "0.68rem", padding: "2px 7px", flexShrink: 0 }}>
+                              {d.tag}
+                            </span>
+                            <span style={{ fontSize: "0.8rem", color: "#334155", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              {d.preview}
+                            </span>
+                            <span style={{ fontSize: "0.72rem", color: "#03A94D", fontWeight: 600, flexShrink: 0 }}>→</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+                {/* 목차 끝부분 */}
                 {Object.keys(paragraphData).map((pid) => {
                   const d = paragraphData[pid];
                   return (
                     <div
                       key={pid}
+                      id={`section-${pid}`}
                       className={`dp-wrap${currentPid === pid ? " selected" : ""}`}
                       onClick={() => selectParagraph(pid)}
                       style={{ cursor: isEditing ? "default" : "pointer" }}
@@ -341,19 +751,12 @@ const Draft = () => {
                       <textarea
                         className="edit-para-textarea"
                         value={texts[pid]}
-                        rows={texts[pid].split('\n').length || 3} // 줄바꿈 개수만큼 기본 높이 확보
                         onChange={(e) => {
                           handleTextChange(pid, e.target.value);
-                          // 입력할 때마다 입력창 높이를 글 내용 높이(scrollHeight)에 맞게 실시간 자동 확장
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
+                          e.target.style.height = "auto";
+                          e.target.style.height = e.target.scrollHeight + "px";
                         }}
-                        onFocus={(e) => {
-                          // 처음 포커스 되었을 때도 높이를 본문 크기에 맞게 자동으로 딱 맞춰줌
-                          e.target.style.height = 'auto';
-                          e.target.style.height = e.target.scrollHeight + 'px';
-                        }}
-                        onClick={(e) => e.stopPropagation()} // 클릭 시 부모 문단 클릭 이벤트 방지
+                        onClick={(e) => e.stopPropagation()}
                       />
                        ) : (
                       <p className="dp-text">{texts[pid]}</p>
@@ -504,8 +907,10 @@ const Draft = () => {
         </div>
       </main>
     </div>
-  );
+);
 };
+
+
 
 const dropdownItemStyle = {
   padding: "10px 16px",
@@ -515,5 +920,4 @@ const dropdownItemStyle = {
   transition: "background 0.2s",
   textAlign: "left"
 };
-
 export default Draft;

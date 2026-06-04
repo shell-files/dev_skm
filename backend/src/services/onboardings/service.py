@@ -40,6 +40,7 @@ STRUCTURED_LOOKUP_IDS = {"G0-05__QL0002", "G0-06__QL0001"}
 EDITABLE_INPUT_MODES = {"MANUAL_NUMBER", "MANUAL_TEXTAREA", "YEAR_RANGE"}
 SUPPORTED_CYCLE_TYPE = "PRE_DMA_G0"
 SUPPORTED_INPUT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
+SUPPORTED_ASSIGNMENT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
 ASSIGNMENT_MANAGER_ROLES = {"ADMIN", "ESG"}
 ASSIGNMENT_MANAGER_ROLE_NAMES = {"관리자", "ESG담당자"}
 PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE = "PRE_DMA_G0_CYCLE_NOT_READY: 기존 PRE_DMA_G0 workflow를 먼저 시작해 주세요."
@@ -377,8 +378,8 @@ def floatOrNone(value):
 def bulkAssign(request: OnboardingAssignmentBulkAssignRequestDto, userModel) -> OnboardingAssignmentBulkAssignResponseDto:
     checkScope(request.companyId, userModel)
     checkManager(userModel)
-    checkCycleType(request.cycleType)
-    cycle = requirePreDmaG0Cycle(request.companyId, request.reportingYear)
+    normalizedCycleType = checkAssignmentCycleType(request.cycleType)
+    cycle = requireCycle(request.companyId, request.reportingYear, normalizedCycleType)
     metricIds = repo.validateCycleMetricIds(int(cycle["id"]), request.companyId, request.metricIds)
     result = assignmentRepo.bulkAssignMetrics(
         companyId=request.companyId,
@@ -415,14 +416,14 @@ def listAssignmentItems(
 ) -> OnboardingAssignmentListResponseDto:
     checkScope(companyId, userModel)
     checkManager(userModel)
-    checkCycleType(cycleType)
-    cycle = repo.resolvePreDmaG0Cycle(companyId=companyId, reportingYear=reportingYear)
+    normalizedCycleType = checkAssignmentCycleType(cycleType)
+    cycle = requireCycle(companyId, reportingYear, normalizedCycleType)
     items = [OnboardingAssignmentItemDto(**item) for item in assignmentRepo.listAssignments(companyId, reportingYear, cycle)]
     return OnboardingAssignmentListResponseDto(
         companyId=companyId,
         reportingYear=reportingYear,
         cycleId=int(cycle["id"]) if cycle else None,
-        cycleType=SUPPORTED_CYCLE_TYPE,
+        cycleType=str(cycle.get("cycle_type") or normalizedCycleType),
         items=items,
     )
 
@@ -436,14 +437,14 @@ def getAssignmentItem(
 ) -> OnboardingAssignmentDetailResponseDto:
     checkScope(companyId, userModel)
     checkManager(userModel)
-    checkCycleType(cycleType)
-    cycle = requirePreDmaG0Cycle(companyId, reportingYear)
+    normalizedCycleType = checkAssignmentCycleType(cycleType)
+    cycle = requireCycle(companyId, reportingYear, normalizedCycleType)
     metricIds = repo.validateCycleMetricIds(int(cycle["id"]), companyId, [metricId])
     response = OnboardingAssignmentListResponseDto(
         companyId=companyId,
         reportingYear=reportingYear,
         cycleId=int(cycle["id"]),
-        cycleType=SUPPORTED_CYCLE_TYPE,
+        cycleType=str(cycle.get("cycle_type") or normalizedCycleType),
         items=[OnboardingAssignmentItemDto(**item) for item in assignmentRepo.listAssignments(companyId, reportingYear, cycle)],
     )
     for item in response.items:
@@ -474,8 +475,8 @@ def patchAssignment(metricId: str, request: OnboardingAssignmentPatchRequestDto,
 def bulkUnassign(request: OnboardingAssignmentBulkUnassignRequestDto, userModel) -> OnboardingAssignmentBulkUnassignResponseDto:
     checkScope(request.companyId, userModel)
     checkManager(userModel)
-    checkCycleType(request.cycleType)
-    cycle = requirePreDmaG0Cycle(request.companyId, request.reportingYear)
+    normalizedCycleType = checkAssignmentCycleType(request.cycleType)
+    cycle = requireCycle(request.companyId, request.reportingYear, normalizedCycleType)
     metricIds = repo.validateCycleMetricIds(int(cycle["id"]), request.companyId, request.metricIds)
     result = assignmentRepo.bulkUnassignMetrics(
         companyId=request.companyId,
@@ -508,6 +509,13 @@ def requirePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:
 def checkCycleType(cycleType: str) -> None:
     if str(cycleType or "").upper() != repo.CYCLE_TYPE_PRE_DMA_G0:
         raise ValueError("Only PRE_DMA_G0 cycleType is supported")
+
+
+def checkAssignmentCycleType(cycleType: str) -> str:
+    normalizedCycleType = str(cycleType or "").strip().upper()
+    if normalizedCycleType not in SUPPORTED_ASSIGNMENT_CYCLE_TYPES:
+        raise ValueError("Only PRE_DMA_G0 or POST_DMA_DISCLOSURE cycleType is supported")
+    return normalizedCycleType
 
 
 def checkManager(userModel) -> None:

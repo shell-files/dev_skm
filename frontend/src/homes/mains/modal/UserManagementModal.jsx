@@ -1,16 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { showDefaultAlert } from '@components/UI/ServiceAlert';
-
-const FIXTURE_ASSIGNMENT_SCOPES = [
-  {
-    reportingYear: 2026,
-    projectName: '2026 지속가능경영보고서',
-    cycleType: 'POST_DMA_DISCLOSURE',
-    assignedSubIssues: ['기후변화 전환계획', '온실가스 배출', '에너지'],
-    assignedMetricCount: 8,
-  },
-];
 
 const getRoleLabel = (role) => {
   const map = {
@@ -97,11 +87,11 @@ export default function UserManagementModal({ isOpen, onClose, userItem }) {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
                 <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                   <tr>
-                    <th style={thStyle}>Reporting Year</th>
-                    <th style={thStyle}>Project Name</th>
-                    <th style={thStyle}>Cycle Type</th>
+                    <th style={thStyle}>보고 연도</th>
+                    <th style={thStyle}>프로젝트 명</th>
+                    <th style={thStyle}>보고 유형</th>
                     <th style={thStyle}>담당 Sub-Issue</th>
-                    <th style={thStyle}>Metric 수</th>
+                    <th style={thStyle}>데이터 입력 수</th>
                   </tr>
                 </thead>
                 <tbody>

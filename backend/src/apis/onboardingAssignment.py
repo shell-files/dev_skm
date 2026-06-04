@@ -30,15 +30,29 @@ onboardingAssignmentRouter = APIRouter(
 )
 
 
+def statusForValueError(error: ValueError) -> int:
+    detail = str(error)
+    if detail.startswith(
+        (
+            "PRE_DMA_G0_CYCLE_NOT_READY",
+            "PRE_DMA_G0_SCOPE_NOT_READY",
+            "POST_DMA_DISCLOSURE_CYCLE_NOT_READY",
+            "POST_DMA_DISCLOSURE_SCOPE_NOT_READY",
+        )
+    ):
+        return 409
+    return 422
+
+
 @router.post(
     "/bulk-assign",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
-    summary="Bulk assign PRE_DMA_G0 metrics",
+    summary="Bulk assign onboarding metrics",
 )
 @onboardingAssignmentRouter.post(
     "/bulk-assign",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
-    summary="Bulk assign PRE_DMA_G0 metrics",
+    summary="Bulk assign onboarding metrics",
 )
 async def bulkAssignRoute(
     request: OnboardingAssignmentBulkAssignRequestDto,
@@ -51,7 +65,7 @@ async def bulkAssignRoute(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -59,12 +73,12 @@ async def bulkAssignRoute(
 @router.get(
     "",
     response_model=OnboardingAssignmentListResponseDto,
-    summary="List PRE_DMA_G0 metric assignments",
+    summary="List onboarding metric assignments",
 )
 @onboardingAssignmentRouter.get(
     "",
     response_model=OnboardingAssignmentListResponseDto,
-    summary="List PRE_DMA_G0 metric assignments",
+    summary="List onboarding metric assignments",
 )
 async def listAssignmentItemsRoute(
     companyId: int = Query(...),
@@ -77,7 +91,7 @@ async def listAssignmentItemsRoute(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -85,12 +99,12 @@ async def listAssignmentItemsRoute(
 @router.get(
     "/{metricId}",
     response_model=OnboardingAssignmentDetailResponseDto,
-    summary="Get one PRE_DMA_G0 metric assignment",
+    summary="Get one onboarding metric assignment",
 )
 @onboardingAssignmentRouter.get(
     "/{metricId}",
     response_model=OnboardingAssignmentDetailResponseDto,
-    summary="Get one PRE_DMA_G0 metric assignment",
+    summary="Get one onboarding metric assignment",
 )
 async def getAssignmentItemRoute(
     metricId: str,
@@ -104,7 +118,7 @@ async def getAssignmentItemRoute(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -112,12 +126,12 @@ async def getAssignmentItemRoute(
 @router.patch(
     "/{metricId}",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
-    summary="Assign one PRE_DMA_G0 metric",
+    summary="Assign one onboarding metric",
 )
 @onboardingAssignmentRouter.patch(
     "/{metricId}",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
-    summary="Assign one PRE_DMA_G0 metric",
+    summary="Assign one onboarding metric",
 )
 async def patchAssignmentRoute(
     metricId: str,
@@ -131,7 +145,7 @@ async def patchAssignmentRoute(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -139,12 +153,12 @@ async def patchAssignmentRoute(
 @router.post(
     "/bulk-unassign",
     response_model=OnboardingAssignmentBulkUnassignResponseDto,
-    summary="Bulk unassign PRE_DMA_G0 metrics",
+    summary="Bulk unassign onboarding metrics",
 )
 @onboardingAssignmentRouter.post(
     "/bulk-unassign",
     response_model=OnboardingAssignmentBulkUnassignResponseDto,
-    summary="Bulk unassign PRE_DMA_G0 metrics",
+    summary="Bulk unassign onboarding metrics",
 )
 async def bulkUnassignRoute(
     request: OnboardingAssignmentBulkUnassignRequestDto,
@@ -157,7 +171,7 @@ async def bulkUnassignRoute(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

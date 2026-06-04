@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useAuth } from '@hooks/AuthContext.jsx';
 import ReportBasisSelectModal from "@components/UI/ReportBasisSelectModal.jsx";
-import { DEFAULT_REPORTING_YEAR } from "@/apis/report";
+import { DEFAULT_REPORTING_YEAR } from "@stores/reportSlice";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
 const Sidebarnav = ({ isOpen, setIsOpen }) => {
@@ -13,26 +13,24 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
         selectedCompany?.company_id ??
         selectedCompany?.companyId;
 
-    // 권한 확인
-    const role = selectedCompany?.role || "ESG담당자";
-    const isSysAdmin = role === "시스템관리자";
-    const isESG = role === "ESG담당자" || role === "ESG 담당자";
-    const isConsultant = role === "컨설턴트";
+    // 권한 확인 (UI 노출용)
+    const role = selectedCompany?.role ?? "guest";
+    const isSysAdmin = role === "시스템관리자" || role === "관리자" || role === "ADMIN";
+    const isESG = role === "ESG담당자" || role === "ESG 담당자" || role === "ESG_MANAGER";
+    const isConsultant = role === "컨설턴트" || role === "CONSULTANT";
+    const isDept = role === "부서담당자" || role === "부서 담당자" || role === "EMPLOYEE" || role === "ASSIGNEE";
 
-    const canViewService = isSysAdmin || isESG || isConsultant;
-    const canViewAdmin = isSysAdmin || isESG || isConsultant;
+    // 메뉴 접근 권한
+    const showReportProj = isESG || isSysAdmin || isConsultant;
+    const showOnboarding = isESG || isSysAdmin || isDept;
+    const showDataApproval = isESG || isSysAdmin || isConsultant;
+    const showPersonnel = isESG || isSysAdmin;
 
     // 아코디언 상태 관리
     const [expanded, setExpanded] = useState({
         service: true,
         admin: false,
         settings: false
-    });
-
-    const [expandedSub, setExpandedSub] = useState({
-        report: false,
-        carbon: false,
-        supply: false
     });
 
     const [filteredCompanies, setFilteredCompanies] = useState([]);
@@ -42,11 +40,6 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
     const toggleAccordion = (key) => {
         setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
-    };
-
-    const toggleSubAccordion = (key, e) => {
-        e.stopPropagation();
-        setExpandedSub(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
     const isActive = (path) => location.pathname.includes(path);
@@ -129,7 +122,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
             handleScroll();
         }, 350);
         return () => clearTimeout(timer);
-    }, [expanded, expandedSub]);
+    }, [expanded]);
 
     useEffect(() => {
         let observer;
@@ -163,8 +156,6 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
     const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
 
-    
-
     const handleReportNav = () => {
         if (!companyId) {
             showDefaultAlert("오류", "회사를 먼저 선택해 주세요.", "error");
@@ -190,38 +181,48 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                             <span>대시보드</span>
                         </div>
                     </div>
-                    <div className="nav-group">
-                        <div className="nav-item" onClick={handleReportNav}>
-                            <div className="nav-accordion-header">
-                                <span>지속가능경영보고서</span>
+                    
+                    {showReportProj && (
+                        <div className="nav-group">
+                            <div className="nav-item" onClick={handleReportNav}>
+                                <div className="nav-accordion-header">
+                                    <span>지속가능경영보고서</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div className="nav-group">
-                        <div className="nav-item" onClick={handleReportNav}>
-                            <span>데이터 입력</span>
-                        </div>
-                    </div>
-                    <div className="nav-group">
-                        <div
-                            className="nav-item"
-                            onClick={() => toggleAccordion("admin")}
-                        >
-                            <div className="nav-accordion-header">
-                                <span>ESG 담당자 통합 관리</span>
-                                <svg className={`nav-arrow ${expanded.admin ? "expanded" : ""}`} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </div>
-                        </div>
+                    )}
 
-                        <div className={`nav-accordion-content ${expanded.admin ? "expanded" : ""}`}>
-                            <div className="inner-wrapper">
-                                <div className="nav-item sub-item" onClick={goManagerdata}>데이터 승인</div>
-                                <div className="nav-item sub-item" onClick={goManager}>인원 관리</div>
+                    {showOnboarding && (
+                        <div className="nav-group">
+                            <div className="nav-item" onClick={handleReportNav}>
+                                <span>데이터 입력</span>
                             </div>
                         </div>
-                    </div>
+                    )}
+
+                    {(showDataApproval || showPersonnel) && (
+                        <div className="nav-group">
+                            <div
+                                className="nav-item"
+                                onClick={() => toggleAccordion("admin")}
+                            >
+                                <div className="nav-accordion-header">
+                                    <span>ESG 담당자 통합 관리</span>
+                                    <svg className={`nav-arrow ${expanded.admin ? "expanded" : ""}`} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div className={`nav-accordion-content ${expanded.admin ? "expanded" : ""}`}>
+                                <div className="inner-wrapper">
+                                    {showDataApproval && <div className="nav-item sub-item" onClick={goManagerdata}>데이터 승인</div>}
+                                    {showPersonnel && <div className="nav-item sub-item" onClick={goManager}>인원 관리</div>}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="nav-group">
                         <div className="nav-item" onClick={() => toggleAccordion("settings")}>
                             <div className="nav-accordion-header">

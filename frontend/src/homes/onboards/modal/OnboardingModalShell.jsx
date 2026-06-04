@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import '@styles/onboardingModal.css';
 import { getAtomicId, isEditableItem, resolveG0InputMode } from '../onboardingUtils';
 
@@ -16,9 +17,14 @@ export default function OnboardingModalShell({
   metricItem,
   subMetrics,
   onSaveAndSubmit,
+  viewerRole,
+  submitLabel,
+  onOpenAssignment,
+  onSubmitRequest,
 }) {
   const [atomicValues, setAtomicValues] = useState({});
   const [atomicFiles, setAtomicFiles] = useState({});
+  const isConsultant = viewerRole === '컨설턴트' || viewerRole === 'CONSULTANT';
 
   useEffect(() => {
     if (!metricItem || !subMetrics) return;
@@ -85,7 +91,7 @@ export default function OnboardingModalShell({
   };
 
   const handleSubmit = () => {
-    onSaveAndSubmit?.(atomicValues, atomicFiles, 'SUBMITTED');
+    onSubmitRequest ? onSubmitRequest(atomicValues, atomicFiles) : onSaveAndSubmit?.(atomicValues, atomicFiles, 'SUBMITTED');
   };
 
   const getDisplayValue = (sub) => {
@@ -110,6 +116,10 @@ export default function OnboardingModalShell({
   const renderInputField = (sub, id) => {
     const inputMode = resolveG0InputMode(sub);
     const value = atomicValues[id] || '';
+
+    if (isConsultant) {
+      return renderReadOnlyValue({ ...sub, valueText: value }, '읽기 전용입니다.');
+    }
 
     if (inputMode === 'MANUAL_NUMBER') {
       return (
@@ -201,10 +211,6 @@ export default function OnboardingModalShell({
         <span className="ob-info-val">{metricItem.metricId}</span>
       </div>
       <div className="ob-info-item">
-        <span className="ob-info-label">Atomic Metric ID</span>
-        <span className="ob-info-val">{metricItem.atomicMetricId || '-'}</span>
-      </div>
-      <div className="ob-info-item">
         <span className="ob-info-label">단위</span>
         <span className="ob-info-val">{metricItem.unit || '-'}</span>
       </div>
@@ -216,6 +222,75 @@ export default function OnboardingModalShell({
       </div>
     </div>
   );
+
+  const renderAssignmentCard = () => {
+    if (!metricItem) return null;
+    
+    const assigneeName = metricItem.assigneeName;
+    const assigneeEmail = metricItem.assigneeEmail;
+    const assignmentStatus = metricItem.assignmentStatus;
+    const inviteStatus = metricItem.inviteStatus;
+    const selfAssignedYn = metricItem.selfAssignedYn;
+    const dueDate = metricItem.submissionDueDate;
+
+    const isAssigned = assignmentStatus === 'ASSIGNED';
+    const isInvitePending = inviteStatus === 'PENDING';
+    const isOverdue = dueDate && dueDate < new Date().toISOString().slice(0, 10);
+
+    return (
+      <div className="ob-side-card ob-assignment-card">
+        <h4>담당자</h4>
+        {isConsultant ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+            <span style={{ fontWeight: 600, color: '#1e293b' }}>{assigneeName || '미지정'}</span>
+            <span className="ob-assignment-card-status">읽기 전용 검토 화면</span>
+          </div>
+        ) : selfAssignedYn ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+            <span style={{ fontWeight: 600, color: '#1e293b' }}>{assigneeName}</span>
+            <span className="ob-assignment-card-status">본인 입력</span>
+          </div>
+        ) : isInvitePending ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+            <span style={{ fontWeight: 600, color: '#1e293b' }}>{assigneeName}</span>
+            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>{assigneeEmail}</span>
+            <span className="ob-assignment-card-status pending">회원가입 초대 대기</span>
+          </div>
+        ) : isAssigned ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+            <span style={{ fontWeight: 600, color: '#1e293b' }}>{assigneeName}</span>
+            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>{assigneeEmail}</span>
+            <span className="ob-assignment-card-status assigned">지정 완료</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+            <span style={{ color: '#94a3b8' }}>지정되지 않음</span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px', padding: '12px', background: '#f8fafc', borderRadius: '6px' }}>
+          <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>제출 기한</span>
+          {dueDate ? (
+            <span style={{ color: isOverdue ? '#ef4444' : '#1e293b', fontWeight: 600 }}>
+              {dueDate} {isOverdue && <span style={{ fontSize: '0.75rem', fontWeight: 400 }}>(초과)</span>}
+            </span>
+          ) : (
+            <span style={{ color: '#94a3b8' }}>미설정</span>
+          )}
+        </div>
+
+        {!isConsultant && (
+          <button 
+            type="button" 
+            className="ob-assignment-card-btn"
+            onClick={onOpenAssignment}
+          >
+            {isAssigned || isInvitePending ? '담당자 변경' : '담당자 지정'}
+          </button>
+        )}
+      </div>
+    );
+  };
 
   /* ─── Render: Generic G0 Input (운영 유형 binding 보류) ─── */
   const renderGenericG0Input = () => {
@@ -354,30 +429,47 @@ export default function OnboardingModalShell({
   };
 
   /* ─── Render: Footer ─── */
-  const renderFooterActions = () => (
-    <div className="ob-modal-footer">
-      <button type="button" className="ob-btn ob-btn-secondary" onClick={onClose}>
-        취소
-      </button>
-      <button
-        type="button"
-        className="ob-btn ob-btn-primary"
-        onClick={handleSaveDraft}
-        disabled={saveDisabled}
-        title={saveDisabled ? '수기 입력 가능한 항목이 없습니다.' : undefined}
-        style={saveDisabled ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
-      >
-        임시저장
-      </button>
-      <button type="button" className="ob-btn ob-btn-primary" style={{ opacity: 0.5, cursor: "not-allowed" }} disabled title="승인 API 연결 후 활성화">
-        데이터 최종 제출
-      </button>
-    </div>
-  );
+  const renderFooterActions = () => {
+    if (isConsultant) {
+      return (
+        <div className="ob-modal-footer">
+          <button type="button" className="ob-btn ob-btn-secondary" onClick={onClose}>
+            닫기
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="ob-modal-footer">
+        <button type="button" className="ob-btn ob-btn-secondary" onClick={onClose}>
+          취소
+        </button>
+        <button
+          type="button"
+          className="ob-btn ob-btn-primary"
+          onClick={handleSaveDraft}
+          disabled={saveDisabled}
+          title={saveDisabled ? '수기 입력 가능한 항목이 없습니다.' : undefined}
+          style={saveDisabled ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+        >
+          임시저장
+        </button>
+        <button 
+          type="button" 
+          className="ob-btn ob-btn-primary" 
+          onClick={handleSubmit}
+          disabled={saveDisabled}
+        >
+          {submitLabel || '승인 요청'}
+        </button>
+      </div>
+    );
+  };
 
   if (!isOpen || !metricItem || !subMetrics) return null;
 
-  return (
+  return createPortal(
     <div className="ob-modal-overlay" onClick={onClose}>
       <div className="ob-modal-shell" onClick={(event) => event.stopPropagation()}>
         {renderHeader()}
@@ -389,6 +481,7 @@ export default function OnboardingModalShell({
           </div>
 
           <div className="ob-modal-right-panel">
+            {renderAssignmentCard()}
             {renderEvidenceSection()}
             {renderValidationSection()}
           </div>
@@ -396,6 +489,8 @@ export default function OnboardingModalShell({
 
         {renderFooterActions()}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
+

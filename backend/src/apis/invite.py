@@ -25,7 +25,16 @@ def invite(inviteId: str):
              description="초대 링크 접속 시 토큰에서 이메일과 회사명 추출하여 반환하는 API입니다.")
 def invite(inviteId: str):
   inviteData = getInviteRedis(inviteId)
-  payload = decryptFromJwe(inviteData["token"])
+  if not inviteData or inviteData.get("status") is not True or not inviteData.get("token"):
+    return ResponseModel(False, "초대 토큰을 찾을 수 없습니다.")
+
+  try:
+    payload = decryptFromJwe(inviteData["token"])
+  except Exception:
+    return ResponseModel(False, "초대 토큰이 유효하지 않습니다.")
+  if not payload:
+    return ResponseModel(False, "초대 토큰이 유효하지 않습니다.")
+
   email = payload.get("email")
   companyName = payload.get("sub")
 

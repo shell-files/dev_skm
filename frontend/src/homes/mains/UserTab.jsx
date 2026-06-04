@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 const UserTab = ({
   isLoading,
@@ -10,56 +10,42 @@ const UserTab = ({
   PAGE_SIZE,
   userPage,
   setUserPage,
-  setCurrentUser,
-  setIsModalOpen,
-  setIsDisconnectModalOpen,
-  setDisconnectTarget,
-  handleDisconnectClick,
-  permission,
-  user,
-  activeService = 'disclosure'
+  onOpenUserManagement,
 }) => {
-  const getSRTheme = (groupName) => {
-    // [공시] 섹션
-    const environmental = ["Climate", "Energy", "Water", "Pollution", "Circularity", "Biodiversity", "Product_env", "Supply Chain_env", "Sustainable investment", "Carbon_Scope1", "Carbon_Scope2"];
-    const social = ["Labor", "Safety", "Talent", "Diversity", "Human Rights", "Supply Chain_social", "Community", "Product_resp", "Privacy", "Supply_Audit", "협력사 평가"];
-    const governance = ["Governance", "Risk", "compliance", "Ethics", "Business Conduct", "Data Governance"];
-
-    if (environmental.includes(groupName)) return "E";
-    if (social.includes(groupName)) return "S";
-    if (governance.includes(groupName)) return "G";
-    return "general";
+  const getConnectionStatus = (u) => {
+    if (u.role === '컨설턴트' || u.role === 'CONSULTANT') return '컨설턴트 연결';
+    if (u.role === '관리자' || u.role === 'ADMIN' || u.role === 'ESG_MANAGER') return '정상 연결';
+    if (u.role === 'ESG담당자') return '정상 연결';
+    if (u.role === '부서담당자' || u.role === 'EMPLOYEE' || u.role === 'ASSIGNEE') return '부서 연결';
+    return '미확인';
   };
 
-  const handleDisconnectClickLocal = (targetUser, type) => {
-    // 부모(Manager.jsx)에서 직접 처리 함수를 내려줬다면 그걸 사용 (직접 컨펌창 방식)
-    if (handleDisconnectClick) {
-      handleDisconnectClick(targetUser, type);
-      return;
-    }
-
-    const role = user?.role;
-
-    if (role === "ESG담당자") {
-      setDisconnectTarget(targetUser);
-      setIsDisconnectModalOpen(true);
-      return;
-    }
-
-    if (role === "컨설턴트") {
-      showDefaultAlert("컨설턴트", "별도 로직 실행", "info");
-      return;
-    }
-
-    showDefaultAlert("권한 없음", "접근 권한이 없습니다", "error");
+  const getConnectionCls = (status) => {
+    if (status.includes('정상') || status.includes('컨설턴트') || status.includes('부서')) return 'connected';
+    return 'unknown';
   };
+
+  const getRoleLabel = (u) => {
+    const roleMap = {
+      '관리자': '관리자',
+      'ADMIN': '관리자',
+      'ESG담당자': 'ESG 담당자',
+      'ESG_MANAGER': 'ESG 담당자',
+      '컨설턴트': '컨설턴트',
+      'CONSULTANT': '컨설턴트',
+      '부서담당자': '부서담당자',
+      'EMPLOYEE': '부서담당자',
+      'ASSIGNEE': '부서담당자',
+    };
+    return roleMap[u.role] || u.role || '-';
+  };
+
   return (
     <section className="fade-in">
-
       <div className="filter-bar">
         <input
           className="search-input"
-          placeholder="사용자명 또는 회사명 / 이슈그룹 검색"
+          placeholder="사용자명 또는 회사명 검색"
           value={userSearch}
           onChange={(e) => setUserSearch(e.target.value)}
           disabled={isLoading}
@@ -70,7 +56,6 @@ const UserTab = ({
       </div>
 
       <div className="table-wrapper">
-
         {isLoading ? (
           <div className="loading-container">
             <div className="spinner"></div>
@@ -86,102 +71,85 @@ const UserTab = ({
               <tr>
                 <th>사용자 정보</th>
                 <th>소속 회사</th>
-                <th>할당 이슈 그룹</th>
+                <th>역할</th>
+                <th>할당 프로젝트·담당 영역</th>
+                <th>연결 상태</th>
                 <th>관리</th>
               </tr>
             </thead>
-
             <tbody>
-              {pagedUsers.map(u => (
-                <tr key={u.id}>
-                  <td>
-                    <strong>{u.name}</strong><br />
-                    <small>{u.email}</small>
-                  </td>
-
-                  <td>
-                    {u.company}
-                    <span className="depth-tag">{u.role}</span>
-                  </td>
-
-                  <td>
-                    <div className="tag-container">
-                      {(() => {
-                        // 1. 현재 서비스에 맞는 그룹만 먼저 필터링
-                        const serviceFilteredGroups = u.groups.filter(g => {
-                          if (activeService === 'carbon') return ["Carbon_Scope1", "Carbon_Scope2"].includes(g);
-                          if (activeService === 'supply') return ["Supply_Audit", "협력사 평가"].includes(g);
-                          // disclosure (나머지 모든 공시 그룹)
-                          const isCarbonOrSupply = ["Carbon_Scope1", "Carbon_Scope2", "Supply_Audit", "협력사 평가"].includes(g);
-                          return !isCarbonOrSupply;
-                        });
-
-                        // 2. 필터링된 결과 중 3개만 노출
-                        const displayGroups = serviceFilteredGroups.slice(0, 3);
-                        const overflowCount = serviceFilteredGroups.length - displayGroups.length;
-
-                        return (
+              {pagedUsers.map(u => {
+                const connStatus = getConnectionStatus(u);
+                const connCls = getConnectionCls(connStatus);
+                const scopes = u.assignmentScopes || [];
+                return (
+                  <tr key={u.id}>
+                    <td>
+                      <strong>{u.name}</strong><br />
+                      <small>{u.email}</small>
+                    </td>
+                    <td>{u.company}</td>
+                    <td>
+                      <span className="depth-tag">{getRoleLabel(u)}</span>
+                    </td>
+                    <td>
+                      <div className="tag-container">
+                        {scopes.length > 0 ? (
                           <>
-                            {displayGroups.map(g => (
-                              <span key={g} className={`sr-ig-chip sr-theme-${getSRTheme(g)}`}>
-                                {g}
-                              </span>
+                            {scopes.slice(0, 1).map((scope, idx) => (
+                              <div key={idx} style={{ fontSize: '13px', lineHeight: 1.5 }}>
+                                <span style={{ fontWeight: 600, color: '#1e293b' }}>
+                                  {scope.projectName}
+                                </span>
+                                <br />
+                                <span style={{ color: '#64748b', fontSize: '12px' }}>
+                                  {scope.assignedSubIssues?.slice(0, 2).join(' · ')}
+                                  {scope.assignedSubIssues?.length > 2 && ` 외 ${scope.assignedSubIssues.length - 2}개`}
+                                </span>
+                                <br />
+                                <span style={{ color: '#94a3b8', fontSize: '11px' }}>
+                                  담당 metric {scope.assignedMetricCount}개
+                                </span>
+                              </div>
                             ))}
-                            {overflowCount > 0 && (
-                              <span className="sr-ig-chip" style={{ background: '#eee', color: '#666' }}>
-                                +{overflowCount}
+                            {scopes.length > 1 && (
+                              <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                                +{scopes.length - 1} 프로젝트
                               </span>
                             )}
                           </>
-                        );
-                      })()}
-                    </div>
-                  </td>
-
-                  <td>
-                    <button
-                      className="btn-outline"
-                      onClick={() => {
-                        setCurrentUser(u);
-                        setIsModalOpen(true);
-                      }}
-                      disabled={isLoading}
-                    >
-                      이슈 그룹 수정
-                    </button>
-                    {permission.canDisconnect && (
-                      <>
-                        {/* 컨설턴트일 때만 */}
-                        {u.role === "컨설턴트" && (
-                          <button
-                            className="btn-outline"
-                            onClick={() => handleDisconnectClickLocal(u, "consultant")}
-                            disabled={isLoading}
-                          >
-                            컨설턴트 연결 해제
-                          </button>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '13px' }}>할당 없음</span>
                         )}
-
-                        {/* 부서담당자일 때만 */}
-                        {u.role === "부서담당자" && (
-                          <button
-                            className="btn-outline"
-                            onClick={() => handleDisconnectClickLocal(u, "employee")}
-                            disabled={isLoading}
-                          >
-                            직원 연결 해제
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                      </div>
+                    </td>
+                    <td>
+                      <span className={`ob1-status-pill ${connCls}`} style={{
+                        fontSize: '12px',
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        background: connCls === 'connected' ? '#dcfce7' : '#f1f5f9',
+                        color: connCls === 'connected' ? '#16a34a' : '#94a3b8',
+                      }}>
+                        {connStatus}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        className="btn-outline"
+                        onClick={() => onOpenUserManagement?.(u)}
+                        disabled={isLoading}
+                      >
+                        관리
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
 
-        {/* 페이지네이션 */}
         {!isLoading && Math.ceil(filteredUsers.length / PAGE_SIZE) > 1 && (
           <div className='pagination'>
             {Array.from({ length: Math.ceil(filteredUsers.length / PAGE_SIZE) }).map((_, i) => (
@@ -200,7 +168,6 @@ const UserTab = ({
             ))}
           </div>
         )}
-
       </div>
     </section>
   );

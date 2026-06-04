@@ -1,31 +1,26 @@
 from __future__ import annotations
 
-import hashlib
-import secrets
-import uuid
 from datetime import date
 from typing import Optional
 
 from src.utils.db import findAll, findOne, getConn
-from src.utils.onboardingapprovalrepository import listCycleMetricScope
+from src.utils.rediscl import setInviteRedis
 from src.utils.settings import settings
+from src.utils.tokenset import generateInviteTokenWithUuid
 
 
-SUPPORTED_CYCLE_TYPE = "PRE_DMA_G0"
 SUPPORTED_TARGET_ROLE = "EMPLOYEE"
-INVITE_EXPIRE_DAYS = 7
 ASSIGNMENT_STATUS_ASSIGNED = "assigned"
 ASSIGNMENT_STATUS_INVITED = "invited"
 ASSIGNMENT_STATUS_UNASSIGNED = "unassigned"
 ASSIGNABLE_ROLE_CODES = {"EMPLOYEE", "ESG", "ADMIN"}
+INVITE_STATE_PENDING = "승인대기"
+INVITE_STATE_COMPLETED = "승인완료"
+INVITE_STATE_REVOKED = "승인취소"
 
 
 def normalizeEmail(email: str) -> str:
     return str(email or "").strip().lower()
-
-
-def hashText(value: str) -> str:
-    return hashlib.sha256(value.encode("utf-8")).hexdigest()
 
 
 def maskEmail(email: Optional[str]) -> Optional[str]:
@@ -35,38 +30,6 @@ def maskEmail(email: Optional[str]) -> Optional[str]:
     if not name:
         return f"***@{domain}"
     return f"{name[0]}***@{domain}"
-
-
-def listG0MetricMaster() -> list[dict]:
-    return findAll(
-        """
-        SELECT DISTINCT metric_id, metric_name_kr
-        FROM ESG_ATOMIC_METRIC_MASTER
-        WHERE delete_yn = 0
-          AND active_yn = 1
-          AND metric_id LIKE 'G0-%'
-        ORDER BY metric_id
-        """
-    ) or []
-
-
-def validateG0MetricIds(metricIds: list[str]) -> list[str]:
-    cleaned = []
-    for metricId in metricIds or []:
-        value = str(metricId or "").strip()
-        if not value:
-            continue
-        if "__" in value:
-            raise ValueError(f"atomic_metric_id is not allowed: {value}")
-        if value not in cleaned:
-            cleaned.append(value)
-    if not cleaned:
-        raise ValueError("metricIds is required")
-    allowed = {row["metric_id"] for row in listG0MetricMaster()}
-    invalid = [metricId for metricId in cleaned if metricId not in allowed]
-    if invalid:
-        raise ValueError(f"Unsupported metricId: {', '.join(invalid)}")
-    return cleaned
 
 
 def resolveExistingUser(companyId: int, normalizedEmail: str) -> Optional[int]:
@@ -96,81 +59,6 @@ def resolveExistingUser(companyId: int, normalizedEmail: str) -> Optional[int]:
     return None
 
 
-def getCompanyName(companyId: int) -> str:
-    companyName = getCompanyNameFromCompanyTable(companyId)
-    if companyName:
-        return companyName
-    row = findOne(
-        f"""
-        SELECT COALESCE(company_code, CAST(company_id AS CHAR)) AS company_name
-        FROM ESG_COMPANY_PROFILE
-        WHERE company_id = ?
-          AND delete_yn = 0
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (companyId,),
-    ) or {}
-    return row.get("company_name") or str(companyId)
-
-
-def getCompanyNameFromCompanyTable(companyId: int) -> Optional[str]:
-    for schemaName in [None, "skm", "with"]:
-        tableInfo = getCompanyTableInfo(schemaName)
-        if not tableInfo:
-            continue
-        qualifiedTable = tableInfo["qualifiedTable"]
-        idColumn = tableInfo["idColumn"]
-        nameColumn = tableInfo["nameColumn"]
-        deleteFilter = "AND delete_yn = 0" if tableInfo.get("hasDeleteYn") else ""
-        try:
-            row = findOne(
-                f"""
-                SELECT aes_d({nameColumn}, '{settings.maria_db_key}') AS company_name
-                FROM {qualifiedTable}
-                WHERE {idColumn} = ?
-                  {deleteFilter}
-                ORDER BY {idColumn} DESC
-                LIMIT 1
-                """,
-                (companyId,),
-            ) or {}
-        except Exception:
-            continue
-        companyName = str(row.get("company_name") or "").strip()
-        if companyName:
-            return companyName
-    return None
-
-
-def getCompanyTableInfo(schemaName: Optional[str]) -> Optional[dict]:
-    schemaFilter = "DATABASE()" if schemaName is None else "?"
-    params = [] if schemaName is None else [schemaName]
-    rows = findAll(
-        f"""
-        SELECT column_name
-        FROM information_schema.columns
-        WHERE table_schema = {schemaFilter}
-          AND table_name = 'COMPANY'
-        """,
-        tuple(params),
-    ) or []
-    columns = {str(row.get("column_name") or "").lower() for row in rows}
-    if not columns:
-        return None
-    idColumn = "company_id" if "company_id" in columns else "id" if "id" in columns else None
-    nameColumn = "company_name" if "company_name" in columns else "name" if "name" in columns else None
-    if not idColumn or not nameColumn:
-        return None
-    qualifiedTable = "COMPANY" if schemaName is None else f"`{schemaName}`.`COMPANY`"
-    return {
-        "qualifiedTable": qualifiedTable,
-        "idColumn": idColumn,
-        "nameColumn": nameColumn,
-        "hasDeleteYn": "delete_yn" in columns,
-    }
-
-
 def bulkAssignMetrics(
     *,
     companyId: int,
@@ -188,7 +76,6 @@ def bulkAssignMetrics(
 
     assigneeUserId = resolveExistingUser(companyId, normalizedEmail)
     cycleId = int(cycle["id"])
-    rawToken = None
     mailEvent = None
     inviteId = None
     inviteCreatedYn = False
@@ -202,33 +89,30 @@ def bulkAssignMetrics(
         with conn.cursor(dictionary=True) as cur:
             oldInviteIds = listAssignmentInviteIdsTx(cur, cycleId, companyId, metricIds)
             if assigneeUserId is None:
-                invite = getReusableInviteTx(cur, companyId, cycleId, normalizedEmail)
-                if invite:
-                    inviteId = int(invite["id"])
-                    inviteReusedYn = True
-                    if sendInviteYn:
-                        rawToken = secrets.token_urlsafe(32)
-                        rotateInviteTokenTx(cur, inviteId, rawToken)
-                else:
-                    rawToken = secrets.token_urlsafe(32)
-                    inviteId = insertInviteTx(
-                        cur,
-                        companyId=companyId,
-                        cycleId=cycleId,
-                        normalizedEmail=normalizedEmail,
-                        rawToken=rawToken,
-                        actorUserId=actorUserId,
-                        sentYn=sendInviteYn,
-                    )
-                    inviteCreatedYn = True
-                if sendInviteYn and rawToken:
-                    mailEvent = buildInviteMailEvent(
-                        companyName=getCompanyName(companyId),
-                        email=normalizedEmail,
-                        rawToken=rawToken,
-                        metricCount=len(metricIds),
-                        dueDate=dueDate,
-                    )
+                roleId = resolveRoleIdTx(cur, SUPPORTED_TARGET_ROLE)
+                companyName = getCompanyName(companyId)
+                inviteId = insertCommonInviteTx(
+                    cur,
+                    companyId=companyId,
+                    actorUserId=actorUserId,
+                    roleId=roleId,
+                    normalizedEmail=normalizedEmail,
+                )
+                inviteCreatedYn = True
+                token, inviteUuid = generateInviteTokenWithUuid(
+                    [],
+                    companyName,
+                    normalizedEmail,
+                    roleId,
+                    0,
+                    inviteId,
+                    companyId,
+                )
+                redisResult = setInviteRedis(inviteUuid, token, inviteExpireSeconds())
+                if not redisResult.get("status"):
+                    raise RuntimeError("Invite token Redis save failed")
+                if sendInviteYn:
+                    mailEvent = buildCommonInviteMailEvent(normalizedEmail, inviteUuid, companyName)
 
             for metricId in metricIds:
                 upsertAssignmentTx(
@@ -267,86 +151,61 @@ def bulkAssignMetrics(
     }
 
 
-def getReusableInviteTx(cur, companyId: int, cycleId: int, normalizedEmail: str) -> dict:
-    cur.execute(
-        """
-        SELECT *
-        FROM ESG_ONBOARDING_INVITE
-        WHERE company_id = ?
-          AND esg_onboarding_cycle_id = ?
-          AND invite_email_hash = ?
-          AND invite_status = 'pending'
-          AND expires_at > CURRENT_TIMESTAMP
-          AND delete_yn = 0
-        ORDER BY id DESC
-        LIMIT 1
-        FOR UPDATE
-        """,
-        (companyId, cycleId, hashText(normalizedEmail)),
-    )
-    return cur.fetchone() or {}
-
-
-def insertInviteTx(
+def insertCommonInviteTx(
     cur,
     *,
     companyId: int,
-    cycleId: int,
-    normalizedEmail: str,
-    rawToken: str,
     actorUserId: Optional[int],
-    sentYn: bool,
+    roleId: int,
+    normalizedEmail: str,
 ) -> int:
+    if actorUserId is None:
+        raise ValueError("actorUserId is required for invite creation")
     cur.execute(
-        f"""
-        INSERT INTO ESG_ONBOARDING_INVITE (
-            invite_public_id,
+        """
+        INSERT INTO INVITE (
             company_id,
-            esg_onboarding_cycle_id,
-            invite_email_enc,
-            invite_email_hash,
-            target_role_code,
-            invite_status,
-            invite_token_hash,
-            expires_at,
-            invited_by_user_id,
-            last_sent_at,
-            resend_count,
+            user_id,
+            role_id,
+            email,
+            state,
             delete_yn
-        ) VALUES (?, ?, ?, aes_e(?, '{settings.maria_db_key}'), ?, ?, 'pending', ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? DAY), ?, CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END, CASE WHEN ? THEN 1 ELSE 0 END, 0)
+        ) VALUES (?, ?, ?, ?, ?, 0)
         """,
-        (
-            uuid.uuid4().hex,
-            companyId,
-            cycleId,
-            normalizedEmail,
-            hashText(normalizedEmail),
-            SUPPORTED_TARGET_ROLE,
-            hashText(rawToken),
-            INVITE_EXPIRE_DAYS,
-            actorUserId,
-            1 if sentYn else 0,
-            1 if sentYn else 0,
-        ),
+        (companyId, actorUserId, roleId, normalizedEmail, INVITE_STATE_PENDING),
     )
     return int(cur.lastrowid)
 
 
-def rotateInviteTokenTx(cur, inviteId: int, rawToken: str) -> None:
+def buildCommonInviteMailEvent(email: str, inviteUuid: str, companyName: str) -> dict:
+    return {
+        "type": 1,
+        "email": email,
+        "uuid": inviteUuid,
+        "companyName": companyName,
+    }
+
+
+def inviteExpireSeconds() -> int:
+    return max(1, int(settings.invite_token_expire_days)) * 24 * 60 * 60
+
+
+def resolveRoleIdTx(cur, roleCode: str) -> int:
     cur.execute(
-        """
-        UPDATE ESG_ONBOARDING_INVITE
-        SET invite_token_hash = ?,
-            expires_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? DAY),
-            last_sent_at = CURRENT_TIMESTAMP,
-            resend_count = resend_count + 1,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-          AND invite_status = 'pending'
+        f"""
+        SELECT id
+        FROM `with`.`ROLE`
+        WHERE aes_d(role, '{settings.maria_db_key}') = ?
           AND delete_yn = 0
+        ORDER BY id
+        LIMIT 1
         """,
-        (hashText(rawToken), INVITE_EXPIRE_DAYS, inviteId),
+        (roleCode,),
     )
+    row = cur.fetchone() or {}
+    if row.get("id") is None:
+        raise ValueError(f"Role was not found: {roleCode}")
+    return int(row["id"])
 
 
 def upsertAssignmentTx(
@@ -400,55 +259,10 @@ def upsertAssignmentTx(
     )
 
 
-def buildInviteMailEvent(
-    *,
-    companyName: str,
-    email: str,
-    rawToken: str,
-    metricCount: int,
-    dueDate: Optional[date],
-) -> dict:
-    return {
-        "type": 5,
-        "email": email,
-        "companyName": companyName,
-        "inviteLink": f"http://main.{settings.host_ip}/onboarding-invite/{rawToken}",
-        "metricCount": metricCount,
-        "dueDate": dueDate.isoformat() if hasattr(dueDate, "isoformat") else dueDate,
-    }
-
-
 def listAssignments(companyId: int, reportingYear: int, cycle: dict) -> list[dict]:
     cycleId = int(cycle["id"]) if cycle else None
     metricRows = listCycleMetricScope(cycleId, companyId) if cycleId is not None else []
-    assignmentRows = []
-    if cycleId is not None:
-        assignmentRows = findAll(
-            f"""
-            SELECT
-                a.metric_id,
-                a.assignment_status,
-                a.assignee_user_id,
-                a.assignee_email,
-                a.due_date,
-                a.invite_id,
-                i.invite_status,
-                aes_d(i.invite_email_enc, '{settings.maria_db_key}') AS invite_email,
-                aes_d(u.email, '{settings.maria_db_key}') AS user_email
-            FROM ESG_METRIC_ASSIGNMENT a
-            LEFT JOIN ESG_ONBOARDING_INVITE i
-              ON i.id = a.invite_id
-             AND i.delete_yn = 0
-            LEFT JOIN `with`.`USER` u
-              ON u.id = a.assignee_user_id
-             AND u.delete_yn = 0
-            WHERE a.esg_onboarding_cycle_id = ?
-              AND a.company_id = ?
-              AND a.delete_yn = 0
-            ORDER BY a.metric_id
-            """,
-            (cycleId, companyId),
-        ) or []
+    assignmentRows = listAssignmentRows(cycleId, companyId) if cycleId is not None else []
     assignmentByMetric = {row["metric_id"]: row for row in assignmentRows}
     items = []
     for metric in metricRows:
@@ -470,6 +284,36 @@ def listAssignments(companyId: int, reportingYear: int, cycle: dict) -> list[dic
             }
         )
     return items
+
+
+def listAssignmentRows(cycleId: int, companyId: int) -> list[dict]:
+    return findAll(
+        f"""
+        SELECT
+            a.id AS assignment_id,
+            a.metric_id,
+            a.assignment_status,
+            a.assignee_user_id,
+            a.assignee_email,
+            a.due_date,
+            a.invite_id,
+            i.state AS invite_status,
+            i.email AS invite_email,
+            aes_d(u.email, '{settings.maria_db_key}') AS user_email
+        FROM ESG_METRIC_ASSIGNMENT a
+        LEFT JOIN INVITE i
+          ON i.id = a.invite_id
+         AND i.delete_yn = 0
+        LEFT JOIN `with`.`USER` u
+          ON u.id = a.assignee_user_id
+         AND u.delete_yn = 0
+        WHERE a.esg_onboarding_cycle_id = ?
+          AND a.company_id = ?
+          AND a.delete_yn = 0
+        ORDER BY a.metric_id
+        """,
+        (cycleId, companyId),
+    ) or []
 
 
 def listAssignmentInviteIdsTx(cur, cycleId: int, companyId: int, metricIds: list[str]) -> list[int]:
@@ -565,35 +409,118 @@ def revokeOrphanInviteTx(cur, inviteId: int) -> bool:
         return False
     cur.execute(
         """
-        UPDATE ESG_ONBOARDING_INVITE
-        SET invite_status = 'revoked',
-            revoked_at = CURRENT_TIMESTAMP,
+        UPDATE INVITE
+        SET state = ?,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-          AND invite_status = 'pending'
           AND delete_yn = 0
         """,
-        (inviteId,),
+        (INVITE_STATE_REVOKED, inviteId),
     )
     return cur.rowcount > 0
 
 
-__all__ = [
-    "SUPPORTED_CYCLE_TYPE",
-    "SUPPORTED_TARGET_ROLE",
-    "INVITE_EXPIRE_DAYS",
-    "ASSIGNMENT_STATUS_ASSIGNED",
-    "ASSIGNMENT_STATUS_INVITED",
-    "ASSIGNMENT_STATUS_UNASSIGNED",
-    "ASSIGNABLE_ROLE_CODES",
-    "normalizeEmail",
-    "hashText",
-    "maskEmail",
-    "listG0MetricMaster",
-    "validateG0MetricIds",
-    "resolveExistingUser",
-    "getCompanyName",
-    "bulkAssignMetrics",
-    "listAssignments",
-    "bulkUnassignMetrics",
-]
+def listAssignedMetricIds(inviteId: int) -> list[str]:
+    rows = findAll(
+        """
+        SELECT metric_id
+        FROM ESG_METRIC_ASSIGNMENT
+        WHERE invite_id = ?
+          AND assignment_status <> ?
+          AND delete_yn = 0
+        ORDER BY metric_id
+        """,
+        (inviteId, ASSIGNMENT_STATUS_UNASSIGNED),
+    ) or []
+    return [row["metric_id"] for row in rows]
+
+
+def listCycleMetricScope(cycleId: int, companyId: int) -> list[dict]:
+    return findAll(
+        """
+        SELECT s.metric_id, m.metric_name_kr
+        FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE s
+        LEFT JOIN (
+            SELECT metric_id, MIN(metric_name_kr) AS metric_name_kr
+            FROM ESG_ATOMIC_METRIC_MASTER
+            WHERE delete_yn = 0
+              AND active_yn = 1
+            GROUP BY metric_id
+        ) m
+          ON m.metric_id = s.metric_id
+        WHERE s.esg_onboarding_cycle_id = ?
+          AND s.company_id = ?
+          AND s.active_yn = 1
+          AND s.delete_yn = 0
+        ORDER BY s.display_order, s.metric_id
+        """,
+        (cycleId, companyId),
+    ) or []
+
+
+def getCompanyName(companyId: int) -> str:
+    for schemaName in [None, "skm", "with"]:
+        tableInfo = getCompanyTableInfo(schemaName)
+        if not tableInfo:
+            continue
+        qualifiedTable = tableInfo["qualifiedTable"]
+        idColumn = tableInfo["idColumn"]
+        nameColumn = tableInfo["nameColumn"]
+        deleteFilter = "AND delete_yn = 0" if tableInfo.get("hasDeleteYn") else ""
+        try:
+            row = findOne(
+                f"""
+                SELECT aes_d({nameColumn}, '{settings.maria_db_key}') AS company_name
+                FROM {qualifiedTable}
+                WHERE {idColumn} = ?
+                  {deleteFilter}
+                ORDER BY {idColumn} DESC
+                LIMIT 1
+                """,
+                (companyId,),
+            ) or {}
+        except Exception:
+            continue
+        companyName = str(row.get("company_name") or "").strip()
+        if companyName:
+            return companyName
+    row = findOne(
+        """
+        SELECT COALESCE(company_code, CAST(company_id AS CHAR)) AS company_name
+        FROM ESG_COMPANY_PROFILE
+        WHERE company_id = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (companyId,),
+    ) or {}
+    return row.get("company_name") or str(companyId)
+
+
+def getCompanyTableInfo(schemaName: Optional[str]) -> Optional[dict]:
+    schemaFilter = "DATABASE()" if schemaName is None else "?"
+    params = [] if schemaName is None else [schemaName]
+    rows = findAll(
+        f"""
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_schema = {schemaFilter}
+          AND table_name = 'COMPANY'
+        """,
+        tuple(params),
+    ) or []
+    columns = {str(row.get("column_name") or "").lower() for row in rows}
+    if not columns:
+        return None
+    idColumn = "company_id" if "company_id" in columns else "id" if "id" in columns else None
+    nameColumn = "company_name" if "company_name" in columns else "name" if "name" in columns else None
+    if not idColumn or not nameColumn:
+        return None
+    qualifiedTable = "COMPANY" if schemaName is None else f"`{schemaName}`.`COMPANY`"
+    return {
+        "qualifiedTable": qualifiedTable,
+        "idColumn": idColumn,
+        "nameColumn": nameColumn,
+        "hasDeleteYn": "delete_yn" in columns,
+    }

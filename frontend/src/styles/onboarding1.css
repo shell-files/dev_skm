@@ -536,3 +536,123 @@
   overflow-y: auto;
   flex: 1;
 }
+
+/* =========================================================================
+   Phase UI-1 & UI-2 추가 스타일
+========================================================================= */
+
+.ob1-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #1d4ed8;
+}
+
+.ob1-table tbody tr.selected td {
+  background-color: #eff6ff !important;
+}
+
+.ob1-assignee-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  text-align: left;
+}
+
+.ob1-assignee-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.ob1-assignee-email {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.ob1-assignee-status {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.ob1-assignee-status.pending {
+  background: #fefce8;
+  color: #a16207;
+}
+
+.ob1-assignee-status.unassigned {
+  background: #f1f5f9;
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+.ob1-status-pill.reviewed { background: #dbeafe; color: #1e40af; }
+.ob1-status-pill.rejected { background: #fef2f2; color: #991b1b; }
+
+/* =========================================================================
+   Phase UI-5 Rollup UX v2 추가 스타일
+========================================================================= */
+
+.ob1-rollup-panel-v2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.ob1-rollup-stepper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ob1-rollup-step {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ob1-rollup-step::after {
+  content: "›";
+  margin-left: 8px;
+  color: #cbd5e1;
+}
+
+.ob1-rollup-step:last-child::after {
+  content: "";
+  margin-left: 0;
+}
+
+.ob1-rollup-step.active {
+  color: #3b82f6;
+  font-weight: 600;
+}
+
+.ob1-rollup-step.completed {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.ob1-rollup-btn.primary {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.ob1-rollup-btn.secondary {
+  background: #f8fafc;
+  color: #475569;
+  border-color: #cbd5e1;
+}

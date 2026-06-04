@@ -106,12 +106,19 @@ def inviteSignUp(inviteId: str, inviteSignUpUserInfo: inviteSignUpUserInfo):
                 return ResponseModel(False, f"사용할 수 없는 초대입니다: {inviteState}")
 
             cur.execute(
-                "INSERT INTO `with`.`USER` (`email`, `password`, `name`) VALUES (?, ?, ?)",
+                f"""
+                INSERT INTO `with`.`USER` (`email`, `password`, `name`)
+                VALUES (
+                    aes_e(?, '{settings.maria_db_key}'),
+                    aes_e(?, '{settings.maria_db_key}'),
+                    aes_e(?, '{settings.maria_db_key}')
+                )
+                """,
                 (email, password, name),
             )
             userId = cur.lastrowid
             cur.execute(
-                "INSERT INTO `USER_ROLE` (`user_id`, `company_id`, `role_id`) VALUES (?, ?, ?)",
+                "INSERT INTO `with`.`USER_ROLE` (`user_id`, `company_id`, `role_id`) VALUES (?, ?, ?)",
                 (userId, companyId, roleId),
             )
             cur.execute(

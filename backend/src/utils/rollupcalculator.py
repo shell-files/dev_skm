@@ -50,6 +50,15 @@ def _aggregateReference(factsByCompany: dict[int, Any], ruleCode: str) -> Any:
         raise CalculationError(f"CALCULATION_REFERENCE_VALUE_AMBIGUOUS", f"Rule {ruleCode} reference values differ across companies")
     return first_val
 
+def buildSourceTrace(sourceCompanyValuesTrace: dict[str, dict]) -> dict:
+    return {
+        str(atomicId): {
+            str(companyId): value
+            for companyId, value in companyValues.items()
+        }
+        for atomicId, companyValues in sourceCompanyValuesTrace.items()
+    }
+
 def buildMultiCompanyFactMap(
     companyIds: list[int],
     atomicMetricIds: list[str],
@@ -193,7 +202,7 @@ def _calculateConsolidatedRule(
             "formulaType": formula,
             "valueNumeric": val if is_numeric else None,
             "valueText": str(val) if not is_numeric else None,
-            "sourceCompanyValues": {str(k): v for k,v in cv.items()},
+            "sourceCompanyValues": buildSourceTrace({atomicId: cv}),
         }
 
     engineFactMap = {}
@@ -231,7 +240,7 @@ def _calculateConsolidatedRule(
             "valueNumeric": engineResult.get("valueNumeric"),
             "valueText": engineResult.get("valueText"),
             "unit": engineResult.get("unit"),
-            "sourceCompanyValues": {str(cid): val for cid, val in sourceCompanyValuesTrace.get(sourceAtomicIds[0], {}).items()} if sourceAtomicIds else {},
+            "sourceCompanyValues": buildSourceTrace(sourceCompanyValuesTrace),
             "calculationTrace": {"preAggregatedMap": engineFactMap, "priorPreAggregatedMap": enginePriorFactMap, "engineTrace": engineResult.get("calculationTrace")}
         }
     except CalculationError as e:

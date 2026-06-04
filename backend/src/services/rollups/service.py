@@ -165,18 +165,19 @@ def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseD
     relations = rollupRepository.listEffectiveSourceCompanies(parentCompanyId, reportingYear, purposeCode)
     relation_ids = {r["companyId"] for r in relations}
 
+    if parentCompanyId in selectedCompanyIds:
+        raise RollupError(422, "ROLLUP_PARENT_SOURCE_NOT_ALLOWED", "Parent company is included automatically.")
+
     if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
-        if parentCompanyId in selectedCompanyIds:
-            raise RollupError(422, "ROLLUP_PARENT_SOURCE_NOT_ALLOWED", "Parent company is included automatically.")
         if not set(selectedCompanyIds).issubset(relation_ids):
             raise RollupError(403, "ROLLUP_SOURCE_SCOPE_FORBIDDEN", "Requested subsidiary is outside of allowed relation scope.")
-        includedCompanyIds = [parentCompanyId, *selectedCompanyIds]
+        includedCompanyIds = normalizeCompanyIds([parentCompanyId, *selectedCompanyIds])
     else:
         if parentCompanyId not in relation_ids:
             raise RollupError(422, "ROLLUP_PARENT_SCOPE_MISSING", "Parent company relation scope is missing.")
         if not set(selectedCompanyIds).issubset(relation_ids):
             raise RollupError(403, "ROLLUP_SOURCE_SCOPE_FORBIDDEN", "Requested subsidiary is outside of allowed relation scope.")
-        includedCompanyIds = [parentCompanyId, *selectedCompanyIds]
+        includedCompanyIds = normalizeCompanyIds([parentCompanyId, *selectedCompanyIds])
 
     existingBatch = rollupRepository.getActiveBatch(request.runId, request.sourceCycleId, purposeCode, metricScopeCode)
     if existingBatch:
@@ -195,14 +196,11 @@ def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseD
                 if not metricIds:
                     raise RollupError(422, "ROLLUP_RULE_NOT_FOUND", "No valid consolidated metrics found in cycle scope.")
 
-            rules = rollupRepository.listBatchRules(metricIds)
+            rules, sources = rollupRepository.resolveConsolidatedRuleClosure(metricIds)
             ruleMetricIds = {r["metric_id"] for r in rules}
             missingMetricIds = [m for m in metricIds if m not in ruleMetricIds]
             if missingMetricIds:
                 raise RollupError(422, "ROLLUP_RULE_NOT_FOUND", f"Missing rules for metrics: {missingMetricIds}")
-            
-            ruleCodes = [r["calculation_rule_code"] for r in rules]
-            sources = rollupRepository.listBatchRuleSources(ruleCodes)
             
             # Create Batch
             batchId = rollupRepository.saveBatchTx(
@@ -219,7 +217,7 @@ def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseD
             rollupRepository.saveScopeFromRulesTx(cur, batchId, rules, sources, purposeCode)
             
             # Determine readiness from Tx
-            requiredAtomicIds = rollupRepository.resolveRequiredSourceAtomicIdsTx(cur, batchId)
+            requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
             requiredAtomicCount = len(requiredAtomicIds)
             
             sourceStatuses = []
@@ -310,9 +308,8 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
         with conn.cursor(dictionary=True) as cur:
             scopes = rollupRepository.listScope(batchId)
             metricIds = list(set([s["metric_id"] for s in scopes]))
-            rules = rollupRepository.listBatchRules(metricIds)
-            ruleSources = rollupRepository.listBatchRuleSources([r["calculation_rule_code"] for r in rules])
-            requiredAtomicIds = rollupRepository.resolveRequiredSourceAtomicIdsTx(cur, batchId)
+            rules, ruleSources = rollupRepository.resolveConsolidatedRuleClosure(metricIds)
+            requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
             
             facts = rollupRepository.listApprovedFactsByCompany(includedCompanyIds, reportingYear, requiredAtomicIds)
             currentFactMap = rollupCalculator.buildMultiCompanyFactMap(includedCompanyIds, requiredAtomicIds, facts)
@@ -440,7 +437,7 @@ def sendSource(batchId: int, userModel) -> RollupSourceSendResponseDto:
         return RollupSourceSendResponseDto(data=buildSourceSendStatus(source))
 
     # Determine readiness
-    requiredAtomicIds = rollupRepository.resolveRequiredSourceAtomicIds(batchId)
+    requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIds(batchId)
     readiness = rollupRepository.buildSourceReadiness(batchId, [sourceCompanyId], int(source["reporting_year"]))
     
     if not readiness["readyYn"]:

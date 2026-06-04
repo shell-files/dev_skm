@@ -309,10 +309,16 @@ def upsertCalculatedEntityFactsTx(
     results: list[dict],
     actorUserId: Optional[int] = None,
 ) -> int:
-    savedCount = 0
-    for result in results or []:
+    if not results:
+        return 0
+    for result in results:
         if str(result.get("calculationStatus") or "").upper() != "CALCULATED":
-            continue
+            raise ValueError(
+                "CALCULATION_RESULTS_NOT_READY: all results must be CALCULATED before saving, "
+                f"found {result.get('calculationStatus')} for {result.get('targetAtomicMetricId')}"
+            )
+    savedCount = 0
+    for result in results:
         if not result.get("targetAtomicMetricId"):
             continue
         cur.execute(
@@ -384,6 +390,7 @@ def invalidateCalculatedEntityFactsTx(
           AND reporting_year = ?
           AND atomic_metric_id IN ({placeholders})
           AND value_source_type = ?
+          AND UPPER(COALESCE(company_scope_type, 'ENTITY')) = 'ENTITY'
           AND LOWER(COALESCE(approval_status, '')) = 'approved'
           AND delete_yn = 0
         """,

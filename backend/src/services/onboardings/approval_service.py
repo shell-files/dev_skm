@@ -6,8 +6,7 @@ from src.utils.db import getConn
 from src.utils import onboardingapprovalrepository as approvalRepo
 from src.utils import onboardinginputrepository as inputRepo
 from src.utils import onboardingscoperepository as scopeRepo
-from src.utils import calculationengine as calcEngine
-from src.utils import calculationrepository as calcRepo
+from src.services.calculations.service import calculateAffectedEntityFactsTx
 
 
 STATE_DRAFT = "draft"
@@ -190,6 +189,7 @@ def approveMetricApproval(
                 conn.commit()
                 return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED, STATE_REVIEWED})
+            calculationSummary = None
             if requireKpiFactYn:
                 quantAtomicIds = set(promotedQuantAtomicIds)
                 changedAtomicIds = []
@@ -197,7 +197,7 @@ def approveMetricApproval(
                     if row.get("atomic_metric_id") in quantAtomicIds:
                         inputRepo.upsertKpiFact(cur, row, actorUserId)
                         changedAtomicIds.append(row.get("atomic_metric_id"))
-                calculateAffectedEntityFactsTx(
+                calculationSummary = calculateAffectedEntityFactsTx(
                     cur,
                     companyId=companyId,
                     reportingYear=reportingYear,
@@ -229,7 +229,11 @@ def approveMetricApproval(
                 commentText=commentText,
             )
         conn.commit()
-        return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
+        return buildMetricApprovalSummary(
+            companyId, reportingYear, metricId,
+            cycle.get("cycle_type") or cycleType,
+            calculationSummary=calculationSummary,
+        )
     except Exception:
         conn.rollback()
         raise
@@ -295,78 +299,16 @@ def buildMetricApprovalSummary(
     reportingYear: int,
     metricId: str,
     cycleType: str = scopeRepo.CYCLE_TYPE_PRE_DMA_G0,
+    calculationSummary: dict = None,
 ) -> dict:
-    return approvalRepo.buildApprovalSummary(companyId, reportingYear, metricId, cycleType)
-
-
-def calculateAffectedEntityFactsTx(
-    cur,
-    *,
-    companyId: int,
-    reportingYear: int,
-    changedAtomicMetricIds: list[str],
-    actorUserId: Optional[int],
-) -> dict:
-    changedAtomicMetricIds = [atomicId for atomicId in changedAtomicMetricIds if atomicId]
-    if not changedAtomicMetricIds:
-        return {"affectedRuleCount": 0, "calculatedFactCount": 0, "results": []}
-
-    activeRules = calcRepo.listActiveRulesTx(cur, calcRepo.EXECUTION_SCOPE_ENTITY)
-    if not activeRules:
-        return {"affectedRuleCount": 0, "calculatedFactCount": 0, "results": []}
-
-    activeRuleCodes = [rule["calculation_rule_code"] for rule in activeRules if rule.get("calculation_rule_code")]
-    sources = calcRepo.listRuleSourcesTx(cur, activeRuleCodes)
-    affectedRules = calcEngine.resolveAffectedRuleGraph(activeRules, sources, changedAtomicMetricIds)
-    if not affectedRules:
-        return {"affectedRuleCount": 0, "calculatedFactCount": 0, "results": []}
-
-    affectedRuleCodes = {rule["calculation_rule_code"] for rule in affectedRules if rule.get("calculation_rule_code")}
-    affectedSources = [source for source in sources if source.get("calculation_rule_code") in affectedRuleCodes]
-    affectedTargetAtomicIds = [
-        rule.get("target_atomic_metric_id")
-        for rule in affectedRules
-        if rule.get("target_atomic_metric_id")
-    ]
-    atomicMetricIds = sorted(
-        {
-            source.get("source_atomic_metric_id")
-            for source in affectedSources
-            if source.get("source_atomic_metric_id")
-        }
-        | set(affectedTargetAtomicIds)
-    )
-    invalidatedFactCount = calcRepo.invalidateCalculatedEntityFactsTx(
-        cur,
-        companyId=companyId,
-        reportingYear=reportingYear,
-        atomicMetricIds=affectedTargetAtomicIds,
-    )
-    currentFacts = calcRepo.listApprovedEntityFactsTx(cur, [companyId], reportingYear, atomicMetricIds)
-    priorFacts = calcRepo.listPriorYearFactsTx(cur, [companyId], reportingYear, atomicMetricIds)
-    results = calcEngine.calculateRules(affectedRules, affectedSources, currentFacts, priorFacts)
-    if not calcEngine.allResultsCalculated(results):
-        return {
-            "affectedRuleCount": len(affectedRules),
-            "invalidatedFactCount": invalidatedFactCount,
-            "calculatedFactCount": 0,
-            "calculationReadyYn": False,
-            "results": results,
-        }
-    calculatedFactCount = calcRepo.upsertCalculatedEntityFactsTx(
-        cur,
-        companyId=companyId,
-        reportingYear=reportingYear,
-        results=results,
-        actorUserId=actorUserId,
-    )
-    return {
-        "affectedRuleCount": len(affectedRules),
-        "invalidatedFactCount": invalidatedFactCount,
-        "calculatedFactCount": calculatedFactCount,
-        "calculationReadyYn": True,
-        "results": results,
-    }
+    summary = approvalRepo.buildApprovalSummary(companyId, reportingYear, metricId, cycleType)
+    if calculationSummary:
+        summary["calculationReadyYn"] = calculationSummary.get("calculationReadyYn")
+        summary["affectedRuleCount"] = calculationSummary.get("affectedRuleCount", 0)
+        summary["invalidatedFactCount"] = calculationSummary.get("invalidatedFactCount", 0)
+        summary["calculatedFactCount"] = calculationSummary.get("calculatedFactCount", 0)
+        summary["calculationWarnings"] = calculationSummary.get("calculationWarnings", [])
+    return summary
 
 
 def resolveActiveCycleTx(

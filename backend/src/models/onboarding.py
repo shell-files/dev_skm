@@ -233,6 +233,11 @@ class OnboardingApprovalListResponseDto(BaseModel):
 
 class OnboardingApprovalStatusDataDto(OnboardingApprovalItemDto):
     rollupReadyYn: bool = False
+    calculationReadyYn: Optional[bool] = None
+    affectedRuleCount: int = 0
+    invalidatedFactCount: int = 0
+    calculatedFactCount: int = 0
+    calculationWarnings: List[str] = Field(default_factory=list)
 
 
 class OnboardingApprovalStatusResponseDto(BaseModel):

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import "@styles/sr.css";
 import "@styles/survey.css";
 import { useAuth } from "@hooks/AuthContext";
 
@@ -10,6 +11,7 @@ import {
 } from "@components/UI/ServiceAlert";
 
 import { GET, POST } from "@utils/Network";
+import { useAuth } from "@hooks/AuthContext";
 
 const IS_DUMMY = true;
 
@@ -742,8 +744,9 @@ const Survey = () => {
           Result Dashboard
       ========================================================== */}
       <div
-        className={`survey-result-dashboard ${dashboardOpen ? "open" : ""
-          }`}
+        className={`survey-result-dashboard ${
+          dashboardOpen ? "open" : ""
+        }`}
       >
         {/* Dashboard Handle */}
         <div
@@ -784,8 +787,8 @@ const Survey = () => {
               <div className="survey-stage">
                 <div className="survey-float-wrap">
                   <img
-                    src={robot}
-                    className="survey-main-img"
+                    surveyc={robot}
+                    className="robot-main-img"
                     alt="robot"
                   />
                 </div>

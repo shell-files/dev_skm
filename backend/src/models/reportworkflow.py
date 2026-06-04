@@ -1,6 +1,6 @@
-from typing import Literal, Optional
+from typing import List, Literal, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 ReportBasisType = Literal["ENTITY", "CONSOLIDATED"]
@@ -28,4 +28,46 @@ class ReportWorkflowStatusDto(BaseModel):
 class ReportWorkflowResponseDto(BaseModel):
     success: bool = True
     data: ReportWorkflowStatusDto
+
+
+class ReportWorkflowPostDmaScopeDataDto(BaseModel):
+    runId: int
+    companyId: int
+    reportingYear: int
+    sourceMaterialityRunId: int
+    cycleId: int
+    cycleType: str
+    metricScopeCode: str
+    selectedSubIssueCount: int
+    scopeMetricCount: int
+    metricIds: List[str] = Field(default_factory=list)
+    cycleCreatedYn: bool
+    cycleReusedYn: bool
+    message: str
+
+
+class ReportWorkflowPostDmaScopeResponseDto(BaseModel):
+    success: bool = True
+    data: ReportWorkflowPostDmaScopeDataDto
+
+
+class ReportWorkflowProjectItemDto(BaseModel):
+    runId: int
+    companyId: int
+    reportingYear: int
+    reportBasisType: Optional[ReportBasisType] = None
+    runStatus: str
+    workflowStep: str
+    currentStageLabel: str
+    pendingCount: int = 0
+    readOnlyYn: bool = False
+
+
+class ReportWorkflowProjectListDataDto(BaseModel):
+    items: List[ReportWorkflowProjectItemDto] = Field(default_factory=list)
+
+
+class ReportWorkflowProjectListResponseDto(BaseModel):
+    success: bool = True
+    data: ReportWorkflowProjectListDataDto
 

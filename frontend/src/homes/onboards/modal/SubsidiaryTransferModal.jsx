@@ -1,20 +1,26 @@
 import { useState, useEffect } from "react";
-import { listRequests, sendSource } from "@/apis/report";
+import { createPortal } from "react-dom";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  fetchRollupRequests,
+  sendRollupSource,
+} from "@stores/reportSlice";
 import { showDefaultAlert, showConfirmAlert } from "@components/UI/ServiceAlert";
 
 /**
  * SubsidiaryTransferModal
  *
  * 지주사 데이터 전송 modal.
- * DTO: res.data.items → {
+ * DTO: res.data.items -> {
  *   batchId, parentCompanyName, reportingYear,
  *   metricScopeCode, sendReadyYn, missingAtomicMetricIds
  * }
- * sendReadyYn=false 면 전송 비활성화
+ * sendReadyYn=false 이면 전송 비활성화
  */
 const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+  const requests = useSelector((state) => state.report.rollup.requests);
+  const loading = useSelector((state) => state.report.loading.requests);
   const [sending, setSending] = useState(false);
   const [selectedBatchId, setSelectedBatchId] = useState(null);
   const [error, setError] = useState(null);
@@ -29,26 +35,12 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
   }, [isOpen]);
 
   const loadRequests = async () => {
-    setLoading(true);
     setError(null);
     try {
-      const res = await listRequests();
-      const isFailed =
-        res?.status === false || res?.success === false || !res?.data;
-
-      if (isFailed) {
-        setRequests([]);
-        setError(res?.error?.message || "요청 목록 조회에 실패했습니다.");
-        return;
-      }
-
-      setRequests(res.data.items || res.data || []);
+      await dispatch(fetchRollupRequests()).unwrap();
     } catch (err) {
       console.error(err);
-      setRequests([]);
-      setError("요청 목록 조회에 실패했습니다.");
-    } finally {
-      setLoading(false);
+      setError(err?.message || "요청 목록 조회에 실패했습니다.");
     }
   };
 
@@ -74,39 +66,31 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
 
     const confirm = await showConfirmAlert(
       "데이터 전송",
-      "현재까지 입력/승인한 G0 데이터를 지주사로 전송하시겠습니까?",
+      "현재까지 입력/승인된 G0 데이터를 지주사로 전송하시겠습니까?",
       "question"
     );
     if (!confirm) return;
 
     setSending(true);
     try {
-      const res = await sendSource(selectedBatchId);
-      const isFailed =
-        res?.status === false || res?.success === false;
-
-      if (!isFailed) {
-        showDefaultAlert("전송 완료", "지주사로 데이터 전송이 완료되었습니다.", "success");
-        onTransferred?.(selectedBatchId);
-        onClose();
-      } else {
-        showDefaultAlert("오류", res?.error?.message || "데이터 전송에 실패했습니다.", "error");
-      }
+      await dispatch(sendRollupSource({ batchId: selectedBatchId })).unwrap();
+      showDefaultAlert("전송 완료", "지주사로 데이터 전송이 완료되었습니다.", "success");
+      onTransferred?.(selectedBatchId);
+      onClose();
     } catch (err) {
       console.error(err);
-      showDefaultAlert("오류", "데이터 전송에 실패했습니다.", "error");
+      showDefaultAlert("오류", err?.message || "데이터 전송에 실패했습니다.", "error");
     } finally {
       setSending(false);
     }
   };
-
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="ob1-modal-overlay">
       <div className="ob1-modal-content" style={{ width: 500 }}>
         <div className="ob1-modal-header">
-          <h2>지주사 데이터 전송 요건 확인</h2>
+          <h2>지주사 데이터 전송 요청 확인</h2>
           <button className="ob1-btn-close" onClick={onClose}>×</button>
         </div>
         <div className="ob1-modal-body">
@@ -118,14 +102,14 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
           {loading && (
             <div className="ob1-table-loading" style={{ padding: "24px" }}>
               <div className="ob1-spinner" />
-              <p>요청 목록 불러오는 중...</p>
+              <p>요청 목록을 불러오는 중...</p>
             </div>
           )}
 
           {/* error */}
           {!loading && error && (
             <div className="ob1-inline-error" style={{ margin: "16px 0" }}>
-              <span className="ob1-error-icon">⚠</span>
+              <span className="ob1-error-icon">!</span>
               <span>{error}</span>
               <button type="button" className="ob1-btn-retry" onClick={loadRequests}>
                 다시 시도
@@ -178,12 +162,12 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
                         {req.parentCompanyName || "데이터 요청"}
                       </div>
                       <div style={{ fontSize: "0.85rem", color: "#64748b" }}>
-                        보고년도: {req.reportingYear || "-"}
+                        보고연도: {req.reportingYear || "-"}
                         {req.metricScopeCode && ` · 범위: ${req.metricScopeCode}`}
                       </div>
                       {isNotReady && (
                         <div style={{ fontSize: "0.8rem", color: "#d97706", marginTop: "4px" }}>
-                          ⚠ 필수 항목 미완료 — 전송 불가
+                          필수 항목 미완료로 전송 불가
                           {req.missingAtomicMetricIds?.length > 0 && (
                             <span style={{ display: "block", marginTop: "2px", fontSize: "0.75rem", color: "#92400e" }}>
                               누락: {req.missingAtomicMetricIds.join(", ")}
@@ -237,8 +221,11 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
 export default SubsidiaryTransferModal;
+
+

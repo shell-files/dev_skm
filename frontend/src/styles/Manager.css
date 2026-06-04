@@ -890,4 +890,128 @@
   background: #fff;
   color: #475569;
   border: 1px solid #cbd5e1;
-}
+}
+
+/* =========================================================================
+   Phase UI-4 DataTab 보완 스타일
+========================================================================= */
+
+#datatap_page .ob-detail-btn {
+  background: #f8fafc;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+}
+
+#datatap_page .ob-detail-btn:hover {
+  background: #f1f5f9;
+}
+
+#datatap_page .ob-completion-cell {
+  font-weight: 600;
+  color: #334155;
+  background-color: #f8fafc;
+}
+
+/* ApprovalDetailModal용 추가 class */
+.ob-approval-modal .ob-modal-header {
+  border-bottom: 1px solid #e2e8f0;
+}
+.ob-approval-modal .ob-modal-footer {
+  border-top: 1px solid #e2e8f0;
+}
+
+/* =========================================================================
+   Approval Project Context & Select UI
+========================================================================= */
+
+#manager_page .approval-project-context-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+#manager_page .approval-project-context-main {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+#manager_page .approval-project-context-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 600;
+}
+
+#manager_page .approval-project-context-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+#manager_page .approval-project-context-meta {
+  font-size: 0.95rem;
+  color: #475569;
+  margin: 0;
+}
+
+#manager_page .approval-project-context-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 32px;
+  border-left: 1px solid #e2e8f0;
+  border-right: 1px solid #e2e8f0;
+  margin-right: 32px;
+}
+
+#manager_page .approval-project-context-stage strong {
+  font-size: 1.1rem;
+  color: #03a94d;
+}
+
+#manager_page .approval-project-context-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+#manager_page .approval-project-readonly-chip {
+  padding: 6px 12px;
+  background: #f1f5f9;
+  color: #64748b;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+}
+
+#manager_page .approval-project-change-btn {
+  padding: 10px 20px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+#manager_page .approval-project-change-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+.approval-project-select-card:hover:not(.selected) {
+  border-color: #cbd5e1 !important;
+  background: #f8fafc !important;
+}
+

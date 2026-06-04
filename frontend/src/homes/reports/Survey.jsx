@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import "@styles/sr.css";
 import "@styles/survey.css";
+import { useAuth } from "@hooks/AuthContext";
 
 import robot from "@assets/images/robot/robot_servey_t.png";
 import {

@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 from src.utils.db import findAll, findOne
 from src.utils.calculationengine import normalizeSource
@@ -117,14 +118,26 @@ def listScopeTx(cur, batchId: int) -> list[dict]:
     cur.execute(sql, (batchId,))
     rows = cur.fetchall()
     for row in rows:
-        val = row.get("source_atomic_metric_ids")
-        try:
-            row["sourceAtomicMetricIds"] = json.loads(val) if val else []
-            if not isinstance(row["sourceAtomicMetricIds"], list):
-                row["sourceAtomicMetricIds"] = [str(row["sourceAtomicMetricIds"])]
-        except Exception:
-            row["sourceAtomicMetricIds"] = [s.strip() for s in str(val).split(",")] if val else []
+        row["sourceAtomicMetricIds"] = decodeAtomicIds(row.get("source_atomic_metric_ids"))
     return rows
+
+def decodeAtomicIds(value) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    rawValue = str(value).strip()
+    if not rawValue:
+        return []
+    try:
+        parsedValue = json.loads(rawValue)
+        if isinstance(parsedValue, list):
+            return [str(item).strip() for item in parsedValue if str(item).strip()]
+        if parsedValue:
+            return [str(parsedValue).strip()]
+        return []
+    except Exception:
+        return [item.strip() for item in rawValue.split(",") if item.strip()]
 
 def listScope(batchId: int) -> list[dict]:
     from src.utils.db import getConn
@@ -160,15 +173,18 @@ def resolveRequiredGroupAtomicIds(batchId: int) -> list[str]:
     return sorted([s["group_atomic_metric_id"] for s in scopes if s.get("group_atomic_metric_id")])
 
 def normalizeFact(row: dict) -> dict:
+    companyId = row.get("companyId") if row.get("companyId") is not None else row.get("company_id")
+    reportingYear = row.get("reportingYear") if row.get("reportingYear") is not None else row.get("reporting_year")
+    atomicMetricId = row.get("atomicMetricId") or row.get("atomic_metric_id")
     return {
-        "companyId": int(row["company_id"]),
-        "reportingYear": int(row["reporting_year"]),
-        "atomicMetricId": row["atomic_metric_id"],
-        "metricId": row.get("metric_id"),
-        "valueNumeric": row.get("value_numeric"),
-        "valueText": row.get("value_text"),
+        "companyId": int(companyId),
+        "reportingYear": int(reportingYear),
+        "atomicMetricId": atomicMetricId,
+        "metricId": row.get("metricId") or row.get("metric_id"),
+        "valueNumeric": row.get("valueNumeric") if row.get("valueNumeric") is not None else row.get("value_numeric"),
+        "valueText": row.get("valueText") if row.get("valueText") is not None else row.get("value_text"),
         "unit": row.get("unit"),
-        "approvalStatus": row.get("approval_status"),
+        "approvalStatus": row.get("approvalStatus") or row.get("approval_status"),
     }
 
 def listApprovedFactsByCompany(companyIds: list[int], reportingYear: int, atomicMetricIds: list[str]) -> list[dict]:
@@ -185,9 +201,16 @@ def listPriorYearApprovedFactsByCompany(companyIds: list[int], reportingYear: in
 
 def buildSourceReadiness(batchId: int, sourceCompanyIds: list[int], reportingYear: int) -> dict:
     requiredAtomicIds = resolveRequiredSourceAtomicIds(batchId)
+    requiredFactCount = len(requiredAtomicIds) * len(sourceCompanyIds)
     if not requiredAtomicIds or not sourceCompanyIds:
         return {
             "requiredAtomicCount": len(requiredAtomicIds),
+            "requiredFactCount": requiredFactCount,
+            "approvedFactCount": 0,
+            "missingByCompany": {
+                str(companyId): requiredAtomicIds
+                for companyId in sourceCompanyIds
+            },
             "approvedAtomicCount": 0,
             "missingAtomicMetricIds": requiredAtomicIds,
             "sourceCompanyCount": len(sourceCompanyIds),
@@ -195,15 +218,17 @@ def buildSourceReadiness(batchId: int, sourceCompanyIds: list[int], reportingYea
             "readyYn": False
         }
         
-    facts = listApprovedEntityFacts(sourceCompanyIds, reportingYear, requiredAtomicIds)
+    facts = listApprovedFactsByCompany(sourceCompanyIds, reportingYear, requiredAtomicIds)
     approvedKeys = set()
     for f in facts:
         approvedKeys.add((f["companyId"], f["atomicMetricId"]))
         
     readySourceCompanyCount = 0
     allMissing = set()
+    missingByCompany = {}
     for cid in sourceCompanyIds:
         companyMissing = [a for a in requiredAtomicIds if (cid, a) not in approvedKeys]
+        missingByCompany[str(cid)] = companyMissing
         for m in companyMissing:
             allMissing.add(m)
         if not companyMissing:
@@ -216,6 +241,9 @@ def buildSourceReadiness(batchId: int, sourceCompanyIds: list[int], reportingYea
     # Let's return missing atomic metric IDs (union across all companies).
     return {
         "requiredAtomicCount": len(requiredAtomicIds),
+        "requiredFactCount": requiredFactCount,
+        "approvedFactCount": len(approvedKeys),
+        "missingByCompany": missingByCompany,
         "approvedAtomicCount": len(requiredAtomicIds) - len(allMissing),
         "missingAtomicMetricIds": sorted(list(allMissing)),
         "sourceCompanyCount": len(sourceCompanyIds),

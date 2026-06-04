@@ -10,23 +10,31 @@ METRIC_SCOPE_SELECTED_DISCLOSURE = "SELECTED_DISCLOSURE"
 METRIC_SCOPE_ROLLUP = "ROLLUP_SCOPE"
 
 
-class RollupSubsidiaryDto(BaseModel):
+class RollupBaseModel(BaseModel):
+    def model_dump(self, *args, **kwargs):
+        if hasattr(BaseModel, "model_dump"):
+            return super().model_dump(*args, **kwargs)
+        return self.dict(*args, **kwargs)
+
+
+class RollupSubsidiaryDto(RollupBaseModel):
     companyId: int
     companyCode: Optional[str] = None
     companyName: Optional[str] = None
 
 
-class RollupSubsidiaryListDto(BaseModel):
-    runId: int
+class RollupSubsidiaryListDto(RollupBaseModel):
+    runId: Optional[int] = None
+    sourceCycleId: Optional[int] = None
     items: list[RollupSubsidiaryDto]
 
 
-class RollupSubsidiaryResponseDto(BaseModel):
+class RollupSubsidiaryResponseDto(RollupBaseModel):
     success: bool = True
     data: RollupSubsidiaryListDto
 
 
-class RollupBatchRequestDto(BaseModel):
+class RollupBatchRequestDto(RollupBaseModel):
     runId: Optional[int] = None
     sourceCycleId: Optional[int] = None
     sourceCompanyIds: list[int] = Field(..., min_length=1)
@@ -34,9 +42,10 @@ class RollupBatchRequestDto(BaseModel):
     metricScopeCode: str = METRIC_SCOPE_G0_02_FINANCIAL_BASIS
 
 
-class RollupBatchStatusDto(BaseModel):
+class RollupBatchStatusDto(RollupBaseModel):
     batchId: int
     runId: Optional[int] = None
+    sourceCycleId: Optional[int] = None
     rollupPurposeCode: str
     metricScopeCode: str
     batchStatus: str
@@ -45,12 +54,12 @@ class RollupBatchStatusDto(BaseModel):
     sourceCompanyIds: list[int]
 
 
-class RollupBatchResponseDto(BaseModel):
+class RollupBatchResponseDto(RollupBaseModel):
     success: bool = True
     data: RollupBatchStatusDto
 
 
-class RollupResultDto(BaseModel):
+class RollupResultDto(RollupBaseModel):
     groupAtomicMetricId: str
     sourceAtomicMetricIds: list[str]
     sourceAtomicMetricId: Optional[str] = None
@@ -66,13 +75,14 @@ class RollupCalculateStatusDto(RollupBatchStatusDto):
     results: list[RollupResultDto]
 
 
-class RollupCalculateResponseDto(BaseModel):
+class RollupCalculateResponseDto(RollupBaseModel):
     success: bool = True
     data: RollupCalculateStatusDto
 
 
-class RollupRequestItemDto(BaseModel):
+class RollupRequestItemDto(RollupBaseModel):
     batchId: int
+    batchCode: Optional[str] = None
     parentCompanyId: int
     parentCompanyCode: Optional[str] = None
     parentCompanyName: Optional[str] = None
@@ -80,21 +90,23 @@ class RollupRequestItemDto(BaseModel):
     rollupPurposeCode: str
     metricScopeCode: str
     requestStatus: str
+    inputStatus: str
+    approvalStatus: str
     transferStatus: str
     sendReadyYn: bool
     missingAtomicMetricIds: list[str]
 
 
-class RollupRequestListDto(BaseModel):
+class RollupRequestListDto(RollupBaseModel):
     items: list[RollupRequestItemDto]
 
 
-class RollupRequestResponseDto(BaseModel):
+class RollupRequestResponseDto(RollupBaseModel):
     success: bool = True
     data: RollupRequestListDto
 
 
-class RollupSourceSendStatusDto(BaseModel):
+class RollupSourceSendStatusDto(RollupBaseModel):
     batchId: int
     parentCompanyId: int
     sourceCompanyId: int
@@ -103,12 +115,12 @@ class RollupSourceSendStatusDto(BaseModel):
     sentAt: Optional[str] = None
 
 
-class RollupSourceSendResponseDto(BaseModel):
+class RollupSourceSendResponseDto(RollupBaseModel):
     success: bool = True
     data: RollupSourceSendStatusDto
 
 
-class RollupBatchSummaryDto(BaseModel):
+class RollupBatchSummaryDto(RollupBaseModel):
     batchId: int
     parentCompanyId: int
     reportingYear: int
@@ -123,6 +135,6 @@ class RollupBatchSummaryDto(BaseModel):
     reportReadyYn: bool = False
 
 
-class RollupBatchSummaryResponseDto(BaseModel):
+class RollupBatchSummaryResponseDto(RollupBaseModel):
     success: bool = True
     data: RollupBatchSummaryDto

@@ -31,34 +31,103 @@ class RollupError(Exception):
         self.message = message
         self.data = data or {}
 
+def validatePurposeScope(
+    rollupPurposeCode,
+    metricScopeCode,
+    runId,
+    sourceCycleId,
+    requireContext: bool = True,
+) -> tuple[str, str]:
+    rollupRepository = loadRepository()
+    purposeCode = str(rollupPurposeCode or "").strip().upper()
+    scopeCode = str(metricScopeCode or "").strip().upper()
+
+    if (
+        purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK
+        and scopeCode == rollupRepository.METRIC_SCOPE_G0_02_FINANCIAL_BASIS
+    ):
+        if requireContext and not runId:
+            raise RollupError(400, "RUN_ID_REQUIRED", "runId is required for DMA_PRECHECK")
+        return purposeCode, scopeCode
+
+    if (
+        purposeCode == rollupRepository.ROLLUP_PURPOSE_REPORT_DISCLOSURE
+        and scopeCode == rollupRepository.METRIC_SCOPE_SELECTED_DISCLOSURE
+    ):
+        if requireContext and not sourceCycleId:
+            raise RollupError(400, "SOURCE_CYCLE_ID_REQUIRED", "sourceCycleId is required for REPORT_DISCLOSURE")
+        return purposeCode, scopeCode
+
+    raise RollupError(
+        422,
+        "ROLLUP_PURPOSE_SCOPE_UNSUPPORTED",
+        "Unsupported rollup purpose and metric scope combination.",
+        {"rollupPurposeCode": rollupPurposeCode, "metricScopeCode": metricScopeCode},
+    )
+
+def validateSourceCycle(rollupRepository, sourceCycleId: int) -> dict:
+    conn = rollupRepository.getConn()
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                """
+                SELECT id, company_id, reporting_year, cycle_type, delete_yn
+                FROM ESG_ONBOARDING_CYCLE
+                WHERE id = ?
+                  AND delete_yn = 0
+                  AND cycle_type = 'POST_DMA_DISCLOSURE'
+                """,
+                (sourceCycleId,),
+            )
+            cycle = cur.fetchone()
+            if not cycle:
+                raise RollupError(422, "POST_DMA_SOURCE_CYCLE_INVALID", "Invalid source cycle")
+            cur.execute(
+                """
+                SELECT COUNT(*) AS scope_count
+                FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE
+                WHERE esg_onboarding_cycle_id = ?
+                  AND active_yn = 1
+                  AND delete_yn = 0
+                """,
+                (sourceCycleId,),
+            )
+            scopeRow = cur.fetchone() or {}
+            if int(scopeRow.get("scope_count") or 0) < 1:
+                raise RollupError(422, "POST_DMA_SOURCE_CYCLE_INVALID", "Invalid source cycle")
+            return cycle
+    finally:
+        conn.close()
+
+def resolveBatchContext(rollupRepository, purposeCode: str, runId: Optional[int], sourceCycleId: Optional[int]) -> dict:
+    if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
+        run = getRunOrRaise(int(runId))
+        checkConsolidatedRun(run)
+        return {
+            "parentCompanyId": int(run["company_id"]),
+            "reportingYear": int(run["reporting_year"]),
+            "run": run,
+            "cycle": None,
+        }
+
+    cycle = validateSourceCycle(rollupRepository, int(sourceCycleId))
+    return {
+        "parentCompanyId": int(cycle["company_id"]),
+        "reportingYear": int(cycle["reporting_year"]),
+        "run": None,
+        "cycle": cycle,
+    }
+
 def listSubsidiaries(runId, sourceCycleId, rollupPurposeCode, metricScopeCode, userModel) -> RollupSubsidiaryResponseDto:
     rollupRepository = loadRepository()
-    
-    if rollupPurposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
-        if not runId:
-            raise RollupError(400, "RUN_ID_REQUIRED", "runId is required for DMA_PRECHECK")
-        run = getRunOrRaise(runId)
-        parentCompanyId = int(run["company_id"])
-        reportingYear = int(run["reporting_year"])
-        checkConsolidatedRun(run)
-    else:
-        if not sourceCycleId:
-            raise RollupError(400, "SOURCE_CYCLE_ID_REQUIRED", "sourceCycleId is required for REPORT_DISCLOSURE")
-        conn = rollupRepository.getConn()
-        try:
-            with conn.cursor(dictionary=True) as cur:
-                cur.execute("SELECT company_id, reporting_year, cycle_type, delete_yn FROM ESG_ONBOARDING_CYCLE WHERE id = ?", (sourceCycleId,))
-                cycle = cur.fetchone()
-                if not cycle or cycle["delete_yn"] == 1 or cycle["cycle_type"] != "POST_DMA_DISCLOSURE":
-                    raise RollupError(422, "POST_DMA_SOURCE_CYCLE_INVALID", "Invalid source cycle")
-                parentCompanyId = int(cycle["company_id"])
-                reportingYear = int(cycle["reporting_year"])
-        finally:
-            conn.close()
+    purposeCode, scopeCode = validatePurposeScope(rollupPurposeCode, metricScopeCode, runId, sourceCycleId)
+    context = resolveBatchContext(rollupRepository, purposeCode, runId, sourceCycleId)
+    parentCompanyId = context["parentCompanyId"]
+    reportingYear = context["reportingYear"]
 
     checkScope(parentCompanyId, userModel)
 
-    items = rollupRepository.listEffectiveSourceCompanies(parentCompanyId, reportingYear, rollupPurposeCode)
+    items = rollupRepository.listEffectiveSourceCompanies(parentCompanyId, reportingYear, purposeCode)
     
     # UI presentation: Do not include parent in the subsidiary selection list
     items = [item for item in items if int(item["companyId"]) != parentCompanyId]
@@ -72,35 +141,20 @@ def listSubsidiaries(runId, sourceCycleId, rollupPurposeCode, metricScopeCode, u
         for item in items
     ]
     
-    return RollupSubsidiaryResponseDto(data=RollupSubsidiaryListDto(runId=runId or 0, items=resItems))
+    return RollupSubsidiaryResponseDto(data=RollupSubsidiaryListDto(runId=runId, sourceCycleId=sourceCycleId, items=resItems))
 
 def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseDto:
     rollupRepository = loadRepository()
-    purposeCode = request.rollupPurposeCode
-    metricScopeCode = request.metricScopeCode
+    purposeCode, metricScopeCode = validatePurposeScope(
+        request.rollupPurposeCode,
+        request.metricScopeCode,
+        request.runId,
+        request.sourceCycleId,
+    )
     actorUserId = getActorUserId(userModel)
-    
-    if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
-        if not request.runId:
-            raise RollupError(400, "RUN_ID_REQUIRED", "runId is required for DMA_PRECHECK")
-        run = getRunOrRaise(request.runId)
-        parentCompanyId = int(run["company_id"])
-        reportingYear = int(run["reporting_year"])
-        checkConsolidatedRun(run)
-    else:
-        if not request.sourceCycleId:
-            raise RollupError(400, "SOURCE_CYCLE_ID_REQUIRED", "sourceCycleId is required for REPORT_DISCLOSURE")
-        conn = rollupRepository.getConn()
-        try:
-            with conn.cursor(dictionary=True) as cur:
-                cur.execute("SELECT company_id, reporting_year, cycle_type, delete_yn FROM ESG_ONBOARDING_CYCLE WHERE id = ?", (request.sourceCycleId,))
-                cycle = cur.fetchone()
-                if not cycle or cycle["delete_yn"] == 1 or cycle["cycle_type"] != "POST_DMA_DISCLOSURE":
-                    raise RollupError(422, "POST_DMA_SOURCE_CYCLE_INVALID", "Invalid source cycle")
-                parentCompanyId = int(cycle["company_id"])
-                reportingYear = int(cycle["reporting_year"])
-        finally:
-            conn.close()
+    context = resolveBatchContext(rollupRepository, purposeCode, request.runId, request.sourceCycleId)
+    parentCompanyId = context["parentCompanyId"]
+    reportingYear = context["reportingYear"]
             
     checkScope(parentCompanyId, userModel)
 
@@ -211,6 +265,9 @@ def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseD
                 )
                 
         conn.commit()
+    except RollupError:
+        conn.rollback()
+        raise
     except Exception as e:
         conn.rollback()
         raise RollupError(500, "ROLLUP_BATCH_CREATE_FAILED", f"Failed to create rollup batch: {str(e)}")
@@ -258,14 +315,16 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
             requiredAtomicIds = rollupRepository.resolveRequiredSourceAtomicIdsTx(cur, batchId)
             
             facts = rollupRepository.listApprovedFactsByCompany(includedCompanyIds, reportingYear, requiredAtomicIds)
-            currentFactMap = rollupRepository.buildMultiCompanyFactMap(includedCompanyIds, requiredAtomicIds, facts)
+            currentFactMap = rollupCalculator.buildMultiCompanyFactMap(includedCompanyIds, requiredAtomicIds, facts)
             
             priorFacts = rollupRepository.listPriorYearApprovedFactsByCompany(includedCompanyIds, reportingYear, requiredAtomicIds)
-            priorFactMap = rollupRepository.buildMultiCompanyFactMap(includedCompanyIds, requiredAtomicIds, priorFacts)
+            priorFactMap = rollupCalculator.buildMultiCompanyFactMap(includedCompanyIds, requiredAtomicIds, priorFacts)
             
             cur.execute("SELECT id FROM ESG_MATERIALITY_RUN WHERE required_rollup_batch_id = ?", (batchId,))
             r = cur.fetchone()
             runId = r["id"] if r else None
+            if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK and not runId:
+                raise RollupError(409, "REPORT_RUN_NOT_FOUND", "Report workflow run was not found for rollup batch.")
             
             from src.utils.rollupcalculator import calculateConsolidatedRules
             results, warnings, allSuccess = calculateConsolidatedRules(
@@ -273,32 +332,28 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
             )
             
             if not allSuccess:
-                rollupRepository.updateBatchStatusTx(cur, batchId, "pending", False, False)
-                conn.commit()
                 raise RollupError(422, "ROLLUP_CALCULATION_NOT_READY", "Calculation failed due to unready sources or calculation errors.", {"warnings": warnings})
 
             if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
                 for res in results:
-                    if not res.get("groupMetricId"):
-                        res["groupMetricId"] = "G0-02"
+                    res["groupMetricId"] = res.get("groupMetricId") or "G0-02"
             else:
                 for res in results:
                     if not res.get("groupMetricId"):
                         raise RollupError(500, "ROLLUP_RESULT_ERROR", "Group Metric ID is required for generic rollup.")
                         
-            rollupRepository.upsertGroupRollupResultsTx(cur, batchId, parentCompanyId, reportingYear, purposeCode, results)
+            actorUserId = getActorUserId(userModel)
+            rollupRepository.upsertGroupRollupResultsTx(cur, batch, results, includedCompanyIds, actorUserId)
             
-            rollupRepository.updateBatchStatusTx(cur, batchId, "completed", True, True)
-            for cId in includedCompanyIds:
-                rollupRepository.updateSourceStatusTx(cur, batchId, cId, "approved", "approved")
+            rollupRepository.updateSourceStatusTx(cur, batchId, len(requiredAtomicIds))
             
             if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
-                rollupRepository.finalizeDmaPrecheckTx(cur, batchId, runId)
+                rollupRepository.finalizeDmaPrecheckTx(cur, batchId, runId, actorUserId)
             else:
-                rollupRepository.finalizeReportDisclosureTx(cur, batchId)
+                rollupRepository.finalizeReportDisclosureTx(cur, batchId, actorUserId)
                 from src.utils.onboardingscoperepository import ensureRollupCycleTx, seedRollupMetricScopeTx
                 ensureRollupCycleTx(cur, parentCompanyId, reportingYear, batchId)
-                seedRollupMetricScopeTx(cur, parentCompanyId, reportingYear, getActorUserId(userModel))
+                seedRollupMetricScopeTx(cur, parentCompanyId, reportingYear, actorUserId)
                     
             conn.commit()
     except RollupError:
@@ -311,63 +366,58 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
         conn.close()
 
     refreshedBatch = rollupRepository.getBatch(batchId)
-    return RollupCalculateResponseDto(data=buildBatchStatus(refreshedBatch, includedCompanyIds))
+    status = buildBatchStatus(refreshedBatch, includedCompanyIds)
+    return RollupCalculateResponseDto(
+        data=RollupCalculateStatusDto(
+            **dumpModel(status),
+            results=[
+                RollupResultDto(
+                    groupAtomicMetricId=result["groupAtomicMetricId"],
+                    sourceAtomicMetricIds=result.get("sourceAtomicMetricIds") or [],
+                    sourceAtomicMetricId=result.get("sourceAtomicMetricId"),
+                    formulaType=result.get("formulaType") or "",
+                    valueNumeric=result.get("valueNumeric"),
+                    valueText=result.get("valueText"),
+                    unit=result.get("unit"),
+                    sourceCompanyValues=result.get("sourceCompanyValues"),
+                    calculationWarnings=result.get("calculationWarnings"),
+                )
+                for result in results
+            ],
+        )
+    )
 
 def listRequests(rollupPurposeCode: str, metricScopeCode: str, userModel) -> RollupRequestResponseDto:
     rollupRepository = loadRepository()
+    purposeCode, scopeCode = validatePurposeScope(
+        rollupPurposeCode,
+        metricScopeCode,
+        runId=None,
+        sourceCycleId=None,
+        requireContext=False,
+    )
     sourceCompanyId = getSource(userModel)
-    
-    conn = rollupRepository.getConn()
-    try:
-        with conn.cursor(dictionary=True) as cur:
-            cur.execute("""
-                SELECT b.id as batchId, b.parent_company_id, b.reporting_year, 
-                       s.request_status, s.input_status, s.approval_status, s.transfer_status,
-                       b.rollup_batch_code
-                FROM ESG_ROLLUP_SOURCE_STATUS s
-                JOIN ESG_ROLLUP_BATCH b ON s.esg_rollup_batch_id = b.id
-                WHERE s.source_company_id = ?
-                  AND s.rollup_purpose_code = ?
-                  AND s.metric_scope_code = ?
-                  AND s.delete_yn = 0 AND b.delete_yn = 0
-            """, (sourceCompanyId, rollupPurposeCode, metricScopeCode))
-            requests = cur.fetchall()
-    finally:
-        conn.close()
+    requests = rollupRepository.listRequests(sourceCompanyId, purposeCode, scopeCode)
 
     items = []
     for req in requests:
         batchId = req["batchId"]
-        requiredCount = 0
-        missingIds = []
-        readyYn = False
-        
-        # Calculate actual readiness
-        try:
-            conn = rollupRepository.getConn()
-            with conn.cursor(dictionary=True) as cur:
-                requiredAtomicIds = rollupRepository.resolveRequiredSourceAtomicIdsTx(cur, batchId)
-                requiredCount = len(requiredAtomicIds)
-            facts = rollupRepository.listApprovedFactsByCompany([sourceCompanyId], req["reporting_year"], requiredAtomicIds)
-            approvedKeys = {f["atomicMetricId"] for f in facts}
-            missingIds = [a for a in requiredAtomicIds if a not in approvedKeys]
-            readyYn = (len(missingIds) == 0) if requiredCount > 0 else False
-        finally:
-            conn.close()
-            
+        readiness = rollupRepository.buildSourceReadiness(batchId, [sourceCompanyId], int(req["reportingYear"]))
         items.append(RollupRequestItemDto(
-            rollupBatchId=batchId,
-            rollupBatchCode=req["rollup_batch_code"],
-            parentCompanyId=req["parent_company_id"],
-            reportingYear=req["reporting_year"],
-            rollupPurposeCode=rollupPurposeCode,
-            metricScopeCode=metricScopeCode,
-            requestStatus=req["request_status"],
-            inputStatus=req["input_status"],
-            approvalStatus=req["approval_status"],
-            transferStatus=req["transfer_status"],
-            sendReadyYn=readyYn,
-            missingAtomicMetricIds=missingIds
+            batchId=batchId,
+            batchCode=req.get("batchCode"),
+            parentCompanyId=req["parentCompanyId"],
+            parentCompanyCode=req.get("parentCompanyCode"),
+            parentCompanyName=req.get("parentCompanyName"),
+            reportingYear=req["reportingYear"],
+            rollupPurposeCode=req.get("rollupPurposeCode") or purposeCode,
+            metricScopeCode=req.get("metricScopeCode") or scopeCode,
+            requestStatus=req.get("requestStatus") or "",
+            inputStatus=req.get("inputStatus") or "",
+            approvalStatus=req.get("approvalStatus") or "",
+            transferStatus=req.get("transferStatus") or "",
+            sendReadyYn=bool(readiness["readyYn"]),
+            missingAtomicMetricIds=readiness["missingByCompany"].get(str(sourceCompanyId), [])
         ))
 
     return RollupRequestResponseDto(data=RollupRequestListDto(items=items))
@@ -509,6 +559,7 @@ def buildBatchStatus(batch: dict, sourceCompanyIds: list[int]) -> RollupBatchSta
     return RollupBatchStatusDto(
         batchId=int(batch["id"]),
         runId=int(batch.get("run_id") or 0) if batch.get("run_id") else None,
+        sourceCycleId=int(batch.get("source_cycle_id") or 0) if batch.get("source_cycle_id") else None,
         rollupPurposeCode=batch.get("rollup_purpose_code") or "",
         metricScopeCode=batch.get("metric_scope_code") or "",
         batchStatus=batch.get("batch_status") or "pending",
@@ -529,6 +580,11 @@ def formatDateTime(value) -> Optional[str]:
     if hasattr(value, "isoformat"):
         return value.isoformat()
     return str(value)
+
+def dumpModel(model) -> dict:
+    if hasattr(model, "model_dump"):
+        return model.model_dump()
+    return model.dict()
 
 def getActorUserId(userModel) -> Optional[int]:
     if isinstance(userModel, dict):

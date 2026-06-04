@@ -1172,8 +1172,11 @@ def ensureRollupCycleTx(cur, companyId: int, reportingYear: int, batchId: int) -
     if cycle:
         cur.execute(
             """
-            UPDATE ESG_ONBOARDING_CYCLE 
-            SET esg_rollup_batch_id = ?, updated_at = CURRENT_TIMESTAMP 
+            UPDATE ESG_ONBOARDING_CYCLE
+            SET parent_rollup_batch_id = ?,
+                metric_scope_code = 'ROLLUP_SCOPE',
+                cycle_status = 'approved',
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
             """,
             (batchId, cycle["id"])
@@ -1187,8 +1190,8 @@ def ensureRollupCycleTx(cur, companyId: int, reportingYear: int, batchId: int) -
             """
             INSERT INTO ESG_ONBOARDING_CYCLE (
                 cycle_type, company_id, reporting_year, cycle_name, cycle_status, 
-                esg_rollup_batch_id, delete_yn, created_at, updated_at
-            ) VALUES ('ROLLUP', ?, ?, ?, 'draft', ?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                parent_rollup_batch_id, metric_scope_code, delete_yn, created_at, updated_at
+            ) VALUES ('ROLLUP', ?, ?, ?, 'approved', ?, 'ROLLUP_SCOPE', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """,
             (companyId, reportingYear, cycleName, batchId)
         )
@@ -1201,6 +1204,7 @@ def resolveRollupMetricScopeRowsTx(cur, batchId: int) -> list[dict]:
         FROM ESG_ROLLUP_BATCH_ATOMIC_SCOPE
         WHERE esg_rollup_batch_id = ? AND delete_yn = 0
         GROUP BY metric_id
+        ORDER BY metric_id
         """,
         (batchId,)
     )
@@ -1209,30 +1213,49 @@ def resolveRollupMetricScopeRowsTx(cur, batchId: int) -> list[dict]:
 def seedRollupMetricScopeTx(cur, companyId: int, reportingYear: int, actorUserId: Optional[int] = None) -> None:
     cur.execute(
         """
-        SELECT id, esg_rollup_batch_id FROM ESG_ONBOARDING_CYCLE
+        SELECT id, parent_rollup_batch_id FROM ESG_ONBOARDING_CYCLE
         WHERE company_id = ? AND reporting_year = ? AND cycle_type = 'ROLLUP' AND delete_yn = 0
         """,
         (companyId, reportingYear)
     )
     cycle = cur.fetchone()
-    if not cycle or not cycle["esg_rollup_batch_id"]:
+    if not cycle or not cycle["parent_rollup_batch_id"]:
         return
         
     cycleId = cycle["id"]
-    batchId = cycle["esg_rollup_batch_id"]
+    batchId = cycle["parent_rollup_batch_id"]
     
     metrics = resolveRollupMetricScopeRowsTx(cur, batchId)
     
-    for m in metrics:
+    for displayIndex, m in enumerate(metrics, start=1):
         metricId = m["metric_id"]
         cur.execute(
             """
             INSERT INTO ESG_ONBOARDING_CYCLE_METRIC_SCOPE (
-                esg_onboarding_cycle_id, company_id, metric_scope_type, 
-                metric_id, scope_source_type,
-                approval_policy_code, active_yn, delete_yn, display_order, created_at, updated_at
-            ) VALUES (?, ?, 'ROLLUP_SCOPE', ?, 'ROLLUP', 'ROLLUP_READONLY', 1, 0, 999, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            ON DUPLICATE KEY UPDATE delete_yn = 0, updated_at = CURRENT_TIMESTAMP
+                esg_onboarding_cycle_id,
+                company_id,
+                metric_id,
+                scope_source_type,
+                required_yn,
+                input_required_yn,
+                approval_required_yn,
+                approval_policy_code,
+                rollup_readonly_yn,
+                display_order,
+                active_yn,
+                created_by_user_id,
+                delete_yn
+            ) VALUES (?, ?, ?, 'ROLLUP', 1, 0, 0, 'ROLLUP_READONLY', 1, ?, 1, ?, 0)
+            ON DUPLICATE KEY UPDATE
+                scope_source_type = VALUES(scope_source_type),
+                required_yn = VALUES(required_yn),
+                input_required_yn = VALUES(input_required_yn),
+                approval_required_yn = VALUES(approval_required_yn),
+                approval_policy_code = VALUES(approval_policy_code),
+                rollup_readonly_yn = VALUES(rollup_readonly_yn),
+                display_order = VALUES(display_order),
+                active_yn = VALUES(active_yn),
+                updated_at = CURRENT_TIMESTAMP
             """,
-            (cycleId, companyId, metricId)
+            (cycleId, companyId, metricId, displayIndex * 10, actorUserId)
         )

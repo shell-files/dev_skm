@@ -400,7 +400,7 @@ const DataTab = ({
                       />
                     </th>
                     <th style={{ width: "100px" }}>Metric ID</th>
-                    <th>지표명</th>
+                    <th>입력 데이터 설명</th>
                     <th style={{ width: "120px" }}>Sub-Issue</th>
                     <th style={{ width: "110px" }}>담당자</th>
                     <th style={{ width: "80px" }}>입력 완료</th>

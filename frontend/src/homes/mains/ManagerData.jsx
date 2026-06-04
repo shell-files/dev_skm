@@ -393,44 +393,6 @@ const ManagerData = () => {
           </div>
         </div>
 
-        <section className="approval-project-context-bar">
-          <div className="approval-project-context-main">
-            <p className="approval-project-context-label">Current report project</p>
-            <h3 className="approval-project-context-title">
-              {displayApprovalProject.reportingYear} Sustainability Report
-            </h3>
-            <p className="approval-project-context-meta">
-              {basisLabel(displayApprovalProject.reportBasisType)}
-              {" · "}
-              {runStatusLabel(displayApprovalProject.runStatus)}
-            </p>
-          </div>
-
-          <div className="approval-project-context-stage">
-            <p className="approval-project-context-label">Current stage</p>
-            <strong>{displayApprovalProject.currentStageLabel || "-"}</strong>
-          </div>
-
-          <div className="approval-project-context-actions">
-            {displayApprovalProject.readOnlyYn && (
-              <span className="approval-project-readonly-chip">Read-only</span>
-            )}
-            <button
-              type="button"
-              className="approval-project-change-btn"
-              disabled={approvalProjectsLoading || approvalProjects.length === 0}
-              title={
-                approvalProjects.length === 0
-                  ? "No report projects are available."
-                  : ""
-              }
-              onClick={() => setIsApprovalProjectModalOpen(true)}
-            >
-              Change project
-            </button>
-          </div>
-        </section>
-
         {approvalProjectsError && (
           <div className="alert alert-warning" style={{ marginBottom: "12px" }}>
             {approvalProjectsError.message ||
@@ -444,27 +406,67 @@ const ManagerData = () => {
           </div>
         )}
 
-        <div className="kpi-container">
-          {[
-            { key: "APPROVED", label: "Approved", count: kpi.approved },
-            { key: "PENDING", label: "Pending", count: kpi.waiting },
-            { key: "REJECTED", label: "Rejected", count: kpi.rejected },
-          ].map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() =>
-                !isLoading &&
-                setStatusFilter(item.key === statusFilter ? "all" : item.key)
-              }
-              className={`kpi-card ${statusFilter === item.key ? "active" : ""} ${
-                isLoading ? "disabled" : ""
-              }`}
-            >
-              <div className="kpi-label">{item.label}</div>
-              <div className="kpi-value">{item.count}</div>
-            </button>
-          ))}
+        <div className="dashboard-top-row">
+          <section className="approval-project-context-bar">
+            <div className="approval-project-context-main">
+              <p className="approval-project-context-label">Current report project</p>
+              <h3 className="approval-project-context-title">
+                {displayApprovalProject.reportingYear} Sustainability Report
+              </h3>
+              <p className="approval-project-context-meta">
+                {basisLabel(displayApprovalProject.reportBasisType)}
+                {" · "}
+                {runStatusLabel(displayApprovalProject.runStatus)}
+              </p>
+            </div>
+
+            <div className="approval-project-context-stage">
+              <p className="approval-project-context-label">Current stage</p>
+              <strong>{displayApprovalProject.currentStageLabel || "-"}</strong>
+            </div>
+
+            <div className="approval-project-context-actions">
+              {displayApprovalProject.readOnlyYn && (
+                <span className="approval-project-readonly-chip">Read-only</span>
+              )}
+              <button
+                type="button"
+                className="approval-project-change-btn"
+                disabled={approvalProjectsLoading || approvalProjects.length === 0}
+                title={
+                  approvalProjects.length === 0
+                    ? "No report projects are available."
+                    : ""
+                }
+                onClick={() => setIsApprovalProjectModalOpen(true)}
+              >
+                Change project
+              </button>
+            </div>
+          </section>
+
+          <div className="kpi-container">
+            {[
+              { key: "APPROVED", label: "Approved", count: kpi.approved },
+              { key: "PENDING", label: "Pending", count: kpi.waiting },
+              { key: "REJECTED", label: "Rejected", count: kpi.rejected },
+            ].map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() =>
+                  !isLoading &&
+                  setStatusFilter(item.key === statusFilter ? "all" : item.key)
+                }
+                className={`kpi-card ${statusFilter === item.key ? "active" : ""} ${
+                  isLoading ? "disabled" : ""
+                }`}
+              >
+                <div className="kpi-label">{item.label}</div>
+                <div className="kpi-value">{item.count}</div>
+              </button>
+            ))}
+          </div>
         </div>
 
         {activeTab === "data" && (

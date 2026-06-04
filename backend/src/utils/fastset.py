@@ -30,7 +30,7 @@ def run():
             app.include_router(module.router, **includeOptions)
 
     # CORS 설정
-    origins = ["http://localhost", settings.host_ip,
+    origins = ["http://localhost", f"http://{settings.host_ip}",
                 f"http://skm.{settings.domain}"
                 # f"http://hg.{settings.domain}", f"http://tv.{settings.domain}"
                 ]

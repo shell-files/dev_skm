@@ -304,7 +304,7 @@ const OnboardingMetricTable = ({
     );
   }
 
-  if (loadingG0) {
+  if (loadingG0 && g0Items.length === 0) {
     return (
       <div className="ob1-table-loading">
         <div className="ob1-spinner" />

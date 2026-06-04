@@ -409,7 +409,7 @@
 
 
 /* ───── 스텝퍼 ───── */
-.sr-stepper-row .step-wrap {
+.result-stepper-row .step-wrap {
   display: flex;
   align-items: center;
 }

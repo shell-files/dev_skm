@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 /* ============================================================================
  *  [병합 작업 요약]  benchmarking.jsx(소문자) → BenchMarking.jsx(대문자) 통합
  * ----------------------------------------------------------------------------
@@ -11,7 +9,7 @@
  *             [병합-수정] = 기존 코드를 살짝 손본 부분
  *             (주석 없는 부분은 대문자 원본 그대로)
  * ========================================================================== */
->>>>>>> f398456 (benchmark.html 파일 react로 수정중(#75))
+
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -54,24 +52,12 @@ const DUMMY_DB_RESULTS = [
   { domain: "G", selected_issue: "윤리·준법경영 시스템", selected_sub_issue: "부패방지 경영시스템(ISO 37001) 운영, 임직원 윤리강령 준수 서약, 내부고발제도 활성화를 설명하는 문장.", type: "sub" },
 ];
 
-<<<<<<< HEAD
-=======
-// ════════════════════════════════════════════════════════════════
-// [병합-추가] 결과 대시보드(통계카드 + 3패널)용 더미 데이터.
-//   - 소문자 파일에선 HTML에 하드코딩돼 있던 값을 객체로 구조화한 것.
-//   - 나중에 백엔드 연동 시, 응답을 이 객체와 같은 형태로 받아
-//     setDashboardData(response.data.dashboard) 한 줄로 교체하면 됨.
-// ════════════════════════════════════════════════════════════════
->>>>>>> f398456 (benchmark.html 파일 react로 수정중(#75))
 const DUMMY_RESULT_DASHBOARD = {stats:{
     reports: 24,
     leaderCount: 8,
     peerCount: 8,
     subcount: 8,
-<<<<<<< HEAD
     identifiedIssues: 10,
-=======
->>>>>>> f398456 (benchmark.html 파일 react로 수정중(#75))
     commonIssues: 19,
     blindSpots: 9,
   }
@@ -121,11 +107,6 @@ const Benchmarking = () => {
   const [showResult, setShowResult] = useState(false);
 
   const [rawRows, setRawRows] = useState([]);
-<<<<<<< HEAD
-=======
-  // [병합-추가] 결과 대시보드(통계카드 + 3패널) 데이터 상태.
-  //   백엔드 연동 전까지는 더미를 기본값으로 사용.
->>>>>>> f398456 (benchmark.html 파일 react로 수정중(#75))
   const [dashboardData, setDashobardData] = useState(DUMMY_RESULT_DASHBOARD);
 
   const particleRef = useRef(null);
@@ -464,45 +445,12 @@ const Benchmarking = () => {
                     <div className="stat-label">식별 이슈</div>
                     <div className="stat-value">{dashboardData.stats.identifiedIssues}개</div>
                   </div>
-<<<<<<< HEAD
                 </div>
                 <div className="result-stat-card">
                   <div className="stat-icon-wrap">👥</div>
                   <div>
                     <div className="stat-label"> 공통 이슈</div>
                     <div className="stat-value">{dashboardData.stats.commonIssues}개</div>
-=======
-
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap>👥</div>
-                  <div>
-                    <div className="stat-label">공통 이슈</div>
-                    <div className="stat-value">{dashboardData.stats.commonIssues}개</div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="result-stat-card">
-                    <div className="stat-icon-wrap">🎯</div>
-                    <div>
-                      <div className="stat-label">자사 Blind Spot</div>
-                      <div className="stat-value">{dashboardData.stats.blindSpots}개</div>
-
-
-
-
-
-
-
-              {/* 개선된 1컬럼 스택트 레이아웃 테이블 */}
-              <div className="gap-analysis-container">
-                <div className="gap-table-header">
-                  <div className="col-info-stacked-header">식별된 ESG 이슈그룹 및 세부 분석 문장(Sub Issue)</div>
-                  <div className="col-status-group-header">
-                    <div className="status-label">리더</div>
-                    <div className="status-label">피어</div>
-                    <div className="status-label">자회사</div>
->>>>>>> f398456 (benchmark.html 파일 react로 수정중(#75))
                   </div>
                 </div>
 

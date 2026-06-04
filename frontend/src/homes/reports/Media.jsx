@@ -86,13 +86,13 @@ const Media = () => {
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showResult, setShowResult] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [loadingTitle, setLoadingTitle] = useState("미디어 수집 현황 대기 중");
   const [loadingDesc, setLoadingDesc] = useState("상단의 수집 시작 버튼을 누르면 실시간 크롤링 및 파싱이 가동됩니다.");
   const [selectedPress, setSelectedPress] = useState([]);
   const [selectedReg, setSelectedReg] = useState([]);
   const [selectedAge, setSelectedAge] = useState([]);
-
-
+  
 
 
 
@@ -120,6 +120,25 @@ const Media = () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    let interval;
+    if (isAnalyzing) {
+      interval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(interval);
+            setStatus({ press: "complete", reg: "complete", expert: "complete" });
+            setShowResult(true);
+            setIsAnalyzing(false);
+            return 100;
+          }
+          return prev + 2;
+        });
+      }, 50);
+    }
+    return () => clearInterval(interval);
+  }, [isAnalyzing]);
 
   // --- 애니메이션 파티클 버블 효과 생성 함수 ---
   const createParticles = () => {
@@ -186,18 +205,8 @@ const Media = () => {
     setLoadingTitle("실시간 크롤링 엔진 가동 중...");
     setLoadingDesc("네이버 뉴스 API 및 공공 데이터 포털 커넥터를 통해 웹 파싱을 실행하고 있습니다.");
 
+    setProgress(0);
     showDefaultAlert("분석 시작", "실시간 미디어 및 외부 데이터 수집을 시작합니다.", "success");
-
-    // 2.5초 뒤 완료 시뮬레이션
-    timerRef.current = setTimeout(() => {
-      setStatus({
-        press: "complete",
-        reg: "complete",
-        expert: "complete",
-      });
-      setShowResult(true);
-      setIsAnalyzing(false);
-    }, 2500);
   };
 
   const getStatusText = (type) => {
@@ -318,9 +327,9 @@ const Media = () => {
                   <label>수집 희망 기간</label>
                   <div className="date-range-group">
                     {/* 시작 날짜 - 2023-01-01 이후만 선택 가능 */}
-                    <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" />
+                    <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" max={today} />
                     <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
-                    <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} max={new Date().toISOString().split("T")[0]} />
+                    <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} min="2023-01-01" max={today} />
                   </div>
                 </div>
                 <div className="status-container">
@@ -453,7 +462,7 @@ const Media = () => {
               {isAnalyzing
                 ? "AI 파이프라인 수집 가동 중..."
                 : showResult
-                  ? "분석 완료 - 결과 요약 확인 (클릭)"
+                  ? "분석 완료 - 결과 요약 확인"
                   : "빅데이터 연동 현황 확인하기"}
             </div>
           </div>
@@ -464,13 +473,23 @@ const Media = () => {
               {/* 가동 애니메이션 파티클 필드 */}
               <div id="particle-field" ref={particleRef}></div>
               {!showResult && (
-                <img src={robot} className="robot-main-img" alt="마스코트 로봇" style={{ alignSelf: "center" }} />
+                <img src={robot} className="robot-media-main-img" alt="마스코트 로봇" style={{ alignSelf: "center" }} />
               )}
               {/* 수집 대기 및 로딩 중 안내판 */}
               {!showResult && (
                 <div style={{ textAlign: "center" }}>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: 850, margin: "0 0 4px 0" }}>{loadingTitle}</h3>
                   <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>{loadingDesc}</p>
+                  {isAnalyzing && (
+                    <div className="progress-section" style={{ margin: "12px auto 0" }}>
+                      <div className="progress-bar-wrap">
+                        <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
+                      </div>
+                      <div style={{ marginTop: "6px", fontWeight: 900, fontSize: "0.85rem", color: "var(--media-primary)" }}>
+                        {progress}% 분석 중
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

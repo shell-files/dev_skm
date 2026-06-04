@@ -15,8 +15,15 @@ import random
 def checkUser(userModel: UserModel):
     uuid = userModel.uuid
     company = getCompanyRedis(uuid)
-    if company is None:
+    if (
+        not company
+        or company.get("status") is not True
+        or company.get("companyId") is None
+    ):
         return ResponseModel(False, "회사를 선택해주세요.")
+
+    userName = None
+    selectedCompany = None
 
     companySql = f"""
         SELECT
@@ -49,12 +56,15 @@ def checkUser(userModel: UserModel):
     userResult = findOne(userSql, userParams)
 
     if userResult is not None:
-        userName = userResult["name"]
+        userName = userResult.get("name")
 
     for com in companyResult:
-        if com["company_id"] == int(company["companyId"]):
+        if int(com["company_id"]) == int(company["companyId"]):
             selectedCompany = com
             break
+
+    if selectedCompany is None:
+        return ResponseModel(False, "선택한 회사 정보를 찾을 수 없습니다.")
 
     return ResponseModel(True, "사용자 정보가 유효합니다.", {"user": userModel.email, "userName": userName, "companys": companyResult, "selectedCompany": selectedCompany})
 

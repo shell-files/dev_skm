@@ -3,6 +3,11 @@ import { useNavigate } from "react-router";
 import "@styles/result.css";
 import "@styles/benchmarking.css";
 import "@styles/media.css";
+import VChain from "@assets/icons/result_page/value-chain.png";
+import SHolder from "@assets/icons/result_page/stakeholder.png";
+// import Survey from "@assets/icons/result_page/survey.png";
+import Analyze from "@assets/icons/result_page/analyze.png";
+
 import {
   ScatterChart,
   Scatter,
@@ -246,18 +251,18 @@ const DoubleMaterialityMatrix = () => {
         <ResponsiveContainer width="100%" height={340}>
           <ScatterChart margin={{ top: 16, right: 28, bottom: 44, left: 20 }}>
              {/* 우상단: High Financial + High Impact (빨강) */}
-              <ReferenceArea x1={2.5} x2={4.2} y1={2} y2={3.5} fill="rgba(239,68,68,0.08)" />   
+              <ReferenceArea x1={2.35} x2={4.2} y1={2} y2={3.5} fill="rgba(239,68,68,0.08)" />   
 
               {/* 좌상단: Low Financial + High Impact (주황) */}
-              <ReferenceArea x1={0.5} x2={2.5} y1={2} y2={3.5} fill="rgba(245,158,11,0.08)" />
+              <ReferenceArea x1={0.5} x2={2.35} y1={2} y2={3.5} fill="rgba(245,158,11,0.08)" />
 
               {/* 우하단: High Financial + Low Impact (파랑) */}
-              <ReferenceArea x1={2.5} x2={4.2} y1={0.5} y2={2} fill="rgba(59,130,246,0.08)" />
+              <ReferenceArea x1={2.35} x2={4.2} y1={0.5} y2={2} fill="rgba(59,130,246,0.08)" />
 
               {/* 좌하단: Low Financial + Low Impact (회색) */}
-              <ReferenceArea x1={0.5} x2={2.5} y1={0.5} y2={2} fill="rgba(148,163,184,0.08)" />  
+              <ReferenceArea x1={0.5} x2={2.35} y1={0.5} y2={2} fill="rgba(148,163,184,0.08)" />  
             <ReferenceLine
-              x={2.5}
+              x={2.35}
               stroke="#94a3b8"
               strokeDasharray="6 5"
               strokeWidth={1.5}
@@ -293,7 +298,7 @@ const DoubleMaterialityMatrix = () => {
               type="number"
               dataKey="x"
               domain={[0.5, 4.2]}
-              ticks={[1, 2, 3, 4]}
+              ticks={[2.35, 4.2]}
               tickFormatter={(v) => ({ 2: "Middle", 3: "High", 4: "" }[v] ?? "")}
               label={{
                 value: "Financial Materiality (재무중요성)",
@@ -437,11 +442,11 @@ const MISSING_DATA_ROWS = [
 ];
 
 const SCATTER_TABLE_ROWS = [
-  { rank: 1, cat: "E", name: "기후목표·전환계획",    type: "위기", period: "장기", fin: "1", impact: "3" },
-  { rank: 2, cat: "E", name: "저탄소·친환경 제품",   type: "기회", period: "단기", fin: "2", impact: "1" },
-  { rank: 3, cat: "S", name: "교육훈련·역량개발",    type: "위기", period: "장기", fin: "1", impact: "2" },
+  { rank: 1, cat: "E", name: "기후목표·전환계획",    type: "위기", period: "장기", fin: "3", impact: "3" },
+  { rank: 2, cat: "E", name: "저탄소·친환경 제품",   type: "기회", period: "단기", fin: "2", impact: "3" },
+  { rank: 3, cat: "S", name: "교육훈련·역량개발",    type: "위기", period: "장기", fin: "2", impact: "2" },
   { rank: 4, cat: "S", name: "소비자 건강·제품안전", type: "기회", period: "장기", fin: "2", impact: "1" },
-  { rank: 5, cat: "S", name: "공급망 감사·시정조치", type: "위기", period: "단기", fin: "3", impact: "2" },
+  { rank: 5, cat: "S", name: "공급망 감사·시정조치", type: "위기", period: "단기", fin: "1", impact: "2" },
 ];
 
 // ════════════════════════════════════════════════════════════════
@@ -594,7 +599,7 @@ const Result = () => {
                 <div className="card-container">
                   <div className="card-title-row">
                     <span className="card-title">최종 선정 요약</span>
-                    <span className="info-mark">ⓘ</span>
+                    {/* <span className="info-mark">ⓘ</span> */}
                   </div>
                   <div id="result-summary-grid" className="summary-grid">
                     {[
@@ -690,10 +695,10 @@ const Result = () => {
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {[
               { icon: "🎯", text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
-              { icon: "📊", text: "2개 이상 분석축에서", sub: "반복 관측" },
-              { icon: "🔗", text: "가치사슬 관련성 높음" },
-              { icon: "👥", text: "이해관계자 관심도 높음" }, 
-              { icon: "🛡️", text: "리스크/기회 요인으로서의", sub: "중요성 고려" },
+              { icon: <img src={Analyze}  width="20" height="20" alt="" style={{ objectFit: "contain" }} />, text: "2개 이상 분석축 관측", sub: "(반복 관측)" },
+              { icon: <img src={VChain}  width="20" height="20" alt="" style={{ objectFit: "contain" }} />, text: "가치사슬 관련성 높음" },
+              { icon: <img src={SHolder}  width="20" height="20" alt="" style={{ objectFit: "contain" }} />, text: "이해관계자 관심도 높음" }, 
+              { icon: "🛡️", text: "리스크/기회 요인으로서의 중요성 고려" },
             ].map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
                 <div style={{ flexShrink: 0, width: "32px", height: "32px", background: "#dcfce7", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem" }}>{item.icon}</div>
@@ -764,7 +769,7 @@ const Result = () => {
               <div className="card-container result-tab-pane">
                 <div className="card-title-row">
                   <span className="card-title">점수 해석</span>
-                  <span className="info-mark">ⓘ</span>
+                  {/* <span className="info-mark">ⓘ</span> */}
                 </div>
 
                 {/* 1. 분석축 기여도 */}
@@ -845,7 +850,7 @@ const Result = () => {
                   <div className="accordion-head" onClick={() => toggleSection(1)}>
                     <div id="accordion-title-wrap">
                       <span className="accordion-title">1. 보고서 반영 우선순위</span>
-                      <span className="info-mark sm">ⓘ</span>
+                      {/* <span className="info-mark sm">ⓘ</span> */}
                     </div>
                     <span className="accordion-arrow">{openSections[1] ? "∧" : "∨"}</span>
                   </div>
@@ -980,17 +985,26 @@ const Result = () => {
                   <DoubleMaterialityMatrix />
                 </div>
                 <div id="table-card">
-                  <div style={{ display: "flex", gap: "16px", marginBottom: "10px", fontSize: "0.8rem", color: "#475569", alignItems: "center" }}>
-                    {[["Low,", 1], ["Middle,", 2], ["High,", 3]].map(([label, filled]) => (
-                      <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
-                        <span style={{ display: "inline-flex", gap: "3px" }}>
-                          {[1, 2, 3].map((i) => (
-                            <span key={i} style={{ width: "9px", height: "9px", borderRadius: "50%", display: "inline-block", backgroundColor: i <= filled ? "#1e293b" : "transparent", border: "2px solid #1e293b" }} />
-                          ))}
+                  {/* <div id="table-card-title">순위표</div> */}
+                  <div style={{ display: "flex", gap: "16px", marginBottom: "12px", fontSize: "0.8rem", color: "#475569", alignItems: "center" }}>
+                    {(() => {
+                      const LEVEL_LABELS = { 1: "Low", 2: "Middle", 3: "High" };
+                      const usedLevels = [...new Set(
+                        SCATTER_TABLE_ROWS.flatMap(row => [Number(row.fin), Number(row.impact)])
+                      )].filter(v => v >= 1 && v <= 3).sort((a, b) => a - b);
+                      return usedLevels.map((filled, idx) => (
+                        <span key={filled} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                          <span style={{ display: "inline-flex", gap: "3px" }}>
+                            {[1, 2, 3].map((i) => (
+                              <span key={i} style={{ width: "9px", height: "9px", borderRadius: "50%", display: "inline-block", backgroundColor: i <= filled ? "#1e293b" : "transparent", border: "2px solid #1e293b" }} />
+                            ))}
+                          </span>
+                          <span style={{ fontWeight: 600 }}>
+                            {LEVEL_LABELS[filled]}{idx < usedLevels.length - 1 ? "," : ""}
+                          </span>
                         </span>
-                        <span style={{ fontWeight: 600 }}>{label}</span>
-                      </span>
-                    ))}
+                      ));
+                    })()}
                   </div>
                   <table className="result-table">
                     <thead>

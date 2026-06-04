@@ -33,15 +33,21 @@ const isEmployee = (role) => ['부서담당자', 'EMPLOYEE', 'ASSIGNEE'].include
 const isConsultant = (role) => ['컨설턴트', 'CONSULTANT'].includes(role);
 
 export default function UserManagementModal({ isOpen, onClose, userItem }) {
+  const [selectedRole, setSelectedRole] = useState(userItem?.role || '');
+
+  React.useEffect(() => {
+    if (isOpen && userItem) {
+      setSelectedRole(userItem.role || '');
+    }
+  }, [isOpen, userItem]);
+
   if (!isOpen || !userItem) return null;
 
   const role = userItem.role;
-  const scopes = userItem.assignmentScopes?.length > 0
-    ? userItem.assignmentScopes
-    : FIXTURE_ASSIGNMENT_SCOPES;
+  const scopes = userItem.assignmentScopes || [];
 
   const handlePreviewAction = (label) => {
-    showDefaultAlert('안내', `${label} 연결은 후속 단계에서 진행됩니다.`, 'info');
+    showDefaultAlert('안내', `${label} 작업은 후속 단계에서 진행됩니다.`, 'info');
   };
 
   return createPortal(
@@ -62,31 +68,59 @@ export default function UserManagementModal({ isOpen, onClose, userItem }) {
             <InfoRow label="연결 상태" value={getConnectionStatus(role)} />
           </div>
 
+          {/* Role Change */}
+          <h4 style={{ fontSize: '0.95rem', color: '#1e293b', marginBottom: '12px' }}>역할·권한</h4>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', alignItems: 'center' }}>
+            <select
+              value={selectedRole}
+              onChange={(e) => setSelectedRole(e.target.value)}
+              style={{ padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.9rem', color: '#334155', minWidth: '160px' }}
+            >
+              <option value="관리자">관리자</option>
+              <option value="ESG담당자">ESG담당자</option>
+              <option value="컨설턴트">컨설턴트</option>
+              <option value="부서담당자">부서담당자</option>
+            </select>
+            <button
+              className="btn-outline"
+              onClick={() => handlePreviewAction('권한 변경 저장')}
+              style={{ ...actionBtnStyle, background: '#f8fafc' }}
+            >
+              권한 변경 저장
+            </button>
+          </div>
+
           {/* Assignment Scopes */}
-          <h4 style={{ fontSize: '0.95rem', color: '#1e293b', marginBottom: '12px' }}>할당 프로젝트 Cycle 목록</h4>
+          <h4 style={{ fontSize: '0.95rem', color: '#1e293b', marginBottom: '12px' }}>담당 데이터 현황</h4>
           <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', marginBottom: '24px' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-              <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <tr>
-                  <th style={thStyle}>Reporting Year</th>
-                  <th style={thStyle}>Project Name</th>
-                  <th style={thStyle}>Cycle Type</th>
-                  <th style={thStyle}>담당 Sub-Issue</th>
-                  <th style={thStyle}>Metric 수</th>
-                </tr>
-              </thead>
-              <tbody>
-                {scopes.map((scope, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={tdStyle}>{scope.reportingYear}</td>
-                    <td style={tdStyle}>{scope.projectName}</td>
-                    <td style={tdStyle}><span style={{ fontSize: '11px', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px' }}>{scope.cycleType}</span></td>
-                    <td style={tdStyle}>{scope.assignedSubIssues?.join(' · ') || '-'}</td>
-                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 600 }}>{scope.assignedMetricCount}</td>
+            {scopes.length > 0 ? (
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <tr>
+                    <th style={thStyle}>Reporting Year</th>
+                    <th style={thStyle}>Project Name</th>
+                    <th style={thStyle}>Cycle Type</th>
+                    <th style={thStyle}>담당 Sub-Issue</th>
+                    <th style={thStyle}>Metric 수</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {scopes.map((scope, idx) => (
+                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={tdStyle}>{scope.reportingYear}</td>
+                      <td style={tdStyle}>{scope.projectName}</td>
+                      <td style={tdStyle}><span style={{ fontSize: '11px', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px' }}>{scope.cycleType}</span></td>
+                      <td style={tdStyle}>{scope.assignedSubIssues?.join(' · ') || '-'}</td>
+                      <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 600 }}>{scope.assignedMetricCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div style={{ padding: '24px', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                할당된 프로젝트와 담당 데이터가 없습니다.
+              </div>
+            )}
           </div>
 
           {/* Actions */}
@@ -114,13 +148,6 @@ export default function UserManagementModal({ isOpen, onClose, userItem }) {
               <>
                 <button
                   className="btn-outline"
-                  onClick={() => handlePreviewAction('권한 확인')}
-                  style={actionBtnStyle}
-                >
-                  권한 확인
-                </button>
-                <button
-                  className="btn-outline"
                   onClick={() => handlePreviewAction('연결 해제')}
                   style={{ ...actionBtnStyle, borderColor: '#fecaca', color: '#dc2626' }}
                 >
@@ -131,10 +158,10 @@ export default function UserManagementModal({ isOpen, onClose, userItem }) {
             {!isEmployee(role) && !isConsultant(role) && (
               <button
                 className="btn-outline"
-                onClick={() => handlePreviewAction('권한 확인')}
+                onClick={() => handlePreviewAction('권한 초기화 등 추가 기능')}
                 style={actionBtnStyle}
               >
-                권한 확인
+                추가 권한 관리
               </button>
             )}
           </div>

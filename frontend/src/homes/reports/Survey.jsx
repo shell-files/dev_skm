@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import "@styles/sr.css";
 import "@styles/survey.css";
-import { useAuth } from "@hooks/AuthContext";
 
 import robot from "@assets/images/robot/robot_servey_t.png";
 import {
@@ -430,7 +429,7 @@ const Survey = () => {
             각 이해관계자 그룹별 설문 발송 관리 및
             실시간 집계 결과를 매핑합니다.
           </p>
-          <div style={{display: "flex", justifyContent: "space-between", marginBottom: "12px",}}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", }}>
             <button
               className="survey-btn"
               onClick={createSurveyUrl}
@@ -744,9 +743,8 @@ const Survey = () => {
           Result Dashboard
       ========================================================== */}
       <div
-        className={`survey-result-dashboard ${
-          dashboardOpen ? "open" : ""
-        }`}
+        className={`survey-result-dashboard ${dashboardOpen ? "open" : ""
+          }`}
       >
         {/* Dashboard Handle */}
         <div
@@ -787,8 +785,8 @@ const Survey = () => {
               <div className="survey-stage">
                 <div className="survey-float-wrap">
                   <img
-                    surveyc={robot}
-                    className="robot-main-img"
+                    src={robot}
+                    className="survey-main-img"
                     alt="robot"
                   />
                 </div>

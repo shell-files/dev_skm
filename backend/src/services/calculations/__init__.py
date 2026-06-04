@@ -1,1 +1,0 @@
-# Calculation bounded context

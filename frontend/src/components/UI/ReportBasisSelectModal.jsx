@@ -331,6 +331,12 @@ const ReportBasisSelectModal = ({
         </div>
 
         <div className="rbm-side">
+          <h3 className="rbm-side-heading">발행 기준 안내</h3>
+          <p className="rbm-side-desc">
+            지속가능경영보고서를 작성할 때<br />
+            데이터 수집 범위와 연결 방식을<br />
+            선택하는 기준입니다.
+          </p>
 
           <div className="rbm-side-section">
             <h4 className="rbm-side-label rbm-side-label--entity">별도기준 (ENTITY)</h4>
@@ -365,6 +371,17 @@ const ReportBasisSelectModal = ({
                 <img src={consolidatedReportIcon} alt="그룹 전체 기준 작성" width={34} height={34} style={{ width: 34, height: 34, objectFit: "contain" }} />
                 <span>그룹 전체 기준 작성</span>
               </li>
+            </ul>
+          </div>
+
+          <div className="rbm-side-tip">
+            <span className="rbm-side-tip-icon">i</span>
+            <strong>선택 전 고려사항</strong>
+            <ul>
+              <li>보고 범위: 단일 회사 또는 그룹 전체</li>
+              <li>자회사 데이터 수집 가능 여부</li>
+              <li>내부 보고 체계 및 외부 규제 요구사항</li>
+              <li>보고서 작성 전까지 변경 가능</li>
             </ul>
           </div>
         </div>

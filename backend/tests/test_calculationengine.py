@@ -20,12 +20,13 @@ def rule(code, target, formula, order=10, unit="KRW", zeroPolicy=None, rounding=
     }
 
 
-def source(code, atomic, role="SOURCE", sourceId=1):
+def source(code, atomic, role="SOURCE", sourceId=1, sourceScope=""):
     return {
         "id": sourceId,
         "calculation_rule_code": code,
         "source_atomic_metric_id": atomic,
         "source_role": role,
+        "source_scope": sourceScope,
     }
 
 
@@ -316,6 +317,62 @@ class CalculationEngineTest(unittest.TestCase):
             {"value_numeric": None, "value_text": "same"},
             {"valueNumeric": None, "valueText": "same"},
         ))
+
+    def test_duplicate_sum_source_deduped(self):
+        result = firstResult(
+            [rule("R1", "M__D1", "ENTITY_SUM")],
+            [
+                source("R1", "M__Q1", sourceId=1),
+                source("R1", "M__Q1", sourceId=2),
+            ],
+            [fact("M__Q1", 100)],
+        )
+        self.assertEqual(result["valueNumeric"], 100)
+
+    def test_duplicate_ratio_numerator_source_deduped(self):
+        result = firstResult(
+            [rule("R1", "M__R1", "ENTITY_RATIO")],
+            [
+                source("R1", "M__Q1", "NUMERATOR", sourceId=1),
+                source("R1", "M__Q1", "NUMERATOR", sourceId=2),
+                source("R1", "M__Q2", "DENOMINATOR", sourceId=3),
+            ],
+            [fact("M__Q1", 50), fact("M__Q2", 100)],
+        )
+        self.assertEqual(result["valueNumeric"], 50)
+
+    def test_same_atomic_different_role_maintained(self):
+        result = firstResult(
+            [rule("R1", "M__R1", "ENTITY_RATIO")],
+            [
+                source("R1", "M__Q1", "NUMERATOR", sourceId=1),
+                source("R1", "M__Q1", "DENOMINATOR", sourceId=2),
+            ],
+            [fact("M__Q1", 50)],
+        )
+        self.assertEqual(result["valueNumeric"], 100)
+
+    def test_same_atomic_different_scope_maintained(self):
+        result = firstResult(
+            [rule("R1", "M__D1", "ENTITY_SUM")],
+            [
+                source("R1", "M__Q1", sourceScope="SCOPE_A", sourceId=1),
+                source("R1", "M__Q1", sourceScope="SCOPE_B", sourceId=2),
+            ],
+            [fact("M__Q1", 100)],
+        )
+        self.assertEqual(result["valueNumeric"], 200)
+
+    def test_reference_copy_multiple_semantic_sources_ambiguous(self):
+        result = firstResult(
+            [rule("R1", "M__D1", "REFERENCE_COPY")],
+            [
+                source("R1", "M__Q1", sourceId=1),
+                source("R1", "M__Q2", sourceId=2),
+            ],
+            [fact("M__Q1", 100), fact("M__Q2", 200)],
+        )
+        self.assertEqual(result["calculationStatus"], engine.STATUS_REFERENCE_SOURCE_AMBIGUOUS)
 
 
 if __name__ == "__main__":

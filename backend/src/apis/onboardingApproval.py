@@ -14,7 +14,6 @@ from src.services.onboardings.service import (
     getApprovalStatus,
     listApprovals,
     rejectApproval,
-    reviewApproval,
     submitApproval,
 )
 from src.utils.auth import get_token
@@ -31,12 +30,12 @@ onboardingApprovalRouter = APIRouter(
 @router.post(
     "/submit",
     response_model=OnboardingApprovalActionResponseDto,
-    summary="Submit onboarding metric inputs for approval",
+    summary="Submit PRE_DMA_G0 G0-02 inputs for approval",
 )
 @onboardingApprovalRouter.post(
     "/submit",
     response_model=OnboardingApprovalActionResponseDto,
-    summary="Submit onboarding metric inputs for approval",
+    summary="Submit PRE_DMA_G0 G0-02 inputs for approval",
 )
 async def submitApprovalRoute(
     request: OnboardingApprovalRequestDto,
@@ -81,22 +80,21 @@ async def listApprovalsRoute(
 @router.get(
     "/status",
     response_model=OnboardingApprovalStatusResponseDto,
-    summary="Get onboarding metric approval status",
+    summary="Get PRE_DMA_G0 G0-02 approval status",
 )
 @onboardingApprovalRouter.get(
     "/status",
     response_model=OnboardingApprovalStatusResponseDto,
-    summary="Get onboarding metric approval status",
+    summary="Get PRE_DMA_G0 G0-02 approval status",
 )
 async def getApprovalStatusRoute(
     companyId: int = Query(...),
     reportingYear: int = Query(...),
-    cycleType: str = Query(default="PRE_DMA_G0"),
-    metricId: str = Query(...),
+    metricId: str = Query(default="G0-02"),
     userModel=Depends(get_token),
 ):
     try:
-        return getApprovalStatus(companyId, reportingYear, metricId, userModel, cycleType)
+        return getApprovalStatus(companyId, reportingYear, metricId, userModel)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
@@ -108,12 +106,12 @@ async def getApprovalStatusRoute(
 @router.post(
     "/approve",
     response_model=OnboardingApprovalActionResponseDto,
-    summary="Approve onboarding metric inputs",
+    summary="Approve PRE_DMA_G0 G0-02 inputs and promote to KPI facts",
 )
 @onboardingApprovalRouter.post(
     "/approve",
     response_model=OnboardingApprovalActionResponseDto,
-    summary="Approve onboarding metric inputs",
+    summary="Approve PRE_DMA_G0 G0-02 inputs and promote to KPI facts",
 )
 async def approveApprovalRoute(
     request: OnboardingApprovalDecisionRequestDto,
@@ -130,38 +128,14 @@ async def approveApprovalRoute(
 
 
 @router.post(
-    "/review",
-    response_model=OnboardingApprovalActionResponseDto,
-    summary="Review onboarding metric inputs",
-)
-@onboardingApprovalRouter.post(
-    "/review",
-    response_model=OnboardingApprovalActionResponseDto,
-    summary="Review onboarding metric inputs",
-)
-async def reviewApprovalRoute(
-    request: OnboardingApprovalDecisionRequestDto,
-    userModel=Depends(get_token),
-):
-    try:
-        return reviewApproval(request, userModel)
-    except PermissionError as e:
-        raise HTTPException(status_code=403, detail=str(e))
-    except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.post(
     "/reject",
     response_model=OnboardingApprovalActionResponseDto,
-    summary="Reject onboarding metric inputs",
+    summary="Reject PRE_DMA_G0 G0-02 inputs",
 )
 @onboardingApprovalRouter.post(
     "/reject",
     response_model=OnboardingApprovalActionResponseDto,
-    summary="Reject onboarding metric inputs",
+    summary="Reject PRE_DMA_G0 G0-02 inputs",
 )
 async def rejectApprovalRoute(
     request: OnboardingApprovalDecisionRequestDto,

@@ -31,15 +31,15 @@
 /* 상단 4개 카드 */
 .ob1-cards {
   display: flex;
-  gap: 12px;
-  margin-bottom: 0px;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 .ob1-stat-card {
-  flex: 0 0 160px;
+  flex: 1;
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 20px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
   display: flex;
   flex-direction: column;
@@ -49,10 +49,9 @@
   font-size: 0.85rem;
   font-weight: 500;
   color: #64748b;
-  white-space: nowrap;
 }
 .ob1-stat-value {
-  font-size: 1.5rem;
+  font-size: 1.8rem;
   font-weight: 700;
   color: #1e293b;
 }
@@ -131,29 +130,20 @@
 .ob1-table {
   width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
 }
 .ob1-table th {
-  background: #f1f5f9;
+  background: #f8fafc;
   color: #475569;
   font-size: 0.8rem;
   font-weight: 600;
   text-align: center;
-  padding: 0 16px;
-  height: 52px;
-  box-sizing: border-box;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e2e8f0;
   white-space: nowrap;
   position: sticky;
   top: 0;
   z-index: 10;
-}
-.ob1-table th:first-child {
-  border-top-left-radius: 8px;
-  border-bottom-left-radius: 8px;
-}
-.ob1-table th:last-child {
-  border-top-right-radius: 8px;
-  border-bottom-right-radius: 8px;
+  box-shadow: 0 1px 0 #e2e8f0;
 }
 .ob1-table td {
   padding: 12px 16px;
@@ -502,7 +492,7 @@
   height: 100vh;
   background: rgba(15, 23, 42, 0.4);
   backdrop-filter: blur(4px);
-  z-index: 1050;
+  z-index: 9999;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -565,9 +555,9 @@
 .ob1-assignee-cell {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 2px;
-  text-align: center;
+  text-align: left;
 }
 
 .ob1-assignee-name {
@@ -665,47 +655,4 @@
   background: #f8fafc;
   color: #475569;
   border-color: #cbd5e1;
-}
-
-/* =========================================================================
-   Table Bulk Action UI
-========================================================================= */
-.ob1-row-selected {
-  background-color: #eff6ff !important;
-}
-.ob1-thead-selected th {
-  border-bottom: 1px solid #c7d2fe !important;
-}
-
-.ob1-btn-batch-assign-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background-color: #fff;
-  color: #1d4ed8;
-  border: 1px solid #1d4ed8;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.ob1-btn-batch-assign-header:hover {
-  background-color: #eff6ff;
-}
-
-.ob1-btn-batch-cancel-header {
-  background-color: #f1f5f9;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.ob1-btn-batch-cancel-header:hover {
-  background-color: #e2e8f0;
 }

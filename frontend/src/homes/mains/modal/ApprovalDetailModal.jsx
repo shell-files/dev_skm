@@ -85,6 +85,11 @@ export default function ApprovalDetailModal({
             </div>
           )}
 
+          {isApproveMode && (
+            <div style={{ marginBottom: '16px', padding: '12px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '0.85rem', color: '#92400e' }}>
+              최종 승인 전에 아래 Atomic 상세 항목을 검토하세요.
+            </div>
+          )}
 
           <div style={summaryStyle}>
             <InfoRow label="Metric" value={metricItem.metricName || metricItem.checklistQuestion || "-"} />

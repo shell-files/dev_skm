@@ -2,13 +2,6 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-ROLLUP_PURPOSE_DMA_PRECHECK = "DMA_PRECHECK"
-ROLLUP_PURPOSE_REPORT_DISCLOSURE = "REPORT_DISCLOSURE"
-
-METRIC_SCOPE_G0_02_FINANCIAL_BASIS = "G0_02_FINANCIAL_BASIS"
-METRIC_SCOPE_SELECTED_DISCLOSURE = "SELECTED_DISCLOSURE"
-METRIC_SCOPE_ROLLUP = "ROLLUP_SCOPE"
-
 
 class RollupSubsidiaryDto(BaseModel):
     companyId: int
@@ -27,11 +20,8 @@ class RollupSubsidiaryResponseDto(BaseModel):
 
 
 class RollupBatchRequestDto(BaseModel):
-    runId: Optional[int] = None
-    sourceCycleId: Optional[int] = None
+    runId: int
     sourceCompanyIds: list[int] = Field(..., min_length=1)
-    rollupPurposeCode: str = ROLLUP_PURPOSE_DMA_PRECHECK
-    metricScopeCode: str = METRIC_SCOPE_G0_02_FINANCIAL_BASIS
 
 
 class RollupBatchStatusDto(BaseModel):
@@ -41,7 +31,6 @@ class RollupBatchStatusDto(BaseModel):
     metricScopeCode: str
     batchStatus: str
     dmaReadyYn: bool
-    reportReadyYn: bool = False
     sourceCompanyIds: list[int]
 
 
@@ -52,14 +41,10 @@ class RollupBatchResponseDto(BaseModel):
 
 class RollupResultDto(BaseModel):
     groupAtomicMetricId: str
-    sourceAtomicMetricIds: list[str]
-    sourceAtomicMetricId: Optional[str] = None
+    sourceAtomicMetricId: str
     formulaType: str
-    valueNumeric: Optional[float | int] = None
-    valueText: Optional[str] = None
+    valueNumeric: float | int
     unit: Optional[str] = None
-    sourceCompanyValues: Optional[dict] = None
-    calculationWarnings: Optional[list[str]] = None
 
 
 class RollupCalculateStatusDto(RollupBatchStatusDto):
@@ -120,7 +105,6 @@ class RollupBatchSummaryDto(BaseModel):
     pendingCount: int
     calculateReadyYn: bool
     dmaReadyYn: bool
-    reportReadyYn: bool = False
 
 
 class RollupBatchSummaryResponseDto(BaseModel):

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+﻿import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import "@styles/onboarding1.css";
@@ -127,7 +127,7 @@ const mergeAssignmentIntoItems = (items = [], assignments = []) => {
       inviteStatus,
       assigneeUserId: assignment.assigneeUserId ?? item.assigneeUserId,
       assigneeEmail,
-      assigneeName: item.assigneeName || null,
+      assigneeName: assigneeEmail || item.assigneeName,
       submissionDueDate: assignment.dueDate || item.submissionDueDate || item.dueDate,
     };
   });
@@ -142,24 +142,8 @@ const getProfileStatusFromItems = (items = []) => {
   return "COMPLETED";
 };
 
-const DonutChart = ({ percent, color, emptyColor = "#f1f5f9" }) => {
-  const safePercent = isNaN(percent) ? 0 : Math.max(0, Math.min(100, percent));
-  return (
-    <div style={{
-      width: '40px', height: '40px', borderRadius: '50%',
-      background: `conic-gradient(${color} ${safePercent}%, ${emptyColor} 0)`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center'
-    }}>
-      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#fff' }}></div>
-    </div>
-  );
-};
-
 const OnboardingStatCards = ({ stats, g0ProfileStatus }) => {
   const statusInfo = getStatusInfo(g0ProfileStatus);
-  const total = stats.totalCount || 1;
-  const completedPercent = (stats.completedCount / total) * 100;
-  const notStartedPercent = (stats.notStartedCount / total) * 100;
 
   return (
     <div className="ob1-cards">
@@ -167,25 +151,19 @@ const OnboardingStatCards = ({ stats, g0ProfileStatus }) => {
         <div className="ob1-stat-title">전체 데이터 입력 항목</div>
         <div className="ob1-stat-value">{stats.totalCount}</div>
       </div>
-      <div className="ob1-stat-card" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div>
-          <div className="ob1-stat-title">입력 완료</div>
-          <div className="ob1-stat-value success">{stats.completedCount}</div>
-        </div>
-        <DonutChart percent={completedPercent} color="#10b981" />
+      <div className="ob1-stat-card">
+        <div className="ob1-stat-title">입력 완료</div>
+        <div className="ob1-stat-value success">{stats.completedCount}</div>
       </div>
-      <div className="ob1-stat-card" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div>
-          <div className="ob1-stat-title">미입력</div>
-          <div className="ob1-stat-value warning">{stats.notStartedCount}</div>
-        </div>
-        <DonutChart percent={notStartedPercent} color="#f97316" />
+      <div className="ob1-stat-card">
+        <div className="ob1-stat-title">미입력</div>
+        <div className="ob1-stat-value warning">{stats.notStartedCount}</div>
       </div>
-      <div className="ob1-stat-card" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+      <div className="ob1-stat-card">
         <div className="ob1-stat-title">프로필 상태</div>
         <div className="ob1-stat-value">
           <span className={`ob1-status-pill ${statusInfo.cls}`}>
-            프로필 상태: {statusInfo.label}
+            {statusInfo.label}
           </span>
         </div>
       </div>
@@ -287,7 +265,6 @@ const OnboardingMetricTable = ({
   onSelectMetric,
   onToggleSelectAll,
   onRowAssignRequested,
-  onBulkAssignRequested,
   onOpenMetric,
   onRetry,
   viewerRole,
@@ -304,7 +281,7 @@ const OnboardingMetricTable = ({
     );
   }
 
-  if (loadingG0 && g0Items.length === 0) {
+  if (loadingG0) {
     return (
       <div className="ob1-table-loading">
         <div className="ob1-spinner" />
@@ -328,72 +305,26 @@ const OnboardingMetricTable = ({
   return (
     <div className="ob1-table-container">
       <table className="ob1-table">
-        <colgroup>
-          <col style={{ width: "44px" }} />
-          <col style={{ width: "90px" }} />
-          <col style={{ width: "auto" }} />
-          <col style={{ width: "150px" }} />
-          <col style={{ width: "110px" }} />
-          <col style={{ width: "130px" }} />
-          <col style={{ width: "110px" }} />
-          <col style={{ width: "140px" }} />
-        </colgroup>
-        <thead className={selectedMetricIds.length > 0 ? "ob1-thead-selected" : ""}>
-          {selectedMetricIds.length > 0 ? (
-            <tr style={{ backgroundColor: "#e0e7ff" }}>
-              <th style={{ width: "44px" }}>
-                <input 
-                  type="checkbox" 
-                  className="ob1-checkbox" 
-                  checked={isAllSelected}
-                  onChange={() => onToggleSelectAll(groupedItems.map(i => i.metricId))}
-                />
-              </th>
-              <th colSpan="7">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontWeight: 600, color: '#1e293b', fontSize: '14px' }}>
-                    {selectedMetricIds.length}개 항목 선택됨
-                  </span>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      type="button"
-                      className="ob1-btn-batch-assign-header" 
-                      onClick={onBulkAssignRequested}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-                      담당자 일괄 지정
-                    </button>
-                    <button 
-                      type="button"
-                      className="ob1-btn-batch-cancel-header" 
-                      onClick={() => onToggleSelectAll([])}
-                    >
-                      ✕ 일괄 선택 해제
-                    </button>
-                  </div>
-                </div>
-              </th>
-            </tr>
-          ) : (
-            <tr>
-              <th style={{ width: "44px" }}>
-                <input 
-                  type="checkbox" 
-                  className="ob1-checkbox" 
-                  aria-label="전체 선택"
-                  checked={isAllSelected}
-                  onChange={() => onToggleSelectAll(groupedItems.map(i => i.metricId))}
-                />
-              </th>
-              <th>Metric ID</th>
-              <th>입력 데이터 설명</th>
-              <th>담당자</th>
-              <th>제출 기한</th>
-              <th>입력 상태</th>
-              <th>승인 상태</th>
-              <th>관리</th>
-            </tr>
-          )}
+        <thead>
+          <tr>
+            <th style={{ width: "44px" }}>
+              <input 
+                type="checkbox" 
+                className="ob1-checkbox" 
+                aria-label="전체 선택"
+                checked={isAllSelected}
+                onChange={() => onToggleSelectAll(groupedItems.map(i => i.metricId))}
+              />
+            </th>
+            <th style={{ width: "90px" }}>Metric ID</th>
+            <th style={{ width: "auto" }}>지표명</th>
+            <th style={{ width: "120px" }}>Sub-Issue</th>
+            <th style={{ width: "170px" }}>담당자</th>
+            <th style={{ width: "110px" }}>제출 기한</th>
+            <th style={{ width: "90px" }}>입력 상태</th>
+            <th style={{ width: "90px" }}>승인 상태</th>
+            <th style={{ width: "180px" }}>관리</th>
+          </tr>
         </thead>
         <tbody>
           {groupedItems.map((item) => {
@@ -421,7 +352,7 @@ const OnboardingMetricTable = ({
             const isOverdue = item.submissionDueDate && item.submissionDueDate < todayStr;
 
             return (
-              <tr key={item.metricId} className={isSelected ? "selected ob1-row-selected" : ""}>
+              <tr key={item.metricId} className={isSelected ? "selected" : ""}>
                 <td>
                   <input 
                     type="checkbox" 
@@ -433,6 +364,7 @@ const OnboardingMetricTable = ({
                 </td>
                 <td>{item.metricId}</td>
                 <td className="ob1-td-name">{item.metricName || item.atomicName || "-"}</td>
+                <td style={{ fontSize: "12px", color: "#64748b" }}>{item.subIssueName || item.sub_issue_name || item.subIssueCode || "-"}</td>
                 
                 <td>
                   <div className="ob1-assignee-cell">
@@ -478,6 +410,9 @@ const OnboardingMetricTable = ({
                     ) : (
                       <>
                         <button type="button" className="ob1-btn-input" onClick={() => onOpenMetric(item, subMetrics)}>입력</button>
+                        <button type="button" className="ob1-btn-input" style={{ borderColor: '#cbd5e1', color: '#475569' }} onClick={() => onRowAssignRequested(item.metricId)}>
+                          {isAssigned ? '담당자 변경' : isInvitePending ? '재지정' : '담당자 지정'}
+                        </button>
                       </>
                     )}
                   </div>
@@ -695,10 +630,7 @@ const OnBoard = () => {
   };
 
   const handleBulkAssignRequested = () => {
-    if (selectedMetricIds.length === 0) {
-      showDefaultAlert("안내", "담당자를 지정할 지표를 먼저 선택해주세요.", "info");
-      return;
-    }
+    if (selectedMetricIds.length === 0) return;
     setAssignmentMode('bulk');
     setAssignmentTargetIds(selectedMetricIds);
     setIsAssignmentModalOpen(true);
@@ -731,7 +663,6 @@ const OnBoard = () => {
           reportingYear,
           cycleType: activeCycleType,
           metricIds,
-          assigneeName: payload.assigneeName,
           assigneeEmail: payload.assigneeEmail,
           dueDate: payload.submissionDueDate || null,
           sendInviteYn: true,
@@ -802,14 +733,14 @@ const OnBoard = () => {
     <div id="ob1-page">
       <div className="ob1-header">
         <h1 className="ob1-title">온보딩 [{basisLabel}]</h1>
+        <p className="ob1-desc">
+          지속가능경영보고서 작성을 위한 기본 경영일반 데이터를 입력하고 확인합니다.<br />
+          {displayWorkflow?.reportBasisType === "CONSOLIDATED" && "본사 및 자회사의 데이터를 통합 관리합니다."}
+        </p>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-        <OnboardingStatCards 
-          stats={profileStats} 
-          g0ProfileStatus={g0ProfileStatus} 
-        />
-      </div>
+      <OnboardingStatCards stats={profileStats} g0ProfileStatus={g0ProfileStatus} />
+
       <div className="ob1-content-layout">
         <div className="ob1-sidebar-panel">
           <div className="ob1-sidebar-title">할당 항목</div>
@@ -851,6 +782,17 @@ const OnBoard = () => {
                 rollupScenario={previewRollupScenario}
               />
 
+              <div className="ob1-batch-bar" style={{ padding: '0 16px', marginTop: '16px' }}>
+                <BatchActionBar 
+                  selectedCount={selectedMetricIds.length}
+                  actions={[
+                    { label: '선택 지표 담당자 지정', onClick: handleBulkAssignRequested, className: 'submit' },
+                    { label: '선택 지표 담당자 해제', onClick: handleBulkUnassignRequested, className: 'reject' },
+                    { label: '선택 해제', onClick: () => setSelectedMetricIds([]), className: 'reject' }
+                  ]}
+                />
+              </div>
+
               <OnboardingMetricTable
                 g0Error={displayG0Error}
                 g0Items={g0Items}
@@ -859,7 +801,6 @@ const OnBoard = () => {
                 onSelectMetric={handleSelectMetric}
                 onToggleSelectAll={handleToggleSelectAll}
                 onRowAssignRequested={handleRowAssignRequested}
-                onBulkAssignRequested={handleBulkAssignRequested}
                 onOpenMetric={(item, subMetrics) => {
                   setSelectedItem({
                     parent: item,
@@ -870,6 +811,7 @@ const OnBoard = () => {
                 onRetry={initializeOnboarding}
                 viewerRole={viewerRole}
               />
+
               <OnboardingWorkflowCta
                 loadingWorkflow={loadingWorkflow}
                 workflow={displayWorkflow}

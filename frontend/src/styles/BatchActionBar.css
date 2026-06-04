@@ -1,98 +1,73 @@
 /* BatchActionBar.css */
 
 .ob-batch-toolbar {
-  position: fixed;
-  bottom: 40px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 12px 24px;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 999px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-  animation: ob-slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  gap: 16px;
+  padding: 8px 16px;
+  background: #f1f5f9;
+  border-radius: 30px;
+  animation: ob-slideInUp 0.3s ease-out;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 @keyframes ob-slideInUp {
   from {
-    transform: translate(-50%, 40px);
+    transform: translateY(10px);
     opacity: 0;
   }
   to {
-    transform: translate(-50%, 0);
+    transform: translateY(0);
     opacity: 1;
   }
 }
 
 .ob-batch-count {
-  font-size: 14px;
-  color: #f1f5f9;
-}
-.ob-batch-count strong {
-  color: #fff;
-  font-size: 15px;
-  margin-right: 4px;
+  font-size: 13px;
+  color: #475569;
 }
 
 .ob-batch-btns {
   display: flex;
-  gap: 12px;
+  gap: 8px;
 }
 
 .ob-batch-btn {
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
   border: none;
   transition: all 0.2s;
 }
 
-/* Base style for standard buttons */
-.ob-batch-btn {
-  background: rgba(255, 255, 255, 0.1);
-  color: #f8fafc;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+.ob-batch-btn.save {
+  background: #fff;
+  color: #03A94D;
+  border: 1px solid #B9E8C9;
 }
 
-.ob-batch-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.15);
-  transform: translateY(-1px);
-}
-
-/* Specific buttons */
 .ob-batch-btn.submit {
-  background: #10b981; /* Emerald 500 */
-  color: #ffffff;
-  border: none;
-}
-.ob-batch-btn.submit:hover:not(:disabled) {
-  background: #059669;
+  background: linear-gradient(135deg, #03A94D, #017E3F);
+  color: #fff;
 }
 
 .ob-batch-btn.approve {
-  background: #3b82f6;
-  color: #ffffff;
-  border: none;
-}
-.ob-batch-btn.approve:hover:not(:disabled) {
-  background: #2563eb;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: #fff;
 }
 
 .ob-batch-btn.reject {
-  background: transparent;
-  color: #fca5a5;
-  border: 1px solid rgba(248, 113, 113, 0.3);
+  background: #fff;
+  border: 1px solid #fee2e2;
+  color: #dc3545;
 }
-.ob-batch-btn.reject:hover:not(:disabled) {
-  background: rgba(248, 113, 113, 0.1);
-  color: #f87171;
+
+.ob-batch-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .ob-batch-btn:disabled {

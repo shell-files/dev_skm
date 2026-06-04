@@ -6,7 +6,7 @@ export default function MetricAssignmentModal({
   isOpen,
   mode = 'single',
   selectedMetricIds = [],
-  currentAssignment = null,
+  currentAssignment = {},
   isSubmitting = false,
   previewResult = null,
   onClose,
@@ -22,7 +22,7 @@ export default function MetricAssignmentModal({
       setEmail(currentAssignment?.assigneeEmail || '');
       setDueDate(currentAssignment?.submissionDueDate || '');
     }
-  }, [isOpen, currentAssignment?.assigneeName, currentAssignment?.assigneeEmail, currentAssignment?.submissionDueDate]);
+  }, [isOpen, currentAssignment]);
 
   if (!isOpen) return null;
 
@@ -115,7 +115,6 @@ export default function MetricAssignmentModal({
           </div>
         </form>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }

@@ -42,7 +42,6 @@ async def list_onboarding_metrics(
             reportingYear=reportingYear,
             cycleType=cycleType,
             metricId=metricId,
-            userModel=userModel,
         )
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -70,7 +69,7 @@ async def patch_onboarding_metric_values(
 ):
     try:
         checkScope(request.companyId, userModel)
-        return saveMetricValues(metricId=metricId, request=request, userId=userId(userModel), userModel=userModel)
+        return saveMetricValues(metricId=metricId, request=request, userId=userId(userModel))
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:

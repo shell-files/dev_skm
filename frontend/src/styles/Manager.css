@@ -31,13 +31,12 @@
 #manager_page .kpi-container {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 0;
-  flex: 1;
+  gap: 20px;
+  margin-bottom: 40px;
 }
 
 #manager_page .kpi-card {
-  padding: 16px;
+  padding: 24px;
   background: #fff; /* 그라데이션 제거 */
   border: 1px solid #e0e0e0; /* 보더 스타일 통일 */
   border-radius: 12px;
@@ -46,9 +45,6 @@
   text-align: center;
   position: relative;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
 }
 
 #manager_page .kpi-card:hover:not(.disabled) {
@@ -75,7 +71,7 @@
 }
 
 #manager_page .kpi-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
   color: #03a94d; /* 포인트 컬러를 kpi 값에 적용하여 강조 */
   letter-spacing: -0.5px;
@@ -928,13 +924,6 @@
    Approval Project Context & Select UI
 ========================================================================= */
 
-#manager_page .dashboard-top-row {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 30px;
-  align-items: stretch;
-}
-
 #manager_page .approval-project-context-bar {
   display: flex;
   align-items: center;
@@ -942,10 +931,9 @@
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 0;
+  padding: 24px;
+  margin-bottom: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  flex: 1.5;
 }
 
 #manager_page .approval-project-context-main {
@@ -979,10 +967,10 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 0 20px;
+  padding: 0 32px;
   border-left: 1px solid #e2e8f0;
   border-right: 1px solid #e2e8f0;
-  margin-right: 20px;
+  margin-right: 32px;
 }
 
 #manager_page .approval-project-context-stage strong {

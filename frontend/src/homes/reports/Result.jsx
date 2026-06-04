@@ -3,11 +3,6 @@ import { useNavigate } from "react-router";
 import "@styles/result.css";
 import "@styles/benchmarking.css";
 import "@styles/media.css";
-import VChain from "@assets/icons/result_page/value-chain.png";
-import SHolder from "@assets/icons/result_page/stakeholder.png";
-// import Survey from "@assets/icons/result_page/survey.png";
-import Analyze from "@assets/icons/result_page/analyze.png";
-
 import {
   ScatterChart,
   Scatter,
@@ -599,7 +594,7 @@ const Result = () => {
                 <div className="card-container">
                   <div className="card-title-row">
                     <span className="card-title">최종 선정 요약</span>
-                    {/* <span className="info-mark">ⓘ</span> */}
+                    <span className="info-mark">ⓘ</span>
                   </div>
                   <div id="result-summary-grid" className="summary-grid">
                     {[
@@ -985,26 +980,17 @@ const Result = () => {
                   <DoubleMaterialityMatrix />
                 </div>
                 <div id="table-card">
-                  {/* <div id="table-card-title">순위표</div> */}
-                  <div style={{ display: "flex", gap: "16px", marginBottom: "12px", fontSize: "0.8rem", color: "#475569", alignItems: "center" }}>
-                    {(() => {
-                      const LEVEL_LABELS = { 1: "Low", 2: "Middle", 3: "High" };
-                      const usedLevels = [...new Set(
-                        SCATTER_TABLE_ROWS.flatMap(row => [Number(row.fin), Number(row.impact)])
-                      )].filter(v => v >= 1 && v <= 3).sort((a, b) => a - b);
-                      return usedLevels.map((filled, idx) => (
-                        <span key={filled} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
-                          <span style={{ display: "inline-flex", gap: "3px" }}>
-                            {[1, 2, 3].map((i) => (
-                              <span key={i} style={{ width: "9px", height: "9px", borderRadius: "50%", display: "inline-block", backgroundColor: i <= filled ? "#1e293b" : "transparent", border: "2px solid #1e293b" }} />
-                            ))}
-                          </span>
-                          <span style={{ fontWeight: 600 }}>
-                            {LEVEL_LABELS[filled]}{idx < usedLevels.length - 1 ? "," : ""}
-                          </span>
+                  <div style={{ display: "flex", gap: "16px", marginBottom: "10px", fontSize: "0.8rem", color: "#475569", alignItems: "center" }}>
+                    {[["Low,", 1], ["Middle,", 2], ["High,", 3]].map(([label, filled]) => (
+                      <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+                        <span style={{ display: "inline-flex", gap: "3px" }}>
+                          {[1, 2, 3].map((i) => (
+                            <span key={i} style={{ width: "9px", height: "9px", borderRadius: "50%", display: "inline-block", backgroundColor: i <= filled ? "#1e293b" : "transparent", border: "2px solid #1e293b" }} />
+                          ))}
                         </span>
-                      ));
-                    })()}
+                        <span style={{ fontWeight: 600 }}>{label}</span>
+                      </span>
+                    ))}
                   </div>
                   <table className="result-table">
                     <thead>

@@ -516,7 +516,11 @@
 
 /* ───── 탭 0: 선정 사유 요약 ───── */
 /* #result-summary-grid: summary-grid 클래스로 기존 스타일 적용. id는 영역 식별용 */
+<<<<<<< HEAD
 /* #result-summary-grid { hook for future overrides } */
+=======
+#result-summary-grid { /* hook for future overrides */ }
+>>>>>>> b2238b82c66fe55db540ba93d2b617278955a664
 
 #result-reason-list {
   display: flex;

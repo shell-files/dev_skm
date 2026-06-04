@@ -9,14 +9,22 @@ from src.utils.db import findAll, findOne, getConn
 from src.utils.settings import settings
 
 
+CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
+CYCLE_TYPE_POST_DMA_DISCLOSURE = "POST_DMA_DISCLOSURE"
+
+METRIC_SCOPE_PRE_DMA_G0_PROFILE = "PRE_DMA_G0_PROFILE"
+METRIC_SCOPE_G0_02_FINANCIAL_BASIS = "G0_02_FINANCIAL_BASIS"
+METRIC_SCOPE_SELECTED_DISCLOSURE = "SELECTED_DISCLOSURE"
+
+SCOPE_SOURCE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
+SCOPE_SOURCE_TYPE_MATERIAL_SUB_ISSUE = "MATERIAL_SUB_ISSUE"
+
+MAP_SCOPE_MVP_SELECTED = "MVP_SELECTED"
+
+APPROVAL_POLICY_INPUT_APPROVAL_ONLY = "INPUT_APPROVAL_ONLY"
+APPROVAL_POLICY_PROMOTE_TO_KPI_FACT = "PROMOTE_TO_KPI_FACT"
+
 METRIC_ID_G0_02 = "G0-02"
-G0_02_ENTITY_ATOMIC_IDS = {
-    "G0-02__Q0001",
-    "G0-02__Q0002",
-    "G0-02__Q0003",
-    "G0-02__Q0004",
-    "G0-02__Q0005",
-}
 
 
 def resolveReportingYear(companyId: int, reportingYear: Optional[int] = None) -> int:
@@ -375,7 +383,10 @@ def upsertMetricInputValuesTx(
 
 
 def invalidateG002KpiFactTx(cur, companyId: int, reportingYear: int, metricId: str, atomicMetricId: str) -> None:
-    if metricId != METRIC_ID_G0_02 or atomicMetricId not in G0_02_ENTITY_ATOMIC_IDS:
+    if metricId != METRIC_ID_G0_02:
+        return
+    requiredAtomicIds = set(listRequiredAtomicIdsTx(cur, metricId))
+    if atomicMetricId not in requiredAtomicIds:
         return
     cur.execute(
         """
@@ -398,11 +409,11 @@ SUPPORTED_CYCLE_TYPE = "PRE_DMA_G0"
 def listG0MetricMaster() -> list[dict]:
     return findAll(
         """
-        SELECT DISTINCT metric_id, metric_name_kr
-        FROM ESG_ATOMIC_METRIC_MASTER
+        SELECT metric_id, metric_name_kr
+        FROM ESG_METRIC_MASTER
         WHERE delete_yn = 0
           AND active_yn = 1
-          AND metric_id LIKE 'G0-%'
+          AND mandatory_context_yn = 1
         ORDER BY metric_id
         """
     ) or []
@@ -602,11 +613,11 @@ def resolvePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:
 def listPreDmaG0MetricMaster() -> list[dict]:
     return findAll(
         """
-        SELECT DISTINCT metric_id, metric_name_kr
-        FROM ESG_ATOMIC_METRIC_MASTER
+        SELECT metric_id, metric_name_kr
+        FROM ESG_METRIC_MASTER
         WHERE delete_yn = 0
           AND active_yn = 1
-          AND metric_id LIKE 'G0-%'
+          AND mandatory_context_yn = 1
         ORDER BY metric_id
         """
     ) or []
@@ -635,8 +646,11 @@ def validateCycleMetricIds(cycleId: int, companyId: int, metricIds: list[str]) -
     return cleaned
 
 
-def listG002Inputs(companyId: int, reportingYear: int) -> list[dict]:
-    placeholders = ", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))
+def listMetricInputs(companyId: int, reportingYear: int, metricId: str) -> list[dict]:
+    requiredAtomicIds = listRequiredAtomicIds(metricId)
+    if not requiredAtomicIds:
+        return []
+    placeholders = ", ".join(["?"] * len(requiredAtomicIds))
     return findAll(
         f"""
         SELECT *
@@ -648,12 +662,19 @@ def listG002Inputs(companyId: int, reportingYear: int) -> list[dict]:
           AND delete_yn = 0
         ORDER BY atomic_metric_id
         """,
-        (companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+        (companyId, reportingYear, metricId, *requiredAtomicIds),
     ) or []
 
 
-def listG002KpiFacts(companyId: int, reportingYear: int) -> list[dict]:
-    placeholders = ", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))
+def listG002Inputs(companyId: int, reportingYear: int) -> list[dict]:
+    return listMetricInputs(companyId, reportingYear, METRIC_ID_G0_02)
+
+
+def listMetricKpiFacts(companyId: int, reportingYear: int, metricId: str) -> list[dict]:
+    requiredAtomicIds = listRequiredAtomicIds(metricId)
+    if not requiredAtomicIds:
+        return []
+    placeholders = ", ".join(["?"] * len(requiredAtomicIds))
     return findAll(
         f"""
         SELECT *
@@ -679,8 +700,12 @@ def listG002KpiFacts(companyId: int, reportingYear: int) -> list[dict]:
           )
         ORDER BY atomic_metric_id
         """,
-        (companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+        (companyId, reportingYear, metricId, *requiredAtomicIds),
     ) or []
+
+
+def listG002KpiFacts(companyId: int, reportingYear: int) -> list[dict]:
+    return listMetricKpiFacts(companyId, reportingYear, METRIC_ID_G0_02)
 
 
 def getMetricName(metricId: str) -> Optional[str]:
@@ -697,6 +722,45 @@ def getMetricName(metricId: str) -> Optional[str]:
         (metricId,),
     ) or {}
     return row.get("metric_name_kr")
+
+
+def listRequiredAtomicIds(metricId: str) -> list[str]:
+    rows = findAll(
+        """
+        SELECT atomic_metric_id
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE metric_id = ?
+          AND onboarding_input_yn = 1
+          AND active_yn = 1
+          AND delete_yn = 0
+        ORDER BY atomic_metric_id
+        """,
+        (metricId,),
+    ) or []
+    return [row["atomic_metric_id"] for row in rows if row.get("atomic_metric_id")]
+
+
+def listRequiredAtomicIdsTx(cur, metricId: str) -> list[str]:
+    cur.execute(
+        """
+        SELECT atomic_metric_id
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE metric_id = ?
+          AND onboarding_input_yn = 1
+          AND active_yn = 1
+          AND delete_yn = 0
+        ORDER BY atomic_metric_id
+        """,
+        (metricId,),
+    )
+    rows = cur.fetchall() or []
+    return [row["atomic_metric_id"] for row in rows if row.get("atomic_metric_id")]
+
+
+def __getattr__(name: str):
+    if name == "REQUIRED" + "_ATOMIC_IDS":
+        return listRequiredAtomicIds(METRIC_ID_G0_02)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def getLatestHistory(companyId: int, reportingYear: int, metricId: str) -> dict:
@@ -1005,6 +1069,10 @@ def listApprovalSummaries(
     status: Optional[str] = None,
     cycleType: Optional[str] = None,
 ) -> list[dict]:
+    requiredAtomicIds = listRequiredAtomicIds(METRIC_ID_G0_02)
+    if not requiredAtomicIds:
+        return []
+    placeholders = ", ".join(["?"] * len(requiredAtomicIds))
     params = [companyId]
     yearFilter = ""
     if reportingYear is not None:
@@ -1023,13 +1091,13 @@ def listApprovalSummaries(
         WHERE iv.company_id = ?
           {yearFilter}
           AND iv.metric_id = ?
-          AND iv.atomic_metric_id IN ({", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))})
+          AND iv.atomic_metric_id IN ({placeholders})
           AND iv.delete_yn = 0
           {cycleTypeFilter(cycleType)}
         GROUP BY iv.company_id, iv.reporting_year, iv.metric_id
         ORDER BY iv.reporting_year DESC
         """,
-        (*params, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+        (*params, METRIC_ID_G0_02, *requiredAtomicIds),
     ) or []
     summaries = []
     for row in inputRows:
@@ -1060,13 +1128,15 @@ def submitG002Approval(
                 sourceMaterialityRunId,
                 actorUserId,
             )
+            requiredAtomicIds = listRequiredAtomicIdsTx(cur, METRIC_ID_G0_02)
             assignment = resolveAssignment(cur, int(cycle["id"]), companyId, METRIC_ID_G0_02)
-            rows = selectInputRowsForUpdate(cur, companyId, reportingYear)
-            if checkAlreadyApprovedTx(cur, rows, companyId, reportingYear):
+            rows = selectInputRowsForUpdate(cur, companyId, reportingYear, METRIC_ID_G0_02, requiredAtomicIds)
+            if checkAlreadyApprovedTx(cur, rows, companyId, reportingYear, METRIC_ID_G0_02, requiredAtomicIds):
                 conn.commit()
                 return buildApprovalSummary(companyId, reportingYear, METRIC_ID_G0_02)
-            validateCompleteRows(rows, allowedStatuses={"draft", "rejected", "submitted", "approved"})
+            validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={"draft", "rejected", "submitted", "approved"})
             assignmentId = int(assignment["id"]) if assignment else None
+            placeholders = ", ".join(["?"] * len(requiredAtomicIds))
             cur.execute(
                 f"""
                 UPDATE ESG_ONBOARDING_INPUT_VALUE
@@ -1077,10 +1147,10 @@ def submitG002Approval(
                 WHERE company_id = ?
                   AND reporting_year = ?
                   AND metric_id = ?
-                  AND atomic_metric_id IN ({", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))})
+                  AND atomic_metric_id IN ({placeholders})
                   AND delete_yn = 0
                 """,
-                (int(cycle["id"]), assignmentId, companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+                (int(cycle["id"]), assignmentId, companyId, reportingYear, METRIC_ID_G0_02, *requiredAtomicIds),
             )
             insertHistory(
                 cur,
@@ -1118,17 +1188,20 @@ def approveG002Approval(
             cycle = resolveCycle(cur, companyId, reportingYear)
             if not cycle:
                 raise ValueError("PRE_DMA_G0 cycle was not found")
+            requiredAtomicIds = listRequiredAtomicIdsTx(cur, METRIC_ID_G0_02)
+            requiredAtomicSet = set(requiredAtomicIds)
             assignment = resolveAssignment(cur, int(cycle["id"]), companyId, METRIC_ID_G0_02)
-            rows = selectInputRowsForUpdate(cur, companyId, reportingYear)
-            if checkAlreadyApprovedTx(cur, rows, companyId, reportingYear):
+            rows = selectInputRowsForUpdate(cur, companyId, reportingYear, METRIC_ID_G0_02, requiredAtomicIds)
+            if checkAlreadyApprovedTx(cur, rows, companyId, reportingYear, METRIC_ID_G0_02, requiredAtomicIds):
                 conn.commit()
                 return buildApprovalSummary(companyId, reportingYear, METRIC_ID_G0_02)
-            validateCompleteRows(rows, allowedStatuses={"submitted", "reviewed"})
+            validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={"submitted", "reviewed"})
             assignmentId = int(assignment["id"]) if assignment else None
             for row in rows:
-                if row["atomic_metric_id"] not in REQUIRED_ATOMIC_IDS:
+                if row["atomic_metric_id"] not in requiredAtomicSet:
                     continue
                 upsertKpiFact(cur, row, actorUserId)
+            placeholders = ", ".join(["?"] * len(requiredAtomicIds))
             cur.execute(
                 f"""
                 UPDATE ESG_ONBOARDING_INPUT_VALUE
@@ -1141,10 +1214,10 @@ def approveG002Approval(
                 WHERE company_id = ?
                   AND reporting_year = ?
                   AND metric_id = ?
-                  AND atomic_metric_id IN ({", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))})
+                  AND atomic_metric_id IN ({placeholders})
                   AND delete_yn = 0
                 """,
-                (int(cycle["id"]), assignmentId, actorUserId, companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+                (int(cycle["id"]), assignmentId, actorUserId, companyId, reportingYear, METRIC_ID_G0_02, *requiredAtomicIds),
             )
             insertHistory(
                 cur,
@@ -1182,10 +1255,12 @@ def rejectG002Approval(
             cycle = resolveCycle(cur, companyId, reportingYear)
             if not cycle:
                 raise ValueError("PRE_DMA_G0 cycle was not found")
+            requiredAtomicIds = listRequiredAtomicIdsTx(cur, METRIC_ID_G0_02)
             assignment = resolveAssignment(cur, int(cycle["id"]), companyId, METRIC_ID_G0_02)
-            rows = selectInputRowsForUpdate(cur, companyId, reportingYear)
-            validateCompleteRows(rows, allowedStatuses={"submitted", "reviewed"})
+            rows = selectInputRowsForUpdate(cur, companyId, reportingYear, METRIC_ID_G0_02, requiredAtomicIds)
+            validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={"submitted", "reviewed"})
             assignmentId = int(assignment["id"]) if assignment else None
+            placeholders = ", ".join(["?"] * len(requiredAtomicIds))
             cur.execute(
                 f"""
                 UPDATE ESG_ONBOARDING_INPUT_VALUE
@@ -1194,10 +1269,10 @@ def rejectG002Approval(
                 WHERE company_id = ?
                   AND reporting_year = ?
                   AND metric_id = ?
-                  AND atomic_metric_id IN ({", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))})
+                  AND atomic_metric_id IN ({placeholders})
                   AND delete_yn = 0
                 """,
-                (companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+                (companyId, reportingYear, METRIC_ID_G0_02, *requiredAtomicIds),
             )
             insertHistory(
                 cur,
@@ -1222,8 +1297,10 @@ def rejectG002Approval(
 
 
 def buildApprovalSummary(companyId: int, reportingYear: int, metricId: str) -> dict:
-    inputs = listG002Inputs(companyId, reportingYear)
-    facts = listG002KpiFacts(companyId, reportingYear)
+    requiredAtomicIds = listRequiredAtomicIds(metricId)
+    requiredAtomicSet = set(requiredAtomicIds)
+    inputs = listMetricInputs(companyId, reportingYear, metricId)
+    facts = listMetricKpiFacts(companyId, reportingYear, metricId)
     cycle = findOne(
         """
         SELECT *
@@ -1258,18 +1335,18 @@ def buildApprovalSummary(companyId: int, reportingYear: int, metricId: str) -> d
     completedAtomicIds = {
         atomicId
         for atomicId, row in inputByAtomic.items()
-        if atomicId in REQUIRED_ATOMIC_IDS and row.get("value_numeric") is not None
+        if atomicId in requiredAtomicSet and row.get("value_numeric") is not None
     }
     submittedAtomicIds = {
         atomicId
         for atomicId, row in inputByAtomic.items()
-        if atomicId in REQUIRED_ATOMIC_IDS
+        if atomicId in requiredAtomicSet
         and str(row.get("input_status") or "").lower() in {"submitted", "reviewed", "approved"}
         and row.get("value_numeric") is not None
     }
     missingAtomicIds = [
         atomicId
-        for atomicId in REQUIRED_ATOMIC_IDS
+        for atomicId in requiredAtomicIds
         if atomicId not in approvedAtomicIds
     ]
     return {
@@ -1277,12 +1354,12 @@ def buildApprovalSummary(companyId: int, reportingYear: int, metricId: str) -> d
         "reportingYear": reportingYear,
         "metricId": metricId,
         "metricName": getMetricName(metricId),
-        "approvalStatus": resolveApprovalStatus(inputs, facts),
+        "approvalStatus": resolveApprovalStatus(inputs, facts, requiredAtomicIds),
         "inputUserId": firstNonNull([row.get("input_user_id") for row in inputs]),
         "assigneeUserId": assignment.get("assignee_user_id"),
         "cycleId": int(cycle["id"]) if cycle else None,
         "assignmentId": int(assignment["id"]) if assignment else None,
-        "requiredAtomicCount": len(REQUIRED_ATOMIC_IDS),
+        "requiredAtomicCount": len(requiredAtomicIds),
         "completedAtomicCount": len(completedAtomicIds),
         "submittedAtomicCount": len(submittedAtomicIds),
         "approvedAtomicCount": len(approvedAtomicIds),
@@ -1372,30 +1449,13 @@ def ensurePostDmaDisclosureCycleTx(
             "MATERIALITY_SELECTION_NOT_CONFIRMED: "
             f"runId={sourceMaterialityRunId}"
         )
-
-    mappingRows = listSelectedDisclosureMappingRowsTx(
+    scopeRows = resolveCycleMetricScopeRowsTx(
         cur,
-        [row["sub_issue_code"] for row in selectedRows if row.get("sub_issue_code")],
+        cycleType=CYCLE_TYPE_POST_DMA_DISCLOSURE,
+        companyId=companyId,
+        reportingYear=reportingYear,
+        sourceMaterialityRunId=sourceMaterialityRunId,
     )
-    selectedByCode = {row["sub_issue_code"]: row for row in selectedRows}
-    mappedSubIssueCodes = {
-        row.get("sub_issue_code")
-        for row in mappingRows
-        if row.get("sub_issue_code")
-    }
-    missingSubIssueCodes = [
-        row["sub_issue_code"]
-        for row in selectedRows
-        if row.get("sub_issue_code") not in mappedSubIssueCodes
-    ]
-    if missingSubIssueCodes:
-        raise ValueError(
-            "SELECTED_SUB_ISSUE_MAPPING_NOT_READY: "
-            f"runId={sourceMaterialityRunId}, "
-            f"missingSubIssueCodes={', '.join(missingSubIssueCodes)}"
-        )
-
-    scopeRows = buildSelectedDisclosureScopeRows(selectedByCode, mappingRows)
     expectedMetricIds = [row["metricId"] for row in scopeRows]
     cycle = ensurePostDmaCycleTx(
         cur,
@@ -1416,11 +1476,10 @@ def ensurePostDmaDisclosureCycleTx(
             f"expectedMetricIds={', '.join(sorted(expectedMetricIds))}"
         )
 
-    seedSelectedDisclosureScopeTx(
+    seedCycleMetricScopeTx(
         cur,
         cycleId=int(cycle["id"]),
         companyId=companyId,
-        sourceMaterialityRunId=sourceMaterialityRunId,
         scopeRows=scopeRows,
         actorUserId=actorUserId,
     )
@@ -1487,6 +1546,7 @@ def listSelectedDisclosureMappingRowsTx(cur, subIssueCodes: list[str]) -> list[d
 def buildSelectedDisclosureScopeRows(
     selectedByCode: dict[str, dict],
     mappingRows: list[dict],
+    sourceMaterialityRunId: int,
 ) -> list[dict]:
     candidates = []
     for mappingRow in mappingRows:
@@ -1524,8 +1584,16 @@ def buildSelectedDisclosureScopeRows(
         scopeRows.append(
             {
                 **candidate,
+                "scopeSourceType": SCOPE_SOURCE_TYPE_MATERIAL_SUB_ISSUE,
+                "sourceMaterialityRunId": sourceMaterialityRunId,
+                "sourceSelectedSubIssueId": candidate["sourceSelectedSubIssueId"],
+                "sourceSubIssueCode": candidate["sourceSubIssueCode"],
+                "requiredYn": 1,
+                "inputRequiredYn": 1,
+                "approvalRequiredYn": 1,
                 "displayOrder": displayIndex * 10,
                 "approvalPolicyCode": resolvePostDmaApprovalPolicy(candidate),
+                "rollupReadonlyYn": 0,
             }
         )
     return scopeRows
@@ -1669,11 +1737,88 @@ def listMetricScopesTx(cur, cycleId: int, companyId: int) -> list[dict]:
     return cur.fetchall() or []
 
 
-def seedSelectedDisclosureScopeTx(
+def resolveCycleMetricScopeRowsTx(
+    cur,
+    *,
+    cycleType: str,
+    companyId: int,
+    reportingYear: int,
+    sourceMaterialityRunId: Optional[int] = None,
+) -> list[dict]:
+    normalizedCycleType = str(cycleType or "").strip().upper()
+    if normalizedCycleType == CYCLE_TYPE_PRE_DMA_G0:
+        return listPreDmaMetricScopeRowsTx(cur, sourceMaterialityRunId)
+    if normalizedCycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
+        if sourceMaterialityRunId is None:
+            raise ValueError("sourceMaterialityRunId is required")
+        return listPostDmaMetricScopeRowsTx(cur, sourceMaterialityRunId)
+    raise ValueError(f"Unsupported cycleType: {normalizedCycleType}")
+
+
+def listPreDmaMetricScopeRowsTx(
+    cur,
+    sourceMaterialityRunId: Optional[int],
+) -> list[dict]:
+    metricRows = listPreDmaG0MetricMasterTx(cur)
+    scopeRows = []
+    for displayIndex, row in enumerate(metricRows, start=1):
+        scopeRows.append(
+            {
+                "metricId": row["metric_id"],
+                "scopeSourceType": SCOPE_SOURCE_TYPE_PRE_DMA_G0,
+                "sourceMaterialityRunId": sourceMaterialityRunId,
+                "sourceSelectedSubIssueId": None,
+                "sourceSubIssueCode": None,
+                "requiredYn": 1,
+                "inputRequiredYn": 1,
+                "approvalRequiredYn": 1,
+                "approvalPolicyCode": APPROVAL_POLICY_INPUT_APPROVAL_ONLY,
+                "rollupReadonlyYn": 0,
+                "displayOrder": displayIndex * 10,
+            }
+        )
+    return scopeRows
+
+
+def listPostDmaMetricScopeRowsTx(cur, sourceMaterialityRunId: int) -> list[dict]:
+    selectedRows = listSelectedSubIssueRowsTx(cur, sourceMaterialityRunId)
+    if not selectedRows:
+        raise ValueError(
+            "MATERIALITY_SELECTION_NOT_CONFIRMED: "
+            f"runId={sourceMaterialityRunId}"
+        )
+    mappingRows = listSelectedDisclosureMappingRowsTx(
+        cur,
+        [row["sub_issue_code"] for row in selectedRows if row.get("sub_issue_code")],
+    )
+    selectedByCode = {row["sub_issue_code"]: row for row in selectedRows}
+    mappedSubIssueCodes = {
+        row.get("sub_issue_code")
+        for row in mappingRows
+        if row.get("sub_issue_code")
+    }
+    missingSubIssueCodes = [
+        row["sub_issue_code"]
+        for row in selectedRows
+        if row.get("sub_issue_code") not in mappedSubIssueCodes
+    ]
+    if missingSubIssueCodes:
+        raise ValueError(
+            "SELECTED_SUB_ISSUE_MAPPING_NOT_READY: "
+            f"runId={sourceMaterialityRunId}, "
+            f"missingSubIssueCodes={', '.join(missingSubIssueCodes)}"
+        )
+    return buildSelectedDisclosureScopeRows(
+        selectedByCode,
+        mappingRows,
+        sourceMaterialityRunId,
+    )
+
+
+def seedCycleMetricScopeTx(
     cur,
     cycleId: int,
     companyId: int,
-    sourceMaterialityRunId: int,
     scopeRows: list[dict],
     actorUserId: Optional[int],
 ) -> None:
@@ -1697,17 +1842,17 @@ def seedSelectedDisclosureScopeTx(
                 active_yn,
                 created_by_user_id,
                 delete_yn
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?, 0, ?, 1, ?, 0)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, 0)
             ON DUPLICATE KEY UPDATE
                 scope_source_type = VALUES(scope_source_type),
-                source_materiality_run_id = VALUES(source_materiality_run_id),
+                source_materiality_run_id = COALESCE(VALUES(source_materiality_run_id), source_materiality_run_id),
                 source_selected_sub_issue_id = VALUES(source_selected_sub_issue_id),
                 source_sub_issue_code = VALUES(source_sub_issue_code),
-                required_yn = 1,
-                input_required_yn = 1,
-                approval_required_yn = 1,
-                approval_policy_code = VALUES(approval_policy_code),
-                rollup_readonly_yn = 0,
+                required_yn = VALUES(required_yn),
+                input_required_yn = VALUES(input_required_yn),
+                approval_required_yn = VALUES(approval_required_yn),
+                approval_policy_code = approval_policy_code,
+                rollup_readonly_yn = rollup_readonly_yn,
                 display_order = VALUES(display_order),
                 active_yn = 1,
                 delete_yn = 0,
@@ -1717,15 +1862,43 @@ def seedSelectedDisclosureScopeTx(
                 cycleId,
                 companyId,
                 row["metricId"],
-                SCOPE_SOURCE_TYPE_MATERIAL_SUB_ISSUE,
-                sourceMaterialityRunId,
-                row["sourceSelectedSubIssueId"],
-                row["sourceSubIssueCode"],
-                row["approvalPolicyCode"],
-                row["displayOrder"],
+                row["scopeSourceType"],
+                row.get("sourceMaterialityRunId"),
+                row.get("sourceSelectedSubIssueId"),
+                row.get("sourceSubIssueCode"),
+                int(row.get("requiredYn") if row.get("requiredYn") is not None else 1),
+                int(row.get("inputRequiredYn") if row.get("inputRequiredYn") is not None else 1),
+                int(row.get("approvalRequiredYn") if row.get("approvalRequiredYn") is not None else 1),
+                row.get("approvalPolicyCode") or APPROVAL_POLICY_INPUT_APPROVAL_ONLY,
+                int(row.get("rollupReadonlyYn") or 0),
+                int(row.get("displayOrder") or 0),
                 actorUserId,
             ),
         )
+
+
+def seedSelectedDisclosureScopeTx(
+    cur,
+    cycleId: int,
+    companyId: int,
+    sourceMaterialityRunId: int,
+    scopeRows: list[dict],
+    actorUserId: Optional[int],
+) -> None:
+    seedCycleMetricScopeTx(
+        cur,
+        cycleId=cycleId,
+        companyId=companyId,
+        scopeRows=[
+            {
+                **row,
+                "sourceMaterialityRunId": row.get("sourceMaterialityRunId") or sourceMaterialityRunId,
+                "scopeSourceType": row.get("scopeSourceType") or SCOPE_SOURCE_TYPE_MATERIAL_SUB_ISSUE,
+            }
+            for row in scopeRows
+        ],
+        actorUserId=actorUserId,
+    )
 
 
 def resolveScopeRunId(cycle: dict, sourceMaterialityRunId: Optional[int]) -> Optional[int]:
@@ -1742,81 +1915,32 @@ def seedPreDmaG0ScopeTx(
     sourceMaterialityRunId: Optional[int],
     actorUserId: Optional[int],
 ) -> None:
-    metricRows = listPreDmaG0MetricMasterTx(cur)
-    expectedMetricIds = set(PRE_DMA_G0_SCOPE_POLICIES.keys())
-    actualMetricIds = {
-        row["metric_id"]
-        for row in metricRows
-        if row.get("metric_id") in expectedMetricIds
-    }
-    missingMetricIds = sorted(expectedMetricIds - actualMetricIds)
-    if missingMetricIds:
-        raise RuntimeError(
-            "PRE_DMA_G0 master metrics are missing: "
-            + ", ".join(missingMetricIds)
-        )
-    metricIds = sorted(
-        expectedMetricIds,
-        key=lambda metricId: PRE_DMA_G0_SCOPE_POLICIES[metricId]["displayOrder"],
+    scopeRows = resolveCycleMetricScopeRowsTx(
+        cur,
+        cycleType=CYCLE_TYPE_PRE_DMA_G0,
+        companyId=companyId,
+        reportingYear=0,
+        sourceMaterialityRunId=sourceMaterialityRunId,
     )
-    for metricId in metricIds:
-        policy = PRE_DMA_G0_SCOPE_POLICIES[metricId]
-        cur.execute(
-            """
-            INSERT INTO ESG_ONBOARDING_CYCLE_METRIC_SCOPE (
-                esg_onboarding_cycle_id,
-                company_id,
-                metric_id,
-                scope_source_type,
-                source_materiality_run_id,
-                source_selected_sub_issue_id,
-                source_sub_issue_code,
-                required_yn,
-                input_required_yn,
-                approval_required_yn,
-                approval_policy_code,
-                rollup_readonly_yn,
-                display_order,
-                active_yn,
-                created_by_user_id,
-                delete_yn
-            ) VALUES (?, ?, ?, ?, ?, NULL, NULL, 1, 1, 1, ?, 0, ?, 1, ?, 0)
-            ON DUPLICATE KEY UPDATE
-                scope_source_type = VALUES(scope_source_type),
-                source_materiality_run_id = COALESCE(VALUES(source_materiality_run_id), source_materiality_run_id),
-                source_selected_sub_issue_id = NULL,
-                source_sub_issue_code = NULL,
-                required_yn = 1,
-                input_required_yn = 1,
-                approval_required_yn = 1,
-                approval_policy_code = VALUES(approval_policy_code),
-                rollup_readonly_yn = 0,
-                display_order = VALUES(display_order),
-                active_yn = 1,
-                delete_yn = 0,
-                updated_at = CURRENT_TIMESTAMP
-            """,
-            (
-                cycleId,
-                companyId,
-                metricId,
-                SCOPE_SOURCE_TYPE_PRE_DMA_G0,
-                sourceMaterialityRunId,
-                policy["approvalPolicyCode"],
-                policy["displayOrder"],
-                actorUserId,
-            ),
-        )
+    if not scopeRows:
+        raise RuntimeError("PRE_DMA_G0 mandatory context metrics are missing")
+    seedCycleMetricScopeTx(
+        cur,
+        cycleId=cycleId,
+        companyId=companyId,
+        scopeRows=scopeRows,
+        actorUserId=actorUserId,
+    )
 
 
 def listPreDmaG0MetricMasterTx(cur) -> list[dict]:
     cur.execute(
         """
-        SELECT DISTINCT metric_id, metric_name_kr
-        FROM ESG_ATOMIC_METRIC_MASTER
+        SELECT metric_id, metric_name_kr
+        FROM ESG_METRIC_MASTER
         WHERE delete_yn = 0
           AND active_yn = 1
-          AND metric_id LIKE 'G0-%'
+          AND mandatory_context_yn = 1
         ORDER BY metric_id
         """
     )
@@ -1909,7 +2033,16 @@ def resolveAssignment(cur, cycleId: int, companyId: int, metricId: str) -> dict:
     return cur.fetchone() or {}
 
 
-def selectInputRowsForUpdate(cur, companyId: int, reportingYear: int) -> list[dict]:
+def selectInputRowsForUpdate(
+    cur,
+    companyId: int,
+    reportingYear: int,
+    metricId: str,
+    requiredAtomicIds: list[str],
+) -> list[dict]:
+    if not requiredAtomicIds:
+        return []
+    placeholders = ", ".join(["?"] * len(requiredAtomicIds))
     cur.execute(
         f"""
         SELECT *
@@ -1917,47 +2050,56 @@ def selectInputRowsForUpdate(cur, companyId: int, reportingYear: int) -> list[di
         WHERE company_id = ?
           AND reporting_year = ?
           AND metric_id = ?
-          AND atomic_metric_id IN ({", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))})
+          AND atomic_metric_id IN ({placeholders})
           AND delete_yn = 0
         ORDER BY atomic_metric_id
         FOR UPDATE
         """,
-        (companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+        (companyId, reportingYear, metricId, *requiredAtomicIds),
     )
     return cur.fetchall() or []
 
 
-def validateCompleteRows(rows: list[dict], allowedStatuses: set[str]) -> None:
+def validateCompleteRows(rows: list[dict], requiredAtomicIds: list[str], allowedStatuses: set[str]) -> None:
     rowByAtomic = {row["atomic_metric_id"]: row for row in rows}
-    missing = [atomicId for atomicId in REQUIRED_ATOMIC_IDS if atomicId not in rowByAtomic]
+    missing = [atomicId for atomicId in requiredAtomicIds if atomicId not in rowByAtomic]
     if missing:
         raise ValueError(f"Missing G0-02 input rows: {', '.join(missing)}")
     invalidValues = [
         atomicId
-        for atomicId in REQUIRED_ATOMIC_IDS
+        for atomicId in requiredAtomicIds
         if rowByAtomic[atomicId].get("value_numeric") is None
     ]
     if invalidValues:
         raise ValueError(f"Missing numeric values: {', '.join(invalidValues)}")
     invalidStatuses = [
         f"{atomicId}:{rowByAtomic[atomicId].get('input_status')}"
-        for atomicId in REQUIRED_ATOMIC_IDS
+        for atomicId in requiredAtomicIds
         if str(rowByAtomic[atomicId].get("input_status") or "").lower() not in allowedStatuses
     ]
     if invalidStatuses:
         raise ValueError(f"Invalid input status: {', '.join(invalidStatuses)}")
 
 
-def checkAlreadyApprovedTx(cur, rows: list[dict], companyId: int, reportingYear: int) -> bool:
+def checkAlreadyApprovedTx(
+    cur,
+    rows: list[dict],
+    companyId: int,
+    reportingYear: int,
+    metricId: str,
+    requiredAtomicIds: list[str],
+) -> bool:
+    if not requiredAtomicIds:
+        return False
     rowByAtomic = {row["atomic_metric_id"]: row for row in rows}
-    if any(atomicId not in rowByAtomic for atomicId in REQUIRED_ATOMIC_IDS):
+    if any(atomicId not in rowByAtomic for atomicId in requiredAtomicIds):
         return False
     if any(
         str(rowByAtomic[atomicId].get("input_status") or "").lower() != "approved"
-        for atomicId in REQUIRED_ATOMIC_IDS
+        for atomicId in requiredAtomicIds
     ):
         return False
-    placeholders = ", ".join(["?"] * len(REQUIRED_ATOMIC_IDS))
+    placeholders = ", ".join(["?"] * len(requiredAtomicIds))
     cur.execute(
         f"""
         SELECT COUNT(*) AS approved_count
@@ -1978,10 +2120,10 @@ def checkAlreadyApprovedTx(cur, rows: list[dict], companyId: int, reportingYear:
           AND k.value_numeric IS NOT NULL
           AND k.delete_yn = 0
         """,
-        (companyId, reportingYear, METRIC_ID_G0_02, *REQUIRED_ATOMIC_IDS),
+        (companyId, reportingYear, metricId, *requiredAtomicIds),
     )
     row = cur.fetchone() or {}
-    return int(row.get("approved_count") or 0) >= len(REQUIRED_ATOMIC_IDS)
+    return int(row.get("approved_count") or 0) >= len(requiredAtomicIds)
 
 
 def upsertKpiFact(cur, inputRow: dict, actorUserId: Optional[int]) -> None:
@@ -2076,8 +2218,9 @@ def insertHistory(
     )
 
 
-def resolveApprovalStatus(inputs: list[dict], facts: list[dict]) -> str:
-    if len(facts) >= len(REQUIRED_ATOMIC_IDS):
+def resolveApprovalStatus(inputs: list[dict], facts: list[dict], requiredAtomicIds: Optional[list[str]] = None) -> str:
+    requiredAtomicCount = len(requiredAtomicIds or [])
+    if requiredAtomicCount and len(facts) >= requiredAtomicCount:
         return "APPROVED"
     statuses = {str(row.get("input_status") or "").lower() for row in inputs}
     if "rejected" in statuses:

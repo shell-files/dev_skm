@@ -299,7 +299,7 @@ const DoubleMaterialityMatrix = () => {
               dataKey="x"
               domain={[0.5, 4.2]}
               ticks={[2.35, 4.2]}
-              tickFormatter={(v) => ({ 2: "Middle", 3: "High", 4: "" }[v] ?? "")}
+              tickFormatter={(v) => v < 3 ? "Middle" : "High"}
               label={{
                 value: "Financial Materiality (재무중요성)",
                 position: "insideBottom", offset: -30,
@@ -695,14 +695,14 @@ const Result = () => {
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {[
               { icon: "🎯", text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
-              { icon: <img src={Analyze}  width="20" height="20" alt="" style={{ objectFit: "contain" }} />, text: "2개 이상 분석축 관측", sub: "(반복 관측)" },
+              { icon: <img src={Analyze}  width="20" height="20" alt="" style={{ objectFit: "contain" }} />, text: "2개 이상 분석축에서 반복 관측" },
               { icon: <img src={VChain}  width="20" height="20" alt="" style={{ objectFit: "contain" }} />, text: "가치사슬 관련성 높음" },
               { icon: <img src={SHolder}  width="20" height="20" alt="" style={{ objectFit: "contain" }} />, text: "이해관계자 관심도 높음" }, 
               { icon: "🛡️", text: "리스크/기회 요인으로서의 중요성 고려" },
             ].map((item, i) => (
               <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
                 <div style={{ flexShrink: 0, width: "32px", height: "32px", background: "#dcfce7", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem" }}>{item.icon}</div>
-                <div style={{ fontSize: "1rem", color: "#334155", lineHeight: 1.6 }}>
+                <div style={{ fontSize: "1.rem", color: "#334155", lineHeight: 1.6 }}>
                   {item.text}{item.sub && <><br /><span style={{ color: "#64748b" }}>{item.sub}</span></>}
                 </div>
               </div>

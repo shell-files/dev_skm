@@ -5,11 +5,7 @@
     --media-border: #e2e8f0;
     --media-text: #334155;
     --media-sub: #64748b;
-<<<<<<< HEAD
     --media-radius: 20px;
-=======
-    --draft-radius: 20px;
->>>>>>> ea4795c (css&페이지 수정)
 }
 
 /* 중앙 컨텐츠 스크롤 제어 */
@@ -83,12 +79,7 @@
 
 .media-card:hover {
     border-color: var(--media-primary);
-<<<<<<< HEAD
-    /* 호버 시 네온 느낌의 부드러운 그림자 효과 추가 */
-    box-shadow: 0 10px 25px rgba(3, 169, 77, 0.12); 
-=======
     box-shadow: 0 10px 25px rgba(3, 169, 77, 0.05);
->>>>>>> ea4795c (css&페이지 수정)
 }
 
 /* 상단 유형 배지 (언론 채널, 규제 기관, 전문 평가기관) */
@@ -266,11 +257,7 @@
     box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.06);
 }
 
-<<<<<<< HEAD
-    .media-result-dashboard.open {
-=======
 .media-result-dashboard.open {
->>>>>>> ea4795c (css&페이지 수정)
     height: 400px;
     }
 

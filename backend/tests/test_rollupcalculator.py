@@ -5,6 +5,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.models.rollup import (
+    RollupBatchRequestDto,
     RollupBatchStatusDto,
     RollupCalculateResponseDto,
     RollupCalculateStatusDto,
@@ -144,7 +145,13 @@ class FakeRepository:
     def listBatchRuleSources(self, ruleCodes):
         return [source("R1", "S1")]
 
+    def resolveConsolidatedRuleClosure(self, metricIds):
+        return self.listBatchRules(metricIds), self.listBatchRuleSources(["R1"])
+
     def resolveRequiredSourceAtomicIdsTx(self, cur, batchId):
+        return ["S1"]
+
+    def resolveExternalEntitySourceAtomicIdsTx(self, cur, batchId):
         return ["S1"]
 
     def listApprovedFactsByCompany(self, companyIds, reportingYear, atomicIds):
@@ -317,10 +324,10 @@ class RollupCalculatorTest(unittest.TestCase):
         self.assertEqual(result[(1, "S1")]["valueNumeric"], 12)
 
     def test_build_source_readiness_missing_by_company(self):
-        originalResolve = scopeRepository.resolveRequiredSourceAtomicIds
+        originalResolve = scopeRepository.resolveExternalEntitySourceAtomicIds
         originalList = scopeRepository.listApprovedFactsByCompany
         try:
-            scopeRepository.resolveRequiredSourceAtomicIds = lambda batchId: ["S1", "S2"]
+            scopeRepository.resolveExternalEntitySourceAtomicIds = lambda batchId: ["S1", "S2"]
             scopeRepository.listApprovedFactsByCompany = lambda companyIds, reportingYear, atomicIds: [
                 {"companyId": 1, "atomicMetricId": "S1"},
                 {"companyId": 2, "atomicMetricId": "S1"},
@@ -332,7 +339,7 @@ class RollupCalculatorTest(unittest.TestCase):
             self.assertEqual(readiness["missingByCompany"], {"1": ["S2"], "2": []})
             self.assertFalse(readiness["readyYn"])
         finally:
-            scopeRepository.resolveRequiredSourceAtomicIds = originalResolve
+            scopeRepository.resolveExternalEntitySourceAtomicIds = originalResolve
             scopeRepository.listApprovedFactsByCompany = originalList
 
     def test_scope_decoder_json_array(self):
@@ -368,6 +375,106 @@ class RollupCalculatorTest(unittest.TestCase):
         )
         self.assertTrue(payload.success)
         self.assertEqual(payload.data.results[0].valueNumeric, 30)
+
+    def test_internal_consolidated_target_excluded_from_external_readiness(self):
+        scopes = [
+            {"group_atomic_metric_id": "T1", "sourceAtomicMetricIds": ["S1"]},
+            {"group_atomic_metric_id": "T2", "sourceAtomicMetricIds": ["T1"]},
+        ]
+        self.assertEqual(scopeRepository.resolveAllRuleSourceAtomicIdsFromScopes(scopes), ["S1", "T1"])
+        self.assertEqual(scopeRepository.resolveExternalEntitySourceAtomicIdsFromScopes(scopes), ["S1"])
+
+    def test_cross_metric_producer_closure(self):
+        originalListRules = scopeRepository.listBatchRules
+        originalListSources = scopeRepository.listBatchRuleSources
+        originalListProducer = scopeRepository.listProducerRulesByTargetAtomicIds
+        try:
+            scopeRepository.listBatchRules = lambda metricIds: [
+                rule("R2", "T2", "ROLLUP_SUM", metricId="MetricB", order=20)
+            ]
+            scopeRepository.listBatchRuleSources = lambda ruleCodes: [
+                source("R1", "S1") for code in ruleCodes if code == "R1"
+            ] + [
+                source("R2", "T1") for code in ruleCodes if code == "R2"
+            ]
+            scopeRepository.listProducerRulesByTargetAtomicIds = lambda atomicIds: [
+                rule("R1", "T1", "ROLLUP_SUM", metricId="MetricA", order=10)
+            ] if "T1" in atomicIds else []
+            rules, sources = scopeRepository.resolveConsolidatedRuleClosure(["MetricB"])
+            self.assertEqual([item["calculation_rule_code"] for item in rules], ["R1", "R2"])
+            self.assertEqual(sorted({item["calculation_rule_code"] for item in sources}), ["R1", "R2"])
+        finally:
+            scopeRepository.listBatchRules = originalListRules
+            scopeRepository.listBatchRuleSources = originalListSources
+            scopeRepository.listProducerRulesByTargetAtomicIds = originalListProducer
+
+    def test_report_disclosure_parent_duplicate_reject(self):
+        class ParentGuardRepository:
+            ROLLUP_PURPOSE_DMA_PRECHECK = "DMA_PRECHECK"
+            ROLLUP_PURPOSE_REPORT_DISCLOSURE = "REPORT_DISCLOSURE"
+            METRIC_SCOPE_G0_02_FINANCIAL_BASIS = "G0_02_FINANCIAL_BASIS"
+            METRIC_SCOPE_SELECTED_DISCLOSURE = "SELECTED_DISCLOSURE"
+
+            def listEffectiveSourceCompanies(self, parentCompanyId, reportingYear, purposeCode):
+                return [{"companyId": parentCompanyId}, {"companyId": 7}]
+
+        originalLoadRepository = rollupService.loadRepository
+        originalResolveContext = rollupService.resolveBatchContext
+        originalCheckScope = rollupService.checkScope
+        try:
+            fakeRepository = ParentGuardRepository()
+            rollupService.loadRepository = lambda: fakeRepository
+            rollupService.resolveBatchContext = lambda repo, purposeCode, runId, sourceCycleId: {
+                "parentCompanyId": 6,
+                "reportingYear": 2024,
+                "run": None,
+                "cycle": {"id": 17},
+            }
+            rollupService.checkScope = lambda parentCompanyId, userModel: None
+            request = RollupBatchRequestDto(
+                sourceCycleId=17,
+                sourceCompanyIds=[6, 7],
+                rollupPurposeCode="REPORT_DISCLOSURE",
+                metricScopeCode="SELECTED_DISCLOSURE",
+            )
+            with self.assertRaises(rollupService.RollupError) as ctx:
+                rollupService.saveBatch(request, {"id": "actor"})
+            self.assertEqual(ctx.exception.code, "ROLLUP_PARENT_SOURCE_NOT_ALLOWED")
+        finally:
+            rollupService.loadRepository = originalLoadRepository
+            rollupService.resolveBatchContext = originalResolveContext
+            rollupService.checkScope = originalCheckScope
+
+    def test_ratio_trace_includes_numerator_and_denominator(self):
+        results, warnings, success = calculate(
+            [rule("R1", "T1", "ROLLUP_RATIO_RECALC")],
+            [source("R1", "S1", "NUMERATOR"), source("R1", "S2", "DENOMINATOR", 2)],
+            [fact(1, "S1", 10), fact(2, "S1", 20), fact(1, "S2", 40), fact(2, "S2", 60)],
+        )
+        self.assertTrue(success, warnings)
+        self.assertEqual(results[0]["sourceCompanyValues"]["S1"], {"1": 10, "2": 20})
+        self.assertEqual(results[0]["sourceCompanyValues"]["S2"], {"1": 40, "2": 60})
+
+    def test_immutable_scope_semantic_compare(self):
+        class ExistingScopeCursor:
+            def __init__(self):
+                self.executeCount = 0
+
+            def execute(self, *args):
+                self.executeCount += 1
+
+            def fetchone(self):
+                return {"id": 1, "source_atomic_metric_ids": '["A", "B"]'}
+
+        cur = ExistingScopeCursor()
+        scopeRepository.saveScopeFromRulesTx(
+            cur,
+            batchId=1,
+            rules=[rule("R1", "T1", "ROLLUP_SUM")],
+            sources=[source("R1", "B", sourceId=1), source("R1", "A", sourceId=2)],
+            scopeReason="REPORT_DISCLOSURE",
+        )
+        self.assertEqual(cur.executeCount, 1)
 
 
 if __name__ == "__main__":

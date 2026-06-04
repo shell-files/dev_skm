@@ -1,7 +1,7 @@
 import json
 from typing import Optional
 from src.utils.db import findAll, findOne
-from src.utils.calculationengine import normalizeSource
+from src.utils.calculationengine import normalizeSource, topologicalSortRules
 from src.utils.calculationrepository import listApprovedEntityFacts
 
 def listEffectiveSourceCompanies(parentCompanyId: int, reportingYear: int, rollupPurposeCode: str) -> list[dict]:
@@ -40,6 +40,67 @@ def listBatchRuleSources(ruleCodes: list[str]) -> list[dict]:
     from src.utils.calculationrepository import listRuleSources
     return listRuleSources(ruleCodes)
 
+def listProducerRulesByTargetAtomicIds(atomicMetricIds: list[str]) -> list[dict]:
+    from src.utils.calculationrepository import listActiveRulesByTargetAtomicIds
+    return listActiveRulesByTargetAtomicIds(atomicMetricIds, executionScope="CONSOLIDATED")
+
+def resolveConsolidatedRuleClosure(initialMetricIds: list[str]) -> tuple[list[dict], list[dict]]:
+    rules = listBatchRules(initialMetricIds)
+    ruleByCode = {
+        rule["calculation_rule_code"]: rule
+        for rule in rules
+        if rule.get("calculation_rule_code")
+    }
+    sourceByRuleCode = {}
+    searchedAtomicIds = set()
+
+    while True:
+        ruleCodes = sorted(ruleByCode.keys())
+        sources = listBatchRuleSources(ruleCodes)
+        sourceByRuleCode = {}
+        for source in sources:
+            ruleCode = source.get("calculation_rule_code")
+            if ruleCode in ruleByCode:
+                sourceByRuleCode.setdefault(ruleCode, []).append(source)
+
+        targetAtomicIds = {
+            str(rule.get("target_atomic_metric_id") or "").strip()
+            for rule in ruleByCode.values()
+            if rule.get("target_atomic_metric_id")
+        }
+        sourceAtomicIds = {
+            normalizeSource(source)["sourceAtomicMetricId"]
+            for source in sources
+            if normalizeSource(source)["sourceAtomicMetricId"]
+        }
+        candidateAtomicIds = sorted(sourceAtomicIds - targetAtomicIds - searchedAtomicIds)
+        if not candidateAtomicIds:
+            break
+        searchedAtomicIds.update(candidateAtomicIds)
+
+        producerRules = listProducerRulesByTargetAtomicIds(candidateAtomicIds)
+        addedYn = False
+        for producerRule in producerRules:
+            ruleCode = producerRule.get("calculation_rule_code")
+            if ruleCode and ruleCode not in ruleByCode:
+                ruleByCode[ruleCode] = producerRule
+                addedYn = True
+        if not addedYn:
+            continue
+
+    closureSources = [
+        source
+        for ruleSources in sourceByRuleCode.values()
+        for source in ruleSources
+    ]
+    orderedRules = topologicalSortRules(list(ruleByCode.values()), closureSources)
+    orderedRuleCodes = {rule["calculation_rule_code"] for rule in orderedRules}
+    return orderedRules, [
+        source
+        for source in closureSources
+        if source.get("calculation_rule_code") in orderedRuleCodes
+    ]
+
 def saveScopeFromRulesTx(cur, batchId: int, rules: list[dict], sources: list[dict], scopeReason: str) -> None:
     sourceMap = {}
     for source in sources:
@@ -56,7 +117,7 @@ def saveScopeFromRulesTx(cur, batchId: int, rules: list[dict], sources: list[dic
             sourceId = norm.get("sourceAtomicMetricId")
             if sourceId and sourceId not in sourceIds:
                 sourceIds.append(sourceId)
-                
+        sourceIds = sorted(set(sourceIds))
         payloadStr = json.dumps(sourceIds) if sourceIds else None
         
         cur.execute(
@@ -70,7 +131,9 @@ def saveScopeFromRulesTx(cur, batchId: int, rules: list[dict], sources: list[dic
         existing = cur.fetchone()
         if existing:
             existingPayload = existing["source_atomic_metric_ids"]
-            if existingPayload != payloadStr:
+            existingIds = sorted(set(decodeAtomicIds(existingPayload)))
+            payloadIds = sorted(set(decodeAtomicIds(payloadStr)))
+            if existingIds != payloadIds:
                 raise ValueError("ROLLUP_BATCH_SCOPE_IMMUTABLE")
         else:
             cur.execute(
@@ -148,21 +211,42 @@ def listScope(batchId: int) -> list[dict]:
     finally:
         conn.close()
 
-def resolveRequiredSourceAtomicIdsTx(cur, batchId: int) -> list[str]:
-    scopes = listScopeTx(cur, batchId)
+def resolveAllRuleSourceAtomicIdsFromScopes(scopes: list[dict]) -> list[str]:
     atomicIds = set()
     for s in scopes:
         for a in s.get("sourceAtomicMetricIds", []):
             atomicIds.add(a)
     return sorted(list(atomicIds))
 
+def resolveConsolidatedTargetAtomicIdsFromScopes(scopes: list[dict]) -> list[str]:
+    return sorted({
+        str(s.get("group_atomic_metric_id") or "").strip()
+        for s in scopes
+        if str(s.get("group_atomic_metric_id") or "").strip()
+    })
+
+def resolveExternalEntitySourceAtomicIdsFromScopes(scopes: list[dict]) -> list[str]:
+    allRuleSourceAtomicIds = set(resolveAllRuleSourceAtomicIdsFromScopes(scopes))
+    consolidatedTargetAtomicIds = set(resolveConsolidatedTargetAtomicIdsFromScopes(scopes))
+    return sorted(allRuleSourceAtomicIds - consolidatedTargetAtomicIds)
+
+def resolveAllRuleSourceAtomicIdsTx(cur, batchId: int) -> list[str]:
+    return resolveAllRuleSourceAtomicIdsFromScopes(listScopeTx(cur, batchId))
+
+def resolveAllRuleSourceAtomicIds(batchId: int) -> list[str]:
+    return resolveAllRuleSourceAtomicIdsFromScopes(listScope(batchId))
+
+def resolveExternalEntitySourceAtomicIdsTx(cur, batchId: int) -> list[str]:
+    return resolveExternalEntitySourceAtomicIdsFromScopes(listScopeTx(cur, batchId))
+
+def resolveExternalEntitySourceAtomicIds(batchId: int) -> list[str]:
+    return resolveExternalEntitySourceAtomicIdsFromScopes(listScope(batchId))
+
+def resolveRequiredSourceAtomicIdsTx(cur, batchId: int) -> list[str]:
+    return resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
+
 def resolveRequiredSourceAtomicIds(batchId: int) -> list[str]:
-    scopes = listScope(batchId)
-    atomicIds = set()
-    for s in scopes:
-        for a in s.get("sourceAtomicMetricIds", []):
-            atomicIds.add(a)
-    return sorted(list(atomicIds))
+    return resolveExternalEntitySourceAtomicIds(batchId)
 
 def resolveRequiredGroupAtomicIdsTx(cur, batchId: int) -> list[str]:
     scopes = listScopeTx(cur, batchId)
@@ -200,7 +284,7 @@ def listPriorYearApprovedFactsByCompany(companyIds: list[int], reportingYear: in
     return [normalizeFact(r) for r in rows]
 
 def buildSourceReadiness(batchId: int, sourceCompanyIds: list[int], reportingYear: int) -> dict:
-    requiredAtomicIds = resolveRequiredSourceAtomicIds(batchId)
+    requiredAtomicIds = resolveExternalEntitySourceAtomicIds(batchId)
     requiredFactCount = len(requiredAtomicIds) * len(sourceCompanyIds)
     if not requiredAtomicIds or not sourceCompanyIds:
         return {

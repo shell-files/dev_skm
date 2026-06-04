@@ -77,6 +77,78 @@ def listActiveRulesTx(
     return cur.fetchall() or []
 
 
+def listActiveRulesByTargetAtomicIds(
+    targetAtomicMetricIds: list[str],
+    executionScope: str = EXECUTION_SCOPE_CONSOLIDATED,
+) -> list[dict]:
+    cleaned = cleanList(targetAtomicMetricIds)
+    if not cleaned:
+        return []
+    placeholders = ", ".join(["?"] * len(cleaned))
+    return findAll(
+        f"""
+        SELECT
+            id,
+            calculation_rule_code,
+            target_atomic_metric_id,
+            target_atomic_name_kr,
+            metric_id,
+            formula_type,
+            execution_scope,
+            applicable_company_scope,
+            zero_division_policy,
+            rounding_policy,
+            result_table,
+            output_unit,
+            execution_order
+        FROM ESG_CALCULATION_RULE
+        WHERE UPPER(COALESCE(execution_scope, '')) = ?
+          AND active_yn = 1
+          AND delete_yn = 0
+          AND target_atomic_metric_id IN ({placeholders})
+        ORDER BY COALESCE(execution_order, 0), calculation_rule_code
+        """,
+        (normalizeScope(executionScope), *cleaned),
+    ) or []
+
+
+def listActiveRulesByTargetAtomicIdsTx(
+    cur,
+    targetAtomicMetricIds: list[str],
+    executionScope: str = EXECUTION_SCOPE_CONSOLIDATED,
+) -> list[dict]:
+    cleaned = cleanList(targetAtomicMetricIds)
+    if not cleaned:
+        return []
+    placeholders = ", ".join(["?"] * len(cleaned))
+    cur.execute(
+        f"""
+        SELECT
+            id,
+            calculation_rule_code,
+            target_atomic_metric_id,
+            target_atomic_name_kr,
+            metric_id,
+            formula_type,
+            execution_scope,
+            applicable_company_scope,
+            zero_division_policy,
+            rounding_policy,
+            result_table,
+            output_unit,
+            execution_order
+        FROM ESG_CALCULATION_RULE
+        WHERE UPPER(COALESCE(execution_scope, '')) = ?
+          AND active_yn = 1
+          AND delete_yn = 0
+          AND target_atomic_metric_id IN ({placeholders})
+        ORDER BY COALESCE(execution_order, 0), calculation_rule_code
+        """,
+        (normalizeScope(executionScope), *cleaned),
+    )
+    return cur.fetchall() or []
+
+
 def listRuleSources(ruleCodes: list[str]) -> list[dict]:
     cleaned = cleanList(ruleCodes)
     if not cleaned:
@@ -439,6 +511,8 @@ __all__ = [
     "APPROVAL_STATUS_APPROVED",
     "listActiveRules",
     "listActiveRulesTx",
+    "listActiveRulesByTargetAtomicIds",
+    "listActiveRulesByTargetAtomicIdsTx",
     "listRuleSources",
     "listRuleSourcesTx",
     "listApprovedEntityFacts",

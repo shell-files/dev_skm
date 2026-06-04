@@ -1,2 +1,0 @@
-"""Onboarding assignment service package."""
-

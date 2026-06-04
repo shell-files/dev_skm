@@ -1,1 +1,0 @@
-"""Onboarding invite service package."""

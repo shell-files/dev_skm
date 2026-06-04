@@ -1,2 +1,0 @@
-"""Onboarding approval service package."""
-

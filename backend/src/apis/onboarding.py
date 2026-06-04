@@ -18,8 +18,14 @@ router = APIRouter()
 
 
 @router.get(
+    "",
+    response_model=OnboardingMetricsResponseDto,
+    summary="List onboarding metrics by cycle scope",
+)
+@router.get(
     "/metrics",
     response_model=OnboardingMetricsResponseDto,
+    include_in_schema=False,
     summary="List onboarding metrics by cycle scope",
 )
 async def list_onboarding_metrics(
@@ -46,8 +52,14 @@ async def list_onboarding_metrics(
 
 
 @router.patch(
+    "/{metricId}",
+    response_model=OnboardingMetricValuesResponseDto,
+    summary="Save onboarding metric input values",
+)
+@router.patch(
     "/metrics/{metricId}",
     response_model=OnboardingMetricValuesResponseDto,
+    include_in_schema=False,
     summary="Save onboarding metric input values",
 )
 async def patch_onboarding_metric_values(
@@ -73,7 +85,15 @@ def userId(userModel) -> Optional[int]:
 
 
 def statusForValueError(error: ValueError) -> int:
-    if str(error).startswith(("PRE_DMA_G0_CYCLE_NOT_READY", "PRE_DMA_G0_SCOPE_NOT_READY")):
+    if str(error).startswith(
+        (
+            "PRE_DMA_G0_CYCLE_NOT_READY",
+            "PRE_DMA_G0_SCOPE_NOT_READY",
+            "POST_DMA_DISCLOSURE_CYCLE_NOT_READY",
+            "POST_DMA_DISCLOSURE_SCOPE_NOT_READY",
+            "POST_DMA_SUB_ISSUE_METADATA_NOT_READY",
+        )
+    ):
         return 409
     return 400
 

@@ -245,7 +245,6 @@ const Media = () => {
   const today = new Date().toISOString().split("T")[0];
 
   return (
-<<<<<<< HEAD
     <>
       <div className="media-container">
         {/* --- STEPPER HEADER --- */}
@@ -254,35 +253,6 @@ const Media = () => {
           <div className="media-stepper-row">
             {STEPS.map((step, index) => (
               <Fragment key={step.id}>
-=======
-    <div className="draft-container">
-      <header className="draft-header">
-        <h1 className="draft-title">
-          지속가능경영보고서 AI 자동 생성
-        </h1>
-
-        <div className="draft-stepper-row">
-          {steps.map((step, index) => (
-            <div
-              key={step.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <div
-                className={`step-box ${
-                  index === activeIndex
-                    ? "active"
-                    : ""
-                }`}
-                onClick={() => moveStep(index)}
-              >
-                <div className="step-icon-circle">
-                  {step.icon}
-                </div>
-
->>>>>>> ea4795c (css&페이지 수정)
                 <div
                   className={`step-box ${index === activeIndex ? "active" : ""}`}
                   onClick={() => moveStep(index)}
@@ -463,88 +433,10 @@ const Media = () => {
               </div>
             </div>
 
-<<<<<<< HEAD
             <div className="action-container">
               <button className="media-btn" onClick={startMediaCollection} style={{ marginBottom: "50px" }}>
                 실시간 AI 분석 시작
               </button>
-=======
-          <div className="action-container">
-            <button
-              className="draft-btn"
-              onClick={startMediaCollection}
-              style={{marginBottom: "50px"}}
-            >
-              실시간 AI 분석 시작
-            </button>
-          </div>
-        </div>
-      </main>
-
-      <div
-        className={`draft-result-dashboard ${
-          dashboardOpen ? "open" : ""
-        }`}
-      >
-        <div
-          className="dashboard-handle"
-          onClick={() =>
-            setDashboardOpen(
-              !dashboardOpen
-            )
-          }
-        >
-          <div className="handle-pill">
-            {isAnalyzing
-              ? "AI 파이프라인 수집 가동 중..."
-              : showResult
-              ? "분석 완료 - 결과 요약 확인 (클릭)"
-              : "빅데이터 연동 현황 확인하기 (클릭)"}
-          </div>
-        </div>
-
-        <div className="robot-view-container">
-          <div
-            id="particle-field"
-            ref={particleRef}
-          ></div>
-
-          <img
-            src={robot}
-            className="robot-main-img"
-            alt="마스코트"
-          />
-
-          {!showResult ? (
-            <div
-              style={{
-                textAlign: "center",
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: "1.1rem",
-                  fontWeight: 850,
-                  margin: "0 0 4px 0",
-                }}
-              >
-                {isAnalyzing
-                  ? "실시간 크롤링 엔진 가동 중..."
-                  : "미디어 수집 현황 대기 중"}
-              </h3>
-
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "#64748b",
-                  margin: 0,
-                }}
-              >
-                {isAnalyzing
-                  ? "AI 기반 외부 데이터 수집 엔진이 ESG 관련 미디어 및 기관 데이터를 분석하고 있습니다."
-                  : "상단의 분석 시작 버튼을 누르면 AI 기반 외부 데이터 분석이 시작됩니다."}
-              </p>
->>>>>>> ea4795c (css&페이지 수정)
             </div>
           </div>
         </main>

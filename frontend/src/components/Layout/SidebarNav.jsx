@@ -15,10 +15,10 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
     // 권한 확인 (UI 노출용)
     const role = selectedCompany?.role ?? "guest";
-    const isSysAdmin = role === "시스템관리자";
-    const isESG = role === "ESG담당자" || role === "ESG 담당자";
-    const isConsultant = role === "컨설턴트";
-    const isDept = role === "부서담당자" || role === "부서 담당자";
+    const isSysAdmin = role === "시스템관리자" || role === "관리자" || role === "ADMIN";
+    const isESG = role === "ESG담당자" || role === "ESG 담당자" || role === "ESG_MANAGER";
+    const isConsultant = role === "컨설턴트" || role === "CONSULTANT";
+    const isDept = role === "부서담당자" || role === "부서 담당자" || role === "EMPLOYEE" || role === "ASSIGNEE";
 
     // 메뉴 접근 권한
     const showReportProj = isESG || isSysAdmin || isConsultant;

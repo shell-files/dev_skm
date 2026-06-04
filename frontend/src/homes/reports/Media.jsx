@@ -4,6 +4,11 @@ import "@styles/media.css";
 import robot from "@assets/images/robot/robot_media_t.png";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
+
+
+const IS_DUMMY = true;
+
+
 // 정적 데이터 정의 (컴포넌트 외부에 두어 불필요한 재렌더링 방지)
 const STEPS = [
   { id: 1, title: "벤치마킹 분석", icon: "🎯", path: "/benchmk" },
@@ -473,7 +478,7 @@ const Media = () => {
               {/* 가동 애니메이션 파티클 필드 */}
               <div id="particle-field" ref={particleRef}></div>
               {!showResult && (
-                <img src={robot} className="robot-main-img" alt="마스코트 로봇" style={{ alignSelf: "center" }} />
+                <img src={robot} className="robot-media-main-img" alt="마스코트 로봇" style={{ alignSelf: "center" }} />
               )}
               {/* 수집 대기 및 로딩 중 안내판 */}
               {!showResult && (

@@ -26,9 +26,13 @@ rollup_source AS (
         qi.metric_id
     FROM quant_input qi
     JOIN ESG_CALCULATION_RULE cr
-      ON cr.source_atomic_metric_ids LIKE CONCAT('%', qi.atomic_metric_id, '%')
-     AND UPPER(COALESCE(cr.execution_scope, '')) = 'CONSOLIDATED'
+      ON UPPER(COALESCE(cr.execution_scope, '')) = 'CONSOLIDATED'
+     AND cr.active_yn = 1
      AND cr.delete_yn = 0
+    JOIN ESG_CALCULATION_RULE_SOURCE src
+      ON src.calculation_rule_code = cr.calculation_rule_code
+     AND src.source_atomic_metric_id = qi.atomic_metric_id
+     AND src.delete_yn = 0
 ),
 expected_policy AS (
     SELECT

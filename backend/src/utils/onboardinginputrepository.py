@@ -426,7 +426,7 @@ def checkAlreadyApprovedTx(
     reportingYear: int,
     metricId: str,
     requiredAtomicIds: list[str],
-    requireKpiFactYn: bool = False,
+    expectedPromotedAtomicIds: Optional[list[str]] = None,
 ) -> bool:
     if not requiredAtomicIds:
         return False
@@ -439,9 +439,10 @@ def checkAlreadyApprovedTx(
         for atomicId in requiredAtomicIds
     ):
         return False
-    if not requireKpiFactYn:
+    promotedAtomicIds = expectedPromotedAtomicIds or []
+    if not promotedAtomicIds:
         return True
-    placeholders = ", ".join(["?"] * len(requiredAtomicIds))
+    placeholders = ", ".join(["?"] * len(promotedAtomicIds))
     cur.execute(
         f"""
         SELECT COUNT(*) AS approved_count
@@ -462,10 +463,10 @@ def checkAlreadyApprovedTx(
           AND k.value_numeric IS NOT NULL
           AND k.delete_yn = 0
         """,
-        (companyId, reportingYear, metricId, *requiredAtomicIds),
+        (companyId, reportingYear, metricId, *promotedAtomicIds),
     )
     row = cur.fetchone() or {}
-    return int(row.get("approved_count") or 0) >= len(requiredAtomicIds)
+    return int(row.get("approved_count") or 0) >= len(promotedAtomicIds)
 
 def upsertKpiFact(cur, inputRow: dict, actorUserId: Optional[int]) -> None:
     cur.execute(
@@ -624,6 +625,27 @@ def listQuantInputAtomicIdsTx(cur, metricId: str) -> list[str]:
     return [row["atomic_metric_id"] for row in listQuantInputAtomicRowsTx(cur, metricId) if row.get("atomic_metric_id")]
 
 
+def listQuantInputAtomicIds(metricId: str) -> list[str]:
+    rows = findAll(
+        """
+        SELECT atomic_metric_id
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE metric_id = ?
+          AND onboarding_input_yn = 1
+          AND active_yn = 1
+          AND delete_yn = 0
+          AND UPPER(COALESCE(atomic_data_role, '')) = 'INPUT'
+          AND (
+              UPPER(COALESCE(data_value_type, '')) IN ('QUANT', 'NUMBER', 'NUMERIC')
+              OR data_value_type = '정량'
+          )
+        ORDER BY atomic_metric_id
+        """,
+        (metricId,),
+    ) or []
+    return [row["atomic_metric_id"] for row in rows if row.get("atomic_metric_id")]
+
+
 def resolveAssignment(cur, cycleId: int, companyId: int, metricId: str) -> dict:
     cur.execute(
         """
@@ -640,3 +662,36 @@ def resolveAssignment(cur, cycleId: int, companyId: int, metricId: str) -> dict:
     )
     return cur.fetchone() or {}
 
+__all__ = [
+    "listValueRows",
+    "resolveAssignmentId",
+    "upsertMetricInputValues",
+    "upsertMetricValueGroups",
+    "upsertMetricInputValuesTx",
+    "invalidateMetricKpiFactsTx",
+    "invalidateG002KpiFactTx",
+    "listMetricInputs",
+    "listG002Inputs",
+    "listMetricKpiFacts",
+    "listG002KpiFacts",
+    "getMetricName",
+    "listRequiredAtomicIds",
+    "listRequiredAtomicIdsTx",
+    "selectInputRowsForUpdate",
+    "validateCompleteRows",
+    "checkAlreadyApprovedTx",
+    "upsertKpiFact",
+    "resolveApprovalStatus",
+    "submittedAt",
+    "approvedAt",
+    "firstNonNull",
+    "formatDatetime",
+    "hasMetricValue",
+    "truthy",
+    "groupRows",
+    "normalizeIssueDomain",
+    "listQuantInputAtomicRowsTx",
+    "listQuantInputAtomicIdsTx",
+    "listQuantInputAtomicIds",
+    "resolveAssignment",
+]

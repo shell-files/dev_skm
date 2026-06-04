@@ -210,6 +210,10 @@ class OnboardingApprovalItemDto(BaseModel):
     submittedAtomicCount: int = 0
     approvedAtomicCount: int = 0
     missingAtomicMetricIds: List[str] = Field(default_factory=list)
+    approvalPolicyCode: Optional[str] = None
+    rollupReadonlyYn: bool = False
+    promotedQuantAtomicCount: int = 0
+    approvedPromotedFactCount: int = 0
     submittedAt: Optional[str] = None
     approvedAt: Optional[str] = None
     commentText: Optional[str] = None

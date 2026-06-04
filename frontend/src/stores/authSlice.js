@@ -53,15 +53,20 @@ const authSlice = createSlice({
         const res = action.payload;
         // console.log(res);
         if(res.status === true) {
-          const data = res.data;
-          const storedCompanies = data.companys; //safeJsonParse(localStorage.getItem("companies"), []);
+          const data = res?.data || {};
+          const storedCompanies = Array.isArray(data.companys)
+            ? data.companys
+            : [];
           state.companies = storedCompanies;
-          state.userName = data.userName;
-          state.selectedCompany = data.selectedCompany;
+          state.userName = data.userName || null;
+          state.selectedCompany = data.selectedCompany || null;
           state.isAuthReady = true;
           state.redirectUrl = getAuthRedirectUrl(storedCompanies.length > 0);
         } else {
           localStorage.removeItem("companies");
+          state.companies = [];
+          state.selectedCompany = null;
+          state.userName = null;
           state.isAuthReady = false;
           state.redirectUrl = "/";
         }
@@ -76,8 +81,9 @@ const authSlice = createSlice({
           state.redirectUrl = "/";
           state.companies = [];
           state.userName = "";
-          state.selectedCompany = {}
+          state.selectedCompany = null
           state.loading = false;
+          location.href = import.meta.env.VITE_API_URL_MAIN;
         } else {
           showDefaultAlert("로그아웃 실패", "접속 오류가 발생 했습니다.", "error");
         }

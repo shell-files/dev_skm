@@ -1,615 +1,886 @@
-/**
- * Onboarding.jsx 페이지 흐름 및 구조 가이드
- * 
- * 1. 데이터 흐름 (Data Flow):
- *    - 원본 데이터: metrics (onboardingData.js에서 로드 및 localStorage와 동기화)
- *    - 필터링 데이터: filteredData (검색어, 카테고리, 이슈그룹, 상태 필터가 적용된 결과)
- *    - 페이지 데이터: pageData (filteredData를 15개씩 자른 현재 페이지 데이터)
- * 
- * 2. 상태(State) 구성:
- *    - activeCategory / selectedIGs: 도메인 및 이슈그룹 필터링 상태
- *    - activeStatusFilters: 상태별 필터링
- *    - selectedIds: 일괄 처리 대상 관리
- *    - isIgExpanded: 이슈그룹 필터 탭 확장 여부
- * 
- * 3. 주요 핸들러 로직:
- *    - handleSaveDraft / handleSubmit: 데이터 저장 및 제출 (승인 프로세스는 제외)
- *    - handleBatch: 선택 항목 일괄 처리
- * 
- * 4. 변경 사항:
- *    - 이슈그룹/R&R 컬럼 유지 (단, 담당자 초대/지정 기능만 제거)
- *    - 도메인별 4가지 고유 컬러 테마 복구 (상단 탭, 이슈그룹 탭, 테이블 셀 등)
- */
-
-import { useMemo, useState, useRef, useEffect } from "react";
-import "@styles/onboarding.css";
-import initialMetrics from "@assets/data/onboardingData.js";
-
-import { CategoryTabs, SubTabs } from "@components/UI/TabButton";
+﻿import { useState, useEffect, useCallback, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router";
+import { useDispatch, useSelector } from "react-redux";
+import "@styles/onboarding1.css";
+import { useAuth } from "@hooks/AuthContext.jsx";
+import { showDefaultAlert } from "@components/UI/ServiceAlert";
+import ReportBasisSelectModal from "@components/UI/ReportBasisSelectModal.jsx";
+import OnboardingModalShell from "./modal/OnboardingModalShell";
+import SubsidiaryRequestModal from "./modal/SubsidiaryRequestModal";
+import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
+import RollupSummaryPanel from "./RollupSummaryPanel";
 import BatchActionBar from "@components/UI/BatchActionBar";
-import { showDefaultAlert, showConfirmAlert } from "@components/UI/ServiceAlert";
-import ServiceTabs from "@components/UI/ServiceTabs";
+import MetricAssignmentModal from "./modal/MetricAssignmentModal";
+import UiPreviewPanel from "@/dev/step12UiPreview/UiPreviewPanel";
+import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
+import { 
+  mergeOnboardingFixtureRows, 
+  ONBOARDING_SCENARIOS, 
+  APPROVAL_SCENARIOS, 
+  ROLLUP_SCENARIOS,
+  PREVIEW_WORKFLOW
+} from "@/dev/step12UiPreview/fixtures";
+import {
+  calculateMetricStatus,
+  calculateProfileStats,
+  getAtomicId,
+  getStatusInfo,
+  hasAtomicValue,
+  isEditableItem,
+  resolveG0InputMode,
+} from "./onboardingUtils";
+import {
+  DEFAULT_REPORTING_YEAR,
+  bulkAssignOnboardingMetrics,
+  bulkUnassignOnboardingMetrics,
+  fetchOnboardingAssignments,
+  fetchCurrentWorkflow,
+  fetchOnboardingMetrics,
+  fetchRollupRequests,
+  resetReportState,
+  saveOnboardingMetric,
+  setActiveBatchId,
+} from "@stores/reportSlice";
 
-import { useAuth } from '@hooks/AuthContext.jsx';
+const isNoRunWorkflow = (workflow) => workflow?.workflowStep === "NO_RUN";
 
-// import { skmApi } from "@utils/Network";
-// 모달 임포트
-import OnboardingModalShell from "./components/modal/OnboardingModalShell";
+const isPendingSubsidiaryRequest = (request = {}) => {
+  const requestStatus = String(request.requestStatus || "").trim().toUpperCase();
+  const transferStatus = String(request.transferStatus || "").trim().toUpperCase();
 
-// ── 0. API 설정 ──
-const USE_DUMMY_API = false;
-
-const requestApi = {
-  
-  saveDraft: async (id, payload) => {
-    if (USE_DUMMY_API) {
-      await new Promise(r => setTimeout(r, 400));
-      return { status: true, message: "임시 저장되었습니다.", data: { metricId: id, status: "DRAFT" } };
-    }
-    // [TODO] 백엔드 API 준비 시 주석 해제
-    // const res = await skmApi.put("/onboard", { 
-    //   metrics: [{ issue_id: id, value: payload.value, unit: payload.unit }]
-    // });
-    // return res.data;
-    return { status: true };
-  },
-  submit: async (id) => {
-    if (USE_DUMMY_API) {
-      await new Promise(r => setTimeout(r, 500));
-      return { status: true, message: "제출되었습니다.", data: { metricId: id, status: "SUBMITTED" } };
-    }
-    // [TODO] 백엔드 API 준비 시 주석 해제
-    // const res = await skmApi.post("/onboard", {
-    //   action: 'SUBMIT',
-    //   issue_ids: [id]
-    // });
-    // return res.data;
-    return { status: true };
-  },
-  uploadEvidence: async (id, file) => {
-    if (USE_DUMMY_API) {
-      await new Promise(r => setTimeout(r, 700));
-      return { status: true, data: { metricId: id, fileName: file.name } };
-    }
-    // [TODO] 백엔드 API 준비 시 주석 해제
-    // const formData = new FormData();
-    // formData.append("file", file);
-    // formData.append("issue_id", id);
-    // const res = await skmApi.post("/onboard/upload", formData, {
-    //   headers: { "Content-Type": "multipart/form-data" }
-    // });
-    // return res.data;
-    return { status: true };
+  if (
+    transferStatus === "SENT" ||
+    transferStatus === "RECEIVED" ||
+    requestStatus === "RECEIVED"
+  ) {
+    return false;
   }
-};
 
-// ── 2. Constants & Config ──
-const categoryTabs = ["전체", "경영일반", "E", "S", "G"];
-const rowsPerPage = 15;
-
-const StatusCfg = {
-  NOT_STARTED: { label: "미입력", cls: "st-not-started" },
-  DRAFT: { label: "작성중", cls: "st-draft" },
-  SUBMITTED: { label: "승인대기", cls: "st-submitted" },
-  PENDING: { label: "승인대기", cls: "st-submitted" },
-  REVIEWED: { label: "검토완료", cls: "st-submitted" },
-  APPROVED: { label: "승인완료", cls: "st-approved" },
-  REJECTED: { label: "반려", cls: "st-rejected" },
-};
-
-const CATEGORY_MAP = {
-  environmental: ["Climate", "Energy", "Water", "Pollution", "Circularity", "Biodiversity", "Product_env", "Supply Chain_env", "Sustainable investment", "Carbon_Scope1", "Carbon_Scope2"],
-  social: ["Labor", "Safety", "Talent", "Diversity", "Human Rights", "Supply Chain_social", "Community", "Product_resp", "Privacy", "Supply_Audit", "협력사 평가"],
-};
-
-const StatusFilterOptions = [
-  { key: "DRAFT", label: "작성중", cls: "st-draft", icon: "edit3" },
-  { key: "SUBMITTED", label: "승인대기", cls: "st-submitted", icon: "send" },
-  { key: "REVIEWED", label: "검토완료", cls: "st-submitted", icon: "check" },
-  { key: "REJECTED", label: "반려", cls: "st-rejected", icon: "xCircle" },
-];
-
-const Icon = ({ type, size = 14, ...props }) => {
-  const icons = {
-    chevronDown: <polyline points="6 9 12 15 18 9" />,
-    filter: <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />,
-    reset: <><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /></>,
-    edit3: <><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></>,
-    send: <><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></>,
-    xCircle: <><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></>,
-    check: <polyline points="20 6 9 17 4 12" />
-  };
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      {icons[type]}
-    </svg>
+    request.sendReadyYn === true ||
+    transferStatus === "NOT_SENT" ||
+    transferStatus === "PENDING" ||
+    requestStatus === "REQUESTED" ||
+    requestStatus === "PENDING"
   );
 };
 
-const getActions = (status) => {
-  const acts = [];
-  if (["NotStarted", "DRAFT", "REJECTED", "EDITING_SUBMITTED"].includes(status)) acts.push("저장");
-  if (["DRAFT", "REJECTED", "EDITING_SUBMITTED"].includes(status)) acts.push("제출");
-  if (status === "SUBMITTED") acts.push("재제출");
-  return acts;
+const groupByMetric = (items = []) => {
+  const grouped = [];
+  const seen = new Set();
+  items.forEach((item) => {
+    if (!seen.has(item.metricId)) {
+      seen.add(item.metricId);
+      grouped.push(item);
+    }
+  });
+  return grouped;
 };
 
-/** [헬퍼] rnrDisplay: 담당자 텍스트 표시용 */
-const rnrDisplay = (assignees = []) => {
-  const accepted = assignees.filter(a => a.status === "ACCEPTED");
-  if (!accepted.length) return null;
-  return accepted.length > 1 ? `${accepted[0].name} 외 ${accepted.length - 1}명` : accepted[0]?.name;
+const flattenOnboardingItems = (metrics = []) =>
+  metrics.flatMap((metric) =>
+    (metric.atomicItems || []).map((atomic) => ({
+      ...atomic,
+      metricId: atomic.metricId || metric.metricId,
+      metricName: atomic.metricName || metric.metricName,
+      approvalPolicyCode: metric.approvalPolicyCode,
+      assignment: metric.assignment,
+    }))
+  );
+
+const normalizeAssignmentStatus = (status) => String(status || "").trim().toUpperCase();
+
+const normalizeInviteStatus = (status) => {
+  const normalized = String(status || "").trim().toUpperCase();
+  if (normalized === "승인대기" || normalized === "PENDING") return "PENDING";
+  if (normalized === "승인완료" || normalized === "COMPLETED" || normalized === "ACCEPTED") return "COMPLETED";
+  if (normalized === "승인취소" || normalized === "REVOKED" || normalized === "CANCELLED") return "REVOKED";
+  return normalized;
 };
 
-const Onboarding = () => {
-  const { selectedCompany } = useAuth();
-  const [metrics, setMetrics] = useState(() => JSON.parse(localStorage.getItem('onboarding_metrics_dummy')) || initialMetrics);
+const resolveOnboardingCycleType = (workflow, requestedCycleType) => {
+  const requested = String(requestedCycleType || "").trim().toUpperCase();
+  if (requested === "POST_DMA_DISCLOSURE") return "POST_DMA_DISCLOSURE";
+  if (requested === "PRE_DMA_G0") return "PRE_DMA_G0";
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeFlow, setActiveFlow] = useState('G0'); // 'G0' | 'GENERAL'
-  const [activeCategory, setActiveCategory] = useState("전체");
-  const [selectedIGs, setSelectedIGs] = useState([]);
-  const [activeService, setActiveService] = useState('disclosure');
-  const [isIgExpanded, setIsIgExpanded] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [errors, setErrors] = useState({});
-  const [shakeIds, setShakeIds] = useState({});
-  const [isStatusPanelOpen, setIsStatusPanelOpen] = useState(false);
-  const [activeStatusFilters, setActiveStatusFilters] = useState([]);
+  const workflowValue = String(
+    workflow?.cycleType ||
+    workflow?.onboardingCycleType ||
+    workflow?.currentCycleType ||
+    ""
+  ).trim().toUpperCase();
+  return workflowValue === "POST_DMA_DISCLOSURE" ? "POST_DMA_DISCLOSURE" : "PRE_DMA_G0";
+};
 
-  const statusMenuRef = useRef(null);
-  const tableWrapRef = useRef(null);
+const mergeAssignmentIntoItems = (items = [], assignments = []) => {
+  const assignmentByMetric = new Map((assignments || []).map((item) => [item.metricId, item]));
+  return items.map((item) => {
+    const assignment = assignmentByMetric.get(item.metricId) || item.assignment || {};
+    const assignmentStatus = normalizeAssignmentStatus(assignment.assignmentStatus);
+    const inviteStatus = normalizeInviteStatus(assignment.inviteStatus);
+    const assigneeEmail = assignment.assigneeEmailMasked || item.assigneeEmail || null;
 
-  useEffect(() => localStorage.setItem('onboarding_metrics_dummy', JSON.stringify(metrics)), [metrics]);
-  const currentRoleName = selectedCompany?.role || "ESG담당자";
+    return {
+      ...item,
+      assignment,
+      assignmentStatus,
+      inviteStatus,
+      assigneeUserId: assignment.assigneeUserId ?? item.assigneeUserId,
+      assigneeEmail,
+      assigneeName: assigneeEmail || item.assigneeName,
+      submissionDueDate: assignment.dueDate || item.submissionDueDate || item.dueDate,
+    };
+  });
+};
 
-  useEffect(() => {
-    const handleOutside = (e) => statusMenuRef.current && !statusMenuRef.current.contains(e.target) && setIsStatusPanelOpen(false);
-    if (isStatusPanelOpen) document.addEventListener("mousedown", handleOutside);
-    return () => document.removeEventListener("mousedown", handleOutside);
-  }, [isStatusPanelOpen]);
+const getProfileStatusFromItems = (items = []) => {
+  const editableItems = items.filter((item) => isEditableItem(item));
+  if (editableItems.length === 0) return "NOT_STARTED";
+  const completedCount = editableItems.filter((item) => hasAtomicValue(item)).length;
+  if (completedCount === 0) return "NOT_STARTED";
+  if (completedCount < editableItems.length) return "IN_PROGRESS";
+  return "COMPLETED";
+};
 
-  const availableIGs = useMemo(() => activeCategory === "전체" ? [] : [...new Set(metrics.filter(m => m.category === activeCategory).map(m => m.issueGroup))], [metrics, activeCategory]);
+const OnboardingStatCards = ({ stats, g0ProfileStatus }) => {
+  const statusInfo = getStatusInfo(g0ProfileStatus);
 
-  const filteredData = useMemo(() => {
-    const s = searchTerm.toLowerCase();
-    return metrics.filter(m => {
-      if ((m.service || 'disclosure') !== activeService) return false;
-      if (activeFlow === 'G0' && m.category !== '경영일반') return false;
-      if (activeFlow === 'GENERAL' && m.category === '경영일반') return false;
-      if (activeStatusFilters.length && !activeStatusFilters.includes(m.status)) return false;
-      if (!activeStatusFilters.length) {
-        if (activeCategory !== "전체" && m.category !== activeCategory) return false;
-        if (selectedIGs.length && !selectedIGs.includes(m.issueGroup)) return false;
-      }
-      if (s && !m.issueId.toLowerCase().includes(s) && !m.issueName.toLowerCase().includes(s) && !m.checklistQuestion.toLowerCase().includes(s)) return false;
-      return true;
-    });
-  }, [metrics, searchTerm, activeCategory, selectedIGs, activeStatusFilters, activeService]);
+  return (
+    <div className="ob1-cards">
+      <div className="ob1-stat-card">
+        <div className="ob1-stat-title">전체 데이터 입력 항목</div>
+        <div className="ob1-stat-value">{stats.totalCount}</div>
+      </div>
+      <div className="ob1-stat-card">
+        <div className="ob1-stat-title">입력 완료</div>
+        <div className="ob1-stat-value success">{stats.completedCount}</div>
+      </div>
+      <div className="ob1-stat-card">
+        <div className="ob1-stat-title">미입력</div>
+        <div className="ob1-stat-value warning">{stats.notStartedCount}</div>
+      </div>
+      <div className="ob1-stat-card">
+        <div className="ob1-stat-title">프로필 상태</div>
+        <div className="ob1-stat-value">
+          <span className={`ob1-status-pill ${statusInfo.cls}`}>
+            {statusInfo.label}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-  const pageCount = Math.ceil(filteredData.length / rowsPerPage);
-  const pageData = useMemo(() => filteredData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage), [filteredData, currentPage]);
+const OnboardingWorkflowCta = ({
+  activeBatchId,
+  hasPendingSubsidiaryRequest,
+  loadingWorkflow,
+  variant = "action",
+  workflow,
+  isNoRunWorkflow,
+  onBasisModalOpen,
+  onCalculated,
+  onCtaClick,
+  onReqModalOpen,
+  onTransferModalOpen,
+  rollupScenario,
+}) => {
+  if (variant === "noRun" || isNoRunWorkflow(workflow)) {
+    return (
+      <>
+        <div className="ob1-empty-state">
+          <p className="ob1-empty-title">보고서 발행 기준 선택이 필요합니다.</p>
+          <p className="ob1-empty-desc">
+          먼저 보고서 워크플로우를 생성해 주세요.
+          </p>
+          <button type="button" className="ob1-btn-cta" onClick={onBasisModalOpen}>
+            보고서 발행 기준 선택
+          </button>
+        </div>
+        <div className="ob1-cta-container">
+          <button className="ob1-btn-cta" onClick={onCtaClick} disabled={loadingWorkflow}>
+            {loadingWorkflow ? "로딩 중..." : "발행 기준 선택"}
+          </button>
+        </div>
+      </>
+    );
+  }
 
-  const rowSpans = useMemo(() => {
-    const spans = {};
-    pageData.forEach((item, i) => {
-      if (i === 0 || pageData[i - 1].issueGroup !== item.issueGroup) {
-        let span = 1;
-        for (let j = i + 1; j < pageData.length && pageData[j].issueGroup === item.issueGroup; j++) span++;
-        spans[i] = span;
-      }
-    });
-    return spans;
-  }, [pageData]);
+  if (variant === "top") {
+    return (
+      <>
+        {hasPendingSubsidiaryRequest && (
+          <div style={{ display: "flex", justifyContent: "flex-end", padding: "16px 24px 0 24px" }}>
+            <button
+              className="ob1-btn-input"
+              onClick={onTransferModalOpen}
+              style={{ padding: "8px 16px", background: "#f8fafc", color: "#1e293b", border: "1px solid #cbd5e1" }}
+            >
+              지주사 요청 확인 및 전송
+            </button>
+          </div>
+        )}
 
-  const handleSaveDraft = async (id) => {
-    const m = metrics.find(x => x.issueId === id);
-    const res = await requestApi.saveDraft(id, { value: m.value, unit: m.unit });
-    if (res.status) {
-      setMetrics(prev => prev.map(x => x.issueId === id ? { ...x, status: x.status === "NotStarted" ? "DRAFT" : x.status } : x));
-      setErrors(p => ({ ...p, [id]: false }));
-      return true;
+        {(activeBatchId || STEP12_UI_FIXTURE_ENABLED) && (
+          <RollupSummaryPanel
+            batchId={activeBatchId}
+            onCalculated={onCalculated}
+            rollupScenario={rollupScenario}
+            onManageRequests={() => onReqModalOpen?.()}
+            onSendSource={() => onTransferModalOpen?.()}
+          />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <div className="ob1-cta-container">
+      <button
+        className="ob1-btn-cta"
+        onClick={onCtaClick}
+        disabled={loadingWorkflow}
+      >
+        {loadingWorkflow
+          ? "로딩 중..."
+          : !workflow
+            ? "워크플로우 상태 확인 필요"
+            : workflow.nextAction === "START_DMA"
+              ? "이중중대성평가 진행하기"
+              : workflow.nextAction === "REQUEST_ROLLUP"
+                ? "자회사 데이터 요청하기"
+                : workflow.nextAction === "WAIT_ROLLUP"
+                  ? "롤업 대기"
+                  : "입력 상태 확인"}
+      </button>
+    </div>
+  );
+};
+
+const OnboardingMetricTable = ({
+  g0Error,
+  g0Items,
+  loadingG0,
+  selectedMetricIds,
+  onSelectMetric,
+  onToggleSelectAll,
+  onRowAssignRequested,
+  onOpenMetric,
+  onRetry,
+  viewerRole,
+}) => {
+  if (g0Error) {
+    return (
+      <div className="ob1-inline-error">
+        <span className="ob1-error-icon">!</span>
+        <span>{g0Error}</span>
+        <button type="button" className="ob1-btn-retry" onClick={onRetry}>
+          다시 시도
+        </button>
+      </div>
+    );
+  }
+
+  if (loadingG0) {
+    return (
+      <div className="ob1-table-loading">
+        <div className="ob1-spinner" />
+        <p>경영일반 데이터를 불러오고 있습니다...</p>
+      </div>
+    );
+  }
+
+  if (g0Items.length === 0) {
+    return (
+      <div className="ob1-empty-state">
+        <p className="ob1-empty-title">할당된 데이터가 없습니다.</p>
+        <p className="ob1-empty-desc">보고서 워크플로우를 먼저 시작해 주세요.</p>
+      </div>
+    );
+  }
+
+  const groupedItems = groupByMetric(g0Items);
+  const isAllSelected = groupedItems.length > 0 && selectedMetricIds.length === groupedItems.length;
+
+  return (
+    <div className="ob1-table-container">
+      <table className="ob1-table">
+        <thead>
+          <tr>
+            <th style={{ width: "44px" }}>
+              <input 
+                type="checkbox" 
+                className="ob1-checkbox" 
+                aria-label="전체 선택"
+                checked={isAllSelected}
+                onChange={() => onToggleSelectAll(groupedItems.map(i => i.metricId))}
+              />
+            </th>
+            <th style={{ width: "90px" }}>Metric ID</th>
+            <th style={{ width: "auto" }}>지표명</th>
+            <th style={{ width: "120px" }}>Sub-Issue</th>
+            <th style={{ width: "170px" }}>담당자</th>
+            <th style={{ width: "110px" }}>제출 기한</th>
+            <th style={{ width: "90px" }}>입력 상태</th>
+            <th style={{ width: "90px" }}>승인 상태</th>
+            <th style={{ width: "180px" }}>관리</th>
+          </tr>
+        </thead>
+        <tbody>
+          {groupedItems.map((item) => {
+            const subMetrics = g0Items.filter((sub) => sub.metricId === item.metricId);
+            const statusInfo = calculateMetricStatus(subMetrics);
+            
+            const inputStatusLabel = item.inputStatus || statusInfo.label;
+            const inputStatusCls = inputStatusLabel === '작성중' ? 'draft' : inputStatusLabel === '제출완료' ? 'submitted' : inputStatusLabel === '입력 완료' ? 'approved' : 'not-started';
+            
+            const approvalStatusLabel = item.approvalStatus || '미제출';
+            let approvalStatusCls = 'not-started';
+            if (approvalStatusLabel === '검토대기') approvalStatusCls = 'draft';
+            else if (approvalStatusLabel === '검토완료') approvalStatusCls = 'reviewed';
+            else if (approvalStatusLabel === '승인완료') approvalStatusCls = 'approved';
+            else if (approvalStatusLabel === '반려') approvalStatusCls = 'rejected';
+
+            const isSelected = selectedMetricIds.includes(item.metricId);
+            const isConsultant = viewerRole === '컨설턴트' || viewerRole === 'CONSULTANT';
+            const isAssigned = item.assignmentStatus === 'ASSIGNED';
+            const isInvitePending = item.inviteStatus === 'PENDING';
+            const isSelfAssigned = item.selfAssignedYn === true;
+            
+            // Mock Date validation for UI-only
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const isOverdue = item.submissionDueDate && item.submissionDueDate < todayStr;
+
+            return (
+              <tr key={item.metricId} className={isSelected ? "selected" : ""}>
+                <td>
+                  <input 
+                    type="checkbox" 
+                    className="ob1-checkbox"
+                    aria-label={`${item.metricId} 선택`}
+                    checked={isSelected}
+                    onChange={() => onSelectMetric(item.metricId)}
+                  />
+                </td>
+                <td>{item.metricId}</td>
+                <td className="ob1-td-name">{item.metricName || item.atomicName || "-"}</td>
+                <td style={{ fontSize: "12px", color: "#64748b" }}>{item.subIssueName || item.sub_issue_name || item.subIssueCode || "-"}</td>
+                
+                <td>
+                  <div className="ob1-assignee-cell">
+                    {isSelfAssigned ? (
+                      <><span className="ob1-assignee-name">{item.assigneeName}</span><span className="ob1-assignee-status">본인 입력</span></>
+                    ) : isInvitePending ? (
+                      <><span className="ob1-assignee-name">{item.assigneeName}</span><span className="ob1-assignee-email">{item.assigneeEmail}</span><span className="ob1-assignee-status pending">초대 대기</span></>
+                    ) : isAssigned ? (
+                      <><span className="ob1-assignee-name">{item.assigneeName}</span><span className="ob1-assignee-email">{item.assigneeEmail}</span></>
+                    ) : (
+                      <span className="ob1-assignee-status unassigned">미지정</span>
+                    )}
+                  </div>
+                </td>
+
+                <td>
+                  {item.submissionDueDate ? (
+                    <div style={{ color: isOverdue ? '#ef4444' : '#334155', fontWeight: isOverdue ? 600 : 400 }}>
+                      {item.submissionDueDate}
+                      {isOverdue && <div style={{ fontSize: '0.75rem', marginTop: '2px' }}>기한 초과</div>}
+                    </div>
+                  ) : (
+                    <span style={{ color: '#94a3b8' }}>미설정</span>
+                  )}
+                </td>
+
+                <td>
+                  <span className={`ob1-status-pill ${inputStatusCls}`}>
+                    {inputStatusLabel}
+                  </span>
+                </td>
+
+                <td>
+                  <span className={`ob1-status-pill ${approvalStatusCls}`}>
+                    {approvalStatusLabel}
+                  </span>
+                </td>
+
+                <td>
+                  <div className="ob1-td-actions" style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                    {isConsultant ? (
+                      <button type="button" className="ob1-btn-input" onClick={() => onOpenMetric(item, subMetrics)}>상세 보기</button>
+                    ) : (
+                      <>
+                        <button type="button" className="ob1-btn-input" onClick={() => onOpenMetric(item, subMetrics)}>입력</button>
+                        <button type="button" className="ob1-btn-input" style={{ borderColor: '#cbd5e1', color: '#475569' }} onClick={() => onRowAssignRequested(item.metricId)}>
+                          {isAssigned ? '담당자 변경' : isInvitePending ? '재지정' : '담당자 지정'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+const OnBoard = () => {
+  const navigate = useNavigate(); 
+  const dispatch = useDispatch();
+  const { selectedCompany, user } = useAuth();
+  const location = useLocation();
+  const companyId = selectedCompany?.company_id ?? selectedCompany?.companyId;
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const reportingYearQuery = searchParams.get("reportingYear");
+  const cycleTypeQuery = searchParams.get("cycleType");
+  const reportingYear = reportingYearQuery ? parseInt(reportingYearQuery, 10) : DEFAULT_REPORTING_YEAR;
+
+  // Preview States
+  const [previewRole, setPreviewRole] = useState("ESG 담당자");
+  const [previewOnboardingScenario, setPreviewOnboardingScenario] = useState(ONBOARDING_SCENARIOS.UNASSIGNED);
+  const [previewApprovalScenario, setPreviewApprovalScenario] = useState(APPROVAL_SCENARIOS.NO_CONSULTANT);
+  const [previewRollupScenario, setPreviewRollupScenario] = useState(ROLLUP_SCENARIOS.PARENT_PENDING);
+
+  const viewerRole = STEP12_UI_FIXTURE_ENABLED ? previewRole : (selectedCompany?.role ?? user?.role ?? "guest");
+
+  const workflow = useSelector((state) => state.report.workflow.current);
+  const rawMetrics = useSelector((state) => state.report.onboarding.metrics);
+  const rawAssignments = useSelector((state) => state.report.onboarding.assignments);
+  const activeBatchId = useSelector((state) => state.report.rollup.activeBatchId);
+  const requests = useSelector((state) => state.report.rollup.requests);
+  const loadingWorkflow = useSelector((state) => state.report.loading.workflow);
+  const loadingG0 = useSelector((state) => state.report.loading.onboarding);
+  const assigningMetrics = useSelector((state) => state.report.loading.assignMetrics);
+  const workflowErrorPayload = useSelector((state) => state.report.error.workflow);
+  const g0ErrorPayload = useSelector((state) => state.report.error.onboarding);
+  
+  const displayWorkflow = STEP12_UI_FIXTURE_ENABLED ? PREVIEW_WORKFLOW : workflow;
+  const activeCycleType = useMemo(
+    () => resolveOnboardingCycleType(displayWorkflow, cycleTypeQuery),
+    [displayWorkflow, cycleTypeQuery]
+  );
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
+  const [isSubReqModalOpen, setIsSubReqModalOpen] = useState(false);
+  const [isSubTransferModalOpen, setIsSubTransferModalOpen] = useState(false);
+  
+  // New States for UI-1 & UI-2
+  const [selectedMetricIds, setSelectedMetricIds] = useState([]);
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [assignmentMode, setAssignmentMode] = useState('single');
+  const [assignmentTargetIds, setAssignmentTargetIds] = useState([]);
+
+  const g0Items = useMemo(() => {
+    const flattened = mergeAssignmentIntoItems(flattenOnboardingItems(rawMetrics), rawAssignments);
+    if (STEP12_UI_FIXTURE_ENABLED) {
+      return mergeOnboardingFixtureRows(flattened, previewOnboardingScenario);
     }
-    return false;
-  };
+    return flattened;
+  }, [rawMetrics, rawAssignments, previewOnboardingScenario]);
 
-  const handleSubmit = async (id) => {
-    const m = metrics.find(x => x.issueId === id);
-    if (!m.value?.trim()) {
-      setErrors(p => ({ ...p, [id]: true }));
-      setShakeIds(p => ({ ...p, [id]: true }));
-      setTimeout(() => setShakeIds(p => ({ ...p, [id]: false })), 400);
-      return false;
-    }
-    const res = await requestApi.submit(id);
-    if (res.status) {
-      setMetrics(prev => prev.map(x => x.issueId === id ? { ...x, status: "SUBMITTED" } : x));
-      setErrors(p => ({ ...p, [id]: false }));
-      return true;
-    }
-    return false;
-  };
+  const g0ProfileStatus = useMemo(() => getProfileStatusFromItems(g0Items), [g0Items]);
+  const hasPendingSubsidiaryRequest = useMemo(
+    () => requests.some(isPendingSubsidiaryRequest),
+    [requests]
+  );
+  const workflowError = workflowErrorPayload?.message || null;
+  const g0Error = g0ErrorPayload?.message || null;
 
-  const handleBatch = async (type) => {
-    const actionText = type === 'save' ? '임시저장' : '제출';
-    const selectedItems = metrics.filter(m => selectedIds.includes(m.issueId));
+  const displayWorkflowError = STEP12_UI_FIXTURE_ENABLED ? null : workflowError;
+  const displayG0Error = STEP12_UI_FIXTURE_ENABLED ? null : g0Error;
 
-    // 1. 상태상 처리가 가능한 대상 필터링
-    let targets = [];
-    if (type === 'save') {
-      targets = selectedItems.filter(m => ["NOT_STARTED", "DRAFT", "REJECTED", "EDITING_SUBMITTED"].includes(m.status));
-    } else {
-      targets = selectedItems.filter(m => ["DRAFT", "REJECTED", "EDITING_SUBMITTED"].includes(m.status));
-    }
-
-    // 2. 입력 값 유무 체크 (임시저장/제출 모두 값이 있는 것만 처리)
-    const validTargets = targets.filter(m => m.value?.trim());
-    const emptyCount = targets.length - validTargets.length;
-
-    if (validTargets.length === 0) {
-      const hasAlreadyDone = selectedItems.some(m => ["SUBMITTED", "APPROVED"].includes(m.status));
-
-      if (emptyCount > 0) {
-        showDefaultAlert("알림", `입력된 값이 없는 항목은 ${actionText}할 수 없습니다.`, "info");
-      } else if (hasAlreadyDone) {
-        showDefaultAlert("알림", "이미 제출(또는 완료)된 상태입니다.", "info");
-      } else {
-        showDefaultAlert("알림", "처리할 수 있는 항목이 없습니다.", "info");
-      }
+  const initializeOnboarding = useCallback(async () => {
+    if (!companyId) {
+      dispatch(resetReportState());
       return;
     }
 
-    const alreadyDoneCount = selectedItems.filter(m => ["SUBMITTED", "APPROVED"].includes(m.status)).length;
-    const notStartedNoValueCount = selectedItems.filter(m => m.status === "NOT_STARTED" && !m.value?.trim()).length;
-    const otherNoValueCount = emptyCount - notStartedNoValueCount;
+    try {
+      const workflowRes = await dispatch(
+        fetchCurrentWorkflow({ companyId, reportingYear })
+      ).unwrap();
+      const nextWorkflow = workflowRes?.data || workflowRes;
 
-    // 3. 자연스러운 컨펌 문구 구성
-    let details = [];
-    if (alreadyDoneCount > 0) details.push(`이미 완료된 ${alreadyDoneCount}건`);
-    if (notStartedNoValueCount > 0) details.push(`미입력 ${notStartedNoValueCount}건`);
-    if (otherNoValueCount > 0) details.push(`내용 없는 ${otherNoValueCount}건`);
+      if (isNoRunWorkflow(nextWorkflow)) {
+        setIsBasisModalOpen(true);
+        return;
+      }
 
-    let confirmMsg = `선택한 ${validTargets.length}건의 지표를 ${actionText}하시겠습니까?`;
-    if (details.length > 0) {
-      confirmMsg += `<br/><small style="color:#94a3b8">(${details.join(", ")} 제외)</small>`;
+      if (nextWorkflow?.reportBasisType === "CONSOLIDATED") {
+        await dispatch(fetchRollupRequests()).unwrap();
+      }
+
+      const nextCycleType = resolveOnboardingCycleType(nextWorkflow, cycleTypeQuery);
+      await dispatch(
+        fetchOnboardingMetrics({ companyId, reportingYear, cycleType: nextCycleType })
+      ).unwrap();
+      await dispatch(
+        fetchOnboardingAssignments({ companyId, reportingYear, cycleType: nextCycleType })
+      ).unwrap();
+    } catch (error) {
+      console.error(error);
+    }
+  }, [companyId, cycleTypeQuery, dispatch, reportingYear]);
+
+  useEffect(() => {
+    dispatch(resetReportState());
+    initializeOnboarding();
+  }, [
+    dispatch,
+    initializeOnboarding,
+    location.state?.workflowStartedAt,
+  ]);
+
+  const profileStats = calculateProfileStats(g0Items);
+  const basisLabel =
+    displayWorkflow?.reportBasisType === "CONSOLIDATED"
+      ? "연결기준"
+      : displayWorkflow?.reportBasisType === "ENTITY"
+        ? "별도기준"
+        : "미확정";
+
+  const handleCtaClick = () => {
+    if (!displayWorkflow || isNoRunWorkflow(displayWorkflow)) {
+      setIsBasisModalOpen(true);
+      return;
     }
 
-    const confirm = await showConfirmAlert("일괄 처리", confirmMsg, "question");
-    if (!confirm) return;
+    switch (displayWorkflow.nextAction) {
+      case "START_DMA":
+        showDefaultAlert("진행", "이중중대성평가를 시작합니다.", "success");
+        navigate("/benchmk");
+        break;
+      case "REQUEST_ROLLUP":
+        setIsSubReqModalOpen(true);
+        break;
+      case "WAIT_ROLLUP":
+        showDefaultAlert("대기", "자회사 데이터 수집 및 롤업 완료를 기다리고 있습니다.", "info");
+        break;
+      default:
+        showDefaultAlert("안내", workflow.message || "데이터 입력 상태를 확인해 주세요.", "info");
+    }
+  };
 
-    // 4. 유효한 대상만 처리
-    for (const item of validTargets) {
-      if (type === 'save') await handleSaveDraft(item.issueId);
-      else await handleSubmit(item.issueId);
+  const handleSaveAndSubmit = async (values, files, status) => {
+    if (!selectedItem || !companyId || isNoRunWorkflow(workflow)) return;
+
+    try {
+      const metricId = selectedItem.parent?.metricId || selectedItem.metrics?.[0]?.metricId;
+      if (!metricId) {
+        showDefaultAlert("오류", "저장할 지표 정보를 찾을 수 없습니다.", "error");
+        return;
+      }
+      const payload = {
+        companyId,
+        reportingYear,
+        cycleType: activeCycleType,
+        values: selectedItem.metrics
+          .filter((item) => isEditableItem(item))
+          .map((item) => {
+            const atomicMetricId = getAtomicId(item);
+            const rawValue = values[atomicMetricId] ?? "";
+            const trimmed = String(rawValue).trim();
+            const numericYn =
+              resolveG0InputMode(item) === "MANUAL_NUMBER" &&
+              trimmed !== "" &&
+              /^-?\d+(\.\d+)?$/.test(trimmed);
+
+            return {
+              metricId: item.metricId,
+              atomicMetricId,
+              valueText: numericYn ? null : trimmed || null,
+              valueNumeric: numericYn ? Number(trimmed) : null,
+              unit: item.unit || null,
+            };
+          }),
+      };
+
+      await dispatch(saveOnboardingMetric({ metricId, payload })).unwrap();
+
+      showDefaultAlert(
+        "완료",
+        status === "DRAFT" ? "임시저장이 완료되었습니다." : "데이터 제출이 완료되었습니다.",
+        "success"
+      );
+      setIsModalOpen(false);
+      await initializeOnboarding();
+    } catch (error) {
+      console.error(error);
+      showDefaultAlert("오류", "처리 중 오류가 발생했습니다.", "error");
+    }
+  };
+
+  // Callbacks for Phase UI-1 & UI-2
+  const handleSelectMetric = (metricId) => {
+    setSelectedMetricIds(prev => 
+      prev.includes(metricId) ? prev.filter(id => id !== metricId) : [...prev, metricId]
+    );
+  };
+
+  const handleToggleSelectAll = (allMetricIds) => {
+    if (selectedMetricIds.length === allMetricIds.length) {
+      setSelectedMetricIds([]);
+    } else {
+      setSelectedMetricIds(allMetricIds);
+    }
+  };
+
+  const handleBulkAssignRequested = () => {
+    if (selectedMetricIds.length === 0) return;
+    setAssignmentMode('bulk');
+    setAssignmentTargetIds(selectedMetricIds);
+    setIsAssignmentModalOpen(true);
+  };
+
+  const handleRowAssignRequested = (metricId) => {
+    setAssignmentMode('single');
+    setAssignmentTargetIds([metricId]);
+    setIsAssignmentModalOpen(true);
+  };
+
+  const handleSubmitAssignment = async (payload) => {
+    if (STEP12_UI_FIXTURE_ENABLED) {
+      showDefaultAlert("안내", "프리뷰 모드에서는 담당자 지정 API를 호출하지 않습니다.", "info");
+      setIsAssignmentModalOpen(false);
+      setSelectedMetricIds([]);
+      return;
     }
 
-    setSelectedIds([]);
-    showDefaultAlert("처리 완료", `${validTargets.length}건이 성공적으로 ${actionText}되었습니다.`, "success");
-  };
-  // OnBoard 컴포넌트 내부 상태 정의 구역
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState(null);
-  // const handleModalSave = async (id, value, file) => {
-  //   // 1. 파일이 있으면 먼저 업로드 프로세스 수행
-  //   if (file && file.raw !== selectedItem.evidenceFileName) {
-  //     await requestApi.uploadEvidence(id, file);
-  //   }
-  //   // 2. 임시저장 데이터 업데이트 로직 실행
-  //   await handleSaveDraft(id, value); // 기존에 정의된 함수 활용 혹은 매개변수 구조에 맞춰 래핑
-  //   setIsModalOpen(false);
-  // };
+    const metricIds = payload?.metricIds || assignmentTargetIds;
+    if (!companyId || metricIds.length === 0) {
+      showDefaultAlert("오류", "담당자를 지정할 metric_id를 선택해 주세요.", "error");
+      return;
+    }
 
-  // const handleModalSubmit = async (id, value, file) => {
-  //   // 저장 후 제출 시퀀스 실행
-  //   if (file) await requestApi.uploadEvidence(id, file);
-  //   await handleSaveDraft(id, value);
-  //   await handleSubmit(id);
-  //   setIsModalOpen(false);
-  // };
-  const getSubMetrics = (issueGroup) => {
-    return metrics.filter(m => m.issueGroup === issueGroup);
+    try {
+      const response = await dispatch(
+        bulkAssignOnboardingMetrics({
+          companyId,
+          reportingYear,
+          cycleType: activeCycleType,
+          metricIds,
+          assigneeEmail: payload.assigneeEmail,
+          dueDate: payload.submissionDueDate || null,
+          sendInviteYn: true,
+        })
+      ).unwrap();
+      const result = response?.data || response;
+
+      await dispatch(fetchOnboardingMetrics({ companyId, reportingYear, cycleType: activeCycleType })).unwrap();
+      await dispatch(fetchOnboardingAssignments({ companyId, reportingYear, cycleType: activeCycleType })).unwrap();
+
+      setSelectedMetricIds([]);
+      setAssignmentTargetIds([]);
+      setIsAssignmentModalOpen(false);
+
+      if (result?.warning) {
+        showDefaultAlert("완료", `담당자 지정은 완료됐지만 메일 큐 처리 경고가 있습니다. ${result.warning}`, "warning");
+      } else if (result?.inviteCreatedYn && result?.mailQueuedYn) {
+        showDefaultAlert("완료", "담당자 지정 및 초대 메일 발송 요청이 완료되었습니다.", "success");
+      } else {
+        showDefaultAlert("완료", "담당자 지정이 완료되었습니다.", "success");
+      }
+    } catch (error) {
+      console.error(error);
+      showDefaultAlert("오류", error?.message || "담당자 지정 중 오류가 발생했습니다.", "error");
+    }
   };
-  return (
-    <div id="onboarding_page">
-      <main className="ob-body">
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-          <button 
-            type="button"
-            className={`ob-btn ${activeFlow === 'G0' ? 'ob-btn-primary' : 'ob-btn-secondary'}`}
-            style={{ padding: '8px 20px', borderRadius: '24px', fontSize: '0.95rem' }}
-            onClick={() => { setActiveFlow('G0'); setCurrentPage(1); setActiveCategory("전체"); }}
-          >
-            📋 1단계: G0 (회사 프로파일) 입력
-          </button>
-          <button 
-            type="button"
-            className={`ob-btn ${activeFlow === 'GENERAL' ? 'ob-btn-primary' : 'ob-btn-secondary'}`}
-            style={{ padding: '8px 20px', borderRadius: '24px', fontSize: '0.95rem' }}
-            onClick={() => { setActiveFlow('GENERAL'); setCurrentPage(1); setActiveCategory("전체"); }}
-          >
-            ✅ 2단계: 일반 온보딩 (DMA 확정 지표)
-          </button>
+
+  const handleBulkUnassignRequested = async () => {
+    if (selectedMetricIds.length === 0) return;
+    if (STEP12_UI_FIXTURE_ENABLED) {
+      showDefaultAlert("안내", "프리뷰 모드에서는 담당자 해제 API를 호출하지 않습니다.", "info");
+      return;
+    }
+
+    try {
+      await dispatch(
+        bulkUnassignOnboardingMetrics({
+          companyId,
+          reportingYear,
+          cycleType: activeCycleType,
+          metricIds: selectedMetricIds,
+        })
+      ).unwrap();
+
+      await dispatch(fetchOnboardingMetrics({ companyId, reportingYear, cycleType: activeCycleType })).unwrap();
+      await dispatch(fetchOnboardingAssignments({ companyId, reportingYear, cycleType: activeCycleType })).unwrap();
+
+      setSelectedMetricIds([]);
+      showDefaultAlert("완료", "선택한 지표의 담당자 지정이 해제되었습니다.", "success");
+    } catch (error) {
+      console.error(error);
+      showDefaultAlert("오류", error?.message || "담당자 해제 중 오류가 발생했습니다.", "error");
+    }
+  };
+
+  if (!STEP12_UI_FIXTURE_ENABLED && loadingWorkflow && !workflow) {
+    return (
+      <div id="ob1-page">
+        <div className="ob1-state-container">
+          <div className="ob1-spinner" />
+          <p className="ob1-state-text">온보딩 데이터를 불러오고 있습니다...</p>
         </div>
-        <div className="ob-header-row">
-          <div className="ob-header-left">
-            <div className="ob-cat-tabs-container">
-              <CategoryTabs
-                tabs={categoryTabs.map(tab => ({
-                  value: tab,
-                  label: (
-                    <>
-                      {tab}
-                      {activeCategory === tab && tab !== "전체" && (
-                        <div className={`ob-tab-expander ${isIgExpanded ? "expanded" : ""}`} onClick={(e) => { e.stopPropagation(); setIsIgExpanded(!isIgExpanded); }}>
-                          <Icon type="chevronDown" strokeWidth="3" />
-                        </div>
-                      )}
-                    </>
-                  )
-                }))}
-                activeTab={activeCategory}
-                onTabChange={(val) => {
-                  setActiveCategory(val);
-                  setSelectedIGs([]);
-                  setIsIgExpanded(false);
-                  setCurrentPage(1);
-                }}
+      </div>
+    );
+  }
+
+  return (
+    <div id="ob1-page">
+      <div className="ob1-header">
+        <h1 className="ob1-title">온보딩 [{basisLabel}]</h1>
+        <p className="ob1-desc">
+          지속가능경영보고서 작성을 위한 기본 경영일반 데이터를 입력하고 확인합니다.<br />
+          {displayWorkflow?.reportBasisType === "CONSOLIDATED" && "본사 및 자회사의 데이터를 통합 관리합니다."}
+        </p>
+      </div>
+
+      <OnboardingStatCards stats={profileStats} g0ProfileStatus={g0ProfileStatus} />
+
+      <div className="ob1-content-layout">
+        <div className="ob1-sidebar-panel">
+          <div className="ob1-sidebar-title">할당 항목</div>
+          <ul className="ob1-sidebar-menu">
+            <li className="ob1-sidebar-menu-item active">1. 경영일반 - G0</li>
+          </ul>
+        </div>
+
+        <div className="ob1-main-area">
+          {displayWorkflowError && (
+            <div className="ob1-inline-error">
+              <span className="ob1-error-icon">!</span>
+              <span>{displayWorkflowError}</span>
+            </div>
+          )}
+
+          {isNoRunWorkflow(displayWorkflow) ? (
+            <OnboardingWorkflowCta
+              variant="noRun"
+              loadingWorkflow={loadingWorkflow}
+              workflow={displayWorkflow}
+              isNoRunWorkflow={isNoRunWorkflow}
+              onBasisModalOpen={() => setIsBasisModalOpen(true)}
+              onCtaClick={handleCtaClick}
+            />
+          ) : (
+            <>
+              <OnboardingWorkflowCta
+                variant="top"
+                activeBatchId={activeBatchId}
+                hasPendingSubsidiaryRequest={hasPendingSubsidiaryRequest}
+                loadingWorkflow={loadingWorkflow}
+                workflow={displayWorkflow}
+                isNoRunWorkflow={isNoRunWorkflow}
+                onCalculated={() => initializeOnboarding()}
+                onCtaClick={handleCtaClick}
+                onReqModalOpen={() => setIsSubReqModalOpen(true)}
+                onTransferModalOpen={() => setIsSubTransferModalOpen(true)}
+                rollupScenario={previewRollupScenario}
               />
 
-              <div className="ob-status-floating-wrap" ref={statusMenuRef}>
-                <button type="button" className={`ob-status-circular-trigger ${isStatusPanelOpen ? "active" : ""} ${activeStatusFilters.length ? "filtering" : ""}`} onClick={() => setIsStatusPanelOpen(!isStatusPanelOpen)}>
-                  <Icon type="filter" size={18} />
-                  {activeStatusFilters.length > 0 && <div className="ob-status-dot" />}
-                </button>
-                <div className={`ob-status-radial-menu ${isStatusPanelOpen ? "open" : ""}`}>
-                  <button className="ob-radial-item reset" style={{ "--idx": 0, "--total": 4 }} onClick={() => setActiveStatusFilters([])}>
-                    <div className="ob-radial-icon"><Icon type="reset" size={12} /></div>
-                    <span className="ob-radial-label">해제</span>
-                  </button>
-                  {StatusFilterOptions.map((opt, i) => (
-                    <button key={opt.key} className={`ob-radial-item ${opt.cls} ${activeStatusFilters.includes(opt.key) ? "selected" : ""}`} style={{ "--idx": i + 1, "--total": 4 }}
-                      onClick={() => setActiveStatusFilters(p => p.includes(opt.key) ? p.filter(k => k !== opt.key) : [...p, opt.key])}>
-                      <div className="ob-radial-icon"><Icon type={opt.icon === "edit-3" ? "edit3" : opt.icon === "send" ? "send" : "xCircle"} size={12} /></div>
-                      <span className="ob-radial-label">{opt.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 대분류 필터를 필터들 바로 옆으로 이동 */}
-              <div className="ob-service-filter">
-                <ServiceTabs 
-                  activeService={activeService} 
-                  onServiceChange={(service) => {
-                    setActiveService(service);
-                    setCurrentPage(1);
-                    setActiveCategory("전체");
-                    setSelectedIGs([]);
-                    setIsIgExpanded(false);
-                  }} 
+              <div className="ob1-batch-bar" style={{ padding: '0 16px', marginTop: '16px' }}>
+                <BatchActionBar 
+                  selectedCount={selectedMetricIds.length}
+                  actions={[
+                    { label: '선택 지표 담당자 지정', onClick: handleBulkAssignRequested, className: 'submit' },
+                    { label: '선택 지표 담당자 해제', onClick: handleBulkUnassignRequested, className: 'reject' },
+                    { label: '선택 해제', onClick: () => setSelectedMetricIds([]), className: 'reject' }
+                  ]}
                 />
               </div>
-            </div>
-          </div>
 
-          <BatchActionBar
-            selectedCount={selectedIds.length}
-            actions={[
-              { label: '선택 저장', onClick: () => handleBatch('save'), className: 'save' },
-              { label: '선택 제출', onClick: () => handleBatch('submit'), className: 'submit' }
-            ]}
-          />
+              <OnboardingMetricTable
+                g0Error={displayG0Error}
+                g0Items={g0Items}
+                loadingG0={STEP12_UI_FIXTURE_ENABLED ? false : loadingG0}
+                selectedMetricIds={selectedMetricIds}
+                onSelectMetric={handleSelectMetric}
+                onToggleSelectAll={handleToggleSelectAll}
+                onRowAssignRequested={handleRowAssignRequested}
+                onOpenMetric={(item, subMetrics) => {
+                  setSelectedItem({
+                    parent: item,
+                    metrics: subMetrics,
+                  });
+                  setIsModalOpen(true);
+                }}
+                onRetry={initializeOnboarding}
+                viewerRole={viewerRole}
+              />
 
-          <div className="ob-toolbar-right">
-            <span className="ob-count">총 {filteredData.length.toLocaleString()}건</span>
-            <div className="ob-current-auth-badge">
-              <span style={{ fontWeight: 600, color: '#3b82f6' }}>{selectedCompany?.company_name || "A회사"}</span>
-              <span className="ob-badge-dot"></span>
-              <span>{currentRoleName}</span>
-            </div>
-            <input type="text" className="ob-search" placeholder="지표 검색..." value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
-          </div>
+              <OnboardingWorkflowCta
+                loadingWorkflow={loadingWorkflow}
+                workflow={displayWorkflow}
+                isNoRunWorkflow={isNoRunWorkflow}
+                onCtaClick={handleCtaClick}
+              />
+            </>
+          )}
         </div>
+      </div>
 
-        <div className={`ob-ig-tabs-wrap ${(isIgExpanded && activeCategory !== "전체" && availableIGs.length) ? "expanded" : ""}`}>
-          <div className="ob-ig-tabs-inner">
-            <SubTabs
-              tabs={availableIGs}
-              activeTab={selectedIGs}
-              categoryTheme={activeCategory}
-              onTabChange={(ig) => {
-                setSelectedIGs(p => p.includes(ig) ? p.filter(g => g !== ig) : [...p, ig]);
-                setCurrentPage(1);
-              }}
-            />
-          </div>
-        </div>
-
-        <div className="ob-table-wrap" ref={tableWrapRef}>
-          <table className="ob-table">
-            <thead>
-              <tr>
-                <th style={{ width: "6%" }}><div className="cell-id-head"><input type="checkbox" className="ob-checkbox" checked={selectedIds.length > 0 && selectedIds.length === pageData.length} onChange={(e) => setSelectedIds(e.target.checked ? pageData.map(d => d.issueId) : [])} />ID</div></th>
-                <th style={{ width: "12%" }}>이슈그룹 / R&R</th>
-                <th style={{ width: "29%" }}>체크리스트 내용</th>
-                <th style={{ width: "23%" }}>데이터 입력</th>
-                <th style={{ width: "6%" }}>단위</th>
-                <th style={{ width: "8%" }}>증빙</th>
-                <th style={{ width: "7%" }}>상태</th>
-                <th style={{ width: "9%" }}>액션</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageData.map((item, i) => {
-                const st = StatusCfg[item.status] || StatusCfg.NOT_STARTED;
-                const acts = getActions(item.status);
-                return (
-                  <tr key={item.issueId} className={`ob-tr-status-${item.status.toLowerCase()} ${rowSpans[i] ? "group-start" : ""}`}>
-                    <td className={`cell-id theme-${item.category}`}><div className="cell-id-inner"><input type="checkbox" className="ob-checkbox" checked={selectedIds.includes(item.issueId)} onChange={() => setSelectedIds(p => p.includes(item.issueId) ? p.filter(x => x !== item.issueId) : [...p, item.issueId])} />{item.issueId}</div></td>
-
-                    {rowSpans[i] && (
-                      <td className={`cell-issue-group theme-${item.category}`} rowSpan={rowSpans[i]}>
-                        <div className="ob-ig-container">
-                          <span className={`ob-ig-badge theme-${item.category}`}>{item.issueGroup}</span>
-                          <div className="ob-ig-rnr">
-                            <span className={`ob-rnr-text theme-${item.category}`}>
-                              {rnrDisplay(item.assignees) || "-"}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                    )}
-
-                    <td className="cell-checklist"><span className="checklist-text">{item.checklistQuestion}</span></td>
-                    {/* 기존 td 구조를 아래와 같이 변경 */}
-                      <td className="ob-td-value">
-                        <div 
-                          className="ob-value-trigger-cell"
-                          onClick={() => {
-                            const groupMetrics = getSubMetrics(item.issueGroup);
-
-                            setSelectedItem({
-                              parent: item,
-                              metrics: groupMetrics
-                            });
-
-                            setIsModalOpen(true);
-                          }}
-                          style={{ 
-                            cursor: 'pointer', 
-                            padding: '8px', 
-                            borderRadius: '4px', 
-                            background: item.value ? '#f0faf4' : '#f8fafc',
-                            border: '1px dashed #cbd5e1',
-                            textAlign: 'center',
-                            minHeight: '34px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          {item.value ? (
-                            <span style={{ fontWeight: '600', color: '#1e293b' }}>
-                              {item.value} <span style={{ fontSize: '12px', color: '#64748b' }}>{item.unit}</span>
-                            </span>
-                          ) : (
-                            <span style={{ color: '#94a3b8', fontSize: '13px' }}>클릭하여 입력</span>
-                          )}
-                        </div>
-                      </td>
-                    <td className="cell-unit"><span className="unit-text">{item.unit !== "-" ? item.unit : ""}</span></td>
-                    <td className="cell-evidence">
-                      <button type="button" className={`ob-evidence-btn ${item.evidenceAttached ? "attached" : ""}`} onClick={async () => {
-                        const res = await requestApi.uploadEvidence(item.issueId, { name: "evidence.pdf" });
-                        if (res.status) setMetrics(p => p.map(x => x.issueId === item.issueId ? { ...x, evidenceAttached: !x.evidenceAttached, evidenceFileName: !x.evidenceAttached ? res.data.fileName : "" } : x));
-                      }}>
-                        {item.evidenceAttached ? "첨부됨" : "미첨부"}
-                      </button>
-                    </td>
-                    <td className="cell-status"><div className="ob-status-wrap"><span className={`ob-status ${st.cls}`}>{st.label}</span></div></td>
-                    <td className="cell-action">
-                      <div className="ob-actions">
-                        {acts.map(label => (
-                          <button key={label} type="button" className={`ob-act-btn ob-act-${label === "저장" ? "draft" : "submit"}`}
-                            onClick={() => {
-                              if (label === "저장") handleSaveDraft(item.issueId);
-                              if (label === "제출") handleSubmit(item.issueId);
-                              if (label === "재제출") setMetrics(p => p.map(x => x.issueId === item.issueId ? { ...x, status: "DRAFT" } : x));
-                            }}>{label}</button>
-                        ))}
-                        {!acts.length && <span className="ob-action-badge-empty">-</span>}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-
-        {pageCount > 1 && (
-          <div className="ob-pagination">
-            <button type="button" className="ob-page-btn ob-page-nav" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>‹</button>
-            <div className="ob-page-numbers">
-              {Array.from({ length: Math.min(10, pageCount) }, (_, i) => {
-                const p = Math.max(1, Math.min(pageCount - 9, currentPage - 5)) + i;
-                if (p > pageCount || p < 1) return null;
-                return <button key={p} type="button" className={`ob-page-btn ${p === currentPage ? "active" : ""}`} onClick={() => setCurrentPage(p)}>{p}</button>;
-              })}
-            </div>
-            <button type="button" className="ob-page-btn ob-page-nav" disabled={currentPage >= pageCount} onClick={() => setCurrentPage(p => Math.min(pageCount, p + 1))}>›</button>
-          </div>
-        )}
-      </main>
-      <OnboardingModalShell 
+      <OnboardingModalShell
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         metricItem={selectedItem?.parent}
         subMetrics={selectedItem?.metrics || []}
-        modalType="MIXED"
-        onSaveAndSubmit={async (values, files, status) => {
-          if (!selectedItem) return;
+        onSaveAndSubmit={handleSaveAndSubmit}
+        viewerRole={viewerRole}
+        onOpenAssignment={() => handleRowAssignRequested(selectedItem?.parent?.metricId)}
+      />
 
-          try {
-            // 1. 파일 업로드
-            for (const issueId in files) {
-              const file = files[issueId];
+      <MetricAssignmentModal
+        isOpen={isAssignmentModalOpen}
+        mode={assignmentMode}
+        selectedMetricIds={assignmentTargetIds}
+        isSubmitting={!STEP12_UI_FIXTURE_ENABLED && assigningMetrics}
+        onClose={() => setIsAssignmentModalOpen(false)}
+        onSubmitAssignment={handleSubmitAssignment}
+      />
 
-              if (file && file.name) {
-                await requestApi.uploadEvidence(issueId, file);
-              }
-            }
-            const targetIds = selectedItem.metrics.map(m => m.issueId);
-            // 2. metrics 상태 업데이트
-            setMetrics(prev =>
-              prev.map(metric => {
-                if (targetIds.includes(metric.issueId)) {
-                  return {
-                    ...metric,
-                    value: values[metric.issueId] || "",
-                    status: status || "SUBMITTED",
-                    evidenceAttached: !!files[metric.issueId],
-                    evidenceFileName: files[metric.issueId]?.name || ""
-                  };
-                }
-
-                return metric;
-              })
-            );
-
-            // 3. 제출 API
-            for (const issueId in values) {
-              await requestApi.saveDraft(issueId, {
-                value: values[issueId]
-              });
-
-              if (status === 'SUBMITTED') {
-                await requestApi.submit(issueId);
-              }
-            }
-
-            showDefaultAlert(
-              "완료",
-              status === 'DRAFT' ? "임시저장이 완료되었습니다." : "데이터 제출이 완료되었습니다.",
-              "success"
-            );
-
-            setIsModalOpen(false);
-
-          } catch (err) {
-            console.error(err);
-
-            showDefaultAlert(
-              "오류",
-              "처리 중 오류가 발생했습니다.",
-              "error"
-            );
-          }
+      <SubsidiaryRequestModal
+        isOpen={isSubReqModalOpen}
+        onClose={() => setIsSubReqModalOpen(false)}
+        runId={workflow?.runId}
+        onRequested={async (batch) => {
+          dispatch(setActiveBatchId(batch.batchId));
+          setIsSubReqModalOpen(false);
+          await initializeOnboarding();
         }}
+      />
+
+      <SubsidiaryTransferModal
+        isOpen={isSubTransferModalOpen}
+        onClose={() => setIsSubTransferModalOpen(false)}
+        onTransferred={async (batchId) => {
+          dispatch(setActiveBatchId(batchId));
+          await initializeOnboarding();
+        }}
+      />
+
+      <ReportBasisSelectModal
+        isOpen={isBasisModalOpen}
+        onClose={() => setIsBasisModalOpen(false)}
+        companyId={companyId}
+        reportingYear={reportingYear}
+      />
+
+      <UiPreviewPanel
+        role={previewRole}
+        onboardingScenario={previewOnboardingScenario}
+        approvalScenario={previewApprovalScenario}
+        rollupScenario={previewRollupScenario}
+        onRoleChange={setPreviewRole}
+        onOnboardingScenarioChange={setPreviewOnboardingScenario}
+        onApprovalScenarioChange={setPreviewApprovalScenario}
+        onRollupScenarioChange={setPreviewRollupScenario}
       />
     </div>
   );
 };
 
-export default Onboarding;
+export default OnBoard;

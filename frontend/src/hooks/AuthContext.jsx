@@ -109,8 +109,7 @@ export const AuthProvider = ({ children }) => {
       );
 
       if (isConfirmed) {
-        dispatch(logoutUser())
-        location.href = import.meta.env.VITE_API_URL_MAIN;;
+        dispatch(logoutUser());
       }
     };
     const toggleSidebarMobile = () => {

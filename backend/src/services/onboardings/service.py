@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Optional
 
@@ -29,6 +29,7 @@ from src.utils import onboardingassignmentrepository as assignmentRepo
 from src.utils import onboardingrepository as repo
 from src.utils.companyscope import checkScope
 from src.services.onboardings import approval_service as approvalService
+from src.services.calculations.service import invalidateAffectedEntityFactsTx
 
 
 CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
@@ -132,7 +133,8 @@ def saveMetricValues(
 ) -> OnboardingMetricValuesResponseDto:
     prepared = validateMetricValues(metricId=metricId, request=request, userId=userId, userModel=userModel)
     cycle = prepared["cycle"]
-    savedCount = saveMetricValueGroups([prepared])
+    group = prepared["group"]
+    savedCount = saveMetricValueGroupsWithInvalidation([group])
     return OnboardingMetricValuesResponseDto(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
@@ -141,6 +143,94 @@ def saveMetricValues(
         metricId=metricId,
         savedItemCount=savedCount,
     )
+
+
+def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
+    """Save metric values and invalidate downstream derived Facts for changed atomics."""
+    if not groups:
+        return 0
+    from src.utils.db import getConn
+    from src.utils import onboardinginputrepository as inputRepo
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("DB connection failed")
+    try:
+        savedCount = 0
+        with conn.cursor(dictionary=True) as cur:
+            for group in groups:
+                companyId = group["companyId"]
+                reportingYear = group["reportingYear"]
+                metricId = group["metricId"]
+                values = group["values"]
+
+                # Collect old values for change detection
+                oldByAtomic = {}
+                for value in values:
+                    atomicId = value["atomicMetricId"]
+                    cur.execute(
+                        """
+                        SELECT value_numeric, value_text
+                        FROM ESG_ONBOARDING_INPUT_VALUE
+                        WHERE company_id = ?
+                          AND reporting_year = ?
+                          AND metric_id = ?
+                          AND atomic_metric_id = ?
+                          AND delete_yn = 0
+                        ORDER BY id DESC
+                        LIMIT 1
+                        """,
+                        (companyId, reportingYear, metricId, atomicId),
+                    )
+                    oldByAtomic[atomicId] = cur.fetchone()
+
+                # Save
+                savedCount += inputRepo.upsertMetricInputValuesTx(cur, **group)
+
+                # Detect changed atomics
+                changedAtomicIds = []
+                for value in values:
+                    atomicId = value["atomicMetricId"]
+                    old = oldByAtomic.get(atomicId)
+                    if _atomicValueChanged(old, value):
+                        changedAtomicIds.append(atomicId)
+
+                # Downstream invalidation for changed atomics
+                if changedAtomicIds:
+                    invalidateAffectedEntityFactsTx(
+                        cur,
+                        companyId=companyId,
+                        reportingYear=reportingYear,
+                        changedAtomicMetricIds=changedAtomicIds,
+                    )
+        conn.commit()
+        return savedCount
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _atomicValueChanged(oldRow: dict, newValue: dict) -> bool:
+    """Return True if the value actually changed compared to the existing DB row."""
+    if oldRow is None:
+        # New insert — always counts as a change
+        return True
+    oldNumeric = oldRow.get("value_numeric")
+    newNumeric = newValue.get("valueNumeric")
+    oldText = str(oldRow.get("value_text") or "").strip()
+    newText = str(newValue.get("valueText") or "").strip()
+    # Compare numeric
+    if oldNumeric is not None or newNumeric is not None:
+        try:
+            if float(oldNumeric or 0) != float(newNumeric or 0):
+                return True
+        except (TypeError, ValueError):
+            return True
+    # Compare text
+    if oldText != newText:
+        return True
+    return False
 
 
 def validateMetricValues(

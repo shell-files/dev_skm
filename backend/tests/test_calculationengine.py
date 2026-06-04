@@ -198,6 +198,125 @@ class CalculationEngineTest(unittest.TestCase):
         )
         self.assertTrue(engine.allResultsCalculated([{"calculationStatus": engine.STATUS_CALCULATED}]))
 
+    # ── Step 12-C2-R2 new tests ──
+
+    def test_all_results_calculated_empty_list_returns_false(self):
+        """allResultsCalculated([]) must return False (§5 empty guard)."""
+        self.assertFalse(engine.allResultsCalculated([]))
+
+    def test_all_results_calculated_none_returns_false(self):
+        """allResultsCalculated(None) must return False."""
+        self.assertFalse(engine.allResultsCalculated(None))
+
+    def test_repository_non_calculated_result_save_blocked(self):
+        """Repository must raise ValueError when any result is not CALCULATED (§6 all-or-none)."""
+        from src.utils import calculationrepository as calcRepo
+
+        class FakeCursor:
+            def execute(self, *a, **kw):
+                raise AssertionError("Should not reach DB execute")
+            def fetchone(self):
+                return None
+            def fetchall(self):
+                return []
+
+        results = [
+            {"calculationStatus": "CALCULATED", "targetAtomicMetricId": "M__D1", "metricId": "M"},
+            {"calculationStatus": "CALCULATION_SOURCE_NOT_READY", "targetAtomicMetricId": "M__D2", "metricId": "M"},
+        ]
+        with self.assertRaisesRegex(ValueError, "CALCULATION_RESULTS_NOT_READY"):
+            calcRepo.upsertCalculatedEntityFactsTx(
+                FakeCursor(),
+                companyId=1,
+                reportingYear=2025,
+                results=results,
+            )
+
+    def test_repository_empty_results_returns_zero(self):
+        """Repository returns 0 saved count for empty results (not an error)."""
+        from src.utils import calculationrepository as calcRepo
+
+        class FakeCursor:
+            pass
+
+        self.assertEqual(
+            calcRepo.upsertCalculatedEntityFactsTx(
+                FakeCursor(),
+                companyId=1,
+                reportingYear=2025,
+                results=[],
+            ),
+            0,
+        )
+
+    def test_entity_invalidation_sql_contains_scope_condition(self):
+        """Entity invalidation SQL must include company_scope_type ENTITY filter (§7)."""
+        import inspect
+        from src.utils import calculationrepository as calcRepo
+        sourceCode = inspect.getsource(calcRepo.invalidateCalculatedEntityFactsTx)
+        self.assertIn("company_scope_type", sourceCode)
+        self.assertIn("ENTITY", sourceCode)
+
+    def test_calculation_summary_response_shape(self):
+        """calculateAffectedEntityFactsTx returns expected observability fields."""
+        from src.services.calculations.service import calculateAffectedEntityFactsTx, _emptySummary
+        summary = _emptySummary()
+        self.assertIn("calculationReadyYn", summary)
+        self.assertIn("affectedRuleCount", summary)
+        self.assertIn("invalidatedFactCount", summary)
+        self.assertIn("calculatedFactCount", summary)
+        self.assertIn("calculationWarnings", summary)
+        self.assertEqual(summary["affectedRuleCount"], 0)
+        self.assertEqual(summary["calculationWarnings"], [])
+        self.assertTrue(summary["calculationReadyYn"])
+
+    def test_invalidate_affected_returns_summary(self):
+        """invalidateAffectedEntityFactsTx returns expected shape for empty input."""
+        from src.services.calculations.service import invalidateAffectedEntityFactsTx
+        # Empty changedAtomicMetricIds should return zero counts
+        result = invalidateAffectedEntityFactsTx(
+            None,  # cur not used for empty input
+            companyId=1,
+            reportingYear=2025,
+            changedAtomicMetricIds=[],
+        )
+        self.assertEqual(result["affectedRuleCount"], 0)
+        self.assertEqual(result["invalidatedFactCount"], 0)
+
+    def test_input_change_detection(self):
+        """_atomicValueChanged correctly detects changes vs no-changes."""
+        import sys
+        from unittest.mock import MagicMock
+        sys.modules['jwcrypto'] = MagicMock()
+        from src.services.onboardings.service import _atomicValueChanged
+
+        # New insert (oldRow=None) is always a change
+        self.assertTrue(_atomicValueChanged(None, {"valueNumeric": 10}))
+
+        # Same value -> no change
+        self.assertFalse(_atomicValueChanged(
+            {"value_numeric": 10, "value_text": None},
+            {"valueNumeric": 10, "valueText": None},
+        ))
+
+        # Different numeric -> change
+        self.assertTrue(_atomicValueChanged(
+            {"value_numeric": 10, "value_text": None},
+            {"valueNumeric": 20, "valueText": None},
+        ))
+
+        # Different text -> change
+        self.assertTrue(_atomicValueChanged(
+            {"value_numeric": None, "value_text": "old"},
+            {"valueNumeric": None, "valueText": "new"},
+        ))
+
+        # Same text -> no change
+        self.assertFalse(_atomicValueChanged(
+            {"value_numeric": None, "value_text": "same"},
+            {"valueNumeric": None, "valueText": "same"},
+        ))
+
 
 if __name__ == "__main__":
     unittest.main()

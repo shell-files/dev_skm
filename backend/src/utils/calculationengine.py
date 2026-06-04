@@ -281,9 +281,9 @@ def duplicateTargetAtomicIds(rules: list[dict]) -> set[str]:
 
 
 def allResultsCalculated(results: list[dict]) -> bool:
-    return all(
+    return bool(results) and all(
         str(result.get("calculationStatus") or "").strip().upper() == STATUS_CALCULATED
-        for result in results or []
+        for result in results
     )
 
 

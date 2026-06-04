@@ -26,7 +26,7 @@ import {
 const CAT_CONFIG = {
   E: { label: "환경(E)",      bg: "rgba(34,197,94,0.92)",  badge: { bg: "#dcfce7", color: "#16a34a" } },
   S: { label: "사회(S)",      bg: "rgba(59,130,246,0.92)", badge: { bg: "#dbeafe", color: "#2563eb" } },
-  G: { label: "거버넌스(G)", bg: "rgba(245,43,43,0.88)",  badge: { bg: "#fee2e2", color: "#dc2626" } },
+  G: { label: "거버넌스(G)",   bg: "rgba(245,43,43,0.88)",  badge: { bg: "#fee2e2", color: "#dc2626" } },
 };
 
 // 선정된 이슈 데이터 (x: 재무중요성, y: 영향중요성, 1~3 스케일)

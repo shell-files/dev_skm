@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import Analyze from "@assets/icons/result_page/analyze.png";
+import VChain from "@assets/icons/result_page/value-chain.png";
+import SHolder from "@assets/icons/result_page/stakeholder.png";
 import "@styles/result.css";
 import "@styles/benchmarking.css";
 import "@styles/media.css";

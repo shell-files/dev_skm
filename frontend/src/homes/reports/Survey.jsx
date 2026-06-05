@@ -114,9 +114,9 @@ const Survey = () => {
     ext: 80,
   });
   const [surveyUrls, setSurveyUrls] = useState({
-    emp: "",
-    exec: "",
-    ext: "",
+    employee: {},
+    management: {},
+    external: {},
   });
 
   const [isUrlCreated, setIsUrlCreated] = useState(false);
@@ -210,13 +210,12 @@ const Survey = () => {
 
       const result = await POST("/survey", {
         companyId: selectedCompany.company_id.toString(),
+        runId: "1",
+        year: "2025",
       });
+      console.log(result);
 
-      setSurveyUrls({
-        emp: result.urls.emp,
-        exec: result.urls.exec,
-        ext: result.urls.ext,
-      });
+      setSurveyUrls(result.forms);
 
       setIsUrlCreated(true);
 
@@ -428,7 +427,7 @@ const Survey = () => {
             각 이해관계자 그룹별 설문 발송 관리 및
             실시간 집계 결과를 매핑합니다.
           </p>
-          <div style={{display: "flex", justifyContent: "space-between", marginBottom: "12px",}}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", }}>
             <button
               className="survey-btn"
               onClick={createSurveyUrl}
@@ -457,20 +456,29 @@ const Survey = () => {
 
                     <label>임직원</label>
 
-                    <div className="url-input-line">
-                      <input
-                        type="text"
-                        value={surveyUrls.emp || ""}
-                        readOnly
-                      />
-
-                      <button
-                        className="btn-url-copy"
-                        onClick={() => copyUrl(surveyUrls.emp)}
+                    {Object.entries(
+                      surveyUrls.employee || {}
+                    ).map(([label, url]) => (
+                      <div
+                        className="url-input-line"
+                        key={label}
                       >
-                        복사
-                      </button>
-                    </div>
+                        <span>{label}</span>
+
+                        <input
+                          type="text"
+                          value={url}
+                          readOnly
+                        />
+
+                        <button
+                          className="btn-url-copy"
+                          onClick={() => copyUrl(url)}
+                        >
+                          복사
+                        </button>
+                      </div>
+                    ))}
 
                     <div className="kpi-input-line">
                       <span>
@@ -496,20 +504,29 @@ const Survey = () => {
                   <div className="survey-row-box">
                     <label>경영진</label>
 
-                    <div className="url-input-line">
-                      <input
-                        type="text"
-                        value={surveyUrls.exec || ""}
-                        readOnly
-                      />
-
-                      <button
-                        className="btn-url-copy"
-                        onClick={() => copyUrl(surveyUrls.exec)}
+                    {Object.entries(
+                      surveyUrls.management || {}
+                    ).map(([label, url]) => (
+                      <div
+                        className="url-input-line"
+                        key={label}
                       >
-                        복사
-                      </button>
-                    </div>
+                        <span>{label}</span>
+
+                        <input
+                          type="text"
+                          value={url}
+                          readOnly
+                        />
+
+                        <button
+                          className="btn-url-copy"
+                          onClick={() => copyUrl(url)}
+                        >
+                          복사
+                        </button>
+                      </div>
+                    ))}
 
                     <div className="kpi-input-line">
                       <span>
@@ -535,21 +552,29 @@ const Survey = () => {
                   <div className="survey-row-box">
                     <label>외부이해관계자</label>
 
-                    <div className="url-input-line">
-                      <input
-                        type="text"
-                        value={surveyUrls.ext || ""}
-                        readOnly
-                      />
-
-                      <button
-                        className="btn-url-copy"
-                        onClick={() => copyUrl(surveyUrls.ext)}
+                    {Object.entries(
+                      surveyUrls.external || {}
+                    ).map(([label, url]) => (
+                      <div
+                        className="url-input-line"
+                        key={label}
                       >
-                        복사
-                      </button>
-                    </div>
+                        <span>{label}</span>
 
+                        <input
+                          type="text"
+                          value={url}
+                          readOnly
+                        />
+
+                        <button
+                          className="btn-url-copy"
+                          onClick={() => copyUrl(url)}
+                        >
+                          복사
+                        </button>
+                      </div>
+                    ))}
                     <div className="kpi-input-line">
                       <span>
                         총 발송 인원 (KPI) :

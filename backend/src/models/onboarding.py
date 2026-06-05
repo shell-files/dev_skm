@@ -181,7 +181,8 @@ ApprovalActionStatus = Literal[
 class OnboardingApprovalRequestDto(BaseModel):
     companyId: int
     reportingYear: int
-    metricId: str = "G0-02"
+    metricId: str
+    cycleType: str = "PRE_DMA_G0"
 
 
 class OnboardingApprovalDecisionRequestDto(OnboardingApprovalRequestDto):
@@ -209,6 +210,10 @@ class OnboardingApprovalItemDto(BaseModel):
     submittedAtomicCount: int = 0
     approvedAtomicCount: int = 0
     missingAtomicMetricIds: List[str] = Field(default_factory=list)
+    approvalPolicyCode: Optional[str] = None
+    rollupReadonlyYn: bool = False
+    promotedQuantAtomicCount: int = 0
+    approvedPromotedFactCount: int = 0
     submittedAt: Optional[str] = None
     approvedAt: Optional[str] = None
     commentText: Optional[str] = None
@@ -228,6 +233,11 @@ class OnboardingApprovalListResponseDto(BaseModel):
 
 class OnboardingApprovalStatusDataDto(OnboardingApprovalItemDto):
     rollupReadyYn: bool = False
+    calculationReadyYn: Optional[bool] = None
+    affectedRuleCount: int = 0
+    invalidatedFactCount: int = 0
+    calculatedFactCount: int = 0
+    calculationWarnings: List[str] = Field(default_factory=list)
 
 
 class OnboardingApprovalStatusResponseDto(BaseModel):

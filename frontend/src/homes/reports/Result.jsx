@@ -1,17 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
-import Score from "@assets/icons/result_page/score.png";
-import VChain from "@assets/icons/result_page/valuechain.png";
-import SHolder from "@assets/icons/result_page/stakeholders.png";
 import Observing from "@assets/icons/result_page/observe.png";
-import Considering from "@assets/icons/result_page/considering.png";
-
-import Benchmk from "@assets/icons/steps/benchmarking.png";
-import Resu from "@assets/icons/steps/Result.png";
-import Survey from "@assets/icons/steps/survey.png";
-import Analyze from "@assets/icons/steps/analyzing.png";
-import Report from "@assets/icons/steps/draft.png";
-
+import Chain from "@assets/icons/result_page/valuechain.png";
 
 import "@styles/result.css";
 import "@styles/benchmarking.css";
@@ -798,6 +788,7 @@ const Result = () => {
 
               </div>
             )}
+  
             {/* 탭 1: 점수 해석 */}
             {leftTab === 2 && (
               <div className="card-container result-tab-pane">

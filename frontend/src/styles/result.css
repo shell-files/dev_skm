@@ -449,7 +449,8 @@
 .step-box { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; opacity: 0.35; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2; }
 .step-box.active { opacity: 1; transform: translateY(-1px); }
 .step-icon-circle { width: 38px; height: 38px; background: #fff; border: 2px solid #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; transition: 0.3s; }
-.step-box.active .step-icon-circle { background: linear-gradient(135deg, #03A94D, #017E3F); color: #fff; border: none; box-shadow: 0 4px 10px rgba(3, 169, 77, 0.2); }
+.step-box.active .step-icon-circle { background: #dcfce7 !important; border: 2px solid #86efac !important; box-shadow: 0 4px 12px rgba(3, 169, 77, 0.15) !important; }
+.step-box.active .step-icon-circle svg { stroke: #03A94D !important; }
 .step-line { flex: 1; height: 2px; background: #e2e8f0; margin: -20px 15px 0; }
 
 /* ───── 메인 레이아웃 ───── */

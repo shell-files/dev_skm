@@ -298,7 +298,7 @@
     border: 1px solid #e2e8f0;
     border-radius: 14px;
     padding: 16px;
-     max-height: 650px;
+
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -313,37 +313,68 @@
 }
 
 .survey-row-box {
-    padding: 12px;
     background: #f8fafc;
-
     border: 1px solid #e2e8f0;
     border-radius: 12px;
+    padding: 16px;
+}
 
+.survey-row-box>label {
+    display: block;
+    margin-bottom: 14px;
+
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+.survey-group-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.survey-row-box {
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-.survey-group-list {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 14px;
-}
-
 .url-input-line {
     display: flex;
-    gap: 8px;
-
     align-items: center;
+    justify-content: space-between;
+
+    gap: 10px;
+
+    padding: 10px 12px;
+
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+.url-input-line span {
+    flex: 1;
+
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .url-input-line input {
     flex: 1;
     min-width: 0;
+}
 
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.url-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
 }
 
 .panel-header-row {

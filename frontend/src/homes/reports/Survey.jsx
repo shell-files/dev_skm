@@ -453,7 +453,7 @@ const Survey = () => {
                   <div className="survey-row-box">
 
                     <label>임직원</label>
-
+                  <div className="url-list">
                     {Object.entries(
                       surveyUrls.employee || {}
                     ).map(([label, url]) => (
@@ -463,11 +463,11 @@ const Survey = () => {
                       >
                         <span>{label}</span>
 
-                        <input
+                        {/* <input
                           type="text"
                           value={url}
                           readOnly
-                        />
+                        /> */}
 
                         <button
                           className="btn-url-copy"
@@ -477,6 +477,7 @@ const Survey = () => {
                         </button>
                       </div>
                     ))}
+                    </div>
 
                     <div className="kpi-input-line">
                       <span>
@@ -511,11 +512,11 @@ const Survey = () => {
                       >
                         <span>{label}</span>
 
-                        <input
+                        {/* <input
                           type="text"
                           value={url}
                           readOnly
-                        />
+                        /> */}
 
                         <button
                           className="btn-url-copy"
@@ -559,11 +560,11 @@ const Survey = () => {
                       >
                         <span>{label}</span>
 
-                        <input
+                        {/* <input
                           type="text"
                           value={url}
                           readOnly
-                        />
+                        /> */}
 
                         <button
                           className="btn-url-copy"

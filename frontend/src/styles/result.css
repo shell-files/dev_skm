@@ -172,6 +172,34 @@
 .flow-desc       { font-size: 0.78rem; color: #64748b; line-height: 1.55; }
 .flow-arrow      { display: flex; justify-content: center; padding: 6px 0; color: #03A94D; font-size: 1.3rem; }
 
+/* ── 아이콘 원형 컨테이너 ── */
+.icon-circle-lg { flex-shrink: 0; width: 52px; height: 52px; background: #dcfce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.icon-circle-sm { flex-shrink: 0; width: 36px; height: 36px; background: #dcfce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+/* ── 선정 과정 카드 ── */
+.process-card          { background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; }
+.process-card-title    { font-size: 1rem; font-weight: 850; color: #1e293b; margin-bottom: 20px; }
+.process-card-body     { display: flex; gap: 24px; align-items: flex-start; }
+.flow-col              { flex: 1.4; display: flex; flex-direction: column; gap: 0; align-items: stretch; }
+
+/* ── 선정 기준 카드 ── */
+.criteria-card         { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px 22px; align-self: stretch; display: flex; flex-direction: column; }
+.criteria-card-title   { font-size: 1.5em; font-weight: 850; color: #03A94D; margin-bottom: 16px; }
+.criteria-item-list    { display: flex; flex-direction: column; gap: 14px; flex: 1; justify-content: space-between; }
+.criteria-item-row     { display: flex; align-items: center; gap: 12px; }
+.criteria-item-text    { font-size: 0.88rem; color: #334155; line-height: 1.6; }
+
+/* ── 이슈 테이블 (선정/제외) ── */
+.issue-table-inner                { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+.issue-table-inner thead tr       { background: #f8fafc; border-bottom: 1.5px solid #e2e8f0; }
+.th-left   { padding: 10px 14px; text-align: left;   font-weight: 700; color: #475569; }
+.th-center { padding: 10px 8px;  text-align: center; font-weight: 700; color: #475569; }
+.td-name   { padding: 10px 14px; font-weight: 700; color: #1e293b; }
+.td-center { padding: 10px 8px;  text-align: center; color: #64748b; }
+.td-center-green { padding: 10px 8px; text-align: center; font-weight: 800; color: #03A94D; }
+.td-center-muted { padding: 10px 8px; text-align: center; color: #94a3b8; }
+.td-text   { padding: 10px 14px; color: #475569; }
+
 #result-criteria-card { flex: 1; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px 22px; align-self: stretch; }
 .criteria-title  { font-size: 0.92rem; font-weight: 850; color: #03A94D; margin-bottom: 16px; }
 .criteria-list   { display: flex; flex-direction: column; gap: 14px; }

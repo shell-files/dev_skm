@@ -7,6 +7,9 @@ import requests
 import json
 import csv
 import os
+import copy
+
+from src.utils.db import findAll
 
 from datetime import datetime
 
@@ -39,27 +42,197 @@ def loadSurveyTemplate():
     with open(settings.surveyTemplate, "r", encoding="utf-8") as f:
         return json.load(f)
 
+
+def getTop20Issues(runId: int):
+
+    sql = """
+        SELECT
+            s.sub_issue_code,
+            m.sub_issue_name_kr,
+            s.rank_no
+        FROM ESG_DMA_SCORE_SUMMARY s
+        INNER JOIN ESG_SUB_ISSUE_MASTER m
+            ON s.sub_issue_code = m.sub_issue_code
+        WHERE s.esg_materiality_run_id = ?
+        ORDER BY s.rank_no ASC
+        LIMIT 20
+    """
+
+    rows = findAll(sql, (runId,))
+
+    return [
+        {
+            "code": row["sub_issue_code"],
+            "name": row["sub_issue_name_kr"],
+            "rank": row["rank_no"]
+        }
+        for row in rows
+    ]
+def buildQuestion(question, issues):
+    if question.get("type") == "top5":
+        return {
+            "type": "top5",
+            "code": question["code"],
+            "title": question["title"],
+            "description": question.get("description", ""),
+            "options": [
+                {
+                    "code": issue["code"],
+                    "name": issue["name"]
+                }
+                for issue in issues
+            ]
+        }
+
+    return {
+        "type": "grid",
+        "code": question["code"],
+        "title": question["title"],
+        "description": question.get("description", ""),
+        "group": question["group"],
+        "rows": [
+            {
+                "code": issue["code"],
+                "label": issue["name"]
+            }
+            for issue in issues
+        ],
+        "columns": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+        ]
+    }
+    
+def buildRespondent(template, respondentType):
+
+    respondent = next(
+        (
+            x
+            for x in template["respondentTypes"]
+            if x["value"] == respondentType
+        ),
+        None
+    )
+
+    if not respondent:
+        return None
+
+    issues = template["meta"]["issues"]
+
+    sections = {}
+
+    for questionKey in respondent["questionSet"]:
+
+        question = copy.deepcopy(
+            template["questions"][questionKey]
+        )
+
+        group = question.get(
+            "group",
+            "common"
+        )
+
+        if group not in sections:
+            sections[group] = []
+
+        sections[group].append(
+            buildQuestion(
+                question,
+                issues
+            )
+        )
+
+    variants = []
+
+    selector = respondent.get("selector")
+
+    if selector:
+
+        for option in selector["options"]:
+
+            route = option["route"]
+
+            order = ["common"]
+
+            if route == "finance":
+                order += ["finance"]
+
+            elif route == "impact":
+                order += ["impact"]
+
+            elif route == "both":
+                order += ["impact", "finance"]
+
+            variants.append({
+                "label": option["label"],
+                "route": route,
+                "order": order
+            })
+
+    else:
+
+        variants.append({
+            "label": "Default",
+            "route": "all",
+            "order": [
+                "common",
+                "impact",
+                "finance"
+            ]
+        })
+
+    return {
+        "value": respondent["value"],
+        "label": respondent["label"],
+        "selector": selector,
+        "sections": sections,
+        "variants": variants
+    }
+    
+def buildSurveyPayload(template):
+
+    return {
+        "meta": template["meta"],
+
+        "respondents": {
+            "employee": buildRespondent(
+                template,
+                "employee"
+            ),
+
+            "management": buildRespondent(
+                template,
+                "management"
+            ),
+
+            "external": buildRespondent(
+                template,
+                "external"
+            )
+        },
+
+        "version": "v2"
+    }
 # =========================
 # CREATE FORM 
 # =========================
 async def createFormProcess(req, token):
 
-    currentTime = datetime.now().strftime(
-        "%Y-%m-%d_%H-%M-%S"
-    )
-
     template = loadSurveyTemplate()
 
-    payload = {
-        "title": f"{req.companyId}ESG Survey/{currentTime}",
-        "description": template.get("description", ""),
-        "meta": template.get("meta", {}),
+    issues = getTop20Issues(req.runId)
 
-        "commonSections": template.get("commonSections", []),
-        "employeeSections": template.get("employeeSections", []),
-        "managerSections": template.get("managerSections", []),
-        "externalSections": template.get("externalSections", [])
-    }
+    template["meta"]["companyId"] = req.companyId
+    template["meta"]["runId"] = req.runId
+    template["meta"]["year"] = req.year
+    template["meta"]["issues"] = issues
+
+    payload = buildSurveyPayload(template)
+
+    
     try:
         response = requests.post(
             APPS_SCRIPT_URL,
@@ -85,17 +258,8 @@ async def createFormProcess(req, token):
 
         return {
             "status": "success",
-
-            "urls": {
-                "emp": data.get("employeeFormUrl"),
-                "exec": data.get("managerFormUrl"),
-                "ext": data.get("externalFormUrl")
-            },
-
-            "sheet": {
-                "id": data.get("sheetId"),
-                "url": data.get("sheetUrl")
-            }
+            "masterSheetId": data["data"]["masterSheetId"],
+            "forms": data["data"]["forms"]
         }
 
     except Exception as e:

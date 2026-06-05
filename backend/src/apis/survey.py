@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from src.utils.auth import get_token
-from src.models.model import CompanyModel
+from src.models.survey import SurveyCreateRequestDto
 
 from src.services.surveys.service import (createFormProcess, exportCsvProcess, getRawProcess)
 
@@ -11,7 +11,7 @@ router = APIRouter()
     summary="설문 생성",
     description="구글 설문 생성"
 )
-async def createForm(req: CompanyModel, token=Depends(get_token)):
+async def createForm(req: SurveyCreateRequestDto, token=Depends(get_token)):
     return await createFormProcess(req, token)
 
 

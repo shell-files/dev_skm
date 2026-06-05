@@ -293,8 +293,6 @@
 .missing-bar-label { font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
 
 #result-shortcuts-grid { padding: 14px 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-.shortcut-card     { display: flex; align-items: center; gap: 10px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; cursor: pointer; background: #fff; transition: background 0.15s; }
-.shortcut-card:hover { background: #f8fafc; }
 .shortcut-icon-box { width: 36px; height: 36px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .shortcut-content  { flex: 1; min-width: 0; }
 .shortcut-title    { font-size: 0.76rem; font-weight: 700; color: #1e293b; margin-bottom: 2px; }
@@ -1055,44 +1053,51 @@
 
 /* 바로가기 카드 */
 #shortcut-grid {
-  padding: 14px 18px;
+  padding: 20px 20px;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
+  align-self: center;
 }
 .shortcut-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
-  padding: 12px 14px;
+  padding: 20px 14px;
   cursor: pointer;
   background: #fff;
   transition: background 0.15s ease;
+  text-align: center;
 }
 .shortcut-card:hover { background: #f8fafc; }
 .shortcut-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  align-self: center;
+  cursor: pointer;
 }
 .shortcut-text {
-  flex: 1;
+  flex: 2;
   min-width: 0;
+  cursor: pointer;
 }
 .shortcut-title {
-  font-size: 0.76rem;
+  font-size: 0.88rem;
   font-weight: 700;
   color: #1e293b;
   margin-bottom: 2px;
 }
 .shortcut-desc {
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   color: #94a3b8;
   line-height: 1.4;
 }

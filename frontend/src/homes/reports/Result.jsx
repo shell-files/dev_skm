@@ -185,8 +185,6 @@ const RankedDot = (props) => {
 };
 
 
-
-
 // 3. 커스텀 툴팁 — 회색 점(label 없음)은 미표시
 const MatrixTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
@@ -718,11 +716,11 @@ const Result = () => {
                       <div className="criteria-card-title">선정 기준</div>
                       <div className="criteria-item-list">
                         {[
-                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="11" y2="13"/><polyline points="13,12 14.5,13.5 17,11"/><line x1="8" y1="17" x2="11" y2="17"/><polyline points="13,16 14.5,17.5 17,15"/></svg>, text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
-                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="6"/><line x1="14.5" y1="14.5" x2="20" y2="20"/><polyline points="7,12 9,9 11,11 13,8"/></svg>, text: "2개 이상 분석축에서 반복 관측" },
-                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6"/><path d="M2.5 22v-6h6"/><path d="M2 11.5A10 10 0 0 1 18.8 7.2"/><path d="M22 12.5A10 10 0 0 1 5.2 16.8"/></svg>, text: "가치사슬 관련성 높음" },
-                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, text: "이해관계자 관심도 높음" },
-                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 3.5a1 1 0 1 0 2 0 1 1 0 0 0-2 0"/><line x1="12" y1="4.5" x2="12" y2="20"/><line x1="2.5" y1="7.5" x2="21.5" y2="7.5"/><line x1="4" y1="7.5" x2="1" y2="14.5"/><line x1="4" y1="7.5" x2="4" y2="14.5"/><line x1="4" y1="7.5" x2="7" y2="14.5"/><path d="M1 14.5 Q4 18 7 14.5"/><line x1="20" y1="7.5" x2="17" y2="14.5"/><line x1="20" y1="7.5" x2="20" y2="14.5"/><line x1="20" y1="7.5" x2="23" y2="14.5"/><path d="M17 14.5 Q20 18 23 14.5"/><path d="M9 20h6" strokeWidth="2.2"/></svg>, text: "리스크/기회 요인으로서의 중요성 고려" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="11" y2="13" /><polyline points="13,12 14.5,13.5 17,11" /><line x1="8" y1="17" x2="11" y2="17" /><polyline points="13,16 14.5,17.5 17,15" /></svg>, text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="6" /><line x1="14.5" y1="14.5" x2="20" y2="20" /><polyline points="7,12 9,9 11,11 13,8" /></svg>, text: "2개 이상 분석축에서 반복 관측" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6" /><path d="M2.5 22v-6h6" /><path d="M2 11.5A10 10 0 0 1 18.8 7.2" /><path d="M22 12.5A10 10 0 0 1 5.2 16.8" /></svg>, text: "가치사슬 관련성 높음" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>, text: "이해관계자 관심도 높음" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 3.5a1 1 0 1 0 2 0 1 1 0 0 0-2 0" /><line x1="12" y1="4.5" x2="12" y2="20" /><line x1="2.5" y1="7.5" x2="21.5" y2="7.5" /><line x1="4" y1="7.5" x2="1" y2="14.5" /><line x1="4" y1="7.5" x2="4" y2="14.5" /><line x1="4" y1="7.5" x2="7" y2="14.5" /><path d="M1 14.5 Q4 18 7 14.5" /><line x1="20" y1="7.5" x2="17" y2="14.5" /><line x1="20" y1="7.5" x2="20" y2="14.5" /><line x1="20" y1="7.5" x2="23" y2="14.5" /><path d="M17 14.5 Q20 18 23 14.5" /><path d="M9 20h6" strokeWidth="2.2" /></svg>, text: "리스크/기회 요인으로서의 중요성 고려" },
                         ].map((item, i) => (
                           <div key={i} className="criteria-item-row">
                             <div className="icon-circle-sm">{item.icon}</div>
@@ -788,15 +786,14 @@ const Result = () => {
 
               </div>
             )}
-  
+
             {/* 탭 1: 점수 해석 */}
             {leftTab === 2 && (
               <div className="card-container result-tab-pane">
                 <div className="card-title-row">
                   <span className="card-title">점수 해석</span>
-                  {/* <span className="info-mark">ⓘ</span> */}
                 </div>
-
+          
                 {/* 1. 분석축 기여도 */}
                 <section id="result-contribution">
                   <div className="section-title">1. 분석축 기여도</div>
@@ -871,19 +868,51 @@ const Result = () => {
                 <div className="card-title">다음 단계 연결</div>
 
                 {/* 섹션 1: 보고서 반영 우선순위 */}
-                <div className="accordion">
-                  <div className="accordion-head static">
-                    <span className="accordion-title">1. 보고서 반영 우선순위</span>
+                {/* 섹션 1 + 섹션 4: 가로 배치 */}
+                <div style={{ display: "flex", gap: "14px", alignItems: "stretch" }}>
+                  <div className="accordion" style={{ flex: 1 }}>
+                    <div className="accordion-head static">
+                      <span className="accordion-title">1. 보고서 반영 우선순위</span>
+                    </div>
+                    <div className="accordion-body" id="priority-body">
+                      {PRIORITY_ITEMS.map((item) => (
+                        <div key={item.rank} className="priority-row">
+                          <span className="priority-name">{item.name}</span>
+                          <span className="priority-score">중요도 <strong>{item.score}</strong></span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="accordion-body" id="priority-body">
-                    {PRIORITY_ITEMS.map((item) => (
-                      <div key={item.rank} className="priority-row">
-                        <span className="priority-name">{item.name}</span>
-                        <span className="priority-score">중요도 <strong>{item.score}</strong></span>
-                      </div>
-                    ))}
+
+                  {/* 섹션 4: 바로가기 */}  
+                  <div className="accordion" style={{ flex: 1 }}>
+                    <div className="accordion-head static">
+                      <span className="accordion-title" align> 바로가기</span>
+                    </div>
+                    <div id="shortcut-grid">
+                      {[
+                        {
+                          bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onboard",
+                          icon: <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+                        },
+                        {
+                          bg: "#ede9fe", title: "보고서 초안 생성", desc: "선택 이슈 기반 초안 생성", path: "/draft",
+                          icon: <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                        },
+                      ].map((item) => (
+                        <div key={item.title} className="shortcut-card" onClick={() => navigate(item.path)}>
+                          <div className="shortcut-icon" style={{ background: item.bg }}>{item.icon}</div>
+                          <div className="shortcut-text">
+                            <div className="shortcut-title">{item.title}</div>
+                            <div className="shortcut-desc">{item.desc}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
+
+
 
                 {/* 섹션 2: 필요 온보딩 지표 */}
                 <div className="accordion">
@@ -957,33 +986,7 @@ const Result = () => {
                   </div>
                 </div>
 
-                {/* 섹션 4: 바로가기 */}
-                <div className="accordion">
-                  <div className="accordion-head static">
-                    <span className="accordion-title">4. 바로가기</span>
-                  </div>
-                  <div id="shortcut-grid">
-                    {[
-                      {
-                        bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onboard",
-                        icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
-                      },                      
-                      {
-                        bg: "#ede9fe", title: "보고서 초안 생성", desc: "선택 이슈 기반 초안 생성", path: "/draft",
-                        icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
-                      },
-                    ].map((item) => (
-                      <div key={item.title} className="shortcut-card" onClick={() => navigate(item.path)}>
-                        <div className="shortcut-icon" style={{ background: item.bg }}>{item.icon}</div>
-                        <div className="shortcut-text">
-                          <div className="shortcut-title">{item.title}</div>
-                          <div className="shortcut-desc">{item.desc}</div>
-                        </div>
 
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
             )}
           </section>

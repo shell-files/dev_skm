@@ -333,7 +333,7 @@
 
 /* Hoverable paragraphs */
 .dp-wrap { position:relative; margin-bottom:14px; }
-.dp-text { font-size:13.5px; line-height:1.75; color:#334155; margin:0; padding:10px 12px; border-radius:8px; border:2px solid transparent; cursor:pointer; transition:background .15s, border-color .15s; }
+.dp-text { width:100%; box-sizing:border-box; font-size:13.5px; line-height:1.75; color:#334155; margin:0; padding:10px 12px; border-radius:8px; border:2px solid transparent; cursor:pointer; transition:background .15s, border-color .15s; }
 .dp-wrap:hover .dp-text { background:#fffbeb; border-color:#fcd34d; }
 .dp-wrap.selected .dp-text { background:#f0fdf4; border-color:#03A94D; }
 .dp-highlight { background:rgba(253,224,71,.35); border-radius:2px; padding:1px 0; }

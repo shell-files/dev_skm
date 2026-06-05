@@ -476,6 +476,125 @@ class RollupCalculatorTest(unittest.TestCase):
         )
         self.assertEqual(cur.executeCount, 1)
 
+    def test_single_level_yoy_diff_uses_prior_consolidated_target(self):
+        rules = [
+            rule("R1", "T1", "ROLLUP_ADD", order=10),
+            rule("R2", "T2", "ROLLUP_YOY_DIFF", order=20),
+        ]
+        sources = [
+            source("R1", "S1", sourceId=1),
+            source("R2", "T1", "CURRENT", sourceId=2),
+        ]
+        results, warnings, success = calculator.calculateConsolidatedRulesByYear(
+            rules,
+            sources,
+            {
+                2026: factMap([fact(1, "S1", 10), fact(2, "S1", 20)]),
+                2025: factMap([fact(1, "S1", 5), fact(2, "S1", 15)]),
+            },
+            2026,
+            [1, 2],
+        )
+        self.assertTrue(success, warnings)
+        self.assertEqual([item["valueNumeric"] for item in results], [30, 10])
+
+    def test_single_level_yoy_rate_uses_prior_consolidated_target(self):
+        rules = [
+            rule("R1", "T1", "ROLLUP_ADD", order=10),
+            rule("R2", "T2", "ROLLUP_YOY_RATE", order=20),
+        ]
+        sources = [
+            source("R1", "S1", sourceId=1),
+            source("R2", "T1", "CURRENT", sourceId=2),
+        ]
+        results, warnings, success = calculator.calculateConsolidatedRulesByYear(
+            rules,
+            sources,
+            {
+                2026: factMap([fact(1, "S1", 10), fact(2, "S1", 20)]),
+                2025: factMap([fact(1, "S1", 5), fact(2, "S1", 15)]),
+            },
+            2026,
+            [1, 2],
+        )
+        self.assertTrue(success, warnings)
+        self.assertEqual(results[1]["valueNumeric"], 50)
+
+    def test_two_level_chained_yoy_resolves_year_two_history(self):
+        rules = [
+            rule("R1", "T1", "ROLLUP_ADD", order=10),
+            rule("R2", "T2", "ROLLUP_YOY_DIFF", order=20),
+            rule("R3", "T3", "ROLLUP_YOY_RATE", order=30),
+        ]
+        sources = [
+            source("R1", "S1", sourceId=1),
+            source("R2", "T1", "CURRENT", sourceId=2),
+            source("R3", "T2", "CURRENT", sourceId=3),
+        ]
+        results, warnings, success = calculator.calculateConsolidatedRulesByYear(
+            rules,
+            sources,
+            {
+                2026: factMap([fact(1, "S1", 10), fact(2, "S1", 20)]),
+                2025: factMap([fact(1, "S1", 5), fact(2, "S1", 15)]),
+                2024: factMap([fact(1, "S1", 3), fact(2, "S1", 7)]),
+            },
+            2026,
+            [1, 2],
+        )
+        self.assertTrue(success, warnings)
+        self.assertEqual([item["valueNumeric"] for item in results], [30, 10, 0])
+        self.assertEqual(calculator.resolveHistoricalLookbackDepth(rules, sources), 2)
+        self.assertEqual(results[2]["calculationTrace"]["historicalLookbackDepth"], 2)
+
+    def test_missing_year_two_raw_fact_blocks_calculation(self):
+        rules = [
+            rule("R1", "T1", "ROLLUP_ADD", order=10),
+            rule("R2", "T2", "ROLLUP_YOY_DIFF", order=20),
+            rule("R3", "T3", "ROLLUP_YOY_RATE", order=30),
+        ]
+        sources = [
+            source("R1", "S1", sourceId=1),
+            source("R2", "T1", "CURRENT", sourceId=2),
+            source("R3", "T2", "CURRENT", sourceId=3),
+        ]
+        _, warnings, success = calculator.calculateConsolidatedRulesByYear(
+            rules,
+            sources,
+            {
+                2026: factMap([fact(1, "S1", 10), fact(2, "S1", 20)]),
+                2025: factMap([fact(1, "S1", 5), fact(2, "S1", 15)]),
+            },
+            2026,
+            [1, 2],
+        )
+        self.assertFalse(success)
+        self.assertIn("CALCULATION_SOURCE_NOT_READY", warnings[0]["error"])
+
+    def test_reporting_year_result_only_with_historical_trace(self):
+        rules = [
+            rule("R1", "T1", "ROLLUP_ADD", order=10),
+            rule("R2", "T2", "ROLLUP_YOY_DIFF", order=20),
+        ]
+        sources = [
+            source("R1", "S1", sourceId=1),
+            source("R2", "T1", "CURRENT", sourceId=2),
+        ]
+        results, warnings, success = calculator.calculateConsolidatedRulesByYear(
+            rules,
+            sources,
+            {
+                2026: factMap([fact(1, "S1", 10), fact(2, "S1", 20)]),
+                2025: factMap([fact(1, "S1", 5), fact(2, "S1", 15)]),
+            },
+            2026,
+            [1, 2],
+        )
+        self.assertTrue(success, warnings)
+        self.assertEqual(len(results), 2)
+        self.assertEqual([item["calculationTrace"]["evaluatedYear"] for item in results], [2026, 2026])
+        self.assertEqual(results[1]["calculationTrace"]["historicalDependencies"][1]["evaluatedYear"], 2025)
+
 
 if __name__ == "__main__":
     unittest.main()

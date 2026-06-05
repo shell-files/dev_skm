@@ -32,11 +32,14 @@ _actionRouter = APIRouter()
     summary="List subsidiaries available for DMA precheck rollup",
 )
 async def listSubsidiariesRoute(
-    runId: int = Query(...),
+    runId: Optional[int] = Query(None),
+    sourceCycleId: Optional[int] = Query(None),
+    rollupPurposeCode: Optional[str] = Query("DMA_PRECHECK"),
+    metricScopeCode: Optional[str] = Query("G0_02_FINANCIAL_BASIS"),
     userModel=Depends(get_token),
 ):
     try:
-        return listSubsidiaries(runId, userModel)
+        return listSubsidiaries(runId, sourceCycleId, rollupPurposeCode, metricScopeCode, userModel)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except RollupError as e:
@@ -85,9 +88,13 @@ async def calcBatchRoute(batchId: int, userModel=Depends(get_token)):
     response_model=RollupRequestResponseDto,
     summary="List rollup transfer requests for current source company",
 )
-async def listRequestsRoute(userModel=Depends(get_token)):
+async def listRequestsRoute(
+    rollupPurposeCode: Optional[str] = Query("DMA_PRECHECK"),
+    metricScopeCode: Optional[str] = Query("G0_02_FINANCIAL_BASIS"),
+    userModel=Depends(get_token)
+):
     try:
-        return listRequests(userModel)
+        return listRequests(rollupPurposeCode, metricScopeCode, userModel)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except RollupError as e:

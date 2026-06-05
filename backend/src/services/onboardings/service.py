@@ -28,6 +28,8 @@ from src.models.onboarding import (
 from src.utils import onboardingassignmentrepository as assignmentRepo
 from src.utils import onboardingrepository as repo
 from src.utils.companyscope import checkScope
+from src.services.onboardings import approval_service as approvalService
+from src.services.calculations.service import invalidateAffectedEntityFactsTx
 
 
 CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
@@ -43,6 +45,12 @@ SUPPORTED_INPUT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLO
 SUPPORTED_ASSIGNMENT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
 ASSIGNMENT_MANAGER_ROLES = {"ADMIN", "ESG"}
 ASSIGNMENT_MANAGER_ROLE_NAMES = {"관리자", "ESG담당자"}
+EMPLOYEE_ROLES = {"EMPLOYEE", "ASSIGNEE"}
+EMPLOYEE_ROLE_NAMES = {"부서담당자"}
+CONSULTANT_ROLES = {"CONSULTANT"}
+CONSULTANT_ROLE_NAMES = {"컨설턴트"}
+REVIEWER_ROLES = {"CONSULTANT", "ADMIN", "ESG"}
+REVIEWER_ROLE_NAMES = {"컨설턴트", "관리자", "ESG담당자"}
 PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE = "PRE_DMA_G0_CYCLE_NOT_READY: 기존 PRE_DMA_G0 workflow를 먼저 시작해 주세요."
 APPROVER_ROLES = {"ADMIN", "ESG"}
 APPROVER_ROLE_NAMES = {"관리자", "ESG담당자"}
@@ -58,21 +66,23 @@ def listMetrics(
     reportingYear: Optional[int],
     cycleType: str,
     metricId: Optional[str] = None,
+    userModel=None,
 ) -> OnboardingMetricsResponseDto:
     year = repo.resolveReportingYear(companyId, reportingYear)
     cycle = requireCycle(companyId, year, cycleType)
     allScopes = repo.listMetricScopes(int(cycle["id"]), companyId)
     if not allScopes:
         raise ValueError(scopeNotReadyMessage(cycle.get("cycle_type") or cycleType))
-    scopes = allScopes
+    assignmentRows = assignmentRepo.listAssignmentRows(int(cycle["id"]), companyId)
+    scopes = listVisibleMetricScopesForUser(allScopes, assignmentRows, userModel)
     if metricId:
         scopes = [row for row in allScopes if row.get("metric_id") == metricId]
+        scopes = listVisibleMetricScopesForUser(scopes, assignmentRows, userModel)
         if not scopes:
             raise ValueError(f"Unsupported metricId for cycle scope: {metricId}")
     metricIds = [row["metric_id"] for row in scopes]
     masterRows = repo.listAtomicMaster(metricIds)
     valueRows = repo.listValueRows(companyId, year, metricIds)
-    assignmentRows = assignmentRepo.listAssignmentRows(int(cycle["id"]), companyId)
     assignmentByMetric = {row["metric_id"]: buildAssignment(row) for row in assignmentRows}
     atomicRowsByMetric = groupBy(masterRows, "metric_id")
 
@@ -119,10 +129,12 @@ def saveMetricValues(
     metricId: str,
     request: OnboardingMetricValuesRequestDto,
     userId: Optional[int] = None,
+    userModel=None,
 ) -> OnboardingMetricValuesResponseDto:
-    prepared = validateMetricValues(metricId=metricId, request=request, userId=userId)
+    prepared = validateMetricValues(metricId=metricId, request=request, userId=userId, userModel=userModel)
     cycle = prepared["cycle"]
-    savedCount = saveMetricValueGroups([prepared])
+    group = prepared["group"]
+    savedCount = saveMetricValueGroupsWithInvalidation([group])
     return OnboardingMetricValuesResponseDto(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
@@ -133,18 +145,114 @@ def saveMetricValues(
     )
 
 
+def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
+    """Save metric values and invalidate downstream derived Facts for changed atomics."""
+    if not groups:
+        return 0
+    from src.utils.db import getConn
+    from src.utils import onboardinginputrepository as inputRepo
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("DB connection failed")
+    try:
+        savedCount = 0
+        with conn.cursor(dictionary=True) as cur:
+            for group in groups:
+                companyId = group["companyId"]
+                reportingYear = group["reportingYear"]
+                metricId = group["metricId"]
+                values = group["values"]
+
+                # Collect old values for change detection
+                oldByAtomic = {}
+                for value in values:
+                    atomicId = value["atomicMetricId"]
+                    cur.execute(
+                        """
+                        SELECT value_numeric, value_text
+                        FROM ESG_ONBOARDING_INPUT_VALUE
+                        WHERE company_id = ?
+                          AND reporting_year = ?
+                          AND metric_id = ?
+                          AND atomic_metric_id = ?
+                          AND delete_yn = 0
+                        ORDER BY id DESC
+                        LIMIT 1
+                        """,
+                        (companyId, reportingYear, metricId, atomicId),
+                    )
+                    oldByAtomic[atomicId] = cur.fetchone()
+
+                # Save
+                savedCount += inputRepo.upsertMetricInputValuesTx(cur, **group)
+
+                # Detect changed atomics
+                changedAtomicIds = []
+                for value in values:
+                    atomicId = value["atomicMetricId"]
+                    old = oldByAtomic.get(atomicId)
+                    if _atomicValueChanged(old, value):
+                        changedAtomicIds.append(atomicId)
+
+                # Downstream invalidation for changed atomics
+                if changedAtomicIds:
+                    invalidateAffectedEntityFactsTx(
+                        cur,
+                        companyId=companyId,
+                        reportingYear=reportingYear,
+                        changedAtomicMetricIds=changedAtomicIds,
+                    )
+        conn.commit()
+        return savedCount
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def _atomicValueChanged(oldRow: dict, newValue: dict) -> bool:
+    """Return True if the value actually changed compared to the existing DB row."""
+    if oldRow is None:
+        # New insert — always counts as a change
+        return True
+    oldNumeric = oldRow.get("value_numeric")
+    newNumeric = newValue.get("valueNumeric")
+    oldText = str(oldRow.get("value_text") or "").strip()
+    newText = str(newValue.get("valueText") or "").strip()
+    # Compare numeric
+    if oldNumeric is not None or newNumeric is not None:
+        try:
+            if float(oldNumeric or 0) != float(newNumeric or 0):
+                return True
+        except (TypeError, ValueError):
+            return True
+    # Compare text
+    if oldText != newText:
+        return True
+    return False
+
+
 def validateMetricValues(
     *,
     metricId: str,
     request: OnboardingMetricValuesRequestDto,
     userId: Optional[int] = None,
+    userModel=None,
 ) -> dict:
     cycle = requireCycle(request.companyId, request.reportingYear, request.cycleType)
+    checkMetricInputPermission(
+        cycle=cycle,
+        companyId=request.companyId,
+        metricId=metricId,
+        userModel=userModel,
+    )
     metrics = listMetrics(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
         cycleType=request.cycleType,
         metricId=metricId,
+        userModel=userModel,
     )
     metric = metrics.items[0]
     atomicById = {item.atomicMetricId: item for item in metric.atomicItems}
@@ -519,33 +627,127 @@ def checkAssignmentCycleType(cycleType: str) -> str:
 
 
 def checkManager(userModel) -> None:
-    role = str(readUserField(userModel, "role") or "").strip().upper()
-    roleName = str(readUserField(userModel, "role_name") or "").strip()
-    if role in ASSIGNMENT_MANAGER_ROLES or roleName in ASSIGNMENT_MANAGER_ROLE_NAMES:
+    if isAssignmentManager(userModel):
         return
     raise PermissionError("Only ESG담당자 or 관리자 can manage onboarding assignments")
 
 
+def listVisibleMetricScopesForUser(scopes: list[dict], assignmentRows: list[dict], userModel) -> list[dict]:
+    if userModel is None or isAssignmentManager(userModel):
+        return scopes
+    if isConsultant(userModel):
+        raise PermissionError("Consultants cannot access onboarding input metrics")
+    if not isEmployee(userModel):
+        raise PermissionError("Only assigned users can access onboarding input metrics")
+    actorUserId = getActorUserId(userModel)
+    assignedMetricIds = {
+        row.get("metric_id")
+        for row in assignmentRows
+        if row.get("assignee_user_id") is not None
+        and actorUserId is not None
+        and int(row.get("assignee_user_id")) == int(actorUserId)
+        and str(row.get("assignment_status") or "").strip().lower() == assignmentRepo.ASSIGNMENT_STATUS_ASSIGNED
+    }
+    return [scope for scope in scopes if scope.get("metric_id") in assignedMetricIds]
+
+
+def checkMetricInputPermission(*, cycle: dict, companyId: int, metricId: str, userModel) -> None:
+    if userModel is None:
+        return
+    if isConsultant(userModel):
+        raise PermissionError("Consultants cannot input onboarding metrics")
+    actorUserId = getActorUserId(userModel)
+    if actorUserId is None:
+        raise PermissionError("Authenticated user id is required")
+    assignmentRows = assignmentRepo.listAssignmentRows(int(cycle["id"]), companyId)
+    assignment = next((row for row in assignmentRows if row.get("metric_id") == metricId), None)
+    if not assignment:
+        raise PermissionError(f"Metric assignment is required: {metricId}")
+    if str(assignment.get("assignment_status") or "").strip().lower() != assignmentRepo.ASSIGNMENT_STATUS_ASSIGNED:
+        raise PermissionError(f"Metric assignment must be assigned before input: {metricId}")
+    if assignment.get("assignee_user_id") is None or int(assignment.get("assignee_user_id")) != int(actorUserId):
+        raise PermissionError(f"Only the assigned user can input metricId={metricId}")
+
+
+def checkMetricStatusPermission(summary: dict, userModel) -> bool:
+    if isReviewer(userModel) or isAssignmentManager(userModel):
+        return True
+    if isEmployee(userModel):
+        actorUserId = getActorUserId(userModel)
+        return (
+            actorUserId is not None
+            and summary.get("assigneeUserId") is not None
+            and int(summary.get("assigneeUserId")) == int(actorUserId)
+        )
+    return False
+
+
+def isAssignmentManager(userModel) -> bool:
+    role = str(readUserField(userModel, "role") or "").strip().upper()
+    roleName = str(readUserField(userModel, "role_name") or "").strip()
+    return role in ASSIGNMENT_MANAGER_ROLES or roleName in ASSIGNMENT_MANAGER_ROLE_NAMES
+
+
+def isEmployee(userModel) -> bool:
+    role = str(readUserField(userModel, "role") or "").strip().upper()
+    roleName = str(readUserField(userModel, "role_name") or "").strip()
+    return role in EMPLOYEE_ROLES or roleName in EMPLOYEE_ROLE_NAMES
+
+
+def isConsultant(userModel) -> bool:
+    role = str(readUserField(userModel, "role") or "").strip().upper()
+    roleName = str(readUserField(userModel, "role_name") or "").strip()
+    return role in CONSULTANT_ROLES or roleName in CONSULTANT_ROLE_NAMES
+
+
+def isReviewer(userModel) -> bool:
+    role = str(readUserField(userModel, "role") or "").strip().upper()
+    roleName = str(readUserField(userModel, "role_name") or "").strip()
+    return role in REVIEWER_ROLES or roleName in REVIEWER_ROLE_NAMES
+
+
 def submitApproval(request: OnboardingApprovalRequestDto, userModel) -> OnboardingApprovalActionResponseDto:
     checkScope(request.companyId, userModel)
-    checkSupportedMetric(request.metricId)
-    summary = repo.submitG002Approval(
+    cycle = requireCycle(request.companyId, request.reportingYear, request.cycleType)
+    checkMetricInputPermission(
+        cycle=cycle,
+        companyId=request.companyId,
+        metricId=request.metricId,
+        userModel=userModel,
+    )
+    summary = approvalService.submitMetricApproval(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
-        reportBasisType=None,
-        sourceMaterialityRunId=None,
+        cycleType=request.cycleType,
+        metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
+        commentText=getattr(request, "commentText", None),
     )
     return actionResponse(summary, "Submitted")
 
 
-def approveApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
+def reviewApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
     checkScope(request.companyId, userModel)
-    checkSupportedMetric(request.metricId)
-    checkApprover(userModel)
-    summary = repo.approveG002Approval(
+    checkReviewer(userModel)
+    summary = approvalService.reviewMetricApproval(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
+        cycleType=request.cycleType,
+        metricId=request.metricId,
+        actorUserId=getActorUserId(userModel),
+        commentText=getattr(request, "commentText", None),
+    )
+    return actionResponse(summary, "Reviewed")
+
+
+def approveApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
+    checkScope(request.companyId, userModel)
+    checkApprover(userModel)
+    summary = approvalService.approveMetricApproval(
+        companyId=request.companyId,
+        reportingYear=request.reportingYear,
+        cycleType=request.cycleType,
+        metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
         commentText=getattr(request, "commentText", None),
     )
@@ -554,14 +756,15 @@ def approveApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
 
 def rejectApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
     checkScope(request.companyId, userModel)
-    checkSupportedMetric(request.metricId)
     checkApprover(userModel)
     commentText = (getattr(request, "commentText", None) or "").strip()
     if not commentText:
         raise ValueError("commentText is required for rejection")
-    summary = repo.rejectG002Approval(
+    summary = approvalService.rejectMetricApproval(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
+        cycleType=request.cycleType,
+        metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
         commentText=commentText,
     )
@@ -577,18 +780,18 @@ def listApprovals(
     userModel,
 ) -> OnboardingApprovalListResponseDto:
     checkScope(companyId, userModel)
-    if cycleType and str(cycleType).upper() != repo.CYCLE_TYPE_PRE_DMA_G0:
-        return OnboardingApprovalListResponseDto(data=OnboardingApprovalListDataDto(items=[]))
-    items = [
-        itemDto(summary, userModel)
-        for summary in repo.listCycleApprovalInboxRows(
-            companyId=companyId,
-            reportingYear=reportingYear,
-            status=status,
-            cycleType=cycleType,
-            assignedOnlyYn=assignedOnlyYn,
-        )
-    ]
+    rows = repo.listCycleApprovalInboxRows(
+        companyId=companyId,
+        reportingYear=reportingYear,
+        status=status,
+        cycleType=cycleType,
+        assignedOnlyYn=assignedOnlyYn,
+    )
+    if isEmployee(userModel):
+        rows = [row for row in rows if checkMetricStatusPermission(row, userModel)]
+    elif not (isReviewer(userModel) or isAssignmentManager(userModel)):
+        raise PermissionError("Only approvers, reviewers, or assigned employees can view approval status")
+    items = [itemDto(summary, userModel) for summary in rows]
     return OnboardingApprovalListResponseDto(data=OnboardingApprovalListDataDto(items=items))
 
 
@@ -597,10 +800,12 @@ def getApprovalStatus(
     reportingYear: int,
     metricId: str,
     userModel,
+    cycleType: str = CYCLE_TYPE_PRE_DMA_G0,
 ) -> OnboardingApprovalStatusResponseDto:
     checkScope(companyId, userModel)
-    checkSupportedMetric(metricId)
-    summary = repo.buildApprovalSummary(companyId, reportingYear, metricId)
+    summary = approvalService.buildMetricApprovalSummary(companyId, reportingYear, metricId, cycleType)
+    if not checkMetricStatusPermission(summary, userModel):
+        raise PermissionError("Only approvers, reviewers, or the assigned employee can view approval status")
     return OnboardingApprovalStatusResponseDto(data=statusDto(summary, userModel))
 
 
@@ -647,24 +852,40 @@ def itemDto(summary: dict, userModel) -> OnboardingApprovalItemDto:
 def statusDto(summary: dict, userModel) -> OnboardingApprovalStatusDataDto:
     payload = dict(summary)
     payload.pop("selfSubmittedYn", None)
+    approvalPolicyCode = str(summary.get("approvalPolicyCode") or "").strip().upper()
+    promotedQuantAtomicCount = int(summary.get("promotedQuantAtomicCount") or 0)
+    approvedPromotedFactCount = int(summary.get("approvedPromotedFactCount") or 0)
     return OnboardingApprovalStatusDataDto(
         **payload,
         selfSubmittedYn=checkSelfSubmitted(summary, userModel),
-        rollupReadyYn=int(summary.get("approvedAtomicCount") or 0) >= len(repo.REQUIRED_ATOMIC_IDS),
+        rollupReadyYn=(
+            approvalPolicyCode == repo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP
+            and promotedQuantAtomicCount > 0
+            and approvedPromotedFactCount >= promotedQuantAtomicCount
+        ),
     )
 
 
 def checkSupportedMetric(metricId: str) -> None:
-    if metricId != repo.METRIC_ID_G0_02:
-        raise ValueError("Only G0-02 approval is supported in MVP")
+    return None
 
 
 def checkApprover(userModel) -> None:
+    if isApprover(userModel):
+        return
+    raise PermissionError("Only ESG담당자 or 관리자 can approve/reject onboarding inputs")
+
+
+def checkReviewer(userModel) -> None:
+    if isReviewer(userModel):
+        return
+    raise PermissionError("Only consultants, ESG담당자, or 관리자 can review onboarding inputs")
+
+
+def isApprover(userModel) -> bool:
     role = str(readUserField(userModel, "role") or "").strip().upper()
     roleName = str(readUserField(userModel, "role_name") or "").strip()
-    if role in APPROVER_ROLES or roleName in APPROVER_ROLE_NAMES:
-        return
-    raise PermissionError("Only ESG담당자 or 관리자 can approve/reject G0-02 inputs")
+    return role in APPROVER_ROLES or roleName in APPROVER_ROLE_NAMES
 
 
 def checkSelfSubmitted(summary: dict, userModel) -> bool:

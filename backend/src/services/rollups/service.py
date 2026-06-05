@@ -1,29 +1,7 @@
-"""
-Domain: ESG Rollup
-Layer: service/workflow
-Responsibility:
-- List subsidiaries eligible for DMA precheck rollup
-- Create DMA precheck G0-02 rollup batches
-- Calculate approved G0-02 consolidated SUM results
-Public functions:
-- listSubsidiaries
-- saveBatch
-- calcBatch
-- listRequests
-- sendSource
-- getStatus
-Do not:
-- do not modify DB schema
-- do not calculate unsupported formulas
-- do not use unapproved onboarding values
-- do not bypass company scope isolation
-- do not connect DMA scoring pipelines
-"""
-
-from __future__ import annotations
-
+﻿from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
+import json
 
 from src.models.rollup import (
     RollupBatchRequestDto,
@@ -45,198 +23,408 @@ from src.models.rollup import (
 )
 from src.utils.companyscope import checkScope, resolveScope
 
-
 class RollupError(Exception):
-    def __init__(
-        self,
-        statusCode: int,
-        code: str,
-        message: str,
-        data: Optional[dict] = None,
-    ):
+    def __init__(self, statusCode: int, code: str, message: str, data: Optional[dict] = None):
         super().__init__(message)
         self.statusCode = statusCode
         self.code = code
         self.message = message
         self.data = data or {}
 
-
-def listSubsidiaries(runId: int, userModel) -> RollupSubsidiaryResponseDto:
+def validatePurposeScope(
+    rollupPurposeCode,
+    metricScopeCode,
+    runId,
+    sourceCycleId,
+    requireContext: bool = True,
+) -> tuple[str, str]:
     rollupRepository = loadRepository()
-    run = getRunOrRaise(runId)
-    checkScope(int(run["company_id"]), userModel)
-    checkConsolidatedRun(run)
-    items = [
+    purposeCode = str(rollupPurposeCode or "").strip().upper()
+    scopeCode = str(metricScopeCode or "").strip().upper()
+
+    if (
+        purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK
+        and scopeCode == rollupRepository.METRIC_SCOPE_G0_02_FINANCIAL_BASIS
+    ):
+        if requireContext and not runId:
+            raise RollupError(400, "RUN_ID_REQUIRED", "runId is required for DMA_PRECHECK")
+        return purposeCode, scopeCode
+
+    if (
+        purposeCode == rollupRepository.ROLLUP_PURPOSE_REPORT_DISCLOSURE
+        and scopeCode == rollupRepository.METRIC_SCOPE_SELECTED_DISCLOSURE
+    ):
+        if requireContext and not sourceCycleId:
+            raise RollupError(400, "SOURCE_CYCLE_ID_REQUIRED", "sourceCycleId is required for REPORT_DISCLOSURE")
+        return purposeCode, scopeCode
+
+    raise RollupError(
+        422,
+        "ROLLUP_PURPOSE_SCOPE_UNSUPPORTED",
+        "Unsupported rollup purpose and metric scope combination.",
+        {"rollupPurposeCode": rollupPurposeCode, "metricScopeCode": metricScopeCode},
+    )
+
+def validateSourceCycle(rollupRepository, sourceCycleId: int) -> dict:
+    conn = rollupRepository.getConn()
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                """
+                SELECT id, company_id, reporting_year, cycle_type, delete_yn
+                FROM ESG_ONBOARDING_CYCLE
+                WHERE id = ?
+                  AND delete_yn = 0
+                  AND cycle_type = 'POST_DMA_DISCLOSURE'
+                """,
+                (sourceCycleId,),
+            )
+            cycle = cur.fetchone()
+            if not cycle:
+                raise RollupError(422, "POST_DMA_SOURCE_CYCLE_INVALID", "Invalid source cycle")
+            cur.execute(
+                """
+                SELECT COUNT(*) AS scope_count
+                FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE
+                WHERE esg_onboarding_cycle_id = ?
+                  AND active_yn = 1
+                  AND delete_yn = 0
+                """,
+                (sourceCycleId,),
+            )
+            scopeRow = cur.fetchone() or {}
+            if int(scopeRow.get("scope_count") or 0) < 1:
+                raise RollupError(422, "POST_DMA_SOURCE_CYCLE_INVALID", "Invalid source cycle")
+            return cycle
+    finally:
+        conn.close()
+
+def resolveBatchContext(rollupRepository, purposeCode: str, runId: Optional[int], sourceCycleId: Optional[int]) -> dict:
+    if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
+        run = getRunOrRaise(int(runId))
+        checkConsolidatedRun(run)
+        return {
+            "parentCompanyId": int(run["company_id"]),
+            "reportingYear": int(run["reporting_year"]),
+            "run": run,
+            "cycle": None,
+        }
+
+    cycle = validateSourceCycle(rollupRepository, int(sourceCycleId))
+    return {
+        "parentCompanyId": int(cycle["company_id"]),
+        "reportingYear": int(cycle["reporting_year"]),
+        "run": None,
+        "cycle": cycle,
+    }
+
+def listSubsidiaries(runId, sourceCycleId, rollupPurposeCode, metricScopeCode, userModel) -> RollupSubsidiaryResponseDto:
+    rollupRepository = loadRepository()
+    purposeCode, scopeCode = validatePurposeScope(rollupPurposeCode, metricScopeCode, runId, sourceCycleId)
+    context = resolveBatchContext(rollupRepository, purposeCode, runId, sourceCycleId)
+    parentCompanyId = context["parentCompanyId"]
+    reportingYear = context["reportingYear"]
+
+    checkScope(parentCompanyId, userModel)
+
+    items = rollupRepository.listEffectiveSourceCompanies(parentCompanyId, reportingYear, purposeCode)
+
+    # UI presentation: Do not include parent in the subsidiary selection list
+    items = [item for item in items if int(item["companyId"]) != parentCompanyId]
+
+    resItems = [
         RollupSubsidiaryDto(
             companyId=item["companyId"],
             companyCode=item.get("companyCode"),
             companyName=item.get("companyName"),
         )
-        for item in rollupRepository.listSubsidiaries(run)
+        for item in items
     ]
-    return RollupSubsidiaryResponseDto(data=RollupSubsidiaryListDto(runId=runId, items=items))
 
+    return RollupSubsidiaryResponseDto(data=RollupSubsidiaryListDto(runId=runId, sourceCycleId=sourceCycleId, items=resItems))
 
 def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseDto:
     rollupRepository = loadRepository()
-    run = getRunOrRaise(request.runId)
-    checkScope(int(run["company_id"]), userModel)
-    checkConsolidatedRun(run)
+    purposeCode, metricScopeCode = validatePurposeScope(
+        request.rollupPurposeCode,
+        request.metricScopeCode,
+        request.runId,
+        request.sourceCycleId,
+    )
+    actorUserId = getActorUserId(userModel)
+    context = resolveBatchContext(rollupRepository, purposeCode, request.runId, request.sourceCycleId)
+    parentCompanyId = context["parentCompanyId"]
+    reportingYear = context["reportingYear"]
 
-    parentCompanyId = int(run["company_id"])
+    checkScope(parentCompanyId, userModel)
+
     selectedCompanyIds = normalizeCompanyIds(request.sourceCompanyIds)
     if not selectedCompanyIds:
         raise RollupError(422, "ROLLUP_SOURCE_REQUIRED", "At least one subsidiary source is required.")
+
+    relations = rollupRepository.listEffectiveSourceCompanies(parentCompanyId, reportingYear, purposeCode)
+    relation_ids = {r["companyId"] for r in relations}
+
     if parentCompanyId in selectedCompanyIds:
         raise RollupError(422, "ROLLUP_PARENT_SOURCE_NOT_ALLOWED", "Parent company is included automatically.")
 
-    eligibleCompanyIds = {
-        int(item["companyId"])
-        for item in rollupRepository.listSubsidiaries(run)
-    }
-    invalidCompanyIds = [
-        companyId
-        for companyId in selectedCompanyIds
-        if companyId not in eligibleCompanyIds
-    ]
-    if invalidCompanyIds:
-        raise RollupError(
-            403,
-            "ROLLUP_SOURCE_SCOPE_FORBIDDEN",
-            "One or more source companies are outside rollup scope.",
-            {"invalidCompanyIds": invalidCompanyIds},
-        )
+    if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
+        if not set(selectedCompanyIds).issubset(relation_ids):
+            raise RollupError(403, "ROLLUP_SOURCE_SCOPE_FORBIDDEN", "Requested subsidiary is outside of allowed relation scope.")
+        includedCompanyIds = normalizeCompanyIds([parentCompanyId, *selectedCompanyIds])
+    else:
+        if parentCompanyId not in relation_ids:
+            raise RollupError(422, "ROLLUP_PARENT_SCOPE_MISSING", "Parent company relation scope is missing.")
+        if not set(selectedCompanyIds).issubset(relation_ids):
+            raise RollupError(403, "ROLLUP_SOURCE_SCOPE_FORBIDDEN", "Requested subsidiary is outside of allowed relation scope.")
+        includedCompanyIds = normalizeCompanyIds([parentCompanyId, *selectedCompanyIds])
 
-    parentFacts = rollupRepository.listApprovedFacts([parentCompanyId], int(run["reporting_year"]))
-    parentMissing = getMissingAtomicIds(parentCompanyId, parentFacts)
-    if parentMissing:
-        raise RollupError(
-            409,
-            "PARENT_G0_02_NOT_READY",
-            "Parent G0-02 approved KPI facts are required before requesting subsidiary data.",
-            {"missingAtomicMetricIds": parentMissing},
-        )
-
-    existingBatch = rollupRepository.getActiveBatch(request.runId)
+    existingBatch = rollupRepository.getActiveBatch(request.runId, request.sourceCycleId, purposeCode, metricScopeCode)
     if existingBatch:
         return RollupBatchResponseDto(data=buildBatchStatus(existingBatch, rollupRepository.listSourceCompanyIds(int(existingBatch["id"]))))
 
-    includedCompanyIds = [parentCompanyId, *selectedCompanyIds]
-    facts = rollupRepository.listApprovedFacts(includedCompanyIds, int(run["reporting_year"]))
-    sourceStatuses = buildSourceStatuses(run, includedCompanyIds, facts)
-    batch = rollupRepository.saveBatch(
-        run=run,
-        includedCompanyIds=includedCompanyIds,
-        sourceStatuses=sourceStatuses,
-        actorUserId=getActorUserId(userModel),
-    )
-    if not batch:
-        raise RollupError(500, "ROLLUP_BATCH_CREATE_FAILED", "Failed to create rollup batch.")
-    return RollupBatchResponseDto(data=buildBatchStatus(batch, includedCompanyIds))
+    conn = rollupRepository.getConn()
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            # Determine metric scope
+            if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
+                metricIds = ["G0-02"]
+            else:
+                from src.utils.onboardingscoperepository import listMetricScopesTx
+                scopeRows = listMetricScopesTx(cur, request.sourceCycleId, parentCompanyId)
+                metricIds = [r["metric_id"] for r in scopeRows if r.get("approval_policy_code") == "PROMOTE_TO_KPI_FACT_AND_ROLLUP"]
+                if not metricIds:
+                    raise RollupError(422, "ROLLUP_RULE_NOT_FOUND", "No valid consolidated metrics found in cycle scope.")
 
+            rules, sources = rollupRepository.resolveConsolidatedRuleClosure(metricIds)
+            ruleMetricIds = {r["metric_id"] for r in rules}
+            missingMetricIds = [m for m in metricIds if m not in ruleMetricIds]
+            if missingMetricIds:
+                raise RollupError(422, "ROLLUP_RULE_NOT_FOUND", f"Missing rules for metrics: {missingMetricIds}")
+
+            # Create Batch
+            batchId = rollupRepository.saveBatchTx(
+                cur=cur,
+                parentCompanyId=parentCompanyId,
+                reportingYear=reportingYear,
+                includedCompanyIds=includedCompanyIds,
+                rollupPurposeCode=purposeCode,
+                metricScopeCode=metricScopeCode,
+                sourceCycleId=request.sourceCycleId,
+                actorUserId=actorUserId,
+            )
+
+            rollupRepository.saveScopeFromRulesTx(cur, batchId, rules, sources, purposeCode)
+
+            # Determine readiness from Tx
+            requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
+            requiredAtomicCount = len(requiredAtomicIds)
+
+            sourceStatuses = []
+            for sourceCompanyId in includedCompanyIds:
+                # Pre-calculate missing count for status insertion
+                facts = rollupRepository.listApprovedFactsByCompany([sourceCompanyId], reportingYear, requiredAtomicIds)
+                approvedKeys = {f["atomicMetricId"] for f in facts}
+                missingAtomicIds = [a for a in requiredAtomicIds if a not in approvedKeys]
+
+                approvedCount = requiredAtomicCount - len(missingAtomicIds)
+                readyYn = approvedCount == requiredAtomicCount
+                parentYn = sourceCompanyId == parentCompanyId
+
+                currentTime = datetime.now(timezone.utc).replace(tzinfo=None)
+                sourceStatuses.append({
+                    "parentCompanyId": parentCompanyId,
+                    "sourceCompanyId": sourceCompanyId,
+                    "reportingYear": reportingYear,
+                    "approvedCount": approvedCount,
+                    "missingAtomicMetricIds": missingAtomicIds,
+                    "requestStatus": rollupRepository.SOURCE_STATUS_RECEIVED if parentYn else rollupRepository.SOURCE_STATUS_REQUESTED,
+                    "inputStatus": rollupRepository.INPUT_STATUS_APPROVED if readyYn else (rollupRepository.INPUT_STATUS_SUBMITTED if approvedCount > 0 else rollupRepository.INPUT_STATUS_NOT_STARTED),
+                    "approvalStatus": rollupRepository.APPROVAL_STATUS_APPROVED if readyYn else (rollupRepository.APPROVAL_STATUS_SUBMITTED if approvedCount > 0 else rollupRepository.APPROVAL_STATUS_PENDING),
+                    "transferStatus": rollupRepository.TRANSFER_STATUS_RECEIVED if parentYn else rollupRepository.TRANSFER_STATUS_NOT_SENT,
+                    "sentAt": currentTime if parentYn else None,
+                    "receivedAt": currentTime if parentYn else None,
+                    "approvedAt": currentTime if readyYn else None,
+                })
+
+            rollupRepository.saveSourcesTx(cur, batchId, sourceStatuses, purposeCode, metricScopeCode, requiredAtomicCount)
+
+            if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
+                cur.execute(
+                    """
+                    UPDATE ESG_MATERIALITY_RUN
+                    SET required_rollup_batch_id = ?,
+                        financial_basis_status = 'CONSOLIDATED_ROLLUP_PENDING',
+                        financial_basis_checked_at = CURRENT_TIMESTAMP,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ? AND delete_yn = 0
+                    """,
+                    (batchId, request.runId),
+                )
+
+        conn.commit()
+    except RollupError:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise RollupError(500, "ROLLUP_BATCH_CREATE_FAILED", f"Failed to create rollup batch: {str(e)}")
+    finally:
+        conn.close()
+
+    batch = rollupRepository.getBatch(batchId)
+    return RollupBatchResponseDto(data=buildBatchStatus(batch, includedCompanyIds))
 
 def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
     rollupRepository = loadRepository()
     rollupCalculator = loadCalculator()
+
     batch = rollupRepository.getBatch(batchId)
     if not batch:
         raise RollupError(404, "ROLLUP_BATCH_NOT_FOUND", "Rollup batch was not found.")
     checkScope(int(batch["parent_company_id"]), userModel)
-    checkBatchScope(batch)
+    checkBatchActive(batch)
 
     sources = rollupRepository.listSources(batchId)
     if not sources:
         raise RollupError(409, "ROLLUP_SOURCE_NOT_FOUND", "Rollup source snapshot was not found.")
+
     transferStatus = checkTransferReady(batch, sources)
     if not transferStatus["readyYn"]:
         raise RollupError(
             409,
             "ROLLUP_SOURCE_NOT_SENT",
-            "One or more subsidiary G0-02 data transfers are not complete.",
+            "One or more subsidiary data transfers are not complete.",
             {"notSentCompanyIds": transferStatus["notSentCompanyIds"]},
         )
 
-    scopes = rollupRepository.listScope(batchId)
-    scopeGroupAtoms = {scope.get("group_atomic_metric_id") for scope in scopes}
-    unsupportedGroupAtoms = [
-        atomicId
-        for atomicId in scopeGroupAtoms
-        if atomicId not in rollupRepository.GROUP_ATOMIC_IDS
-    ]
-    if unsupportedGroupAtoms:
-        raise RollupError(
-            422,
-            "ROLLUP_SCOPE_UNSUPPORTED",
-            "Only G0-02 group financial basis atomic scope is supported.",
-            {"unsupportedGroupAtomicMetricIds": unsupportedGroupAtoms},
-        )
+    includedCompanyIds = json.loads(batch.get("included_company_ids_json") or "[]")
+    reportingYear = int(batch["reporting_year"])
+    purposeCode = batch["rollup_purpose_code"]
+    parentCompanyId = int(batch["parent_company_id"])
 
-    missingGroupAtoms = [
-        atomicId
-        for atomicId in rollupRepository.GROUP_ATOMIC_IDS
-        if atomicId not in scopeGroupAtoms
-    ]
-    if missingGroupAtoms:
-        raise RollupError(
-            409,
-            "ROLLUP_SCOPE_NOT_READY",
-            "Rollup atomic scope is incomplete.",
-            {"missingGroupAtomicMetricIds": missingGroupAtoms},
-        )
-
-    sourceCompanyIds = [int(source["source_company_id"]) for source in sources]
-    facts = rollupRepository.listApprovedFacts(sourceCompanyIds, int(batch["reporting_year"]))
-    missingSources = buildMissingSources(sourceCompanyIds, facts)
-    if missingSources:
-        raise RollupError(
-            409,
-            "ROLLUP_SOURCE_NOT_READY",
-            "One or more source companies have incomplete approved G0-02 KPI facts.",
-            {"missingSources": missingSources},
-        )
-
-    factMap = buildFactMap(facts)
+    conn = rollupRepository.getConn()
     try:
-        results = rollupCalculator.calcBatch(batch, sources, scopes, factMap)
-    except ValueError as e:
-        raise RollupError(422, "ROLLUP_FORMULA_UNSUPPORTED", str(e))
+        with conn.cursor(dictionary=True) as cur:
+            scopes = rollupRepository.listScope(batchId)
+            metricIds = list(set([s["metric_id"] for s in scopes]))
+            rules, ruleSources = rollupRepository.resolveConsolidatedRuleClosure(metricIds)
+            requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
 
-    if not rollupRepository.upsertResults(batch, results, getActorUserId(userModel)):
-        raise RollupError(500, "ROLLUP_CALCULATE_FAILED", "Failed to calculate rollup batch.")
+            historicalDepth = rollupCalculator.resolveHistoricalLookbackDepth(rules, ruleSources)
+            entityFactMapsByYear = {}
+            for factYear in range(reportingYear, reportingYear - historicalDepth - 1, -1):
+                facts = rollupRepository.listApprovedFactsByCompany(includedCompanyIds, factYear, requiredAtomicIds)
+                entityFactMapsByYear[factYear] = rollupCalculator.buildMultiCompanyFactMap(
+                    includedCompanyIds,
+                    requiredAtomicIds,
+                    facts,
+                )
 
-    refreshedBatch = rollupRepository.getBatch(batchId) or batch
-    resultDtos = [
-        RollupResultDto(
-            groupAtomicMetricId=result["groupAtomicMetricId"],
-            sourceAtomicMetricId=result["sourceAtomicMetricId"],
-            formulaType=result["formulaType"],
-            valueNumeric=result["valueNumeric"],
-            unit=result.get("unit"),
-        )
-        for result in results
-    ]
-    statusDto = buildBatchStatus(refreshedBatch, sourceCompanyIds)
+            cur.execute("SELECT id FROM ESG_MATERIALITY_RUN WHERE required_rollup_batch_id = ?", (batchId,))
+            r = cur.fetchone()
+            runId = r["id"] if r else None
+            if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK and not runId:
+                raise RollupError(409, "REPORT_RUN_NOT_FOUND", "Report workflow run was not found for rollup batch.")
+
+            results, warnings, allSuccess = rollupCalculator.calculateConsolidatedRulesByYear(
+                rules=rules,
+                sources=ruleSources,
+                entityFactMapsByYear=entityFactMapsByYear,
+                reportingYear=reportingYear,
+                companyIds=includedCompanyIds,
+            )
+
+            if not allSuccess:
+                raise RollupError(422, "ROLLUP_CALCULATION_NOT_READY", "Calculation failed due to unready sources or calculation errors.", {"warnings": warnings})
+
+            if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
+                for res in results:
+                    res["groupMetricId"] = res.get("groupMetricId") or "G0-02"
+            else:
+                for res in results:
+                    if not res.get("groupMetricId"):
+                        raise RollupError(500, "ROLLUP_RESULT_ERROR", "Group Metric ID is required for generic rollup.")
+
+            actorUserId = getActorUserId(userModel)
+            rollupRepository.upsertGroupRollupResultsTx(cur, batch, results, includedCompanyIds, actorUserId)
+
+            rollupRepository.updateSourceStatusTx(cur, batchId, len(requiredAtomicIds))
+
+            if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
+                rollupRepository.finalizeDmaPrecheckTx(cur, batchId, runId, actorUserId)
+            else:
+                rollupRepository.finalizeReportDisclosureTx(cur, batchId, actorUserId)
+                from src.utils.onboardingscoperepository import ensureRollupCycleTx, seedRollupMetricScopeTx
+                ensureRollupCycleTx(cur, parentCompanyId, reportingYear, batchId)
+                seedRollupMetricScopeTx(cur, parentCompanyId, reportingYear, actorUserId)
+
+            conn.commit()
+    except RollupError:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise RollupError(500, "ROLLUP_CALCULATE_FAILED", f"Failed to save calculated rollup batch: {e}")
+    finally:
+        conn.close()
+
+    refreshedBatch = rollupRepository.getBatch(batchId)
+    status = buildBatchStatus(refreshedBatch, includedCompanyIds)
     return RollupCalculateResponseDto(
         data=RollupCalculateStatusDto(
-            **statusDto.model_dump(),
-            results=resultDtos,
+            **dumpModel(status),
+            results=[
+                RollupResultDto(
+                    groupAtomicMetricId=result["groupAtomicMetricId"],
+                    sourceAtomicMetricIds=result.get("sourceAtomicMetricIds") or [],
+                    sourceAtomicMetricId=result.get("sourceAtomicMetricId"),
+                    formulaType=result.get("formulaType") or "",
+                    valueNumeric=result.get("valueNumeric"),
+                    valueText=result.get("valueText"),
+                    unit=result.get("unit"),
+                    sourceCompanyValues=result.get("sourceCompanyValues"),
+                    calculationWarnings=result.get("calculationWarnings"),
+                )
+                for result in results
+            ],
         )
     )
 
-
-def listRequests(userModel) -> RollupRequestResponseDto:
+def listRequests(rollupPurposeCode: str, metricScopeCode: str, userModel) -> RollupRequestResponseDto:
     rollupRepository = loadRepository()
+    purposeCode, scopeCode = validatePurposeScope(
+        rollupPurposeCode,
+        metricScopeCode,
+        runId=None,
+        sourceCycleId=None,
+        requireContext=False,
+    )
     sourceCompanyId = getSource(userModel)
-    requests = rollupRepository.listRequests(sourceCompanyId)
-    facts = []
-    for reportingYear in getRequestYears(requests):
-        facts.extend(rollupRepository.listApprovedFacts([sourceCompanyId], reportingYear))
-    items = [
-        buildRequestItem(request, sourceCompanyId, facts)
-        for request in requests
-    ]
-    return RollupRequestResponseDto(data=RollupRequestListDto(items=items))
+    requests = rollupRepository.listRequests(sourceCompanyId, purposeCode, scopeCode)
 
+    items = []
+    for req in requests:
+        batchId = req["batchId"]
+        readiness = rollupRepository.buildSourceReadiness(batchId, [sourceCompanyId], int(req["reportingYear"]))
+        items.append(RollupRequestItemDto(
+            batchId=batchId,
+            batchCode=req.get("batchCode"),
+            parentCompanyId=req["parentCompanyId"],
+            parentCompanyCode=req.get("parentCompanyCode"),
+            parentCompanyName=req.get("parentCompanyName"),
+            reportingYear=req["reportingYear"],
+            rollupPurposeCode=req.get("rollupPurposeCode") or purposeCode,
+            metricScopeCode=req.get("metricScopeCode") or scopeCode,
+            requestStatus=req.get("requestStatus") or "",
+            inputStatus=req.get("inputStatus") or "",
+            approvalStatus=req.get("approvalStatus") or "",
+            transferStatus=req.get("transferStatus") or "",
+            sendReadyYn=bool(readiness["readyYn"]),
+            missingAtomicMetricIds=readiness["missingByCompany"].get(str(sourceCompanyId), [])
+        ))
+
+    return RollupRequestResponseDto(data=RollupRequestListDto(items=items))
 
 def sendSource(batchId: int, userModel) -> RollupSourceSendResponseDto:
     rollupRepository = loadRepository()
@@ -244,41 +432,42 @@ def sendSource(batchId: int, userModel) -> RollupSourceSendResponseDto:
     batch = rollupRepository.getBatch(batchId)
     if not batch:
         raise RollupError(404, "ROLLUP_BATCH_NOT_FOUND", "Rollup batch was not found.")
-    checkBatchScope(batch)
     checkBatchActive(batch)
 
     source = rollupRepository.getSource(batchId, sourceCompanyId)
     if not source:
-        raise RollupError(
-            404,
-            "ROLLUP_SOURCE_REQUEST_NOT_FOUND",
-            "Rollup source transfer request was not found.",
-        )
+        raise RollupError(404, "ROLLUP_SOURCE_REQUEST_NOT_FOUND", "Rollup source transfer request was not found.")
     if int(source["source_company_id"]) == int(source["parent_company_id"]):
-        raise RollupError(
-            409,
-            "ROLLUP_PARENT_SEND_NOT_ALLOWED",
-            "Parent company data is included automatically and cannot be sent separately.",
-        )
+        raise RollupError(409, "ROLLUP_PARENT_SEND_NOT_ALLOWED", "Parent company data is included automatically.")
 
     if str(source.get("transfer_status") or "").lower() in {"sent", "received"}:
         return RollupSourceSendResponseDto(data=buildSourceSendStatus(source))
 
-    facts = rollupRepository.listApprovedFacts([sourceCompanyId], int(source["reporting_year"]))
-    missingAtomicIds = getMissingAtomicIds(sourceCompanyId, facts)
-    if missingAtomicIds:
+    # Determine readiness
+    requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIds(batchId)
+    readiness = rollupRepository.buildSourceReadiness(batchId, [sourceCompanyId], int(source["reporting_year"]))
+
+    if not readiness["readyYn"]:
         raise RollupError(
             409,
-            "SOURCE_G0_02_NOT_READY",
-            "Approved G0-02 data is required before transfer.",
-            {"missingAtomicMetricIds": missingAtomicIds},
+            "SOURCE_NOT_READY",
+            "Approved KPI facts are required before transfer.",
+            {"missingAtomicMetricIds": readiness["missingAtomicMetricIds"]},
         )
 
-    updatedSource = rollupRepository.updateSourceSent(batchId, sourceCompanyId)
-    if not updatedSource:
+    conn = rollupRepository.getConn()
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            rollupRepository.updateSourceSentTx(cur, batchId, sourceCompanyId, len(requiredAtomicIds))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
         raise RollupError(500, "ROLLUP_SOURCE_SEND_FAILED", "Failed to update rollup source transfer status.")
-    return RollupSourceSendResponseDto(data=buildSourceSendStatus(updatedSource))
+    finally:
+        conn.close()
 
+    source = rollupRepository.getSource(batchId, sourceCompanyId)
+    return RollupSourceSendResponseDto(data=buildSourceSendStatus(source))
 
 def getStatus(batchId: int, userModel) -> RollupBatchSummaryResponseDto:
     rollupRepository = loadRepository()
@@ -286,12 +475,10 @@ def getStatus(batchId: int, userModel) -> RollupBatchSummaryResponseDto:
     if not batch:
         raise RollupError(404, "ROLLUP_BATCH_NOT_FOUND", "Rollup batch was not found.")
     checkScope(int(batch["parent_company_id"]), userModel)
-    checkBatchScope(batch)
     summary = rollupRepository.getStatus(batchId)
     if not summary:
         raise RollupError(404, "ROLLUP_BATCH_NOT_FOUND", "Rollup batch was not found.")
     return RollupBatchSummaryResponseDto(data=buildSummary(summary))
-
 
 def getRunOrRaise(runId: int) -> dict:
     rollupRepository = loadRepository()
@@ -300,31 +487,21 @@ def getRunOrRaise(runId: int) -> dict:
         raise RollupError(404, "REPORT_RUN_NOT_FOUND", "Report workflow run was not found.")
     return run
 
-
 def checkConsolidatedRun(run: dict) -> None:
     if str(run.get("report_basis_type") or "").upper() != "CONSOLIDATED":
         raise RollupError(409, "REPORT_BASIS_NOT_CONSOLIDATED", "Rollup is available only for consolidated report basis.")
-
-
-def checkBatchScope(batch: dict) -> None:
-    rollupRepository = loadRepository()
-    if str(batch.get("rollup_purpose_code") or "").upper() != rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
-        raise RollupError(422, "ROLLUP_PURPOSE_UNSUPPORTED", "Unsupported rollup purpose.")
-    if str(batch.get("metric_scope_code") or "").upper() != rollupRepository.METRIC_SCOPE_G0_02_FINANCIAL_BASIS:
-        raise RollupError(422, "ROLLUP_METRIC_SCOPE_UNSUPPORTED", "Unsupported rollup metric scope.")
-
 
 def checkBatchActive(batch: dict) -> None:
     batchStatus = str(batch.get("batch_status") or "").lower()
     if batchStatus in {"deleted", "cancelled", "canceled", "archived", "completed"}:
         raise RollupError(409, "ROLLUP_BATCH_NOT_ACTIVE", "Rollup batch is not active.")
 
-
 def checkTransferReady(batch: dict, sources: list[dict]) -> dict:
+    rollupRepository = loadRepository()
     parentCompanyId = int(batch["parent_company_id"])
     parentReadyYn = any(
         int(source["source_company_id"]) == parentCompanyId
-        and str(source.get("transfer_status") or "").lower() == TRANSFER_STATUS_RECEIVED
+        and str(source.get("transfer_status") or "").lower() == rollupRepository.TRANSFER_STATUS_RECEIVED
         for source in sources
     )
     notSentCompanyIds = [
@@ -332,8 +509,8 @@ def checkTransferReady(batch: dict, sources: list[dict]) -> dict:
         for source in sources
         if int(source["source_company_id"]) != parentCompanyId
         and str(source.get("transfer_status") or "").lower() not in {
-            TRANSFER_STATUS_SENT,
-            TRANSFER_STATUS_RECEIVED,
+            rollupRepository.TRANSFER_STATUS_SENT,
+            rollupRepository.TRANSFER_STATUS_RECEIVED,
         }
     ]
     if not parentReadyYn:
@@ -342,7 +519,6 @@ def checkTransferReady(batch: dict, sources: list[dict]) -> dict:
         "readyYn": len(notSentCompanyIds) == 0,
         "notSentCompanyIds": notSentCompanyIds,
     }
-
 
 def normalizeCompanyIds(companyIds: list[int]) -> list[int]:
     normalizedIds = []
@@ -355,93 +531,6 @@ def normalizeCompanyIds(companyIds: list[int]) -> list[int]:
         normalizedIds.append(numericCompanyId)
     return normalizedIds
 
-
-def buildSourceStatuses(run: dict, sourceCompanyIds: list[int], facts: list[dict]) -> list[dict]:
-    rollupRepository = loadRepository()
-    parentCompanyId = int(run["company_id"])
-    reportingYear = int(run["reporting_year"])
-    currentTime = datetime.now(timezone.utc).replace(tzinfo=None)
-    statuses = []
-    for sourceCompanyId in sourceCompanyIds:
-        missingAtomicIds = getMissingAtomicIds(sourceCompanyId, facts)
-        approvedCount = len(rollupRepository.SOURCE_ATOMIC_IDS) - len(missingAtomicIds)
-        readyYn = approvedCount == len(rollupRepository.SOURCE_ATOMIC_IDS)
-        parentYn = sourceCompanyId == parentCompanyId
-        statuses.append(
-            {
-                "parentCompanyId": parentCompanyId,
-                "sourceCompanyId": sourceCompanyId,
-                "reportingYear": reportingYear,
-                "approvedCount": approvedCount,
-                "missingAtomicMetricIds": missingAtomicIds,
-                "requestStatus": SOURCE_STATUS_RECEIVED if parentYn else SOURCE_STATUS_REQUESTED,
-                "inputStatus": INPUT_STATUS_APPROVED if readyYn else (INPUT_STATUS_SUBMITTED if approvedCount > 0 else INPUT_STATUS_NOT_STARTED),
-                "approvalStatus": APPROVAL_STATUS_APPROVED if readyYn else (APPROVAL_STATUS_SUBMITTED if approvedCount > 0 else APPROVAL_STATUS_PENDING),
-                "transferStatus": TRANSFER_STATUS_RECEIVED if parentYn else TRANSFER_STATUS_NOT_SENT,
-                "sentAt": currentTime if parentYn else None,
-                "receivedAt": currentTime if parentYn else None,
-                "approvedAt": currentTime if readyYn else None,
-            }
-        )
-    return statuses
-
-
-def buildMissingSources(companyIds: list[int], facts: list[dict]) -> list[dict]:
-    missingSources = []
-    for companyId in companyIds:
-        missingAtomicIds = getMissingAtomicIds(companyId, facts)
-        if missingAtomicIds:
-            missingSources.append(
-                {
-                    "companyId": companyId,
-                    "missingAtomicMetricIds": missingAtomicIds,
-                }
-            )
-    return missingSources
-
-
-def getMissingAtomicIds(companyId: int, facts: list[dict]) -> list[str]:
-    rollupRepository = loadRepository()
-    approvedAtomicIds = {
-        fact["atomicMetricId"]
-        for fact in facts
-        if int(fact["companyId"]) == int(companyId)
-    }
-    return [
-        atomicId
-        for atomicId in rollupRepository.SOURCE_ATOMIC_IDS
-        if atomicId not in approvedAtomicIds
-    ]
-
-
-def buildFactMap(facts: list[dict]) -> dict[tuple[int, str], dict]:
-    return {
-        (int(fact["companyId"]), fact["atomicMetricId"]): fact
-        for fact in facts
-    }
-
-
-def buildRequestItem(request: dict, sourceCompanyId: int, facts: list[dict]) -> RollupRequestItemDto:
-    missingAtomicIds = getMissingAtomicIdsForYear(
-        sourceCompanyId,
-        int(request["reportingYear"]),
-        facts,
-    )
-    return RollupRequestItemDto(
-        batchId=int(request["batchId"]),
-        parentCompanyId=int(request["parentCompanyId"]),
-        parentCompanyCode=request.get("parentCompanyCode"),
-        parentCompanyName=request.get("parentCompanyName") or request.get("parentCompanyCode"),
-        reportingYear=int(request["reportingYear"]),
-        rollupPurposeCode=request.get("rollupPurposeCode") or "",
-        metricScopeCode=request.get("metricScopeCode") or "",
-        requestStatus=request.get("requestStatus") or "",
-        transferStatus=request.get("transferStatus") or "",
-        sendReadyYn=len(missingAtomicIds) == 0,
-        missingAtomicMetricIds=missingAtomicIds,
-    )
-
-
 def buildSourceSendStatus(source: dict) -> RollupSourceSendStatusDto:
     return RollupSourceSendStatusDto(
         batchId=int(source["esg_rollup_batch_id"]),
@@ -451,7 +540,6 @@ def buildSourceSendStatus(source: dict) -> RollupSourceSendStatusDto:
         transferStatus=source.get("transfer_status") or "",
         sentAt=formatDateTime(source.get("sent_at")),
     )
-
 
 def buildSummary(summary: dict) -> RollupBatchSummaryDto:
     requestedCount = int(summary.get("requestedCount") or 0)
@@ -468,41 +556,27 @@ def buildSummary(summary: dict) -> RollupBatchSummaryDto:
         pendingCount=pendingCount,
         calculateReadyYn=requestedCount > 0 and pendingCount == 0,
         dmaReadyYn=bool(summary.get("dmaReadyYn")),
+        reportReadyYn=bool(summary.get("reportReadyYn")),
     )
-
 
 def buildBatchStatus(batch: dict, sourceCompanyIds: list[int]) -> RollupBatchStatusDto:
     return RollupBatchStatusDto(
         batchId=int(batch["id"]),
-        runId=int(batch["run_id"]) if batch.get("run_id") is not None else None,
+        runId=int(batch.get("run_id") or 0) if batch.get("run_id") else None,
+        sourceCycleId=int(batch.get("source_cycle_id") or 0) if batch.get("source_cycle_id") else None,
         rollupPurposeCode=batch.get("rollup_purpose_code") or "",
         metricScopeCode=batch.get("metric_scope_code") or "",
         batchStatus=batch.get("batch_status") or "pending",
         dmaReadyYn=bool(batch.get("dma_ready_yn")),
+        reportReadyYn=bool(batch.get("report_ready_yn")),
         sourceCompanyIds=[int(companyId) for companyId in sourceCompanyIds],
     )
-
 
 def getSource(userModel) -> int:
     sourceCompanyId = resolveScope(userModel)
     if sourceCompanyId is None:
         raise RollupError(403, "COMPANY_SCOPE_REQUIRED", "Company scope is required.")
     return int(sourceCompanyId)
-
-
-def getRequestYears(requests: list[dict]) -> list[int]:
-    return sorted({int(request["reportingYear"]) for request in requests})
-
-
-def getMissingAtomicIdsForYear(companyId: int, reportingYear: int, facts: list[dict]) -> list[str]:
-    filteredFacts = [
-        fact
-        for fact in facts
-        if int(fact["companyId"]) == int(companyId)
-        and int(fact.get("reportingYear") or reportingYear) == int(reportingYear)
-    ]
-    return getMissingAtomicIds(companyId, filteredFacts)
-
 
 def formatDateTime(value) -> Optional[str]:
     if value is None:
@@ -511,6 +585,10 @@ def formatDateTime(value) -> Optional[str]:
         return value.isoformat()
     return str(value)
 
+def dumpModel(model) -> dict:
+    if hasattr(model, "model_dump"):
+        return model.model_dump()
+    return model.dict()
 
 def getActorUserId(userModel) -> Optional[int]:
     if isinstance(userModel, dict):
@@ -522,32 +600,13 @@ def getActorUserId(userModel) -> Optional[int]:
     except (TypeError, ValueError):
         return None
 
-
 def loadRepository():
     from src.utils import rolluprepository
-
     return rolluprepository
-
 
 def loadCalculator():
     from src.utils import rollupcalculator
-
     return rollupcalculator
-
-
-SOURCE_STATUS_RECEIVED = "received"
-SOURCE_STATUS_REQUESTED = "requested"
-SOURCE_STATUS_SENT = "sent"
-INPUT_STATUS_APPROVED = "approved"
-INPUT_STATUS_SUBMITTED = "submitted"
-INPUT_STATUS_NOT_STARTED = "not_started"
-APPROVAL_STATUS_APPROVED = "approved"
-APPROVAL_STATUS_SUBMITTED = "submitted"
-APPROVAL_STATUS_PENDING = "pending"
-TRANSFER_STATUS_RECEIVED = "received"
-TRANSFER_STATUS_SENT = "sent"
-TRANSFER_STATUS_NOT_SENT = "not_sent"
-
 
 __all__ = [
     "listSubsidiaries",

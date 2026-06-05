@@ -4,14 +4,19 @@ import "@styles/media.css";
 import robot from "@assets/images/robot/robot_media_t.png";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
+
+
+const IS_DUMMY = true;
+
+
 // 정적 데이터 정의 (컴포넌트 외부에 두어 불필요한 재렌더링 방지)
 const STEPS = [
-  { id: 1, title: "벤치마킹 분석", icon: "🎯", path: "/benchmk" },
-  { id: 2, title: "미디어 분석", icon: "📺", path: "/media" },
-  { id: 3, title: "이해관계자 설문", icon: "👥", path: "/survey" },
-  { id: 4, title: "전체 결과", icon: "📊", path: "/result" },
-  { id: 5, title: "보고서 초안", icon: "📄", path: "/draft" },
-];
+    { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
+    { id: 2, title: "미디어 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><polyline points="5,13 8,10 11,12 14,8 19,6" /></svg>, path: "/media" },
+    { id: 3, title: "이해관계자 설문", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" /><line x1="13" y1="11" x2="16" y2="11" /><line x1="13" y1="16" x2="16" y2="16" /></svg>, path: "/survey" },
+    { id: 4, title: "전체 결과", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="20" x2="21" y2="20" /><line x1="3" y1="4" x2="3" y2="20" /><rect x="5" y="13" width="3" height="7" /><rect x="10" y="10" width="3" height="10" /><rect x="15" y="8" width="3" height="12" /><circle cx="19" cy="4" r="3" /><polyline points="17.5,4 18.5,5 21,2.5" /></svg>, path: "/result" },
+    { id: 5, title: "보고서 초안", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>, path: "/draft" },
+  ];
 
 const DASHBOARD_MOCK_DATA = {
   stats: {
@@ -258,7 +263,7 @@ const Media = () => {
       <div className="media-container">
         {/* --- STEPPER HEADER --- */}
         <header className="media-header">
-          <h1 className="media-title">지속가능경영보고서 AI 자동 생성</h1>
+          
           <div className="media-stepper-row">
             {STEPS.map((step, index) => (
               <Fragment key={step.id}>
@@ -463,7 +468,7 @@ const Media = () => {
                 ? "AI 파이프라인 수집 가동 중..."
                 : showResult
                   ? "분석 완료 - 결과 요약 확인 (클릭)"
-                  : "빅데이터 연동 현황 확인하기"}
+                  : "실시간 분석 대기 중"}
             </div>
           </div>
 
@@ -498,11 +503,11 @@ const Media = () => {
                 <div className="result-layout-content" style={{ width: "100%" }}>
                   {/* 결과 배너 */}
                   <div className="result-banner" style={{ background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                    <div className="result-banner-left" style={{ alignItems: "stretch", textAlign: "center" }}>
-                      <div className="result-banner-title" style={{ textAlign: "center" }}>
+                    <div className="result-banner-left">
+                      <div className="result-banner-title" style={{ textAlign: "center", alignSelf: "center" }}>
                         [AI 미디어 시그널 분석 결과]
                       </div>
-                      <p className="result-banner-desc" style={{ textAlign: "center" }}>
+                      <p className="result-banner-desc">
                         언론 기사, 전문기관 자료, 핵심규제 프레임을 종합 반영하여<br />
                         외부 시그널 기반의 주요 서브이슈를 도출했습니다.
                       </p>

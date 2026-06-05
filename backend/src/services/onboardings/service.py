@@ -42,10 +42,10 @@ SUPPORTED_CYCLE_TYPE = "PRE_DMA_G0"
 SUPPORTED_INPUT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
 SUPPORTED_ASSIGNMENT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
 ASSIGNMENT_MANAGER_ROLES = {"ADMIN", "ESG"}
-ASSIGNMENT_MANAGER_ROLE_NAMES = {"관리자", "ESG담당자"}
+ASSIGNMENT_MANAGER_ROLE_NAMES = {"관리자", "ESG담당자", "ESG 담당자"}
 PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE = "PRE_DMA_G0_CYCLE_NOT_READY: 기존 PRE_DMA_G0 workflow를 먼저 시작해 주세요."
 APPROVER_ROLES = {"ADMIN", "ESG"}
-APPROVER_ROLE_NAMES = {"관리자", "ESG담당자"}
+APPROVER_ROLE_NAMES = {"관리자", "ESG담당자", "ESG 담당자"}
 
 
 class PreDmaG0CycleNotReadyError(ValueError):
@@ -682,5 +682,14 @@ def readUserField(userModel, key: str):
     if userModel is None:
         return None
     if isinstance(userModel, dict):
-        return userModel.get(key)
-    return getattr(userModel, key, None)
+        if key in userModel:
+            return userModel.get(key)
+        if key == "role_name":
+            return userModel.get("roleName")
+        return None
+    value = getattr(userModel, key, None)
+    if value is not None:
+        return value
+    if key == "role_name":
+        return getattr(userModel, "roleName", None)
+    return None

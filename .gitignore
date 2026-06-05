@@ -208,6 +208,7 @@ __marimo__/
 
 secrets/
 
-
 docs/
 backend/references/
+node_modules
+

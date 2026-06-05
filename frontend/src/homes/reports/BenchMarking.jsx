@@ -1,3 +1,15 @@
+/* ============================================================================
+ *  [병합 작업 요약]  benchmarking.jsx(소문자) → BenchMarking.jsx(대문자) 통합
+ * ----------------------------------------------------------------------------
+ *  - 베이스: 대문자 BenchMarking.jsx (정상 동작하는 React 컴포넌트) 유지
+ *  - 이식:   소문자 파일의 "통계카드 4개 + 3패널"만 React 문법으로 변환해 추가
+ *  - 숫자:   현재는 더미. 백엔드 연동 시 dashboardData 한 곳만 교체하면 됨
+ *
+ *  ▶ 코드에서 [병합-추가] = 이번에 새로 들어간 부분
+ *             [병합-수정] = 기존 코드를 살짝 손본 부분
+ *             (주석 없는 부분은 대문자 원본 그대로)
+ * ========================================================================== */
+
 
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -40,7 +52,8 @@ const DUMMY_DB_RESULTS = [
   { domain: "G", selected_issue: "윤리·준법경영 시스템", selected_sub_issue: "부패방지 경영시스템(ISO 37001) 운영, 임직원 윤리강령 준수 서약, 내부고발제도 활성화를 설명하는 문장.", type: "sub" },
 ];
 
-const DUMMY_RESULT_DASHBOARD = {stats:{
+const DUMMY_RESULT_DASHBOARD = {
+  stats: {
     reports: 24,
     leaderCount: 8,
     peerCount: 8,
@@ -49,14 +62,14 @@ const DUMMY_RESULT_DASHBOARD = {stats:{
     commonIssues: 19,
     blindSpots: 9,
   }
-,
-// 패널1: 벤치마킹 Top 이슈 점수
+  ,
+  // 패널1: 벤치마킹 Top 이슈 점수
   topIssues: [
-    { rank: 1, name: "기후변화·온실가스", impact: 9.2, financial:8.7 },
-    { rank: 2, name: "수자원·폐수 관리", impact: 8.6, financial: 7.9} ,
-    { rank: 3, name :"폐기물·자원순환", impact: 8.1, financial: 7.6} ,
-    { rank: 4, name :"친환경 제품·Eco-Design", impact: 7.8, financial: 7.3} ,
-    { rank: 5, name :"공급망 ESG 관리", impact: 7.4, financial: 6.8} ,
+    { rank: 1, name: "기후변화·온실가스", impact: 9.2, financial: 8.7 },
+    { rank: 2, name: "수자원·폐수 관리", impact: 8.6, financial: 7.9 },
+    { rank: 3, name: "폐기물·자원순환", impact: 8.1, financial: 7.6 },
+    { rank: 4, name: "친환경 제품·Eco-Design", impact: 7.8, financial: 7.3 },
+    { rank: 5, name: "공급망 ESG 관리", impact: 7.4, financial: 6.8 },
   ],
   // 패널2: 공통 선정 이슈
   commonIssues: [
@@ -66,14 +79,14 @@ const DUMMY_RESULT_DASHBOARD = {stats:{
     { name: "공급망 ESG 관리", leader: true, peer: true, sub: true },
     { name: "공급망 ESG 관리", leader: true, peer: true, sub: true },
   ],
-   // 패널3: 자사 Blind Spot
-   blindSpots : [
-    {title: "생물다양성 영향 관리", desc: "생물다양성 리스크·영향 평가 및 관리 체계가 보고서에서 상대적으로 낮게 다뤄지고 있습니다."},
+  // 패널3: 자사 Blind Spot
+  blindSpots: [
+    { title: "생물다양성 영향 관리", desc: "생물다양성 리스크·영향 평가 및 관리 체계가 보고서에서 상대적으로 낮게 다뤄지고 있습니다." },
     { title: "인권 실사 및 관리", desc: "인권 실사 프로세스 및 고충처리 체계에 대한 정보가 상대적으로 부족합니다." },
-     { title: "ESG 데이터 관리 체계", desc: "ESG 데이터 수집·관리·검증 체계의 고도화 및 거버넌스 정보가 미흡합니다." },
-  ],  
+    { title: "ESG 데이터 관리 체계", desc: "ESG 데이터 수집·관리·검증 체계의 고도화 및 거버넌스 정보가 미흡합니다." },
+  ],
 }
-  
+
 
 
 const Benchmarking = () => {
@@ -101,11 +114,11 @@ const Benchmarking = () => {
   const navigate = useNavigate();
 
   const steps = [
-    { id: 1, title: "벤치마킹 분석", icon: "🎯", path: "/benchmk" },
-    { id: 2, title: "미디어 분석", icon: "📺", path: "/media" },
-    { id: 3, title: "이해관계자 설문", icon: "👥", path: "/survey" },
-    { id: 4, title: "전체 결과", icon: "📊", path: "/result" },
-    { id: 5, title: "보고서 초안", icon: "📄", path: "/draft" },
+    { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
+    { id: 2, title: "미디어 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><polyline points="5,13 8,10 11,12 14,8 19,6" /></svg>, path: "/media" },
+    { id: 3, title: "이해관계자 설문", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" /><line x1="13" y1="11" x2="16" y2="11" /><line x1="13" y1="16" x2="16" y2="16" /></svg>, path: "/survey" },
+    { id: 4, title: "전체 결과", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="20" x2="21" y2="20" /><line x1="3" y1="4" x2="3" y2="20" /><rect x="5" y="13" width="3" height="7" /><rect x="10" y="10" width="3" height="10" /><rect x="15" y="8" width="3" height="12" /><circle cx="19" cy="4" r="3" /><polyline points="17.5,4 18.5,5 21,2.5" /></svg>, path: "/result" },
+    { id: 5, title: "보고서 초안", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>, path: "/draft" },
   ];
 
   const activeIndex = 0;
@@ -263,6 +276,9 @@ const Benchmarking = () => {
         });
         if (response && response.status !== false) {
           setRawRows(response.data || []);
+          // [병합-추가/백엔드 TODO] 통계카드 + 3패널 데이터도 응답에서 주입.
+          //   응답이 DUMMY_RESULT_DASHBOARD와 같은 형태라면 아래 한 줄이면 됨:
+          // setDashboardData(response.data.dashboard);
         } else {
           showDefaultAlert("데이터 분석 오류", "네트워크 통신 중 에러가 발생했습니다.", "error");
         }
@@ -337,7 +353,7 @@ const Benchmarking = () => {
   return (
     <div className="Bench-container">
       <header className="Bench-header">
-        <h1 className="Bench-title">지속가능경영보고서 AI 자동 생성</h1>
+        {/* <h1 className="Bench-title">지속가능경영보고서 AI 자동 생성</h1> */}
 
         <div className="Bench-stepper-row">
           {steps.map((step, index) => (
@@ -370,13 +386,13 @@ const Benchmarking = () => {
       </main>
 
       <div className={`dashboard-result-dashboard ${dashboardOpen ? "open " : ""}`} id="dashboard" >
-        <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen) }>
+        <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen)}>
           <div className="handle-pill" >
             {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인" : "실시간 분석 대기 중"}
           </div>
         </div>
-          {/* [병합-수정] showResult일 때 showing-result 클래스 부여 → 결과 길어지면 내부 스크롤 (CSS와 연동) */}
-        <div className={`robot-view-container ${isAnalyzing ? "analyzing" : ""} ${showResult ? "showing-result":""}`}>
+        {/* [병합-수정] showResult일 때 showing-result 클래스 부여 → 결과 길어지면 내부 스크롤 (CSS와 연동) */}
+        <div className={`robot-view-container ${isAnalyzing ? "analyzing" : ""} ${showResult ? "showing-result" : ""}`}>
           <div id="particle-field" className="particle-field" ref={particleRef}></div>
 
           {!showResult ? (
@@ -411,8 +427,8 @@ const Benchmarking = () => {
                 </p>
               </div>
 
-               {/* 통계 카드 4개 */}
-               <div className = "result-stats-row">
+              {/* 통계 카드 4개 */}
+              <div className="result-stats-row">
                 <div className="result-stat-card">
                   <div className="stat-icon-wrap">📋</div>
                   <div>
@@ -421,9 +437,9 @@ const Benchmarking = () => {
                     <div className="stat-sub">
                       리더 {dashboardData.stats.leaderCount} · 피어 {dashboardData.stats.peerCount} · 자회사 {dashboardData.stats.subcount}
                     </div>
-                    </div>  
-                    </div>
-                
+                  </div>
+                </div>
+
                 <div className="result-stat-card">
                   <div className="stat-icon-wrap">≡</div>
                   <div>
@@ -439,16 +455,16 @@ const Benchmarking = () => {
                   </div>
                 </div>
 
-                
-                  <div className="result-stat-card">
-                    <div className="stat-icon-wrap">🎯</div>
-                    <div>
-                      <div className="stat-label">자사 Blind Spot</div>
-                      <div className="stat-value">{dashboardData.stats.blindSpots}개</div>
-                    </div>
+
+                <div className="result-stat-card">
+                  <div className="stat-icon-wrap">🎯</div>
+                  <div>
+                    <div className="stat-label">자사 Blind Spot</div>
+                    <div className="stat-value">{dashboardData.stats.blindSpots}개</div>
                   </div>
+                </div>
               </div>
-                {/* 하단 3패널 (Top 이슈 점수 / 공통 선정 이슈 / Blind Spot) */}
+              {/* 하단 3패널 (Top 이슈 점수 / 공통 선정 이슈 / Blind Spot) */}
               <div className="result-panels-row">
                 {/* 패널1: 벤치마킹 Top 이슈 점수 */}
                 <div className="result-panel">

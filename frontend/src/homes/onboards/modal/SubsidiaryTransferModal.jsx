@@ -99,10 +99,10 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
           </p>
 
           {/* loading */}
-          {loading && (
+          {loading && requests.length === 0 && (
             <div className="ob1-table-loading" style={{ padding: "24px" }}>
               <div className="ob1-spinner" />
-              <p>요청 목록을 불러오는 중...</p>
+              <p>요청 목록을 불러오고 있습니다...</p>
             </div>
           )}
 
@@ -125,7 +125,7 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
           )}
 
           {/* list */}
-          {!loading && !error && requests.length > 0 && (
+          {((loading && requests.length > 0) || (!loading && !error && requests.length > 0)) && (
             <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
               {requests.map((req) => {
                 const isNotReady = req.sendReadyYn === false;

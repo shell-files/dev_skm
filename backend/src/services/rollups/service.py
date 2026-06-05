@@ -311,11 +311,15 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
             rules, ruleSources = rollupRepository.resolveConsolidatedRuleClosure(metricIds)
             requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
 
-            facts = rollupRepository.listApprovedFactsByCompany(includedCompanyIds, reportingYear, requiredAtomicIds)
-            currentFactMap = rollupCalculator.buildMultiCompanyFactMap(includedCompanyIds, requiredAtomicIds, facts)
-
-            priorFacts = rollupRepository.listPriorYearApprovedFactsByCompany(includedCompanyIds, reportingYear, requiredAtomicIds)
-            priorFactMap = rollupCalculator.buildMultiCompanyFactMap(includedCompanyIds, requiredAtomicIds, priorFacts)
+            historicalDepth = rollupCalculator.resolveHistoricalLookbackDepth(rules, ruleSources)
+            entityFactMapsByYear = {}
+            for factYear in range(reportingYear, reportingYear - historicalDepth - 1, -1):
+                facts = rollupRepository.listApprovedFactsByCompany(includedCompanyIds, factYear, requiredAtomicIds)
+                entityFactMapsByYear[factYear] = rollupCalculator.buildMultiCompanyFactMap(
+                    includedCompanyIds,
+                    requiredAtomicIds,
+                    facts,
+                )
 
             cur.execute("SELECT id FROM ESG_MATERIALITY_RUN WHERE required_rollup_batch_id = ?", (batchId,))
             r = cur.fetchone()
@@ -323,9 +327,12 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
             if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK and not runId:
                 raise RollupError(409, "REPORT_RUN_NOT_FOUND", "Report workflow run was not found for rollup batch.")
 
-            from src.utils.rollupcalculator import calculateConsolidatedRules
-            results, warnings, allSuccess = calculateConsolidatedRules(
-                rules, ruleSources, currentFactMap, priorFactMap, includedCompanyIds
+            results, warnings, allSuccess = rollupCalculator.calculateConsolidatedRulesByYear(
+                rules=rules,
+                sources=ruleSources,
+                entityFactMapsByYear=entityFactMapsByYear,
+                reportingYear=reportingYear,
+                companyIds=includedCompanyIds,
             )
 
             if not allSuccess:

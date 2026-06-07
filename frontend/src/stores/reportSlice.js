@@ -31,6 +31,10 @@ const toApiError = (res, fallbackMessage) => ({
   error: res?.error || null,
 });
 
+const ROLLUP_API_ROOT = "/api/v1/rollups";
+const ONBOARDING_APPROVAL_API_ROOT = "/api/v1/onboarding-approvals";
+const REPORT_WORKFLOW_API_ROOT = "/api/v1/report-workflow";
+
 const rejectIfFailed = (res, rejectWithValue, fallbackMessage) => {
   if (isApiFailed(res)) {
     return rejectWithValue(toApiError(res, fallbackMessage));
@@ -60,6 +64,7 @@ const initialState = {
   workflow: {
     current: null,
     g0Status: null,
+    postDmaScope: null,
   },
 
   onboarding: {
@@ -107,6 +112,8 @@ const initialState = {
     onboardingApprovalReview: false,
     onboardingApprovalApprove: false,
     onboardingApprovalReject: false,
+    initializePostDmaDisclosureScope: false,
+    fetchActiveRollupBatch: false,
   },
 
   error: {
@@ -131,6 +138,8 @@ const initialState = {
     onboardingApprovalReview: null,
     onboardingApprovalApprove: null,
     onboardingApprovalReject: null,
+    initializePostDmaDisclosureScope: null,
+    fetchActiveRollupBatch: null,
   },
 };
 
@@ -349,7 +358,7 @@ export const fetchApprovalItems = createAsyncThunk(
     };
     if (status) params.status = status;
     try {
-      const res = await GET("/v1/onboarding-approvals", params);
+      const res = await GET(`${ONBOARDING_APPROVAL_API_ROOT}`, params);
       return rejectIfFailed(res, rejectWithValue, "승인 작업함 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -386,7 +395,7 @@ export const fetchRollupSubsidiaries = createAsyncThunk(
     if (rollupPurposeCode) params.rollupPurposeCode = rollupPurposeCode;
     if (metricScopeCode) params.metricScopeCode = metricScopeCode;
     try {
-      const res = await GET("/v1/rollups/subsidiaries", params);
+      const res = await GET(`${ROLLUP_API_ROOT}/subsidiaries`, params);
       return rejectIfFailed(res, rejectWithValue, "자회사 목록 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -402,7 +411,7 @@ export const fetchRollupScopePreview = createAsyncThunk(
   "report/fetchRollupScopePreview",
   async (payload = {}, { rejectWithValue }) => {
     try {
-      const res = await GET("/v1/rollups/scope-preview", payload);
+      const res = await GET(`${ROLLUP_API_ROOT}/scope-preview`, payload);
       return rejectIfFailed(res, rejectWithValue, "롤업 범위 미리보기 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -418,7 +427,7 @@ export const createRollupBatch = createAsyncThunk(
   "report/createRollupBatch",
   async (payload, { rejectWithValue }) => {
     try {
-      const res = await POST("/v1/rollups/batches", payload);
+      const res = await POST(`${ROLLUP_API_ROOT}/batches`, payload);
       return rejectIfFailed(res, rejectWithValue, "자회사 데이터 요청에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -430,11 +439,47 @@ export const createRollupBatch = createAsyncThunk(
   }
 );
 
+export const fetchActiveRollupBatch = createAsyncThunk(
+  "report/fetchActiveRollupBatch",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = await GET(`${ROLLUP_API_ROOT}/batches/active`, payload);
+      return rejectIfFailed(res, rejectWithValue, "진행 중인 롤업 배치 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message:
+          error?.message ||
+          "진행 중인 롤업 배치 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const initializePostDmaDisclosureScope = createAsyncThunk(
+  "report/initializePostDmaDisclosureScope",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = await POST(`${REPORT_WORKFLOW_API_ROOT}/${runId}/post-dma-scope/initialize`);
+      return rejectIfFailed(res, rejectWithValue, "POST DMA 스코프 초기화에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message:
+          error?.message ||
+          "POST DMA 스코프 초기화 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
 export const fetchRollupRequests = createAsyncThunk(
   "report/fetchRollupRequests",
   async (payload = {}, { rejectWithValue }) => {
     try {
-      const res = await GET("/v1/rollups/requests", payload);
+      const res = await GET(`${ROLLUP_API_ROOT}/requests`, payload);
       return rejectIfFailed(res, rejectWithValue, "자회사 요청 목록 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -450,7 +495,7 @@ export const fetchRollupRequestDetail = createAsyncThunk(
   "report/fetchRollupRequestDetail",
   async ({ batchId }, { rejectWithValue }) => {
     try {
-      const res = await GET(`/v1/rollups/requests/${batchId}`);
+      const res = await GET(`${ROLLUP_API_ROOT}/requests/${batchId}`);
       return rejectIfFailed(res, rejectWithValue, "롤업 요청 상세 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -466,7 +511,7 @@ export const fetchRollupBatchSources = createAsyncThunk(
   "report/fetchRollupBatchSources",
   async ({ batchId }, { rejectWithValue }) => {
     try {
-      const res = await GET(`/v1/rollups/batches/${batchId}/sources`);
+      const res = await GET(`${ROLLUP_API_ROOT}/batches/${batchId}/sources`);
       return rejectIfFailed(res, rejectWithValue, "롤업 배치 자회사 목록 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -482,7 +527,7 @@ export const sendRollupSource = createAsyncThunk(
   "report/sendRollupSource",
   async ({ batchId }, { rejectWithValue }) => {
     try {
-      const res = await POST(`/v1/rollups/batches/${batchId}/sources/send`);
+      const res = await POST(`${ROLLUP_API_ROOT}/batches/${batchId}/sources/send`);
       return rejectIfFailed(res, rejectWithValue, "자회사 데이터 전송에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -498,7 +543,7 @@ export const fetchRollupBatchStatus = createAsyncThunk(
   "report/fetchRollupBatchStatus",
   async ({ batchId }, { rejectWithValue }) => {
     try {
-      const res = await GET(`/v1/rollups/batches/${batchId}/status`);
+      const res = await GET(`${ROLLUP_API_ROOT}/batches/${batchId}/status`);
       return rejectIfFailed(res, rejectWithValue, "롤업 배치 상태 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -514,7 +559,7 @@ export const calculateRollupBatch = createAsyncThunk(
   "report/calculateRollupBatch",
   async ({ batchId }, { rejectWithValue }) => {
     try {
-      const res = await POST(`/v1/rollups/batches/${batchId}/calculate`);
+      const res = await POST(`${ROLLUP_API_ROOT}/batches/${batchId}/calculate`);
       return rejectIfFailed(res, rejectWithValue, "롤업 계산에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -530,7 +575,7 @@ export const submitOnboardingApproval = createAsyncThunk(
   "report/submitOnboardingApproval",
   async (payload, { rejectWithValue }) => {
     try {
-      const res = await POST("/v1/onboarding-approvals/submit", payload);
+      const res = await POST(`${ONBOARDING_APPROVAL_API_ROOT}/submit`, payload);
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 요청에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -547,7 +592,7 @@ export const reviewOnboardingApproval = createAsyncThunk(
   async (payload, { rejectWithValue }) => {
     try {
       const res = await POST(
-        "/v1/onboarding-approvals/review",
+        `${ONBOARDING_APPROVAL_API_ROOT}/review`,
         normalizeApprovalDecisionPayload(payload)
       );
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 검토에 실패했습니다.");
@@ -566,7 +611,7 @@ export const approveOnboardingApproval = createAsyncThunk(
   async (payload, { rejectWithValue }) => {
     try {
       const res = await POST(
-        "/v1/onboarding-approvals/approve",
+        `${ONBOARDING_APPROVAL_API_ROOT}/approve`,
         normalizeApprovalDecisionPayload(payload)
       );
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 처리에 실패했습니다.");
@@ -585,7 +630,7 @@ export const rejectOnboardingApproval = createAsyncThunk(
   async (payload, { rejectWithValue }) => {
     try {
       const res = await POST(
-        "/v1/onboarding-approvals/reject",
+        `${ONBOARDING_APPROVAL_API_ROOT}/reject`,
         normalizeApprovalDecisionPayload(payload)
       );
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 반려에 실패했습니다.");
@@ -796,6 +841,43 @@ const reportSlice = createSlice({
       .addCase(createRollupBatch.rejected, (state, action) => setRejected(state, "createBatch", action));
 
     builder
+      // initializePostDmaDisclosureScope
+      .addCase(initializePostDmaDisclosureScope.pending, (state) =>
+        setPending(state, "initializePostDmaDisclosureScope")
+      )
+      .addCase(initializePostDmaDisclosureScope.fulfilled, (state, action) => {
+        state.loading.initializePostDmaDisclosureScope = false;
+        state.error.initializePostDmaDisclosureScope = null;
+        state.workflow.postDmaScope = dataOf(action.payload);
+      })
+      .addCase(initializePostDmaDisclosureScope.rejected, (state, action) => {
+        setRejected(state, "initializePostDmaDisclosureScope", action);
+        state.workflow.postDmaScope = null;
+      })
+
+      // fetchActiveRollupBatch
+      .addCase(fetchActiveRollupBatch.pending, (state) =>
+        setPending(state, "fetchActiveRollupBatch")
+      )
+      .addCase(fetchActiveRollupBatch.fulfilled, (state, action) => {
+        state.loading.fetchActiveRollupBatch = false;
+        state.error.fetchActiveRollupBatch = null;
+
+        const hasDataField =
+          action.payload &&
+          Object.prototype.hasOwnProperty.call(action.payload, "data");
+
+        const data = hasDataField
+          ? action.payload.data
+          : action.payload;
+
+        state.rollup.activeBatchId = data?.batchId ?? null;
+        state.rollup.batchStatus = data || null;
+      })
+      .addCase(fetchActiveRollupBatch.rejected, (state, action) => {
+        setRejected(state, "fetchActiveRollupBatch", action);
+      })
+
       .addCase(fetchRollupRequests.pending, (state) => setPending(state, "requests"))
       .addCase(fetchRollupRequests.fulfilled, (state, action) => {
         state.loading.requests = false;

@@ -47,14 +47,24 @@ def getBatch(batchId: int) -> dict:
 
 def listRequests(
     sourceCompanyId: int,
-    rollupPurposeCode: str,
-    metricScopeCode: str,
+    rollupPurposeCode: Optional[str],
+    metricScopeCode: Optional[str],
     includeSentYn: bool = True,
     transferStatus: Optional[str] = None,
 ) -> list[dict]:
     transferFilter = ""
     requestFilter = ""
-    params = [sourceCompanyId, rollupPurposeCode, metricScopeCode]
+    purposeFilter = ""
+    scopeFilter = ""
+    params = [sourceCompanyId]
+    
+    if rollupPurposeCode is not None:
+        purposeFilter = "AND b.rollup_purpose_code = ?"
+        params.append(rollupPurposeCode)
+        
+    if metricScopeCode is not None:
+        scopeFilter = "AND b.metric_scope_code = ?"
+        params.append(metricScopeCode)
     normalizedTransferStatus = str(transferStatus or "").strip().lower()
     if normalizedTransferStatus:
         transferFilter = "AND LOWER(COALESCE(s.transfer_status, '')) = ?"
@@ -88,8 +98,8 @@ def listRequests(
         WHERE s.source_company_id = ?
           AND s.source_company_id <> s.parent_company_id
           AND s.delete_yn = 0
-          AND b.rollup_purpose_code = ?
-          AND b.metric_scope_code = ?
+          {purposeFilter}
+          {scopeFilter}
           {requestFilter}
           {transferFilter}
           AND LOWER(COALESCE(b.batch_status, '')) NOT IN (
@@ -99,7 +109,7 @@ def listRequests(
               'archived'
           )
         ORDER BY s.updated_at DESC, s.id DESC
-    """.format(requestFilter=requestFilter, transferFilter=transferFilter)
+    """.format(purposeFilter=purposeFilter, scopeFilter=scopeFilter, requestFilter=requestFilter, transferFilter=transferFilter)
     return findAll(sql, tuple(params)) or []
 
 def getSource(batchId: int, sourceCompanyId: int) -> dict:

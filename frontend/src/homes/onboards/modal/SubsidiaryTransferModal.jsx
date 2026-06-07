@@ -37,7 +37,7 @@ const SubsidiaryTransferModal = ({ isOpen, onClose, onTransferred }) => {
   const loadRequests = async () => {
     setError(null);
     try {
-      await dispatch(fetchRollupRequests()).unwrap();
+      await dispatch(fetchRollupRequests({ allPurposesYn: true })).unwrap();
     } catch (err) {
       console.error(err);
       setError(err?.message || "요청 목록 조회에 실패했습니다.");

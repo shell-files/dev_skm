@@ -304,13 +304,14 @@ def calculateConsolidatedRulesByYear(
                 }
 
         except CalculationError as error:
-            result = buildRuleResult(rule, [], error.code, year)
+            result = buildRuleResult(rule, ruleSources, error.code, year)
             result["calculationTrace"] = {
                 "reportingYear": reportingYear,
                 "evaluatedYear": year,
                 "historicalLookbackDepth": historicalLookbackDepth,
                 "errorCode": error.code,
                 "errorMessage": error.message,
+                "historicalDependencies": dependencyTrace,
             }
 
         finally:

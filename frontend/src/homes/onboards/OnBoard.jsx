@@ -116,6 +116,20 @@ const resolveOnboardingCycleType = (workflow, requestedCycleType) => {
   return workflowValue === "POST_DMA_DISCLOSURE" ? "POST_DMA_DISCLOSURE" : "PRE_DMA_G0";
 };
 
+const resolveRollupContext = (cycleType) => {
+  const normalized = String(cycleType || "").trim().toUpperCase();
+  if (normalized === "POST_DMA_DISCLOSURE") {
+    return {
+      rollupPurposeCode: "REPORT_DISCLOSURE",
+      metricScopeCode: "SELECTED_DISCLOSURE",
+    };
+  }
+  return {
+    rollupPurposeCode: "DMA_PRECHECK",
+    metricScopeCode: "G0_02_FINANCIAL_BASIS",
+  };
+};
+
 const mergeAssignmentIntoItems = (items = [], assignments = []) => {
   const assignmentByMetric = new Map((assignments || []).map((item) => [item.metricId, item]));
   return items.map((item) => {
@@ -207,8 +221,9 @@ const OnboardingWorkflowCta = ({
   onBasisModalOpen,
   onCalculated,
   onCtaClick,
-  onReqModalOpen,
   onTransferModalOpen,
+  rollupPurposeCode,
+  metricScopeCode,
   rollupScenario,
 }) => {
   if (variant === "noRun" || isNoRunWorkflow(workflow)) {
@@ -251,8 +266,9 @@ const OnboardingWorkflowCta = ({
           <RollupSummaryPanel
             batchId={activeBatchId}
             onCalculated={onCalculated}
+            rollupPurposeCode={rollupPurposeCode}
+            metricScopeCode={metricScopeCode}
             rollupScenario={rollupScenario}
-            onManageRequests={() => onReqModalOpen?.()}
             onSendSource={() => onTransferModalOpen?.()}
           />
         )}
@@ -290,7 +306,6 @@ const OnboardingMetricTable = ({
   selectedMetricIds,
   onSelectMetric,
   onToggleSelectAll,
-  onRowAssignRequested,
   onBulkAssignRequested,
   onOpenMetric,
   onRetry,
@@ -530,12 +545,17 @@ const OnBoard = () => {
     () => resolveOnboardingCycleType(displayWorkflow, cycleTypeQuery),
     [displayWorkflow, cycleTypeQuery]
   );
+  const activeRollupContext = useMemo(
+    () => resolveRollupContext(activeCycleType),
+    [activeCycleType]
+  );
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
   const [isSubReqModalOpen, setIsSubReqModalOpen] = useState(false);
   const [isSubTransferModalOpen, setIsSubTransferModalOpen] = useState(false);
+  const [activeSourceCycleId, setActiveSourceCycleId] = useState(null);
 
   // New States for UI-1 & UI-2
   const [selectedMetricIds, setSelectedMetricIds] = useState([]);
@@ -565,6 +585,7 @@ const OnBoard = () => {
   const initializeOnboarding = useCallback(async () => {
     if (!companyId) {
       dispatch(resetReportState());
+      setActiveSourceCycleId(null);
       return;
     }
 
@@ -575,11 +596,13 @@ const OnBoard = () => {
       const nextWorkflow = workflowRes?.data || workflowRes;
 
       if (isNoRunWorkflow(nextWorkflow)) {
+        setActiveSourceCycleId(null);
         setIsBasisModalOpen(true);
         return;
       }
 
       const nextCycleType = resolveOnboardingCycleType(nextWorkflow, cycleTypeQuery);
+      const nextRollupContext = resolveRollupContext(nextCycleType);
       const runId = nextWorkflow.runId;
       let sourceCycleId;
 
@@ -591,20 +614,15 @@ const OnBoard = () => {
         const initializedScope = initializedRes?.data || initializedRes;
         sourceCycleId = initializedScope?.cycleId;
       }
+      setActiveSourceCycleId(sourceCycleId ?? null);
 
       if (nextWorkflow?.reportBasisType === "CONSOLIDATED") {
         const activeRes = await dispatch(
           fetchActiveRollupBatch({
             runId,
             sourceCycleId,
-            rollupPurposeCode:
-              nextCycleType === "POST_DMA_DISCLOSURE"
-                ? "REPORT_DISCLOSURE"
-                : "DMA_PRECHECK",
-            metricScopeCode:
-              nextCycleType === "POST_DMA_DISCLOSURE"
-                ? "SELECTED_DISCLOSURE"
-                : "G0_02_FINANCIAL_BASIS",
+            rollupPurposeCode: nextRollupContext.rollupPurposeCode,
+            metricScopeCode: nextRollupContext.metricScopeCode,
           })
         ).unwrap();
 
@@ -638,7 +656,7 @@ const OnBoard = () => {
 
   useEffect(() => {
     dispatch(resetReportState());
-    initializeOnboarding();
+    Promise.resolve().then(() => initializeOnboarding());
   }, [
     dispatch,
     initializeOnboarding,
@@ -891,8 +909,9 @@ const OnBoard = () => {
                 isNoRunWorkflow={isNoRunWorkflow}
                 onCalculated={() => initializeOnboarding()}
                 onCtaClick={handleCtaClick}
-                onReqModalOpen={() => setIsSubReqModalOpen(true)}
                 onTransferModalOpen={() => setIsSubTransferModalOpen(true)}
+                rollupPurposeCode={activeRollupContext.rollupPurposeCode}
+                metricScopeCode={activeRollupContext.metricScopeCode}
                 rollupScenario={previewRollupScenario}
               />
 
@@ -903,7 +922,6 @@ const OnBoard = () => {
                 selectedMetricIds={selectedMetricIds}
                 onSelectMetric={handleSelectMetric}
                 onToggleSelectAll={handleToggleSelectAll}
-                onRowAssignRequested={handleRowAssignRequested}
                 onBulkAssignRequested={handleBulkAssignRequested}
                 onOpenMetric={(item, subMetrics) => {
                   setSelectedItem({
@@ -914,6 +932,22 @@ const OnBoard = () => {
                 }}
                 onRetry={initializeOnboarding}
                 viewerRole={viewerRole}
+              />
+              <BatchActionBar
+                selectedCount={selectedMetricIds.length}
+                actions={[
+                  {
+                    label: "담당자 일괄 지정",
+                    onClick: handleBulkAssignRequested,
+                    className: "save",
+                  },
+                  {
+                    label: "담당자 일괄 해제",
+                    onClick: handleBulkUnassignRequested,
+                    className: "cancel",
+                    disabled: !selectedMetricIds.length,
+                  },
+                ]}
               />
               <OnboardingWorkflowCta
                 loadingWorkflow={loadingWorkflow}
@@ -949,8 +983,14 @@ const OnBoard = () => {
         isOpen={isSubReqModalOpen}
         onClose={() => setIsSubReqModalOpen(false)}
         runId={workflow?.runId}
-        onRequested={async (batch) => {
-          dispatch(setActiveBatchId(batch.batchId));
+        reportingYear={reportingYear}
+        sourceCycleId={activeSourceCycleId}
+        rollupPurposeCode={activeRollupContext.rollupPurposeCode}
+        metricScopeCode={activeRollupContext.metricScopeCode}
+        onRequested={async (batchId) => {
+          if (batchId) {
+            dispatch(setActiveBatchId(batchId));
+          }
           setIsSubReqModalOpen(false);
           await initializeOnboarding();
         }}
@@ -959,9 +999,14 @@ const OnBoard = () => {
       <SubsidiaryTransferModal
         isOpen={isSubTransferModalOpen}
         onClose={() => setIsSubTransferModalOpen(false)}
+        reportingYear={reportingYear}
         onTransferred={async (batchId) => {
           dispatch(setActiveBatchId(batchId));
           await initializeOnboarding();
+        }}
+        onNavigateToInput={({ url }) => {
+          setIsSubTransferModalOpen(false);
+          navigate(url);
         }}
       />
 

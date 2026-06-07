@@ -1,50 +1,113 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";
 import {
   createRollupBatch,
+  fetchRollupBatchSources,
+  fetchRollupBatchStatus,
+  fetchRollupScopePreview,
   fetchRollupSubsidiaries,
+  setActiveBatchId,
 } from "@stores/reportSlice";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
-/**
- * SubsidiaryRequestModal
- *
- * G0 데이터 요청 자회사 선택 modal.
- * DTO: res.data.items -> { companyId, companyCode, companyName }
- */
-const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
+const purposeLabel = (code) => {
+  const value = String(code || "").toUpperCase();
+  if (value === "REPORT_DISCLOSURE") return "보고서 연결 공시";
+  if (value === "DMA_PRECHECK") return "DMA 사전 계산";
+  return value || "-";
+};
+
+const asItems = (value) => {
+  if (Array.isArray(value)) return value;
+  if (Array.isArray(value?.items)) return value.items;
+  if (Array.isArray(value?.metricItems)) return value.metricItems;
+  if (Array.isArray(value?.metrics)) return value.metrics;
+  return [];
+};
+
+const SubsidiaryRequestModal = ({
+  isOpen,
+  onClose,
+  runId,
+  reportingYear,
+  sourceCycleId,
+  rollupPurposeCode = "DMA_PRECHECK",
+  metricScopeCode = "G0_02_FINANCIAL_BASIS",
+  onRequested,
+}) => {
   const dispatch = useDispatch();
   const subsidiaries = useSelector((state) => state.report.rollup.subsidiaries);
-  const loading = useSelector((state) => state.report.loading.subsidiaries);
+  const scopePreview = useSelector((state) => state.report.rollup.scopePreview);
+  const loadingSubsidiaries = useSelector((state) => state.report.loading.subsidiaries);
+  const loadingPreview = useSelector((state) => state.report.loading.rollupScopePreview);
+  const creatingBatch = useSelector((state) => state.report.loading.createBatch);
   const [selectedIds, setSelectedIds] = useState([]);
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadSubsidiaries();
-    } else {
-      setSelectedIds([]);
-      setError(null);
-    }
-  }, [isOpen]);
+  const requiresSourceCycle = rollupPurposeCode === "REPORT_DISCLOSURE";
+  const previewMetricItems = useMemo(() => asItems(scopePreview), [scopePreview]);
+  const metricCount =
+    scopePreview?.metricCount ??
+    scopePreview?.requestedMetricCount ??
+    previewMetricItems.length;
+  const atomicCount =
+    scopePreview?.atomicCount ??
+    scopePreview?.requiredAtomicCount ??
+    scopePreview?.resolvedExternalEntityAtomicCount ??
+    previewMetricItems.reduce((sum, metric) => sum + (metric.atomicCount || metric.atomicItems?.length || 0), 0);
 
-  const loadSubsidiaries = async () => {
+  const loadData = useCallback(async () => {
+    if (!isOpen) return;
+    if (requiresSourceCycle && !sourceCycleId) {
+      setError("POST DMA 공시 롤업은 sourceCycleId가 필요합니다.");
+      return;
+    }
+
     setError(null);
     try {
-      const res = await dispatch(fetchRollupSubsidiaries({ runId })).unwrap();
-      const items = Array.isArray(res?.data?.items)
-        ? res.data.items
-        : Array.isArray(res?.data)
-          ? res.data
-          : [];
-      setSelectedIds(items.map((item) => item.companyId));
+      const commonParams = {
+        runId,
+        sourceCycleId,
+        rollupPurposeCode,
+        metricScopeCode,
+      };
+
+      const [, subsidiaryRes] = await Promise.all([
+        dispatch(fetchRollupScopePreview(commonParams)).unwrap(),
+        dispatch(fetchRollupSubsidiaries(commonParams)).unwrap(),
+      ]);
+
+      const items = Array.isArray(subsidiaryRes?.data?.items)
+        ? subsidiaryRes.data.items
+        : Array.isArray(subsidiaryRes?.items)
+          ? subsidiaryRes.items
+          : Array.isArray(subsidiaryRes?.data)
+            ? subsidiaryRes.data
+            : [];
+      setSelectedIds(items.map((item) => item.companyId).filter((id) => id != null));
     } catch (err) {
       console.error(err);
-      setError(err?.message || "자회사 목록 조회에 실패했습니다.");
+      setError(err?.message || "자회사 요청 정보 조회에 실패했습니다.");
     }
-  };
+  }, [dispatch, isOpen, metricScopeCode, requiresSourceCycle, rollupPurposeCode, runId, sourceCycleId]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.resolve().then(() => {
+      if (!active) return;
+      if (isOpen) {
+        loadData();
+      } else {
+        setSelectedIds([]);
+        setError(null);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [isOpen, loadData]);
 
   const handleToggle = (companyId) => {
     setSelectedIds((prev) =>
@@ -56,16 +119,35 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
 
   const handleRequest = async () => {
     if (selectedIds.length === 0) return;
+    if (requiresSourceCycle && !sourceCycleId) {
+      showDefaultAlert("요청 불가", "POST DMA 공시 롤업은 sourceCycleId가 필요합니다.", "warning");
+      return;
+    }
 
     setRequesting(true);
     try {
-      const res = await dispatch(createRollupBatch({
-        runId,
-        sourceCompanyIds: selectedIds,
-      })).unwrap();
+      const res = await dispatch(
+        createRollupBatch({
+          runId,
+          sourceCycleId,
+          sourceCompanyIds: selectedIds,
+          rollupPurposeCode,
+          metricScopeCode,
+        })
+      ).unwrap();
+
+      const data = res?.data || res;
+      const batchId = data?.batchId;
+      if (batchId) {
+        dispatch(setActiveBatchId(batchId));
+        await Promise.all([
+          dispatch(fetchRollupBatchStatus({ batchId })).unwrap(),
+          dispatch(fetchRollupBatchSources({ batchId })).unwrap(),
+        ]);
+      }
 
       showDefaultAlert("완료", "자회사 데이터 요청이 완료되었습니다.", "success");
-      onRequested?.(res.data || res);
+      onRequested?.(batchId);
       onClose();
     } catch (err) {
       console.error(err);
@@ -74,33 +156,76 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
       setRequesting(false);
     }
   };
+
   if (!isOpen) return null;
+
+  const loading = loadingSubsidiaries || loadingPreview;
+  const disabled =
+    loading ||
+    requesting ||
+    creatingBatch ||
+    Boolean(error) ||
+    selectedIds.length === 0 ||
+    (requiresSourceCycle && !sourceCycleId);
 
   return createPortal(
     <div className="ob1-modal-overlay">
-      <div className="ob1-modal-content" style={{ width: 480 }}>
+      <div className="ob1-modal-content" style={{ width: 760 }}>
         <div className="ob1-modal-header">
-          <h2>G0 데이터 요청 자회사 선택</h2>
+          <h2>자회사 데이터 요청</h2>
           <button className="ob1-btn-close" onClick={onClose}>×</button>
         </div>
         <div className="ob1-modal-body">
-          <p style={{ marginBottom: 16, fontSize: "0.9rem", color: "#475569" }}>
-            데이터를 수집할 자회사를 선택해 주세요.
-          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "8px", marginBottom: "16px" }}>
+            {[
+              ["보고연도", reportingYear || "-"],
+              ["롤업 목적", purposeLabel(rollupPurposeCode)],
+              ["Metric", metricCount || 0],
+              ["Atomic", atomicCount || 0],
+            ].map(([label, value]) => (
+              <div key={label} style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: "8px", background: "#f8fafc" }}>
+                <div style={{ fontSize: "0.75rem", color: "#64748b", marginBottom: "4px" }}>{label}</div>
+                <div style={{ fontWeight: 700, color: "#0f172a" }}>{value}</div>
+              </div>
+            ))}
+          </div>
 
-          {/* loading */}
+          <div style={{ marginBottom: "16px" }}>
+            <div style={{ fontWeight: 700, marginBottom: "8px", color: "#0f172a" }}>요청 Metric 미리보기</div>
+            {loadingPreview && !scopePreview ? (
+              <div style={{ padding: "14px", color: "#64748b", border: "1px dashed #cbd5e1", borderRadius: "8px" }}>
+                롤업 범위를 확인하고 있습니다.
+              </div>
+            ) : previewMetricItems.length === 0 ? (
+              <div style={{ padding: "14px", color: "#64748b", border: "1px dashed #cbd5e1", borderRadius: "8px" }}>
+                표시할 Metric 미리보기가 없습니다.
+              </div>
+            ) : (
+              <div style={{ maxHeight: "132px", overflow: "auto", display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" }}>
+                {previewMetricItems.map((metric) => (
+                  <div key={metric.metricId} style={{ padding: "10px", border: "1px solid #e2e8f0", borderRadius: "8px" }}>
+                    <div style={{ fontWeight: 700, color: "#1e293b" }}>{metric.metricId}</div>
+                    <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "2px" }}>
+                      {metric.metricName || metric.metricNameKr || "-"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {loading && subsidiaries.length === 0 && (
             <div className="ob1-table-loading" style={{ padding: "24px" }}>
               <div className="ob1-spinner" />
-              <p>자회사 목록을 불러오고 있습니다...</p>
+              <p>자회사 목록을 불러오고 있습니다.</p>
             </div>
           )}
 
           {!loading && error && (
-            <div className="ob1-inline-error" style={{ margin: "24px" }}>
+            <div className="ob1-inline-error" style={{ margin: "16px 0" }}>
               <span className="ob1-error-icon">!</span>
               <span>{error}</span>
-              <button type="button" className="ob1-btn-retry" onClick={loadSubsidiaries}>
+              <button type="button" className="ob1-btn-retry" onClick={loadData}>
                 다시 시도
               </button>
             </div>
@@ -108,11 +233,11 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
 
           {!loading && !error && subsidiaries.length === 0 && (
             <div style={{ padding: "24px", textAlign: "center", color: "#64748b" }}>
-              등록된 자회사가 없습니다.
+              요청 가능한 자회사가 없습니다.
             </div>
           )}
 
-          {((loading && subsidiaries.length > 0) || (!loading && !error && subsidiaries.length > 0)) && (
+          {subsidiaries.length > 0 && (
             <ul
               className="sub-list"
               style={{
@@ -122,6 +247,8 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
                 display: "flex",
                 flexDirection: "column",
                 gap: "8px",
+                maxHeight: "260px",
+                overflow: "auto",
               }}
             >
               {subsidiaries.map((sub) => (
@@ -150,19 +277,15 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
                       checked={selectedIds.includes(sub.companyId)}
                       onChange={() => handleToggle(sub.companyId)}
                     />
-                    <span style={{ fontWeight: 500 }}>
-                      {sub.companyName}
-                    </span>
+                    <span style={{ fontWeight: 500 }}>{sub.companyName}</span>
                     {sub.companyCode && (
                       <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
                         ({sub.companyCode})
                       </span>
                     )}
                   </label>
-                  <div style={{ textAlign: "right", fontSize: "0.8rem" }}>
-                    <span style={{ color: "#2563eb" }}>
-                      요청 대상
-                    </span>
+                  <div style={{ textAlign: "right", fontSize: "0.8rem", color: "#2563eb" }}>
+                    요청 대상
                   </div>
                 </li>
               ))}
@@ -198,13 +321,13 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
               color: "#fff",
               border: "none",
               borderRadius: "4px",
-              cursor: selectedIds.length ? "pointer" : "not-allowed",
-              opacity: selectedIds.length ? 1 : 0.5,
+              cursor: disabled ? "not-allowed" : "pointer",
+              opacity: disabled ? 0.5 : 1,
             }}
             onClick={handleRequest}
-            disabled={!selectedIds.length || requesting}
+            disabled={disabled}
           >
-            {requesting ? "요청 중..." : "요청 보내기"}
+            {requesting || creatingBatch ? "요청 중..." : "요청 보내기"}
           </button>
         </div>
       </div>
@@ -214,5 +337,3 @@ const SubsidiaryRequestModal = ({ isOpen, onClose, runId, onRequested }) => {
 };
 
 export default SubsidiaryRequestModal;
-
-

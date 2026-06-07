@@ -3,8 +3,8 @@
 // 모든 셀이 metric_id에 바인딩. breakdown metric이 없으면 해당 행 자동 생략(더미 금지)
 // ============================================================
 import React from "react";
-import { SRChrome } from "./SRChrome";
-import { Narrative, mt, dv, num, fmtInt, reductionFromBase, NARRATIVE_TEMPLATE_CLIMATE } from "./srHelpers";
+import { SRChrome } from "../../../core/SRChrome";
+import { Narrative, mt, dv, num, fmtInt, reductionFromBase, NARRATIVE_TEMPLATE_CLIMATE } from "../../../core/srHelpers";
 
 /** 일반 셀: render → displayValue, placeholder → {id} */
 function Cell({ metrics, id, mode, cls }) {
@@ -39,7 +39,7 @@ export function ClimateTargetPageB(props) {
 
   return (
     <SRChrome {...props}>
-      <Narrative narrativeText={narrativeText} template={template} metrics={metrics} mode={mode} highlight={highlight} />
+      <Narrative narrativeText={narrativeText} template={template} metrics={metrics} mode={mode} highlight={highlight} onNarrativeChange={props.onNarrativeChange} />
 
       <div className="sr-cols">
         <div className="c-main">
@@ -134,4 +134,4 @@ export function ClimateTargetPageB(props) {
       </div>
     </SRChrome>
   );
-}
+} 

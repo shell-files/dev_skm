@@ -90,30 +90,114 @@ export function renderPlaceholder(text) {
   });
 }
 
+/** 편집 모드: 템플릿의 {id} 토큰을 클릭 편집 가능한 span으로 (값 있으면 값, 없으면 {id}) */
+export function renderEditableNarrative(template, metrics) {
+  return template.split(/(\{[^}]+\})/g).map((p, i) => {
+    const m = p.match(/^\{([^}]+)\}$/);
+    if (!m) return <React.Fragment key={i}>{p}</React.Fragment>;
+    const id = m[1];
+    const val = dv(metrics, id);
+    return (
+      <span key={i} className={"sr-tok-edit" + (val == null ? " empty" : "")} data-source={id}>
+        {val != null ? val : `{${id}}`}
+      </span>
+    );
+  });
+}
+
 /** 본문에서 강조 대상으로 삼을 metric_id (짧은 수치류) */
 export const CLIMATE_HIGHLIGHT_IDS = [
   "E1-05__QL0002", "E1-05__G0003", "E1-06__G0003", "E1-06__G0004",
   "E1-06__G0005", "E1-07__G0003", "E1-08__G0001", "E1-08__G0002",
 ];
 
-/** 본문 렌더 컴포넌트 (A/B 공통) */
-export function Narrative({
-  narrativeText, template, metrics, mode = "render",
-  highlight = true, highlightIds = CLIMATE_HIGHLIGHT_IDS,
-}) {
-  const text = resolveNarrative({ narrativeText, template, metrics, mode });
-  const paras = text.split(/\n+/).filter(Boolean);
+/** 템플릿을 텍스트/토큰 노드로 분해 */
+export function splitNarrative(template) {
+  return (template || "")
+    .split(/(\{[^}]+\})/g)
+    .map((part) => {
+      const m = part.match(/^\{([^}]+)\}$/);
+      return m ? { token: true, id: m[1] } : { token: false, text: part };
+    })
+    .filter((n) => n.token || n.text);
+}
+
+/** 정적 본문(보기/PDF): 토큰 값은 .sr-fig 로 강조, 미입력 토큰은 .empty */
+export function NarrativeStatic({ template, metrics }) {
+  const nodes = splitNarrative(template);
   return (
     <div className="sr-prose">
-      {paras.map((para, i) => (
-        <p key={i}>
-          {mode === "placeholder"
-            ? renderPlaceholder(para)
-            : highlight
-            ? highlightFigures(para, metrics, highlightIds)
-            : para}
-        </p>
-      ))}
+      <p>
+        {nodes.map((n, i) => {
+          if (!n.token) return <React.Fragment key={i}>{n.text}</React.Fragment>;
+          const val = dv(metrics, n.id);
+          return (
+            <span key={i} className={"sr-fig" + (val == null ? " empty" : "")} data-source={n.id}>
+              {val != null ? val : `{${n.id}}`}
+            </span>
+          );
+        })}
+      </p>
     </div>
   );
+}
+
+/** 편집용 본문(contentEditable): 사이 문구는 자유 편집, 토큰은 강조 span(클릭해 값 수정).
+ *  - 토큰 span 은 contentEditable=false 라 글자 편집 대상이 아니며, 클릭 시 값 팝업이 열림(Draft에서 처리)
+ *  - blur 시 DOM을 다시 템플릿 문자열({id} 보존)로 직렬화해 저장 → 강조/데이터바인딩 유지 */
+export function EditableNarrative({ template, metrics, onChange }) {
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el || document.activeElement === el) return; // 편집 중엔 덮어쓰지 않음(커서 보존)
+    el.innerHTML = "";
+    splitNarrative(template).forEach((n) => {
+      if (n.token) {
+        const val = dv(metrics, n.id);
+        const span = document.createElement("span");
+        span.className = "sr-fig" + (val == null ? " empty" : "");
+        span.setAttribute("data-source", n.id);
+        span.setAttribute("contenteditable", "false");
+        span.textContent = val != null ? val : `{${n.id}}`;
+        el.appendChild(span);
+      } else {
+        el.appendChild(document.createTextNode(n.text));
+      }
+    });
+  }, [template, metrics]);
+
+  const serialize = () => {
+    const el = ref.current;
+    if (!el) return template;
+    let out = "";
+    el.childNodes.forEach((node) => {
+      if (node.nodeType === 3) out += node.textContent;
+      else if (node.getAttribute && node.getAttribute("data-source")) out += "{" + node.getAttribute("data-source") + "}";
+      else out += node.textContent || "";
+    });
+    return out;
+  };
+
+  return (
+    <div
+      ref={ref}
+      className="sr-prose sr-prose-edit"
+      contentEditable
+      suppressContentEditableWarning
+      spellCheck={false}
+      onBlur={() => onChange && onChange(serialize())}
+    />
+  );
+}
+
+/** 본문 렌더 컴포넌트 (A/B 공통) */
+export function Narrative({
+  narrativeText, template, metrics, mode = "render", onNarrativeChange,
+}) {
+  // 커스텀 본문(토큰 포함 템플릿)이 있으면 우선, 없으면 기본 템플릿
+  const tpl = (narrativeText && narrativeText.trim()) ? narrativeText : template;
+  if (mode === "edit") {
+    return <EditableNarrative template={tpl} metrics={metrics} onChange={onNarrativeChange} />;
+  }
+  return <NarrativeStatic template={tpl} metrics={metrics} />;
 }

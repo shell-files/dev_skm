@@ -5,6 +5,7 @@
 // ============================================================
 import React from "react";
 import { num } from "./srHelpers";
+import "./sr-page.css";
 
 export const DEFAULT_NAV = [
   { key: "letter", label: "Letter to Stakeholders" },

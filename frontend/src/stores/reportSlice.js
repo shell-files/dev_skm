@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+﻿import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { GET, POST, PATCH } from "@utils/Network";
 
 export const DEFAULT_REPORTING_YEAR = new Date().getFullYear();
@@ -40,6 +40,15 @@ const rejectIfFailed = (res, rejectWithValue, fallbackMessage) => {
 
 const dataOf = (payload) => payload?.data ?? payload;
 
+const normalizeApprovalDecisionPayload = (payload = {}) => {
+  const normalized = { ...payload };
+  if (normalized.commentText == null && normalized.comment != null) {
+    normalized.commentText = normalized.comment;
+  }
+  delete normalized.comment;
+  return normalized;
+};
+
 const itemsOf = (payload) => {
   const data = dataOf(payload);
   if (Array.isArray(data?.items)) return data.items;
@@ -62,11 +71,16 @@ const initialState = {
     projects: [],
     selectedProject: null,
     items: [],
+    lastMutationResult: null,
+    lastMutationError: null,
   },
 
   rollup: {
     subsidiaries: [],
+    scopePreview: null,
     requests: [],
+    selectedRequestDetail: null,
+    batchSources: [],
     activeBatchId: null,
     batchStatus: null,
   },
@@ -81,11 +95,18 @@ const initialState = {
     approvalProjects: false,
     approvals: false,
     subsidiaries: false,
+    rollupScopePreview: false,
     createBatch: false,
     requests: false,
+    rollupRequestDetail: false,
+    rollupBatchSources: false,
     sendSource: false,
     batchStatus: false,
     calculateBatch: false,
+    onboardingApprovalSubmit: false,
+    onboardingApprovalReview: false,
+    onboardingApprovalApprove: false,
+    onboardingApprovalReject: false,
   },
 
   error: {
@@ -98,11 +119,18 @@ const initialState = {
     approvalProjects: null,
     approvals: null,
     subsidiaries: null,
+    rollupScopePreview: null,
     createBatch: null,
     requests: null,
+    rollupRequestDetail: null,
+    rollupBatchSources: null,
     sendSource: null,
     batchStatus: null,
     calculateBatch: null,
+    onboardingApprovalSubmit: null,
+    onboardingApprovalReview: null,
+    onboardingApprovalApprove: null,
+    onboardingApprovalReject: null,
   },
 };
 
@@ -321,7 +349,7 @@ export const fetchApprovalItems = createAsyncThunk(
     };
     if (status) params.status = status;
     try {
-      const res = await GET("/onboardingApproval", params);
+      const res = await GET("/v1/onboarding-approvals", params);
       return rejectIfFailed(res, rejectWithValue, "승인 작업함 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -351,9 +379,14 @@ export const fetchApprovalProjects = createAsyncThunk(
 
 export const fetchRollupSubsidiaries = createAsyncThunk(
   "report/fetchRollupSubsidiaries",
-  async ({ runId }, { rejectWithValue }) => {
+  async ({ runId, sourceCycleId, rollupPurposeCode, metricScopeCode } = {}, { rejectWithValue }) => {
+    const params = {};
+    if (runId != null) params.runId = runId;
+    if (sourceCycleId != null) params.sourceCycleId = sourceCycleId;
+    if (rollupPurposeCode) params.rollupPurposeCode = rollupPurposeCode;
+    if (metricScopeCode) params.metricScopeCode = metricScopeCode;
     try {
-      const res = await GET("/rollup/subsidiaries", { runId });
+      const res = await GET("/v1/rollups/subsidiaries", params);
       return rejectIfFailed(res, rejectWithValue, "자회사 목록 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -365,11 +398,27 @@ export const fetchRollupSubsidiaries = createAsyncThunk(
   }
 );
 
+export const fetchRollupScopePreview = createAsyncThunk(
+  "report/fetchRollupScopePreview",
+  async (payload = {}, { rejectWithValue }) => {
+    try {
+      const res = await GET("/v1/rollups/scope-preview", payload);
+      return rejectIfFailed(res, rejectWithValue, "롤업 범위 미리보기 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "롤업 범위 미리보기 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
 export const createRollupBatch = createAsyncThunk(
   "report/createRollupBatch",
   async (payload, { rejectWithValue }) => {
     try {
-      const res = await POST("/rollup/batches", payload);
+      const res = await POST("/v1/rollups/batches", payload);
       return rejectIfFailed(res, rejectWithValue, "자회사 데이터 요청에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -383,9 +432,9 @@ export const createRollupBatch = createAsyncThunk(
 
 export const fetchRollupRequests = createAsyncThunk(
   "report/fetchRollupRequests",
-  async (_, { rejectWithValue }) => {
+  async (payload = {}, { rejectWithValue }) => {
     try {
-      const res = await GET("/rollup/requests");
+      const res = await GET("/v1/rollups/requests", payload);
       return rejectIfFailed(res, rejectWithValue, "자회사 요청 목록 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -397,11 +446,43 @@ export const fetchRollupRequests = createAsyncThunk(
   }
 );
 
+export const fetchRollupRequestDetail = createAsyncThunk(
+  "report/fetchRollupRequestDetail",
+  async ({ batchId }, { rejectWithValue }) => {
+    try {
+      const res = await GET(`/v1/rollups/requests/${batchId}`);
+      return rejectIfFailed(res, rejectWithValue, "롤업 요청 상세 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "롤업 요청 상세 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const fetchRollupBatchSources = createAsyncThunk(
+  "report/fetchRollupBatchSources",
+  async ({ batchId }, { rejectWithValue }) => {
+    try {
+      const res = await GET(`/v1/rollups/batches/${batchId}/sources`);
+      return rejectIfFailed(res, rejectWithValue, "롤업 배치 자회사 목록 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "롤업 배치 자회사 목록 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
 export const sendRollupSource = createAsyncThunk(
   "report/sendRollupSource",
   async ({ batchId }, { rejectWithValue }) => {
     try {
-      const res = await POST(`/rollup/batches/${batchId}/sources/send`);
+      const res = await POST(`/v1/rollups/batches/${batchId}/sources/send`);
       return rejectIfFailed(res, rejectWithValue, "자회사 데이터 전송에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -417,7 +498,7 @@ export const fetchRollupBatchStatus = createAsyncThunk(
   "report/fetchRollupBatchStatus",
   async ({ batchId }, { rejectWithValue }) => {
     try {
-      const res = await GET(`/rollup/batches/${batchId}/status`);
+      const res = await GET(`/v1/rollups/batches/${batchId}/status`);
       return rejectIfFailed(res, rejectWithValue, "롤업 배치 상태 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -433,13 +514,86 @@ export const calculateRollupBatch = createAsyncThunk(
   "report/calculateRollupBatch",
   async ({ batchId }, { rejectWithValue }) => {
     try {
-      const res = await POST(`/rollup/batches/${batchId}/calculate`);
+      const res = await POST(`/v1/rollups/batches/${batchId}/calculate`);
       return rejectIfFailed(res, rejectWithValue, "롤업 계산에 실패했습니다.");
     } catch (error) {
       console.error(error);
       return rejectWithValue({
         status: false,
         message: "롤업 계산 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const submitOnboardingApproval = createAsyncThunk(
+  "report/submitOnboardingApproval",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = await POST("/v1/onboarding-approvals/submit", payload);
+      return rejectIfFailed(res, rejectWithValue, "온보딩 승인 요청에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "온보딩 승인 요청 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const reviewOnboardingApproval = createAsyncThunk(
+  "report/reviewOnboardingApproval",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = await POST(
+        "/v1/onboarding-approvals/review",
+        normalizeApprovalDecisionPayload(payload)
+      );
+      return rejectIfFailed(res, rejectWithValue, "온보딩 승인 검토에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "온보딩 승인 검토 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const approveOnboardingApproval = createAsyncThunk(
+  "report/approveOnboardingApproval",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = await POST(
+        "/v1/onboarding-approvals/approve",
+        normalizeApprovalDecisionPayload(payload)
+      );
+      return rejectIfFailed(res, rejectWithValue, "온보딩 승인 처리에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "온보딩 승인 처리 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const rejectOnboardingApproval = createAsyncThunk(
+  "report/rejectOnboardingApproval",
+  async (payload, { rejectWithValue }) => {
+    try {
+      const res = await POST(
+        "/v1/onboarding-approvals/reject",
+        normalizeApprovalDecisionPayload(payload)
+      );
+      return rejectIfFailed(res, rejectWithValue, "온보딩 승인 반려에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "온보딩 승인 반려 중 오류가 발생했습니다.",
       });
     }
   }
@@ -453,6 +607,23 @@ const setPending = (state, key) => {
 const setRejected = (state, key, action) => {
   state.loading[key] = false;
   state.error[key] = action.payload || action.error || null;
+};
+
+const setApprovalMutationPending = (state, key) => {
+  setPending(state, key);
+  state.approval.lastMutationError = null;
+};
+
+const setApprovalMutationFulfilled = (state, key, action) => {
+  state.loading[key] = false;
+  state.error[key] = null;
+  state.approval.lastMutationResult = dataOf(action.payload);
+  state.approval.lastMutationError = null;
+};
+
+const setApprovalMutationRejected = (state, key, action) => {
+  setRejected(state, key, action);
+  state.approval.lastMutationError = action.payload || action.error || null;
 };
 
 const reportSlice = createSlice({
@@ -604,6 +775,18 @@ const reportSlice = createSlice({
       });
 
     builder
+      .addCase(fetchRollupScopePreview.pending, (state) => setPending(state, "rollupScopePreview"))
+      .addCase(fetchRollupScopePreview.fulfilled, (state, action) => {
+        state.loading.rollupScopePreview = false;
+        state.error.rollupScopePreview = null;
+        state.rollup.scopePreview = dataOf(action.payload);
+      })
+      .addCase(fetchRollupScopePreview.rejected, (state, action) => {
+        setRejected(state, "rollupScopePreview", action);
+        state.rollup.scopePreview = null;
+      });
+
+    builder
       .addCase(createRollupBatch.pending, (state) => setPending(state, "createBatch"))
       .addCase(createRollupBatch.fulfilled, (state, action) => {
         state.loading.createBatch = false;
@@ -622,6 +805,30 @@ const reportSlice = createSlice({
       .addCase(fetchRollupRequests.rejected, (state, action) => {
         setRejected(state, "requests", action);
         state.rollup.requests = [];
+      });
+
+    builder
+      .addCase(fetchRollupRequestDetail.pending, (state) => setPending(state, "rollupRequestDetail"))
+      .addCase(fetchRollupRequestDetail.fulfilled, (state, action) => {
+        state.loading.rollupRequestDetail = false;
+        state.error.rollupRequestDetail = null;
+        state.rollup.selectedRequestDetail = dataOf(action.payload);
+      })
+      .addCase(fetchRollupRequestDetail.rejected, (state, action) => {
+        setRejected(state, "rollupRequestDetail", action);
+        state.rollup.selectedRequestDetail = null;
+      });
+
+    builder
+      .addCase(fetchRollupBatchSources.pending, (state) => setPending(state, "rollupBatchSources"))
+      .addCase(fetchRollupBatchSources.fulfilled, (state, action) => {
+        state.loading.rollupBatchSources = false;
+        state.error.rollupBatchSources = null;
+        state.rollup.batchSources = itemsOf(action.payload);
+      })
+      .addCase(fetchRollupBatchSources.rejected, (state, action) => {
+        setRejected(state, "rollupBatchSources", action);
+        state.rollup.batchSources = [];
       });
 
     builder
@@ -652,6 +859,50 @@ const reportSlice = createSlice({
         state.rollup.batchStatus = dataOf(action.payload) || state.rollup.batchStatus;
       })
       .addCase(calculateRollupBatch.rejected, (state, action) => setRejected(state, "calculateBatch", action));
+
+    builder
+      .addCase(submitOnboardingApproval.pending, (state) =>
+        setApprovalMutationPending(state, "onboardingApprovalSubmit")
+      )
+      .addCase(submitOnboardingApproval.fulfilled, (state, action) =>
+        setApprovalMutationFulfilled(state, "onboardingApprovalSubmit", action)
+      )
+      .addCase(submitOnboardingApproval.rejected, (state, action) =>
+        setApprovalMutationRejected(state, "onboardingApprovalSubmit", action)
+      );
+
+    builder
+      .addCase(reviewOnboardingApproval.pending, (state) =>
+        setApprovalMutationPending(state, "onboardingApprovalReview")
+      )
+      .addCase(reviewOnboardingApproval.fulfilled, (state, action) =>
+        setApprovalMutationFulfilled(state, "onboardingApprovalReview", action)
+      )
+      .addCase(reviewOnboardingApproval.rejected, (state, action) =>
+        setApprovalMutationRejected(state, "onboardingApprovalReview", action)
+      );
+
+    builder
+      .addCase(approveOnboardingApproval.pending, (state) =>
+        setApprovalMutationPending(state, "onboardingApprovalApprove")
+      )
+      .addCase(approveOnboardingApproval.fulfilled, (state, action) =>
+        setApprovalMutationFulfilled(state, "onboardingApprovalApprove", action)
+      )
+      .addCase(approveOnboardingApproval.rejected, (state, action) =>
+        setApprovalMutationRejected(state, "onboardingApprovalApprove", action)
+      );
+
+    builder
+      .addCase(rejectOnboardingApproval.pending, (state) =>
+        setApprovalMutationPending(state, "onboardingApprovalReject")
+      )
+      .addCase(rejectOnboardingApproval.fulfilled, (state, action) =>
+        setApprovalMutationFulfilled(state, "onboardingApprovalReject", action)
+      )
+      .addCase(rejectOnboardingApproval.rejected, (state, action) =>
+        setApprovalMutationRejected(state, "onboardingApprovalReject", action)
+      );
   },
 });
 

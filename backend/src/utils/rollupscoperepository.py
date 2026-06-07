@@ -101,6 +101,83 @@ def resolveConsolidatedRuleClosure(initialMetricIds: list[str]) -> tuple[list[di
         if source.get("calculation_rule_code") in orderedRuleCodes
     ]
 
+def resolveConsolidatedRulesFromBatchScopeTx(cur, batchId: int) -> tuple[list[dict], list[dict]]:
+    from src.utils.calculationrepository import listActiveRulesByTargetAtomicIdsTx, listRuleSourcesTx
+
+    scopes = listScopeTx(cur, batchId)
+    snapshotTargetAtomicIds = sorted({
+        str(scope.get("group_atomic_metric_id") or "").strip()
+        for scope in scopes
+        if str(scope.get("group_atomic_metric_id") or "").strip()
+    })
+    if not snapshotTargetAtomicIds:
+        raise ValueError("ROLLUP_BATCH_SCOPE_RULE_MISMATCH")
+
+    rules = listActiveRulesByTargetAtomicIdsTx(
+        cur,
+        snapshotTargetAtomicIds,
+        executionScope="CONSOLIDATED",
+    )
+    resolvedTargetAtomicIds = sorted({
+        str(rule.get("target_atomic_metric_id") or "").strip()
+        for rule in rules
+        if str(rule.get("target_atomic_metric_id") or "").strip()
+    })
+    if resolvedTargetAtomicIds != snapshotTargetAtomicIds:
+        raise ValueError("ROLLUP_BATCH_SCOPE_RULE_MISMATCH")
+
+    ruleCodes = sorted({
+        str(rule.get("calculation_rule_code") or "").strip()
+        for rule in rules
+        if str(rule.get("calculation_rule_code") or "").strip()
+    })
+    sources = listRuleSourcesTx(cur, ruleCodes)
+
+    snapshotSourcesByTarget = {}
+    for scope in scopes:
+        targetAtomicId = str(scope.get("group_atomic_metric_id") or "").strip()
+        if not targetAtomicId:
+            continue
+        snapshotSourcesByTarget[targetAtomicId] = sorted(set(scope.get("sourceAtomicMetricIds") or []))
+
+    ruleTargetByCode = {
+        str(rule.get("calculation_rule_code") or "").strip(): str(rule.get("target_atomic_metric_id") or "").strip()
+        for rule in rules
+        if str(rule.get("calculation_rule_code") or "").strip()
+    }
+    metadataSourcesByTarget = {targetAtomicId: set() for targetAtomicId in snapshotTargetAtomicIds}
+    for source in sources:
+        ruleCode = str(source.get("calculation_rule_code") or "").strip()
+        targetAtomicId = ruleTargetByCode.get(ruleCode)
+        if not targetAtomicId:
+            continue
+        sourceAtomicId = normalizeSource(source).get("sourceAtomicMetricId")
+        if sourceAtomicId:
+            metadataSourcesByTarget.setdefault(targetAtomicId, set()).add(sourceAtomicId)
+
+    for targetAtomicId in snapshotTargetAtomicIds:
+        snapshotSourceIds = snapshotSourcesByTarget.get(targetAtomicId, [])
+        metadataSourceIds = sorted(metadataSourcesByTarget.get(targetAtomicId, set()))
+        if metadataSourceIds != snapshotSourceIds:
+            raise ValueError("ROLLUP_BATCH_SCOPE_METADATA_CHANGED")
+
+    orderedRules = topologicalSortRules(rules, sources)
+    orderedRuleCodes = {rule["calculation_rule_code"] for rule in orderedRules}
+    return orderedRules, [
+        source
+        for source in sources
+        if source.get("calculation_rule_code") in orderedRuleCodes
+    ]
+
+def resolveConsolidatedRulesFromBatchScope(batchId: int) -> tuple[list[dict], list[dict]]:
+    from src.utils.db import getConn
+    conn = getConn()
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            return resolveConsolidatedRulesFromBatchScopeTx(cur, batchId)
+    finally:
+        conn.close()
+
 def saveScopeFromRulesTx(cur, batchId: int, rules: list[dict], sources: list[dict], scopeReason: str) -> None:
     sourceMap = {}
     for source in sources:

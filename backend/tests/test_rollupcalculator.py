@@ -13,6 +13,7 @@ from src.models.rollup import (
 )
 from src.services.rollups import service as rollupService
 from src.utils import rollupcalculator as calculator
+from src.utils import calculationrepository as calculationRepository
 from src.utils import rollupscoperepository as scopeRepository
 
 
@@ -147,6 +148,9 @@ class FakeRepository:
 
     def resolveConsolidatedRuleClosure(self, metricIds):
         return self.listBatchRules(metricIds), self.listBatchRuleSources(["R1"])
+
+    def resolveConsolidatedRulesFromBatchScopeTx(self, cur, batchId):
+        return self.listBatchRules(["G0-02"]), self.listBatchRuleSources(["R1"])
 
     def resolveRequiredSourceAtomicIdsTx(self, cur, batchId):
         return ["S1"]
@@ -407,6 +411,87 @@ class RollupCalculatorTest(unittest.TestCase):
             scopeRepository.listBatchRules = originalListRules
             scopeRepository.listBatchRuleSources = originalListSources
             scopeRepository.listProducerRulesByTargetAtomicIds = originalListProducer
+
+    def test_exact_batch_scope_resolver_does_not_expand_sibling_rules(self):
+        originalListScope = scopeRepository.listScopeTx
+        originalListRulesByTarget = calculationRepository.listActiveRulesByTargetAtomicIdsTx
+        originalListSources = calculationRepository.listRuleSourcesTx
+        try:
+            scopeRepository.listScopeTx = lambda cur, batchId: [
+                {
+                    "metric_id": "MetricB",
+                    "group_atomic_metric_id": "T2",
+                    "sourceAtomicMetricIds": ["T1"],
+                },
+                {
+                    "metric_id": "MetricA",
+                    "group_atomic_metric_id": "T1",
+                    "sourceAtomicMetricIds": ["S1"],
+                },
+            ]
+
+            def fakeRulesByTarget(cur, targetAtomicMetricIds, executionScope="CONSOLIDATED"):
+                self.assertEqual(sorted(targetAtomicMetricIds), ["T1", "T2"])
+                return [
+                    rule("R1", "T1", "ROLLUP_SUM", metricId="MetricA", order=10),
+                    rule("R2", "T2", "ROLLUP_SUM", metricId="MetricB", order=20),
+                ]
+
+            calculationRepository.listActiveRulesByTargetAtomicIdsTx = fakeRulesByTarget
+            calculationRepository.listRuleSourcesTx = lambda cur, ruleCodes: [
+                source("R1", "S1", sourceId=1),
+                source("R2", "T1", sourceId=2),
+            ]
+
+            rules, sources = scopeRepository.resolveConsolidatedRulesFromBatchScopeTx(object(), 1)
+            self.assertEqual([item["calculation_rule_code"] for item in rules], ["R1", "R2"])
+            self.assertEqual(sorted({item["calculation_rule_code"] for item in sources}), ["R1", "R2"])
+            self.assertNotIn("CR_G0_02_G0002", [item["calculation_rule_code"] for item in rules])
+        finally:
+            scopeRepository.listScopeTx = originalListScope
+            calculationRepository.listActiveRulesByTargetAtomicIdsTx = originalListRulesByTarget
+            calculationRepository.listRuleSourcesTx = originalListSources
+
+    def test_exact_batch_scope_resolver_rejects_missing_target_rule(self):
+        originalListScope = scopeRepository.listScopeTx
+        originalListRulesByTarget = calculationRepository.listActiveRulesByTargetAtomicIdsTx
+        originalListSources = calculationRepository.listRuleSourcesTx
+        try:
+            scopeRepository.listScopeTx = lambda cur, batchId: [
+                {"group_atomic_metric_id": "T1", "sourceAtomicMetricIds": ["S1"]},
+                {"group_atomic_metric_id": "T2", "sourceAtomicMetricIds": ["T1"]},
+            ]
+            calculationRepository.listActiveRulesByTargetAtomicIdsTx = lambda *args, **kwargs: [
+                rule("R1", "T1", "ROLLUP_SUM")
+            ]
+            calculationRepository.listRuleSourcesTx = lambda *args, **kwargs: [source("R1", "S1")]
+            with self.assertRaises(ValueError) as ctx:
+                scopeRepository.resolveConsolidatedRulesFromBatchScopeTx(object(), 1)
+            self.assertEqual(str(ctx.exception), "ROLLUP_BATCH_SCOPE_RULE_MISMATCH")
+        finally:
+            scopeRepository.listScopeTx = originalListScope
+            calculationRepository.listActiveRulesByTargetAtomicIdsTx = originalListRulesByTarget
+            calculationRepository.listRuleSourcesTx = originalListSources
+
+    def test_exact_batch_scope_resolver_rejects_source_metadata_change(self):
+        originalListScope = scopeRepository.listScopeTx
+        originalListRulesByTarget = calculationRepository.listActiveRulesByTargetAtomicIdsTx
+        originalListSources = calculationRepository.listRuleSourcesTx
+        try:
+            scopeRepository.listScopeTx = lambda cur, batchId: [
+                {"group_atomic_metric_id": "T1", "sourceAtomicMetricIds": ["S1"]},
+            ]
+            calculationRepository.listActiveRulesByTargetAtomicIdsTx = lambda *args, **kwargs: [
+                rule("R1", "T1", "ROLLUP_SUM")
+            ]
+            calculationRepository.listRuleSourcesTx = lambda *args, **kwargs: [source("R1", "S2")]
+            with self.assertRaises(ValueError) as ctx:
+                scopeRepository.resolveConsolidatedRulesFromBatchScopeTx(object(), 1)
+            self.assertEqual(str(ctx.exception), "ROLLUP_BATCH_SCOPE_METADATA_CHANGED")
+        finally:
+            scopeRepository.listScopeTx = originalListScope
+            calculationRepository.listActiveRulesByTargetAtomicIdsTx = originalListRulesByTarget
+            calculationRepository.listRuleSourcesTx = originalListSources
 
     def test_report_disclosure_parent_duplicate_reject(self):
         class ParentGuardRepository:

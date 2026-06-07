@@ -178,11 +178,23 @@ def resolveConsolidatedRulesFromBatchScope(batchId: int) -> tuple[list[dict], li
     finally:
         conn.close()
 
-def saveScopeFromRulesTx(cur, batchId: int, rules: list[dict], sources: list[dict], scopeReason: str) -> None:
+def saveScopeFromRulesTx(
+    cur,
+    batchId: int,
+    rules: list[dict],
+    sources: list[dict],
+    scopeReason: str,
+    directMetricIds: list[str] | None = None,
+) -> None:
     sourceMap = {}
     for source in sources:
         ruleCode = source["calculation_rule_code"]
         sourceMap.setdefault(ruleCode, []).append(source)
+    directMetricSet = {
+        str(metricId or "").strip()
+        for metricId in directMetricIds or []
+        if str(metricId or "").strip()
+    }
 
     import json
     for rule in rules:
@@ -213,6 +225,12 @@ def saveScopeFromRulesTx(cur, batchId: int, rules: list[dict], sources: list[dic
             if existingIds != payloadIds:
                 raise ValueError("ROLLUP_BATCH_SCOPE_IMMUTABLE")
         else:
+            ruleScopeReason = scopeReason
+            if directMetricIds is not None:
+                metricId = str(rule.get("metric_id") or "").strip()
+                scopeKind = "DIRECT_REQUEST" if metricId in directMetricSet else "CLOSURE_DEPENDENCY"
+                ruleScopeReason = f"{scopeReason}:{scopeKind}"
+
             cur.execute(
                 """
                 INSERT INTO ESG_ROLLUP_BATCH_ATOMIC_SCOPE (
@@ -232,7 +250,7 @@ def saveScopeFromRulesTx(cur, batchId: int, rules: list[dict], sources: list[dic
                     rule.get("metric_id"),
                     rule["target_atomic_metric_id"],
                     payloadStr,
-                    scopeReason
+                    ruleScopeReason
                 )
             )
 
@@ -287,6 +305,52 @@ def listScope(batchId: int) -> list[dict]:
             return listScopeTx(cur, batchId)
     finally:
         conn.close()
+
+def listRequestedMetricIdsFromBatchScope(batchId: int) -> list[str]:
+    rows = findAll(
+        """
+        SELECT DISTINCT metric_id
+        FROM ESG_ROLLUP_BATCH_ATOMIC_SCOPE
+        WHERE esg_rollup_batch_id = ?
+          AND delete_yn = 0
+          AND required_yn = 1
+          AND scope_reason LIKE '%:DIRECT_REQUEST'
+          AND metric_id IS NOT NULL
+          AND metric_id <> ''
+        ORDER BY metric_id
+        """,
+        (batchId,),
+    ) or []
+    return [
+        str(row.get("metric_id") or "").strip()
+        for row in rows
+        if str(row.get("metric_id") or "").strip()
+    ]
+
+def listAtomicMetadata(atomicMetricIds: list[str]) -> list[dict]:
+    cleaned = [
+        str(atomicMetricId or "").strip()
+        for atomicMetricId in atomicMetricIds or []
+        if str(atomicMetricId or "").strip()
+    ]
+    if not cleaned:
+        return []
+    placeholders = ", ".join(["?"] * len(cleaned))
+    return findAll(
+        f"""
+        SELECT
+            metric_id AS metricId,
+            metric_name_kr AS metricName,
+            atomic_metric_id AS atomicMetricId,
+            atomic_name_kr AS atomicName
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE atomic_metric_id IN ({placeholders})
+          AND active_yn = 1
+          AND delete_yn = 0
+        ORDER BY metric_id, atomic_metric_id
+        """,
+        tuple(cleaned),
+    ) or []
 
 def resolveAllRuleSourceAtomicIdsFromScopes(scopes: list[dict]) -> list[str]:
     atomicIds = set()

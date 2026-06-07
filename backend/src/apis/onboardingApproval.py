@@ -14,6 +14,7 @@ from src.services.onboardings.service import (
     getApprovalStatus,
     listApprovals,
     rejectApproval,
+    reviewApproval,
     submitApproval,
 )
 from src.utils.auth import get_token
@@ -43,6 +44,30 @@ async def submitApprovalRoute(
 ):
     try:
         return submitApproval(request, userModel)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/review",
+    response_model=OnboardingApprovalActionResponseDto,
+    summary="Review onboarding inputs",
+)
+@onboardingApprovalRouter.post(
+    "/review",
+    response_model=OnboardingApprovalActionResponseDto,
+    summary="Review onboarding inputs",
+)
+async def reviewApprovalRoute(
+    request: OnboardingApprovalDecisionRequestDto,
+    userModel=Depends(get_token),
+):
+    try:
+        return reviewApproval(request, userModel)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:

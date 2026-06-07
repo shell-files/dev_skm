@@ -6,15 +6,24 @@ import json
 from src.models.rollup import (
     RollupBatchRequestDto,
     RollupBatchResponseDto,
+    RollupBatchSourceItemDto,
+    RollupBatchSourceListDto,
+    RollupBatchSourceListResponseDto,
     RollupBatchSummaryDto,
     RollupBatchSummaryResponseDto,
     RollupBatchStatusDto,
     RollupCalculateResponseDto,
     RollupCalculateStatusDto,
+    RollupInputWorkspaceDto,
+    RollupRequestDetailDto,
+    RollupRequestDetailResponseDto,
     RollupRequestItemDto,
     RollupRequestListDto,
+    RollupRequestMetricItemDto,
     RollupRequestResponseDto,
     RollupResultDto,
+    RollupScopePreviewDto,
+    RollupScopePreviewResponseDto,
     RollupSourceSendResponseDto,
     RollupSourceSendStatusDto,
     RollupSubsidiaryDto,
@@ -22,6 +31,7 @@ from src.models.rollup import (
     RollupSubsidiaryResponseDto,
 )
 from src.utils.companyscope import checkScope, resolveScope
+from src.utils.calculationengine import normalizeSource
 
 class RollupError(Exception):
     def __init__(self, statusCode: int, code: str, message: str, data: Optional[dict] = None):
@@ -214,7 +224,14 @@ def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseD
                 actorUserId=actorUserId,
             )
 
-            rollupRepository.saveScopeFromRulesTx(cur, batchId, rules, sources, purposeCode)
+            rollupRepository.saveScopeFromRulesTx(
+                cur,
+                batchId,
+                rules,
+                sources,
+                purposeCode,
+                directMetricIds=metricIds,
+            )
 
             # Determine readiness from Tx
             requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
@@ -390,6 +407,21 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
     )
 
 def listRequests(rollupPurposeCode: str, metricScopeCode: str, userModel) -> RollupRequestResponseDto:
+    return listRequestsForSource(
+        rollupPurposeCode=rollupPurposeCode,
+        metricScopeCode=metricScopeCode,
+        includeSentYn=True,
+        transferStatus=None,
+        userModel=userModel,
+    )
+
+def listRequestsForSource(
+    rollupPurposeCode: str,
+    metricScopeCode: str,
+    includeSentYn: bool,
+    transferStatus: Optional[str],
+    userModel,
+) -> RollupRequestResponseDto:
     rollupRepository = loadRepository()
     purposeCode, scopeCode = validatePurposeScope(
         rollupPurposeCode,
@@ -399,30 +431,175 @@ def listRequests(rollupPurposeCode: str, metricScopeCode: str, userModel) -> Rol
         requireContext=False,
     )
     sourceCompanyId = getSource(userModel)
-    requests = rollupRepository.listRequests(sourceCompanyId, purposeCode, scopeCode)
+    requests = rollupRepository.listRequests(
+        sourceCompanyId,
+        purposeCode,
+        scopeCode,
+        includeSentYn=includeSentYn,
+        transferStatus=transferStatus,
+    )
 
     items = []
     for req in requests:
-        batchId = req["batchId"]
-        readiness = rollupRepository.buildSourceReadiness(batchId, [sourceCompanyId], int(req["reportingYear"]))
-        items.append(RollupRequestItemDto(
-            batchId=batchId,
-            batchCode=req.get("batchCode"),
-            parentCompanyId=req["parentCompanyId"],
-            parentCompanyCode=req.get("parentCompanyCode"),
-            parentCompanyName=req.get("parentCompanyName"),
-            reportingYear=req["reportingYear"],
-            rollupPurposeCode=req.get("rollupPurposeCode") or purposeCode,
-            metricScopeCode=req.get("metricScopeCode") or scopeCode,
-            requestStatus=req.get("requestStatus") or "",
-            inputStatus=req.get("inputStatus") or "",
-            approvalStatus=req.get("approvalStatus") or "",
-            transferStatus=req.get("transferStatus") or "",
-            sendReadyYn=bool(readiness["readyYn"]),
-            missingAtomicMetricIds=readiness["missingByCompany"].get(str(sourceCompanyId), [])
-        ))
+        items.append(buildRequestItem(req, sourceCompanyId))
 
     return RollupRequestResponseDto(data=RollupRequestListDto(items=items))
+
+def getScopePreview(
+    runId: Optional[int],
+    sourceCycleId: Optional[int],
+    rollupPurposeCode: str,
+    metricScopeCode: str,
+    userModel,
+) -> RollupScopePreviewResponseDto:
+    rollupRepository = loadRepository()
+    purposeCode, scopeCode = validatePurposeScope(
+        rollupPurposeCode,
+        metricScopeCode,
+        runId,
+        sourceCycleId,
+    )
+    context = resolveBatchContext(rollupRepository, purposeCode, runId, sourceCycleId)
+    parentCompanyId = int(context["parentCompanyId"])
+    reportingYear = int(context["reportingYear"])
+    checkScope(parentCompanyId, userModel)
+
+    metricIds = resolvePreviewMetricIds(rollupRepository, purposeCode, parentCompanyId, sourceCycleId)
+    if not metricIds:
+        raise RollupError(422, "ROLLUP_RULE_NOT_FOUND", "No valid consolidated metrics found in rollup scope.")
+    rules, sources = rollupRepository.resolveConsolidatedRuleClosure(metricIds)
+    if not rules:
+        raise RollupError(422, "ROLLUP_RULE_NOT_FOUND", "No consolidated calculation rules were found in rollup scope.")
+    requiredAtomicIds = resolveExternalAtomicIdsFromRules(rules, sources)
+    return RollupScopePreviewResponseDto(
+        data=RollupScopePreviewDto(
+            runId=runId,
+            sourceCycleId=sourceCycleId,
+            parentCompanyId=parentCompanyId,
+            reportingYear=reportingYear,
+            rollupPurposeCode=purposeCode,
+            metricScopeCode=scopeCode,
+            metricCount=len(metricIds),
+            metricIds=metricIds,
+            requiredAtomicCount=len(requiredAtomicIds),
+            requiredAtomicMetricIds=requiredAtomicIds,
+        )
+    )
+
+def getRequestDetail(batchId: int, userModel) -> RollupRequestDetailResponseDto:
+    rollupRepository = loadRepository()
+    sourceCompanyId = getSource(userModel)
+    batch = rollupRepository.getBatch(batchId)
+    if not batch:
+        raise RollupError(404, "ROLLUP_BATCH_NOT_FOUND", "Rollup batch was not found.")
+    source = rollupRepository.getSource(batchId, sourceCompanyId)
+    if not source or int(source.get("source_company_id") or 0) == int(batch["parent_company_id"]):
+        raise RollupError(404, "ROLLUP_SOURCE_REQUEST_NOT_FOUND", "Rollup source transfer request was not found.")
+    readiness = rollupRepository.buildSourceReadiness(batchId, [sourceCompanyId], int(batch["reporting_year"]))
+    missingAtomicIds = readiness["missingByCompany"].get(str(sourceCompanyId), [])
+    metricScope = buildBatchMetricScope(batch)
+    requestedMetricIds = metricScope["requestedMetricIds"]
+    dependencyMetricIds = metricScope["dependencyMetricIds"]
+    metricItems = buildMetricReadinessItems(batchId, missingAtomicIds, requestedMetricIds)
+    dependencyItems = buildMetricReadinessItems(batchId, missingAtomicIds, dependencyMetricIds)
+    actionableInputMetricIds = buildActionableInputMetricIds(requestedMetricIds, dependencyItems)
+    parentProfile = rollupRepository.getCompanyProfile(int(batch["parent_company_id"]))
+    sourceProfile = rollupRepository.getCompanyProfile(sourceCompanyId)
+    requiredAtomicCount = int(readiness.get("requiredAtomicCount") or 0)
+    approvedAtomicCount = max(0, requiredAtomicCount - len(missingAtomicIds))
+    return RollupRequestDetailResponseDto(
+        data=RollupRequestDetailDto(
+            batchId=batchId,
+            batchCode=batch.get("rollup_batch_code"),
+            sourceCycleId=int(batch["source_cycle_id"]) if batch.get("source_cycle_id") is not None else None,
+            parentCompanyId=int(batch["parent_company_id"]),
+            parentCompanyCode=parentProfile.get("companyCode"),
+            parentCompanyName=parentProfile.get("companyName"),
+            sourceCompanyId=sourceCompanyId,
+            sourceCompanyCode=sourceProfile.get("companyCode"),
+            sourceCompanyName=sourceProfile.get("companyName"),
+            reportingYear=int(batch["reporting_year"]),
+            rollupPurposeCode=batch.get("rollup_purpose_code") or "",
+            metricScopeCode=batch.get("metric_scope_code") or "",
+            requestStatus=source.get("request_status") or "",
+            inputStatus=source.get("input_status") or "",
+            approvalStatus=source.get("approval_status") or "",
+            transferStatus=source.get("transfer_status") or "",
+            sendReadyYn=bool(readiness.get("readyYn")),
+            readinessStatus=buildReadinessStatus(requiredAtomicCount, approvedAtomicCount, len(missingAtomicIds)),
+            metricCount=len(requestedMetricIds),
+            requiredAtomicCount=requiredAtomicCount,
+            approvedAtomicCount=approvedAtomicCount,
+            missingAtomicCount=len(missingAtomicIds),
+            currentApprovedAtomicCount=approvedAtomicCount,
+            currentMissingAtomicCount=len(missingAtomicIds),
+            missingAtomicMetricIds=missingAtomicIds,
+            metricIds=requestedMetricIds,
+            requestedMetricCount=len(requestedMetricIds),
+            requestedMetricIds=requestedMetricIds,
+            resolvedMetricCount=len(metricScope["resolvedMetricIds"]),
+            resolvedMetricIds=metricScope["resolvedMetricIds"],
+            dependencyMetricIds=dependencyMetricIds,
+            actionableInputMetricIds=actionableInputMetricIds,
+            inputWorkspace=resolveInputWorkspace(
+                sourceCompanyId=sourceCompanyId,
+                reportingYear=int(batch["reporting_year"]),
+                metricIds=actionableInputMetricIds,
+            ),
+            items=metricItems,
+            dependencyItems=dependencyItems,
+        )
+    )
+
+def listBatchSources(batchId: int, userModel) -> RollupBatchSourceListResponseDto:
+    rollupRepository = loadRepository()
+    batch = rollupRepository.getBatch(batchId)
+    if not batch:
+        raise RollupError(404, "ROLLUP_BATCH_NOT_FOUND", "Rollup batch was not found.")
+    parentCompanyId = int(batch["parent_company_id"])
+    checkScope(parentCompanyId, userModel)
+    rows = [
+        row
+        for row in rollupRepository.listSourceDetails(batchId)
+        if int(row["source_company_id"]) != parentCompanyId
+    ]
+    items = []
+    for row in rows:
+        sourceCompanyId = int(row["source_company_id"])
+        readiness = rollupRepository.buildSourceReadiness(batchId, [sourceCompanyId], int(batch["reporting_year"]))
+        missingAtomicIds = readiness["missingByCompany"].get(str(sourceCompanyId), [])
+        requiredAtomicCount = int(readiness.get("requiredAtomicCount") or 0)
+        approvedAtomicCount = max(0, requiredAtomicCount - len(missingAtomicIds))
+        items.append(
+            RollupBatchSourceItemDto(
+                sourceCompanyId=sourceCompanyId,
+                sourceCompanyCode=row.get("sourceCompanyCode"),
+                sourceCompanyName=row.get("sourceCompanyName"),
+                requestStatus=row.get("request_status") or "",
+                inputStatus=row.get("input_status") or "",
+                approvalStatus=row.get("approval_status") or "",
+                transferStatus=row.get("transfer_status") or "",
+                sendReadyYn=bool(readiness.get("readyYn")),
+                readinessStatus=buildReadinessStatus(requiredAtomicCount, approvedAtomicCount, len(missingAtomicIds)),
+                requiredAtomicCount=requiredAtomicCount,
+                approvedAtomicCount=approvedAtomicCount,
+                missingAtomicCount=len(missingAtomicIds),
+                currentApprovedAtomicCount=approvedAtomicCount,
+                currentMissingAtomicCount=len(missingAtomicIds),
+                sentAt=formatDateTime(row.get("sent_at")),
+                receivedAt=formatDateTime(row.get("received_at")),
+            )
+        )
+    return RollupBatchSourceListResponseDto(
+        data=RollupBatchSourceListDto(
+            batchId=batchId,
+            parentCompanyId=parentCompanyId,
+            reportingYear=int(batch["reporting_year"]),
+            rollupPurposeCode=batch.get("rollup_purpose_code") or "",
+            metricScopeCode=batch.get("metric_scope_code") or "",
+            items=items,
+        )
+    )
 
 def sendSource(batchId: int, userModel) -> RollupSourceSendResponseDto:
     rollupRepository = loadRepository()
@@ -477,6 +654,193 @@ def getStatus(batchId: int, userModel) -> RollupBatchSummaryResponseDto:
     if not summary:
         raise RollupError(404, "ROLLUP_BATCH_NOT_FOUND", "Rollup batch was not found.")
     return RollupBatchSummaryResponseDto(data=buildSummary(summary))
+
+def resolvePreviewMetricIds(rollupRepository, purposeCode: str, parentCompanyId: int, sourceCycleId: Optional[int]) -> list[str]:
+    if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
+        return ["G0-02"]
+    from src.utils.onboardingscoperepository import listMetricScopes
+    scopeRows = listMetricScopes(int(sourceCycleId), parentCompanyId)
+    metricIds = [
+        str(row.get("metric_id") or "").strip()
+        for row in scopeRows
+        if str(row.get("approval_policy_code") or "").strip().upper() == "PROMOTE_TO_KPI_FACT_AND_ROLLUP"
+    ]
+    return sorted({metricId for metricId in metricIds if metricId})
+
+def resolveExternalAtomicIdsFromRules(rules: list[dict], sources: list[dict]) -> list[str]:
+    targetAtomicIds = {
+        str(rule.get("target_atomic_metric_id") or "").strip()
+        for rule in rules
+        if str(rule.get("target_atomic_metric_id") or "").strip()
+    }
+    sourceAtomicIds = {
+        normalizeSource(source).get("sourceAtomicMetricId")
+        for source in sources
+        if normalizeSource(source).get("sourceAtomicMetricId")
+    }
+    return sorted(sourceAtomicIds - targetAtomicIds)
+
+def buildRequestItem(req: dict, sourceCompanyId: int) -> RollupRequestItemDto:
+    batchId = int(req["batchId"])
+    rollupRepository = loadRepository()
+    readiness = rollupRepository.buildSourceReadiness(batchId, [sourceCompanyId], int(req["reportingYear"]))
+    missingAtomicIds = readiness["missingByCompany"].get(str(sourceCompanyId), [])
+    metricScope = buildBatchMetricScope(req)
+    requestedMetricIds = metricScope["requestedMetricIds"]
+    requiredAtomicCount = int(readiness.get("requiredAtomicCount") or 0)
+    approvedAtomicCount = max(0, requiredAtomicCount - len(missingAtomicIds))
+    return RollupRequestItemDto(
+        batchId=batchId,
+        batchCode=req.get("batchCode"),
+        sourceCycleId=int(req["sourceCycleId"]) if req.get("sourceCycleId") is not None else None,
+        parentCompanyId=req["parentCompanyId"],
+        parentCompanyCode=req.get("parentCompanyCode"),
+        parentCompanyName=req.get("parentCompanyName"),
+        reportingYear=req["reportingYear"],
+        rollupPurposeCode=req.get("rollupPurposeCode") or "",
+        metricScopeCode=req.get("metricScopeCode") or "",
+        requestStatus=req.get("requestStatus") or "",
+        inputStatus=req.get("inputStatus") or "",
+        approvalStatus=req.get("approvalStatus") or "",
+        transferStatus=req.get("transferStatus") or "",
+        sendReadyYn=bool(readiness["readyYn"]),
+        missingAtomicMetricIds=missingAtomicIds,
+        readinessStatus=buildReadinessStatus(requiredAtomicCount, approvedAtomicCount, len(missingAtomicIds)),
+        currentApprovedAtomicCount=approvedAtomicCount,
+        currentMissingAtomicCount=len(missingAtomicIds),
+        metricCount=len(requestedMetricIds),
+        requiredAtomicCount=requiredAtomicCount,
+        approvedAtomicCount=approvedAtomicCount,
+        missingAtomicCount=len(missingAtomicIds),
+        metricIds=requestedMetricIds,
+        requestedMetricCount=len(requestedMetricIds),
+        requestedMetricIds=requestedMetricIds,
+        resolvedMetricCount=len(metricScope["resolvedMetricIds"]),
+        resolvedMetricIds=metricScope["resolvedMetricIds"],
+        dependencyMetricIds=metricScope["dependencyMetricIds"],
+    )
+
+def buildMetricReadinessItems(
+    batchId: int,
+    missingAtomicIds: list[str],
+    metricIds: Optional[list[str]] = None,
+) -> list[RollupRequestMetricItemDto]:
+    rollupRepository = loadRepository()
+    scopes = rollupRepository.listScope(batchId)
+    metricFilter = set(metricIds or [])
+    targetAtomicIds = {
+        str(scope.get("group_atomic_metric_id") or "").strip()
+        for scope in scopes
+        if str(scope.get("group_atomic_metric_id") or "").strip()
+    }
+    requiredByMetric = {}
+    for scope in scopes:
+        metricId = str(scope.get("metric_id") or "").strip()
+        if not metricId:
+            continue
+        if metricFilter and metricId not in metricFilter:
+            continue
+        for atomicId in scope.get("sourceAtomicMetricIds") or []:
+            if atomicId and atomicId not in targetAtomicIds:
+                requiredByMetric.setdefault(metricId, set()).add(atomicId)
+    atomicMetadata = rollupRepository.listAtomicMetadata(
+        sorted({atomicId for atomicIds in requiredByMetric.values() for atomicId in atomicIds})
+    )
+    metricNameByMetric = {}
+    for row in atomicMetadata:
+        metricId = row.get("metricId")
+        if metricId and row.get("metricName"):
+            metricNameByMetric.setdefault(metricId, row.get("metricName"))
+    missingSet = set(missingAtomicIds or [])
+    items = []
+    for metricId in sorted(requiredByMetric.keys()):
+        requiredAtomicIds = sorted(requiredByMetric[metricId])
+        metricMissingIds = [atomicId for atomicId in requiredAtomicIds if atomicId in missingSet]
+        items.append(
+            RollupRequestMetricItemDto(
+                metricId=metricId,
+                metricName=metricNameByMetric.get(metricId),
+                requiredAtomicCount=len(requiredAtomicIds),
+                approvedAtomicCount=max(0, len(requiredAtomicIds) - len(metricMissingIds)),
+                missingAtomicMetricIds=metricMissingIds,
+            )
+        )
+    return items
+
+def buildBatchMetricScope(batch: dict) -> dict:
+    rollupRepository = loadRepository()
+    requestedMetricIds = resolveBatchRequestedMetricIds(batch)
+    scopes = rollupRepository.listScope(int(batch["batchId"] if batch.get("batchId") is not None else batch["id"]))
+    resolvedMetricIds = sorted({
+        str(scope.get("metric_id") or "").strip()
+        for scope in scopes
+        if str(scope.get("metric_id") or "").strip()
+    })
+    requestedSet = set(requestedMetricIds)
+    return {
+        "requestedMetricIds": requestedMetricIds,
+        "resolvedMetricIds": resolvedMetricIds,
+        "dependencyMetricIds": [metricId for metricId in resolvedMetricIds if metricId not in requestedSet],
+    }
+
+def resolveBatchRequestedMetricIds(batch: dict) -> list[str]:
+    rollupRepository = loadRepository()
+    batchId = batch.get("batchId") if batch.get("batchId") is not None else batch.get("id")
+    if batchId is not None:
+        snapshotMetricIds = rollupRepository.listRequestedMetricIdsFromBatchScope(int(batchId))
+        if snapshotMetricIds:
+            return snapshotMetricIds
+    purposeCode = str(batch.get("rollupPurposeCode") or batch.get("rollup_purpose_code") or "").strip().upper()
+    sourceCycleId = batch.get("sourceCycleId") if batch.get("sourceCycleId") is not None else batch.get("source_cycle_id")
+    parentCompanyId = batch.get("parentCompanyId") if batch.get("parentCompanyId") is not None else batch.get("parent_company_id")
+    if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
+        return ["G0-02"]
+    if purposeCode == rollupRepository.ROLLUP_PURPOSE_REPORT_DISCLOSURE and sourceCycleId is not None:
+        return resolvePreviewMetricIds(rollupRepository, purposeCode, int(parentCompanyId), int(sourceCycleId))
+    return []
+
+def buildReadinessStatus(requiredAtomicCount: int, approvedAtomicCount: int, missingAtomicCount: int) -> str:
+    if requiredAtomicCount <= 0:
+        return "NOT_STARTED"
+    if approvedAtomicCount <= 0:
+        return "NOT_STARTED"
+    if missingAtomicCount > 0:
+        return "PARTIAL"
+    return "READY"
+
+def buildActionableInputMetricIds(
+    requestedMetricIds: list[str],
+    dependencyItems: list[RollupRequestMetricItemDto],
+) -> list[str]:
+    metricIds = {
+        str(metricId or "").strip()
+        for metricId in requestedMetricIds or []
+        if str(metricId or "").strip()
+    }
+    for item in dependencyItems or []:
+        if item.missingAtomicMetricIds:
+            metricIds.add(item.metricId)
+    return sorted(metricIds)
+
+def resolveInputWorkspace(
+    sourceCompanyId: int,
+    reportingYear: int,
+    metricIds: list[str],
+) -> RollupInputWorkspaceDto:
+    rollupRepository = loadRepository()
+    workspace = rollupRepository.findActiveInputWorkspace(sourceCompanyId, reportingYear, metricIds)
+    if not workspace:
+        return RollupInputWorkspaceDto(
+            availableYn=False,
+            reportingYear=reportingYear,
+            reason="INPUT_WORKSPACE_NOT_READY",
+        )
+    return RollupInputWorkspaceDto(
+        availableYn=True,
+        cycleId=int(workspace["cycleId"]),
+        cycleType=workspace.get("cycleType"),
+        reportingYear=int(workspace.get("reportingYear") or reportingYear),
+    )
 
 def getRunOrRaise(runId: int) -> dict:
     rollupRepository = loadRepository()
@@ -611,6 +975,10 @@ __all__ = [
     "saveBatch",
     "calcBatch",
     "listRequests",
+    "listRequestsForSource",
+    "getScopePreview",
+    "getRequestDetail",
+    "listBatchSources",
     "sendSource",
     "getStatus",
     "RollupError",

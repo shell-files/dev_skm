@@ -1,9 +1,10 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 import json
 
 from src.models.rollup import (
+    RollupActiveBatchResponseDto,
     RollupBatchRequestDto,
     RollupBatchResponseDto,
     RollupBatchSourceItemDto,
@@ -412,6 +413,7 @@ def listRequests(rollupPurposeCode: str, metricScopeCode: str, userModel) -> Rol
         metricScopeCode=metricScopeCode,
         includeSentYn=True,
         transferStatus=None,
+        allPurposesYn=False,
         userModel=userModel,
     )
 
@@ -420,16 +422,20 @@ def listRequestsForSource(
     metricScopeCode: str,
     includeSentYn: bool,
     transferStatus: Optional[str],
+    allPurposesYn: bool,
     userModel,
 ) -> RollupRequestResponseDto:
     rollupRepository = loadRepository()
-    purposeCode, scopeCode = validatePurposeScope(
-        rollupPurposeCode,
-        metricScopeCode,
-        runId=None,
-        sourceCycleId=None,
-        requireContext=False,
-    )
+    if allPurposesYn:
+        purposeCode, scopeCode = None, None
+    else:
+        purposeCode, scopeCode = validatePurposeScope(
+            rollupPurposeCode,
+            metricScopeCode,
+            runId=None,
+            sourceCycleId=None,
+            requireContext=False,
+        )
     sourceCompanyId = getSource(userModel)
     requests = rollupRepository.listRequests(
         sourceCompanyId,
@@ -654,6 +660,31 @@ def getStatus(batchId: int, userModel) -> RollupBatchSummaryResponseDto:
     if not summary:
         raise RollupError(404, "ROLLUP_BATCH_NOT_FOUND", "Rollup batch was not found.")
     return RollupBatchSummaryResponseDto(data=buildSummary(summary))
+
+def getActiveBatchStatus(
+    runId: Optional[int],
+    sourceCycleId: Optional[int],
+    rollupPurposeCode: str,
+    metricScopeCode: str,
+    userModel,
+) -> RollupActiveBatchResponseDto:
+    rollupRepository = loadRepository()
+    purposeCode, scopeCode = validatePurposeScope(
+        rollupPurposeCode,
+        metricScopeCode,
+        runId,
+        sourceCycleId,
+    )
+    context = resolveBatchContext(rollupRepository, purposeCode, runId, sourceCycleId)
+    parentCompanyId = context["parentCompanyId"]
+    checkScope(parentCompanyId, userModel)
+    
+    batch = rollupRepository.getActiveBatch(runId, sourceCycleId, purposeCode, scopeCode)
+    if not batch:
+        return RollupActiveBatchResponseDto(data=None)
+        
+    includedCompanyIds = rollupRepository.listSourceCompanyIds(int(batch["id"]))
+    return RollupActiveBatchResponseDto(data=buildBatchStatus(batch, includedCompanyIds))
 
 def resolvePreviewMetricIds(rollupRepository, purposeCode: str, parentCompanyId: int, sourceCycleId: Optional[int]) -> list[str]:
     if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
@@ -981,5 +1012,6 @@ __all__ = [
     "listBatchSources",
     "sendSource",
     "getStatus",
+    "getActiveBatchStatus",
     "RollupError",
 ]

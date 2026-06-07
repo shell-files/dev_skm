@@ -136,6 +136,7 @@ class RollupReadApiServiceTest(unittest.TestCase):
                 "SELECTED_DISCLOSURE",
                 includeSentYn=True,
                 transferStatus="sent",
+                allPurposesYn=False,
                 userModel={},
             )
 

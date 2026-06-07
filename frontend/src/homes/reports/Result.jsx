@@ -197,28 +197,17 @@ const MatrixTooltip = ({ active, payload }) => {
   const cfg = CAT_CONFIG[d.cat] ?? { bg: "rgba(148,163,184,0.9)", badge: { bg: "#f1f5f9", color: "#475569" } };
 
   return (
-    <div style={{
-      background: "#fff", border: "1px solid #e2e8f0", borderRadius: "10px",
-      padding: "10px 14px", fontSize: "12px", fontFamily: "Pretendard, sans-serif",
-      boxShadow: "0 4px 16px rgba(0,0,0,0.10)", minWidth: "190px",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-        <span style={{
-          width: "24px", height: "24px", borderRadius: "50%", background: cfg.bg,
-          display: "inline-flex", alignItems: "center", justifyContent: "center",
-          color: "#fff", fontWeight: 800, fontSize: "11px", flexShrink: 0,
-        }}>
+    <div className="matrix-tooltip">
+      <div className="matrix-tooltip-header">
+        <span className="matrix-tooltip-rank" style={{ background: cfg.bg }}>
           {d.rank}
         </span>
-        <span style={{ fontWeight: 700, color: "#1e293b" }}>{d.label}</span>
-        <span style={{
-          padding: "2px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 700,
-          background: cfg.badge.bg, color: cfg.badge.color, marginLeft: "auto",
-        }}>
+        <span className="matrix-tooltip-name">{d.label}</span>
+        <span className="matrix-tooltip-cat-badge" style={{ background: cfg.badge.bg, color: cfg.badge.color }}>
           {d.cat}
         </span>
       </div>
-      <div style={{ display: "flex", gap: "14px", color: "#64748b", fontSize: "11px" }}>
+      <div className="matrix-tooltip-meta">
         <div>재무중요성: <strong style={{ color: "#1e293b" }}>{lvl(d.x)}</strong></div>
         <div>영향중요성: <strong style={{ color: "#1e293b" }}>{lvl(d.y)}</strong></div>
       </div>
@@ -239,13 +228,13 @@ const DoubleMaterialityMatrix = () => {
   );
 
   return (
-    <div style={{ fontFamily: "Pretendard, sans-serif" }}>
+    <div className="dmat-wrap">
 
       {/* 차트 래퍼 — position:relative 필수 (ZoneOverlay absolute 기준점) */}
-      <div ref={chartWrapRef} style={{ position: "relative" }}>
+      <div ref={chartWrapRef} className="dmat-chart-wrap">
         {/* 동심원 배경 SVG 오버레이 */}
         <ZoneOverlay containerRef={chartWrapRef} />
-        <div style={{ position: "relative" }}>
+        <div className="dmat-chart-wrap">
           <ResponsiveContainer width="100%" height={340}>
             <ScatterChart margin={{ top: 16, right: 28, bottom: 44, left: 20 }}>
               {/* 우상단: High Financial + High Impact (빨강) */}
@@ -346,42 +335,33 @@ const DoubleMaterialityMatrix = () => {
       </div>
 
       {/* 하단 범례 */}
-      <div style={{ display: "flex", gap: "20px", justifyContent: "center", marginTop: "4px", flexWrap: "wrap" }}>
-
+      <div className="dmat-cat-legend">
         {activeCats.map((cat) => (
-          <div key={cat} style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "#475569" }}>
-            <span style={{ width: "12px", height: "12px", borderRadius: "50%", background: CAT_CONFIG[cat].bg, display: "inline-block" }} />
+          <div key={cat} className="dmat-cat-legend-item">
+            <span className="dmat-cat-legend-dot" style={{ background: CAT_CONFIG[cat].bg }} />
             {CAT_CONFIG[cat].label} 선정 이슈
           </div>
         ))}
       </div>
 
       {/* 선정 이슈 목록 */}
-      <div style={{ marginTop: "14px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "4px 14px" }}>
+      <div className="dmat-issue-grid">
         {MATRIX_POINTS.map((p) => {
           const cfg = CAT_CONFIG[p.cat] ?? { bg: "rgba(148,163,184,0.9)", badge: { bg: "#f1f5f9", color: "#475569" } };
           const key = `${p.cat}-${p.rank}`;
           return (
             <div
               key={key}
+              className="dmat-issue-item"
               onMouseEnter={() => setHoveredKey(key)}
               onMouseLeave={() => setHoveredKey(null)}
-              style={{
-                display: "flex", alignItems: "center", gap: "8px",
-                fontSize: "12px", color: "#334155", padding: "5px 7px", borderRadius: "7px",
-                background: hoveredKey === key ? "#f1f5f9" : "transparent",
-                transition: "background 0.15s", cursor: "default",
-              }}
+              style={{ background: hoveredKey === key ? "#f1f5f9" : "transparent" }}
             >
-              <span style={{
-                width: "22px", height: "22px", borderRadius: "50%", background: cfg.bg,
-                color: "#fff", fontSize: "10px", fontWeight: 800,
-                display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-              }}>
+              <span className="dmat-rank-dot" style={{ background: cfg.bg }}>
                 {p.rank}
               </span>
-              <span style={{ fontWeight: 600, flex: 1 }}>{p.label}</span>
-              <span style={{ padding: "1px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, background: cfg.badge.bg, color: cfg.badge.color }}>
+              <span className="dmat-issue-label">{p.label}</span>
+              <span className="dmat-cat-badge" style={{ background: cfg.badge.bg, color: cfg.badge.color }}>
                 {p.cat}
               </span>
             </div>
@@ -585,10 +565,10 @@ const Result = () => {
 
         <div className="sr-stepper-row">
           {steps.map((step, index) => (
-            <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
+            <div key={step.id} className="stepper-step-wrap">
               <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
                 <div className="step-icon-circle">{step.icon}</div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 850 }}>{step.title}</div>
+                <div className="step-title-text">{step.title}</div>
               </div>
               {index < steps.length - 1 && <div className="step-line"></div>}
             </div>
@@ -708,7 +688,7 @@ const Result = () => {
                         },
                       ].map((card, i) => (
                         <div key={i}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "16px", background: card.last ? "#f0fdf4" : "#f8fafc", border: `1px solid ${card.last ? "#bbf7d0" : "#e2e8f0"}`, borderRadius: "14px", padding: "18px 20px" }}>
+                          <div className={`flow-card${card.last ? " last" : ""}`}>
                             <div className="icon-circle-lg">{card.icon}</div>
                             <div>
                               <div className="flow-count">{card.count}</div>
@@ -914,21 +894,11 @@ const Result = () => {
                           return (
                             <tr key={item.rank}>
                               <td className="missing-name">
-                                <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-                                  <span style={{
-                                    width: "22px", height: "22px", borderRadius: "50%",
-                                    background: item.color, color: "#fff",
-                                    fontSize: "11px", fontWeight: 700,
-                                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                                    flexShrink: 0,
-                                  }}>
+                                <span className="priority-issue-wrap">
+                                  <span className="priority-rank-dot" style={{ background: item.color }}>
                                     {index + 1}
                                   </span>
-                                  <span style={{
-                                    padding: "2px 6px", borderRadius: "5px",
-                                    background: category.bg, color: category.color,
-                                    fontSize: "10px", fontWeight: 700, flexShrink: 0,
-                                  }}>
+                                  <span className="priority-cat-badge" style={{ background: category.bg, color: category.color }}>
                                     {category.text}
                                   </span>
                                   {item.name}
@@ -1070,15 +1040,15 @@ const Result = () => {
                   <DoubleMaterialityMatrix />
                 </div>
                 <div id="table-card">
-                  <div style={{ display: "flex", gap: "16px", marginBottom: "10px", fontSize: "0.8rem", color: "#475569", alignItems: "center" }}>
+                  <div className="scatter-legend-row">
                     {[["Low,", 1], ["Middle,", 2], ["High,", 3]].map(([label, filled]) => (
-                      <span key={label} style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
-                        <span style={{ display: "inline-flex", gap: "3px" }}>
+                      <span key={label} className="scatter-legend-item">
+                        <span className="scatter-legend-dots">
                           {[1, 2, 3].map((i) => (
-                            <span key={i} style={{ width: "9px", height: "9px", borderRadius: "50%", display: "inline-block", backgroundColor: i <= filled ? "#1e293b" : "transparent", border: "2px solid #1e293b" }} />
+                            <span key={i} className="scatter-legend-dot" style={{ backgroundColor: i <= filled ? "#1e293b" : "transparent" }} />
                           ))}
                         </span>
-                        <span style={{ fontWeight: 600 }}>{label}</span>
+                        <span className="scatter-legend-label">{label}</span>
                       </span>
                     ))}
                   </div>

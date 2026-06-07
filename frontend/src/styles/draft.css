@@ -561,3 +561,51 @@
   background-color: #f0fdf4;
   outline: none;
 }
+
+/* ── 스텝퍼 ── */
+.stepper-step-wrap { display: flex; align-items: center; }
+.step-title-text   { font-size: 0.8rem; font-weight: 850; }
+
+/* ── 수정 버튼 볼드 ── */
+.doc-btn.editing-active { font-weight: bold; }
+
+/* ── 내보내기 드롭다운 ── */
+.save-dropdown-container { position: relative; display: inline-block; flex-shrink: 0; }
+.save-dropdown-arrow     { font-size: 0.7rem; margin-left: 4px; }
+.save-dropdown-menu {
+  position: absolute; top: 100%;
+  right: 0; margin-top: 6px;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,.1); padding: 6px 0;
+  list-style: none; z-index: 50; min-width: 145px;
+}
+.dropdown-item { padding: 10px 16px; font-size: 0.85rem; color: #334155; cursor: pointer; transition: background 0.2s; text-align: left; }
+.dropdown-item:hover { background: #f1f5f9; color: #03A94D; }
+
+/* ── 목차 ── */
+.toc-section  { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px 32px; margin-bottom: 32px; }
+.toc-heading  { font-size: 1rem; font-weight: 700; color: #1e293b; margin: 0 0 16px 0; padding-bottom: 10px; border-bottom: 2px solid #03A94D; display: flex; align-items: center; gap: 8px; }
+.toc-list     { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.toc-item-btn { display: flex; align-items: center; gap: 8px; width: 100%; border: none; background: none; cursor: pointer; padding: 7px 8px; border-radius: 6px; text-align: left; transition: background 0.15s; }
+.toc-item-btn:hover  { background: #eef2f7; }
+.toc-item-btn.active { background: #e2e8f0; }
+.toc-item-num   { font-size: 0.75rem; color: #94a3b8; font-weight: 700; min-width: 20px; flex-shrink: 0; }
+.toc-chip       { font-size: 0.68rem !important; padding: 2px 7px !important; flex-shrink: 0; }
+.toc-item-title { font-size: 0.8rem; color: #334155; font-weight: 400; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toc-item-title.active { color: #03A94D; font-weight: 700; }
+.toc-item-arrow { font-size: 0.72rem; color: #03A94D; font-weight: 600; flex-shrink: 0; }
+
+/* ── 패널 빈 상태 ── */
+.panel-empty-text { padding: 40px; color: #64748b; text-align: center; }
+
+/* ── PDF 렌더 루트 (화면 밖) ── */
+.pdf-render-root    { position: fixed; left: -99999px; top: 0; width: 297mm; background: #fff; z-index: -1; }
+.pdf-toc-wrap       { width: 297mm; padding: 20mm 22mm; box-sizing: border-box; font-family: "Noto Sans KR", sans-serif; }
+.pdf-toc-sublabel   { font-size: 13px; font-weight: 700; color: #34805c; margin-bottom: 4px; }
+.pdf-toc-title      { font-size: 22px; font-weight: 800; color: #16241f; margin-bottom: 6px; }
+.pdf-toc-rule       { height: 2px; background: #1b5e44; margin-bottom: 18px; border: none; }
+.pdf-toc-item       { display: flex; align-items: center; gap: 10px; padding: 11px 6px; border-bottom: 1px solid #e2eae5; font-size: 13px; color: #16241f; }
+.pdf-toc-item-num   { font-weight: 800; color: #8c9893; min-width: 26px; }
+.pdf-toc-item-tag   { font-weight: 700; color: #1b5e44; }
+.pdf-toc-item-label { flex: 1; }
+.pdf-toc-item-arrow { color: #34805c; font-weight: 600; }

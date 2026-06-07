@@ -760,13 +760,13 @@ const Draft = () => {
      
         <div className="draft-stepper-row">
           {steps.map((step, index) => (
-            <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
+            <div key={step.id} className="stepper-step-wrap">
               <div
                 className={`step-box ${index === activeIndex ? "active" : ""}`}
                 onClick={() => { if (index !== activeIndex) navigate(step.path); }}
               >
                 <div className="step-icon-circle">{step.icon}</div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 850 }}>{step.title}</div>
+                <div className="step-title-text">{step.title}</div>
               </div>
               {index < steps.length - 1 && <div className="step-line"></div>}
             </div>
@@ -790,31 +790,25 @@ const Draft = () => {
                 
                 <div className="doc-actions">
                   {/* 1. 독립된 본문 수정 버튼 (Toggle 형태) */}
-                  <button 
-                    className={`doc-btn ${isEditing ? "editing-active" : ""}`} 
+                  <button
+                    className={`doc-btn ${isEditing ? "editing-active" : ""}`}
                     onClick={() => setIsEditing(!isEditing)}
-                    style={{ fontWeight: isEditing ? "bold" : "normal" }}
                   >
                     {isEditing ? "💾 수정 완료" : "✏️ 본문 수정"}
                   </button>
 
                   {/* 2. 분리된 파일 내려받기 드롭다운 버튼 */}
-                  <div className="save-dropdown-container" ref={dropdownRef} style={{ position: "relative", display: "inline-block", flexShrink: 0 }}>
+                  <div className="save-dropdown-container" ref={dropdownRef}>
                     <button className="doc-btn export-toggle-btn" onClick={() => setExportMenuOpen(!exportMenuOpen)}>
-                      📥 파일 내려받기 <span style={{ fontSize: "0.7rem", marginLeft: "4px" }}>▼</span>
+                      📥 파일 내려받기 <span className="save-dropdown-arrow">▼</span>
                     </button>
-                    
+
                     {exportMenuOpen && (
-                      <ul className="save-dropdown-menu" style={{
-                        position: "absolute", top: "100%", right: 0, marginTop: "6px",
-                        background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px",
-                        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)", padding: "6px 0",
-                        listStyle: "none", zIndex: 50, minWidth: "145px"
-                      }}>
-                        <li onClick={() => handleExport("PDF")} style={dropdownItemStyle}>📄 PDF 다운로드</li>
-                        <li onClick={() => handleExport("Word")} style={dropdownItemStyle}>📝 Word (Docx) 저장</li>
-                        <li onClick={() => handleExport("Excel")} style={dropdownItemStyle}>📊 Excel 데이터 추출</li>
-                        <li onClick={() => handleExport("JSON")} style={dropdownItemStyle}>⚙️ JSON 데이터 추출</li>
+                      <ul className="save-dropdown-menu">
+                        <li className="dropdown-item" onClick={() => handleExport("PDF")}>📄 PDF 다운로드</li>
+                        <li className="dropdown-item" onClick={() => handleExport("Word")}>📝 Word (Docx) 저장</li>
+                        <li className="dropdown-item" onClick={() => handleExport("Excel")}>📊 Excel 데이터 추출</li>
+                        <li className="dropdown-item" onClick={() => handleExport("JSON")}>⚙️ JSON 데이터 추출</li>
                       </ul>
                     )}
                   </div>
@@ -826,37 +820,29 @@ const Draft = () => {
                 <p className="doc-subtitle">전환 리스크에 선제적으로 대응하는 넷제로 로드맵</p>
 
                 {/* 목차 */}
-                <div id="toc-section" style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "24px 32px", marginBottom: "32px" }}>
-                  <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", marginBottom: "16px", paddingBottom: "10px", borderBottom: "2px solid #03A94D", display: "flex", alignItems: "center", gap: "8px" }}>
+                <div id="toc-section" className="toc-section">
+                  <h2 className="toc-heading">
                     <span>📋</span> 목차
                   </h2>
-                  <ol style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "4px" }}>
+                  <ol className="toc-list">
                     {PAGES.map((page, idx) => {
                       const active = idx === currentPage;
                       return (
                         <li key={page.key} id={`toc-item-${page.key}`}>
                           <button
+                            className={`toc-item-btn${active ? " active" : ""}`}
                             onClick={(e) => { e.stopPropagation(); goToPage(idx); }}
-                            style={{
-                              display: "flex", alignItems: "center", gap: "8px",
-                              width: "100%", border: "none",
-                              background: active ? "#e2e8f0" : "none",
-                              cursor: "pointer", padding: "7px 8px", borderRadius: "6px",
-                              textAlign: "left", transition: "background 0.15s",
-                            }}
-                            onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#eef2f7"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = active ? "#e2e8f0" : "none"; }}
                           >
-                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, minWidth: "20px" }}>
+                            <span className="toc-item-num">
                               {String(idx + 1).padStart(2, "0")}
                             </span>
-                            <span className="para-chip blue" style={{ fontSize: "0.68rem", padding: "2px 7px", flexShrink: 0 }}>
+                            <span className="para-chip blue toc-chip">
                               {page.tocTag}
                             </span>
-                            <span style={{ fontSize: "0.8rem", color: active ? "#03A94D" : "#334155", fontWeight: active ? 700 : 400, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <span className={`toc-item-title${active ? " active" : ""}`}>
                               {page.tocTitle}
                             </span>
-                            <span style={{ fontSize: "0.72rem", color: "#03A94D", fontWeight: 600, flexShrink: 0 }}>→</span>
+                            <span className="toc-item-arrow">→</span>
                           </button>
                         </li>
                       );
@@ -1059,7 +1045,7 @@ const Draft = () => {
                   </div>
                 </div>
               ) : (
-                <div className="panel-empty-text" style={{ padding: "40px", color: "#64748b", textAlign: "center" }}>
+                <div className="panel-empty-text">
                   문단을 선택하면 데이터 추적 정보가 표시됩니다.
                 </div>
               )}
@@ -1072,29 +1058,19 @@ const Draft = () => {
       {/* ── PDF 내보내기용: 서브이슈별로 (목차 + 페이지들)을 화면 밖에 풀사이즈로 렌더 ──
           id 에 서브이슈를 prefix 하여 export 시 서브이슈별로 묶어 캡처. 평소엔 렌더 안 함 */}
       {pdfMode && (
-        <div
-          id="pdf-render-root"
-          style={{ position: "fixed", left: "-99999px", top: 0, width: "297mm", background: "#fff", zIndex: -1 }}
-        >
+        <div id="pdf-render-root" className="pdf-render-root">
           {subIssues.map((si) => (
             <div key={si.id} data-subissue={si.id}>
-              <div
-                id={`pdf-toc-${si.id}`}
-                style={{ width: "297mm", padding: "20mm 22mm", boxSizing: "border-box", fontFamily: '"Noto Sans KR", sans-serif' }}
-              >
-                <div style={{ fontSize: "13px", fontWeight: 700, color: "#34805c", marginBottom: "4px" }}>{si.subLabel}</div>
-                <div style={{ fontSize: "22px", fontWeight: 800, color: "#16241f", marginBottom: "6px" }}>{si.label} · 목차</div>
-                <div style={{ height: "2px", background: "#1b5e44", marginBottom: "18px" }} />
+              <div id={`pdf-toc-${si.id}`} className="pdf-toc-wrap">
+                <div className="pdf-toc-sublabel">{si.subLabel}</div>
+                <div className="pdf-toc-title">{si.label} · 목차</div>
+                <hr className="pdf-toc-rule" />
                 {si.pages.map((p, i) => (
-                  <div
-                    key={p.key}
-                    id={`pdf-tocitem-${si.id}-${p.key}`}
-                    style={{ display: "flex", alignItems: "center", gap: "10px", padding: "11px 6px", borderBottom: "1px solid #e2eae5", fontSize: "13px", color: "#16241f" }}
-                  >
-                    <span style={{ fontWeight: 800, color: "#8c9893", minWidth: "26px" }}>{String(i + 1).padStart(2, "0")}</span>
-                    <span style={{ fontWeight: 700, color: "#1b5e44" }}>{p.tocTag}</span>
-                    <span style={{ flex: 1 }}>{p.tabLabel}</span>
-                    <span style={{ color: "#34805c", fontWeight: 600 }}>p.{p.props.pageNumber} →</span>
+                  <div key={p.key} id={`pdf-tocitem-${si.id}-${p.key}`} className="pdf-toc-item">
+                    <span className="pdf-toc-item-num">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="pdf-toc-item-tag">{p.tocTag}</span>
+                    <span className="pdf-toc-item-label">{p.tabLabel}</span>
+                    <span className="pdf-toc-item-arrow">p.{p.props.pageNumber} →</span>
                   </div>
                 ))}
               </div>
@@ -1121,12 +1097,4 @@ const Draft = () => {
 
 
 
-const dropdownItemStyle = {
-  padding: "10px 16px",
-  fontSize: "0.85rem",
-  color: "#334155",
-  cursor: "pointer",
-  transition: "background 0.2s",
-  textAlign: "left"
-};
 export default Draft;

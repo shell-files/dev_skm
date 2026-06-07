@@ -6,6 +6,12 @@ import html2canvas from "html2canvas";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import * as XLSX from "xlsx";
 
+// ── SR 템플릿 통합 (서브이슈 레지스트리 소비) ──
+// 새 서브이슈는 srTemplates/subIssues/<name>/ 폴더 + registry.js 한 줄로 추가됨.
+// (데모용 index.jsx / demo.html / metricsExample.js 는 import 하지 않음)
+import { subIssues } from "./srTemplates/registry";
+import "./srTemplates/core/sr-page.css";
+
 
 
 
@@ -402,9 +408,50 @@ const TrendChart = ({ trend }) => {
   );
 };
 
+// ── 보고서 페이지 레지스트리 ───────────────────────────────
+// 클릭 이동(목차/이전·다음/subnav 탭)의 단일 소스. 페이지 추가 시 항목만 push.
+// metrics/narrativeText 는 렌더 시점에 주입(여기엔 정적 메타만 — 더미 수치 없음).
+// ── 레지스트리에서 평탄화한 페이지 목록 (클릭 이동/렌더/PDF의 단일 소스) ──
+// 각 페이지에 소속 서브이슈 메타(어댑터·편집필드·내보내기명)를 부착.
+const PAGES = subIssues.flatMap((si) =>
+  si.pages.map((p) => ({
+    ...p,
+    tocTitle: si.label,
+    subIssueId: si.id,
+    subIssueLabel: si.label,
+    exportName: si.exportName,
+    adapter: si.adapter,
+    metricFields: si.metricFields,
+  }))
+);
+
+// 편집 입력값(displayValue) + 실제 row 를 해당 서브이슈 adapter 로 합쳐 metrics Map 생성.
+// 빈 입력은 미포함(템플릿이 토큰/—). 숫자 추출 가능하면 차트 스케일용 value 로.
+function buildMetricsFromEdits(adapter, editMetrics, rows) {
+  const map = { ...adapter(rows) };
+  Object.entries(editMetrics || {}).forEach(([id, raw]) => {
+    const t = (raw ?? "").trim();
+    if (!t) return;
+    const n = parseFloat(t.replace(/[^0-9.\-]/g, ""));
+    map[id] = {
+      ...(map[id] || {}),
+      displayValue: t,
+      value: Number.isNaN(n) ? t : n,
+      status: "DRAFT",
+    };
+  });
+  return map;
+}
+
 const Draft = () => {
   const [currentPid, setCurrentPid] = useState(null);
   const [metricOpen, setMetricOpen] = useState(true);
+  const [currentPage, setCurrentPage] = useState(0); // 현재 보고서 페이지 인덱스
+  const [pdfMode, setPdfMode] = useState(false); // PDF 내보내기용 전체 페이지 렌더 모드
+  const [editMetricsByPage, setEditMetricsByPage] = useState({}); // { pageKey: { metric_id: 표시값 } }
+  const [editNarrativeByPage, setEditNarrativeByPage] = useState({}); // { pageKey: 본문 }
+  const [inlineEdit, setInlineEdit] = useState(null); // 본문 값 인라인 편집 팝업 {id, top, left, width, value}
+  const [savedAt, setSavedAt] = useState(null); // 마지막 저장 시각
   
   // ── 상태 정의 ──
   const [isEditing, setIsEditing] = useState(false); // 본문 수정 모드 상태
@@ -414,13 +461,89 @@ const Draft = () => {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  const steps = [
+  // ── SR 템플릿 데이터 연결 (페이지별 웹 편집 → 미리보기/PDF 동일 반영) ──
+  // 실제 API/state 가 생기면 actualMetricRows 로 연결. 현재는 빈 배열 + 페이지별 편집값.
+  const actualMetricRows = []; // ← 실제 source 연결 시 교체 (더미 금지)
+
+  // 특정 페이지의 metrics Map / 본문 (페이지 키별 편집값 + 소속 서브이슈 adapter)
+  const buildPageMetrics = (pageObj) =>
+    buildMetricsFromEdits(pageObj.adapter, editMetricsByPage[pageObj.key], actualMetricRows);
+  const buildPageNarrative = (key) => {
+    const t = (editNarrativeByPage[key] || "").trim();
+    return t ? t : null; // 비어 있으면 템플릿이 지표값으로 자동 조합
+  };
+
+  const STORAGE_KEY = "draft-sr-edits-v1";
+
+  // 저장된 편집값 불러오기 (최초 마운트 시)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed.metrics) setEditMetricsByPage(parsed.metrics);
+      if (parsed.narrative) setEditNarrativeByPage(parsed.narrative);
+      if (parsed.savedAt) setSavedAt(parsed.savedAt);
+    } catch (e) {
+      console.warn("저장된 편집값 로드 실패:", e);
+    }
+  }, []);
+
+  // 저장: 현재 편집값을 영속화. (백엔드 미연동 → localStorage. 실제 API는 TODO 지점에 연결)
+  const handleSaveEdits = () => {
+    const now = new Date().toISOString();
+    const payload = { metrics: editMetricsByPage, narrative: editNarrativeByPage, savedAt: now };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      setSavedAt(now);
+      // TODO(R2): 여기서 실제 저장 API 호출 (예: await api.saveReportDraft(payload))
+    } catch (e) {
+      console.warn("편집값 저장 실패:", e);
+      alert("저장에 실패했습니다. 브라우저 저장 권한을 확인해 주세요.");
+    }
+  };
+
+  // ── 페이지 이동 핸들러 (목차 / 이전·다음 / subnav 탭 공용) ──
+  const goToPage = (i) => {
+    if (i < 0 || i >= PAGES.length || i === currentPage) return;
+    setCurrentPage(i);
+    // 페이지 전환 시 미리보기 상단으로 스크롤
+    requestAnimationFrame(() => {
+      document
+        .querySelector(".draft-sr-preview")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+  const prevPage = () => goToPage(currentPage - 1);
+  const nextPage = () => goToPage(currentPage + 1);
+
+  // ── 본문(오른쪽 페이지)에서 값/토큰 클릭 → 그 자리에서 인라인 편집 ──
+  const openInlineEdit = (e) => {
+    if (!isEditing) return;
+    const el = e.target.closest("[data-source]");
+    if (!el) return; // 본문의 일반 문구(토큰 아님)는 data-source가 없어 contentEditable 편집으로 넘어감
+    const src = el.getAttribute("data-source");
+    if (!src || src.includes(",")) return; // 파생/복합값(예: 기준연도 대비 %)은 편집 제외
+    e.stopPropagation();
+    const r = el.getBoundingClientRect();
+    const pk = PAGES[currentPage].key;
+    const cur = (editMetricsByPage[pk] && editMetricsByPage[pk][src]) ?? "";
+    setInlineEdit({ id: src, top: r.bottom + 4, left: r.left, width: Math.max(r.width, 160), value: cur });
+  };
+  const commitInlineEdit = (val) => {
+    if (!inlineEdit) return;
+    const pk = PAGES[currentPage].key;
+    const id = inlineEdit.id;
+    setEditMetricsByPage((prev) => ({ ...prev, [pk]: { ...(prev[pk] || {}), [id]: val } }));
+    setInlineEdit(null);
+  };
+
+   const steps = [
     { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
     { id: 2, title: "미디어 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><polyline points="5,13 8,10 11,12 14,8 19,6" /></svg>, path: "/media" },
     { id: 3, title: "이해관계자 설문", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" /><line x1="13" y1="11" x2="16" y2="11" /><line x1="13" y1="16" x2="16" y2="16" /></svg>, path: "/survey" },
     { id: 4, title: "전체 결과", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="20" x2="21" y2="20" /><line x1="3" y1="4" x2="3" y2="20" /><rect x="5" y="13" width="3" height="7" /><rect x="10" y="10" width="3" height="10" /><rect x="15" y="8" width="3" height="12" /><circle cx="19" cy="4" r="3" /><polyline points="17.5,4 18.5,5 21,2.5" /></svg>, path: "/result" },
     { id: 5, title: "보고서 초안", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>, path: "/draft" },
-
   ];
   const activeIndex = 4;
 
@@ -449,93 +572,104 @@ const Draft = () => {
   setExportMenuOpen(false);
 
   if (type === "PDF") {
-    const target = document.querySelector("#draftDoc .doc-content");
+    // 1) 모든 서브이슈의 페이지를 화면 밖에 렌더(캡처용) → React 리렌더/레이아웃 대기
+    setPdfMode(true);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    await new Promise((r) => setTimeout(r, 120));
 
-    const clone = target.cloneNode(true);
-    clone.style.position  = "fixed";
-    clone.style.top       = "-99999px";
-    clone.style.left      = "0";
-    clone.style.width     = target.offsetWidth + "px";
-    clone.style.height    = "auto";
-    clone.style.overflow  = "visible";
-    clone.style.background = "#fff";
-    document.body.appendChild(clone);
+    try {
+      const root = document.getElementById("pdf-render-root");
+      if (!root) return;
 
-    // 레이아웃 확정 후 각 섹션/목차 아이템 위치 측정
-    await new Promise(r => setTimeout(r, 80));
-    const cloneRect = clone.getBoundingClientRect();
+      const renderEl = (el) =>
+        html2canvas(el, {
+          scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff",
+          width: el.offsetWidth, height: el.offsetHeight, windowWidth: el.offsetWidth,
+        });
 
-    const sectionTops = {};
-    const tocItemRects = {};
-    Object.keys(paragraphData).forEach((pid) => {
-      const secEl = clone.querySelector(`#section-${pid}`);
-      if (secEl) {
-        const r = secEl.getBoundingClientRect();
-        sectionTops[pid] = r.top - cloneRect.top;
+      // ── 서브이슈별로 각각 독립 PDF 1개 생성 → 개별 파일로 저장 ──
+      for (const si of subIssues) {
+        const pdf = new jsPDF("l", "mm", "a4"); // SR 템플릿 A4 가로(landscape)
+        const pageW = pdf.internal.pageSize.getWidth();   // 297
+        const pageH = pdf.internal.pageSize.getHeight();  // 210
+
+        const pdfPageOf = {}; // page.key → 이 PDF 내 페이지 번호
+        const tocLinks = [];
+        const subnavLinks = [];
+
+        // PDF 1쪽: 이 서브이슈 목차
+        const tocEl = root.querySelector(`#pdf-toc-${si.id}`);
+        if (tocEl) {
+          const tocCanvas = await renderEl(tocEl);
+          const tocImgH = Math.min((tocCanvas.height * pageW) / tocCanvas.width, pageH);
+          pdf.addImage(tocCanvas.toDataURL("image/png"), "PNG", 0, 0, pageW, tocImgH);
+          const tocRect = tocEl.getBoundingClientRect();
+          const tocMmPerPx = pageW / tocRect.width;
+          si.pages.forEach((p) => {
+            const item = root.querySelector(`#pdf-tocitem-${si.id}-${p.key}`);
+            if (!item) return;
+            const r = item.getBoundingClientRect();
+            tocLinks.push({
+              key: p.key,
+              x: (r.left - tocRect.left) * tocMmPerPx,
+              y: (r.top - tocRect.top) * tocMmPerPx,
+              w: r.width * tocMmPerPx,
+              h: r.height * tocMmPerPx,
+            });
+          });
+        }
+
+        // PDF 2~쪽: 이 서브이슈의 각 페이지
+        for (const page of si.pages) {
+          const sec = root.querySelector(`#pdf-sec-${si.id}-${page.key} .sr-page`);
+          if (!sec) continue;
+          const canvas = await renderEl(sec);
+          pdf.addPage();
+          const thisPdfPage = pdf.getNumberOfPages();
+          pdfPageOf[page.key] = thisPdfPage;
+          const imgH = (canvas.height * pageW) / canvas.width;
+          pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, pageW, imgH);
+
+          // subnav 탭 → 같은 서브이슈 내 해당 페이지로 이동 링크
+          const secRect = sec.getBoundingClientRect();
+          const mmPerPx = pageW / secRect.width;
+          sec.querySelectorAll(".sr-subnav span:not(.dot)").forEach((tab, ti) => {
+            if (ti >= si.pages.length) return;
+            const r = tab.getBoundingClientRect();
+            subnavLinks.push({
+              onPdfPage: thisPdfPage,
+              x: (r.left - secRect.left) * mmPerPx,
+              y: (r.top - secRect.top) * mmPerPx,
+              w: r.width * mmPerPx,
+              h: r.height * mmPerPx,
+              targetKey: si.pages[ti].key,
+            });
+          });
+        }
+
+        // 링크 주입: 목차(1쪽) → 페이지, 각 페이지 subnav 탭 → 페이지
+        if (tocLinks.length) {
+          pdf.setPage(1);
+          tocLinks.forEach((l) => {
+            const t = pdfPageOf[l.key];
+            if (t) pdf.link(l.x, l.y, l.w, Math.max(l.h, 4), { pageNumber: t });
+          });
+        }
+        subnavLinks.forEach((l) => {
+          const t = pdfPageOf[l.targetKey];
+          if (!t) return;
+          pdf.setPage(l.onPdfPage);
+          pdf.link(l.x, l.y, l.w, Math.max(l.h, 4), { pageNumber: t });
+        });
+
+        // 서브이슈별 개별 파일로 저장 (climate-target.pdf 등)
+        pdf.save(`${si.exportName || si.id}.pdf`);
+        // 브라우저가 다중 다운로드를 막지 않도록 약간의 간격
+        await new Promise((r) => setTimeout(r, 300));
       }
-      const tocEl = clone.querySelector(`#toc-item-${pid}`);
-      if (tocEl) {
-        const r = tocEl.getBoundingClientRect();
-        tocItemRects[pid] = { top: r.top - cloneRect.top, h: r.height, w: r.width };
-      }
-    });
-
-    const canvas = await html2canvas(clone, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      scrollX: 0,
-      scrollY: 0,
-      width:  clone.offsetWidth,
-      height: clone.scrollHeight,
-      backgroundColor: "#ffffff",
-    });
-
-    document.body.removeChild(clone);
-
-    const pdf        = new jsPDF("l", "mm", "a4");
-    const pageWidth  = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    const imgData    = canvas.toDataURL("image/png");
-    const imgWidth   = pageWidth;
-    const imgHeight  = (canvas.height * imgWidth) / canvas.width;
-
-    // clone px → PDF mm 변환 계수 (canvas는 scale:2 적용)
-    const mmPerPx = pageWidth / (canvas.width / 2);
-
-    let position = 0;
-    let totalPages = 1;
-    pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-
-    let remaining = imgHeight - pageHeight;
-    while (remaining > 0) {
-      position -= pageHeight;
-      pdf.addPage();
-      totalPages++;
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight);
-      remaining -= pageHeight;
+    } finally {
+      setPdfMode(false);
     }
-
-    // 목차 항목 → 해당 섹션으로 이동하는 내부 링크 삽입
-    Object.keys(paragraphData).forEach((pid) => {
-      const tocR = tocItemRects[pid];
-      const secTop = sectionTops[pid];
-      if (!tocR || secTop == null) return;
-
-      const tocPdfY    = tocR.top * mmPerPx;
-      const tocPage    = Math.floor(tocPdfY / pageHeight) + 1;
-      const tocYOnPage = tocPdfY - (tocPage - 1) * pageHeight;
-
-      const secPdfY  = secTop * mmPerPx;
-      const secPage  = Math.min(Math.floor(secPdfY / pageHeight) + 1, totalPages);
-
-      if (tocPage >= 1 && tocPage <= totalPages) {
-        pdf.setPage(tocPage);
-        pdf.link(4, tocYOnPage, pageWidth - 8, Math.max(tocR.h * mmPerPx, 5), { pageNumber: secPage });
-      }
-    });
-
-    pdf.save("sustainability_report.pdf");
     return;
   }
 
@@ -623,16 +757,16 @@ const Draft = () => {
   return (
     <div className="draft-container">
       <header className="draft-header">
-        {/* <h1 className="draft-title">지속가능경영보고서 AI 자동 생성</h1> */}
+     
         <div className="draft-stepper-row">
           {steps.map((step, index) => (
-            <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
+            <div key={step.id} className="stepper-step-wrap">
               <div
                 className={`step-box ${index === activeIndex ? "active" : ""}`}
                 onClick={() => { if (index !== activeIndex) navigate(step.path); }}
               >
                 <div className="step-icon-circle">{step.icon}</div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 850 }}>{step.title}</div>
+                <div className="step-title-text">{step.title}</div>
               </div>
               {index < steps.length - 1 && <div className="step-line"></div>}
             </div>
@@ -656,31 +790,25 @@ const Draft = () => {
                 
                 <div className="doc-actions">
                   {/* 1. 독립된 본문 수정 버튼 (Toggle 형태) */}
-                  <button 
-                    className={`doc-btn ${isEditing ? "editing-active" : ""}`} 
+                  <button
+                    className={`doc-btn ${isEditing ? "editing-active" : ""}`}
                     onClick={() => setIsEditing(!isEditing)}
-                    style={{ fontWeight: isEditing ? "bold" : "normal" }}
                   >
                     {isEditing ? "💾 수정 완료" : "✏️ 본문 수정"}
                   </button>
 
                   {/* 2. 분리된 파일 내려받기 드롭다운 버튼 */}
-                  <div className="save-dropdown-container" ref={dropdownRef} style={{ position: "relative", display: "inline-block", flexShrink: 0 }}>
+                  <div className="save-dropdown-container" ref={dropdownRef}>
                     <button className="doc-btn export-toggle-btn" onClick={() => setExportMenuOpen(!exportMenuOpen)}>
-                      📥 파일 내려받기 <span style={{ fontSize: "0.7rem", marginLeft: "4px" }}>▼</span>
+                      📥 파일 내려받기 <span className="save-dropdown-arrow">▼</span>
                     </button>
-                    
+
                     {exportMenuOpen && (
-                      <ul className="save-dropdown-menu" style={{
-                        position: "absolute", top: "100%", right: 0, marginTop: "6px",
-                        background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px",
-                        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)", padding: "6px 0",
-                        listStyle: "none", zIndex: 50, minWidth: "145px"
-                      }}>
-                        <li onClick={() => handleExport("PDF")} style={dropdownItemStyle}>📄 PDF 다운로드</li>
-                        <li onClick={() => handleExport("Word")} style={dropdownItemStyle}>📝 Word (Docx) 저장</li>
-                        <li onClick={() => handleExport("Excel")} style={dropdownItemStyle}>📊 Excel 데이터 추출</li>
-                        <li onClick={() => handleExport("JSON")} style={dropdownItemStyle}>⚙️ JSON 데이터 추출</li>
+                      <ul className="save-dropdown-menu">
+                        <li className="dropdown-item" onClick={() => handleExport("PDF")}>📄 PDF 다운로드</li>
+                        <li className="dropdown-item" onClick={() => handleExport("Word")}>📝 Word (Docx) 저장</li>
+                        <li className="dropdown-item" onClick={() => handleExport("Excel")}>📊 Excel 데이터 추출</li>
+                        <li className="dropdown-item" onClick={() => handleExport("JSON")}>⚙️ JSON 데이터 추출</li>
                       </ul>
                     )}
                   </div>
@@ -692,40 +820,29 @@ const Draft = () => {
                 <p className="doc-subtitle">전환 리스크에 선제적으로 대응하는 넷제로 로드맵</p>
 
                 {/* 목차 */}
-                <div id="toc-section" style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "24px 32px", marginBottom: "32px" }}>
-                  <h2 style={{ fontSize: "1rem", fontWeight: 700, color: "#1e293b", marginBottom: "16px", paddingBottom: "10px", borderBottom: "2px solid #03A94D", display: "flex", alignItems: "center", gap: "8px" }}>
+                <div id="toc-section" className="toc-section">
+                  <h2 className="toc-heading">
                     <span>📋</span> 목차
                   </h2>
-                  <ol style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "4px" }}>
-                    {Object.keys(paragraphData).map((pid, idx) => {
-                      const d = paragraphData[pid];
+                  <ol className="toc-list">
+                    {PAGES.map((page, idx) => {
+                      const active = idx === currentPage;
                       return (
-                        <li key={pid} id={`toc-item-${pid}`}>
+                        <li key={page.key} id={`toc-item-${page.key}`}>
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`#section-${pid}`);
-                              document.getElementById(`section-${pid}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-                            }}
-                            style={{
-                              display: "flex", alignItems: "center", gap: "8px",
-                              width: "100%", background: "none", border: "none",
-                              cursor: "pointer", padding: "7px 8px", borderRadius: "6px",
-                              textAlign: "left", transition: "background 0.15s",
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.background = "#e2e8f0"; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = "none"; }}
+                            className={`toc-item-btn${active ? " active" : ""}`}
+                            onClick={(e) => { e.stopPropagation(); goToPage(idx); }}
                           >
-                            <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 700, minWidth: "20px" }}>
+                            <span className="toc-item-num">
                               {String(idx + 1).padStart(2, "0")}
                             </span>
-                            <span className={`para-chip ${d.tagType}`} style={{ fontSize: "0.68rem", padding: "2px 7px", flexShrink: 0 }}>
-                              {d.tag}
+                            <span className="para-chip blue toc-chip">
+                              {page.tocTag}
                             </span>
-                            <span style={{ fontSize: "0.8rem", color: "#334155", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                              {d.preview}
+                            <span className={`toc-item-title${active ? " active" : ""}`}>
+                              {page.tocTitle}
                             </span>
-                            <span style={{ fontSize: "0.72rem", color: "#03A94D", fontWeight: 600, flexShrink: 0 }}>→</span>
+                            <span className="toc-item-arrow">→</span>
                           </button>
                         </li>
                       );
@@ -733,48 +850,78 @@ const Draft = () => {
                   </ol>
                 </div>
                 {/* 목차 끝부분 */}
-                {Object.keys(paragraphData).map((pid) => {
-                  const d = paragraphData[pid];
-                  return (
-                    <div
-                      key={pid}
-                      id={`section-${pid}`}
-                      className={`dp-wrap${currentPid === pid ? " selected" : ""}`}
-                      onClick={() => selectParagraph(pid)}
-                      style={{ cursor: isEditing ? "default" : "pointer" }}
-                    >
-                      <span className={`para-chip ${d.tagType}`} style={{ marginBottom: "8px", display: "inline-block" }}>
-                        {d.tag}
-                      </span>
-                      
-                      {/* 수정 모드일 때는 textarea로 렌더링, 평소에는 text형태로 출력 */}
-                      {isEditing ? (
-                      <textarea
-                        className="edit-para-textarea"
-                        value={texts[pid]}
-                        onChange={(e) => {
-                          handleTextChange(pid, e.target.value);
-                          e.target.style.height = "auto";
-                          e.target.style.height = e.target.scrollHeight + "px";
-                        }}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                       ) : (
-                      <p className="dp-text">{texts[pid]}</p>
-                       )}
 
-                      <div className="dp-tooltip">
-                        <div className="dp-tooltip-title">{d.tooltipTitle}</div>
-                        {d.tooltipRows.map((row, i) => (
-                          <div key={i} className="dp-tooltip-row">
-                            <span className="dp-tooltip-key">{row.key}</span>
-                            <span className="dp-tooltip-val">{row.val}</span>
-                          </div>
-                        ))}
+                {/* ── 편집 바 (✏️ 수정 모드) — 본문·값 모두 아래 페이지에서 직접 수정 ── */}
+                {isEditing && (
+                  <div className="sr-editor">
+                    <div className="sr-editor-bar">
+                      <div className="sr-editor-hd">
+                        ✏️ <b>{PAGES[currentPage].subIssueLabel}</b> · {PAGES[currentPage].tabLabel} 수정 중
+                      </div>
+                      <div className="sr-editor-actions">
+                        {savedAt && (
+                          <span className="sr-editor-saved">
+                            저장됨 {new Date(savedAt).toLocaleString("ko-KR", { hour: "2-digit", minute: "2-digit", month: "numeric", day: "numeric" })}
+                          </span>
+                        )}
+                        <button className="sr-editor-save" onClick={handleSaveEdits}>💾 저장</button>
                       </div>
                     </div>
-                  );
-                })}
+                    <div className="sr-editor-hint">
+                      아래 페이지에서 <b>본문 문장</b>은 클릭해 바로 타이핑하고, <b>KPI·표·차트의 값</b>은 클릭하면 입력창이 떠서 수정됩니다(같은 지표는 모든 위치에 동시 반영). 이 페이지에만 적용됩니다.
+                    </div>
+                  </div>
+                )}
+
+                {/* ── 페이지 이동 바 (이전 · 다음) ── */}
+                <div className="sr-pager">
+                  <button className="sr-pager-btn" onClick={prevPage} disabled={currentPage === 0}>‹ 이전</button>
+                  <span className="sr-pager-info">{currentPage + 1} / {PAGES.length}</span>
+                  <button className="sr-pager-btn" onClick={nextPage} disabled={currentPage === PAGES.length - 1}>다음 ›</button>
+                </div>
+
+                {/* ── 보고서 미리보기 영역: SR 운영 템플릿 (현재 페이지) ──
+                    데이터는 climateMetrics(adapter) + climateNarrative 로만 구동(더미 없음).
+                    subNavItems = 페이지 탭(클릭 시 onSubNavClick → goToPage). */}
+                <div
+                  className={"draft-sr-preview" + (isEditing ? " is-editing" : "")}
+                  onClick={openInlineEdit}
+                >
+                  {(() => {
+                    const page = PAGES[currentPage];
+                    const PageComponent = page.Component;
+                    return (
+                      <PageComponent
+                        {...page.props}
+                        mode={isEditing ? "edit" : "render"}
+                        metrics={buildPageMetrics(page)}
+                        narrativeText={buildPageNarrative(page.key)}
+                        onNarrativeChange={(text) =>
+                          setEditNarrativeByPage((prev) => ({ ...prev, [page.key]: text }))
+                        }
+                        subNavItems={PAGES.map((p, i) => ({ label: p.tabLabel, active: i === currentPage }))}
+                        onSubNavClick={(item, i) => goToPage(i)}
+                        onNavClick={(item, i) => { /* 상단 메인 nav: 페이지 매핑 없으면 무시 */ }}
+                      />
+                    );
+                  })()}
+                </div>
+
+                {/* 본문 인라인 편집 입력창 (값/토큰 클릭 시 그 자리에 표시) */}
+                {inlineEdit && (
+                  <input
+                    autoFocus
+                    className="sr-inline-input"
+                    style={{ position: "fixed", top: inlineEdit.top, left: inlineEdit.left, width: inlineEdit.width, zIndex: 1000 }}
+                    defaultValue={inlineEdit.value}
+                    placeholder={inlineEdit.id}
+                    onBlur={(e) => commitInlineEdit(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                      else if (e.key === "Escape") setInlineEdit(null);
+                    }}
+                  />
+                )}
               </div>
             </div>
 
@@ -898,7 +1045,7 @@ const Draft = () => {
                   </div>
                 </div>
               ) : (
-                <div className="panel-empty-text" style={{ padding: "40px", color: "#64748b", textAlign: "center" }}>
+                <div className="panel-empty-text">
                   문단을 선택하면 데이터 추적 정보가 표시됩니다.
                 </div>
               )}
@@ -907,18 +1054,47 @@ const Draft = () => {
           </div>
         </div>
       </main>
+
+      {/* ── PDF 내보내기용: 서브이슈별로 (목차 + 페이지들)을 화면 밖에 풀사이즈로 렌더 ──
+          id 에 서브이슈를 prefix 하여 export 시 서브이슈별로 묶어 캡처. 평소엔 렌더 안 함 */}
+      {pdfMode && (
+        <div id="pdf-render-root" className="pdf-render-root">
+          {subIssues.map((si) => (
+            <div key={si.id} data-subissue={si.id}>
+              <div id={`pdf-toc-${si.id}`} className="pdf-toc-wrap">
+                <div className="pdf-toc-sublabel">{si.subLabel}</div>
+                <div className="pdf-toc-title">{si.label} · 목차</div>
+                <hr className="pdf-toc-rule" />
+                {si.pages.map((p, i) => (
+                  <div key={p.key} id={`pdf-tocitem-${si.id}-${p.key}`} className="pdf-toc-item">
+                    <span className="pdf-toc-item-num">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="pdf-toc-item-tag">{p.tocTag}</span>
+                    <span className="pdf-toc-item-label">{p.tabLabel}</span>
+                    <span className="pdf-toc-item-arrow">p.{p.props.pageNumber} →</span>
+                  </div>
+                ))}
+              </div>
+              {si.pages.map((page) => {
+                const PageComponent = page.Component;
+                return (
+                  <div key={page.key} id={`pdf-sec-${si.id}-${page.key}`}>
+                    <PageComponent
+                      {...page.props}
+                      metrics={buildMetricsFromEdits(si.adapter, editMetricsByPage[page.key], actualMetricRows)}
+                      narrativeText={buildPageNarrative(page.key)}
+                      subNavItems={si.pages.map((p) => ({ label: p.tabLabel, active: p.key === page.key }))}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
 );
 };
 
 
 
-const dropdownItemStyle = {
-  padding: "10px 16px",
-  fontSize: "0.85rem",
-  color: "#334155",
-  cursor: "pointer",
-  transition: "background 0.2s",
-  textAlign: "left"
-};
 export default Draft;

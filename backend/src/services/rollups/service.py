@@ -306,9 +306,7 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
     conn = rollupRepository.getConn()
     try:
         with conn.cursor(dictionary=True) as cur:
-            scopes = rollupRepository.listScope(batchId)
-            metricIds = list(set([s["metric_id"] for s in scopes]))
-            rules, ruleSources = rollupRepository.resolveConsolidatedRuleClosure(metricIds)
+            rules, ruleSources = rollupRepository.resolveConsolidatedRulesFromBatchScopeTx(cur, batchId)
             requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
 
             historicalDepth = rollupCalculator.resolveHistoricalLookbackDepth(rules, ruleSources)

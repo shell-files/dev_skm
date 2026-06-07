@@ -66,6 +66,7 @@ def listRequests(
         SELECT
             s.esg_rollup_batch_id AS batchId,
             b.rollup_batch_code AS batchCode,
+            b.source_cycle_id AS sourceCycleId,
             s.parent_company_id AS parentCompanyId,
             p.company_code AS parentCompanyCode,
             COALESCE(p.company_code, CAST(s.parent_company_id AS CHAR)) AS parentCompanyName,
@@ -156,6 +157,46 @@ def getCompanyProfile(companyId: int) -> dict:
         "companyCode": None,
         "companyName": str(companyId),
     }
+
+def findActiveInputWorkspace(companyId: int, reportingYear: int, requestedMetricIds: list[str]) -> dict:
+    metricIds = [
+        str(metricId or "").strip()
+        for metricId in requestedMetricIds or []
+        if str(metricId or "").strip()
+    ]
+    if not metricIds:
+        return {}
+    placeholders = ", ".join(["?"] * len(metricIds))
+    sql = f"""
+        SELECT
+            c.id AS cycleId,
+            c.cycle_type AS cycleType,
+            c.reporting_year AS reportingYear,
+            COUNT(DISTINCT s.metric_id) AS matchedMetricCount
+        FROM ESG_ONBOARDING_CYCLE c
+        JOIN ESG_ONBOARDING_CYCLE_METRIC_SCOPE s
+          ON s.esg_onboarding_cycle_id = c.id
+         AND s.company_id = c.company_id
+         AND s.metric_id IN ({placeholders})
+         AND s.active_yn = 1
+         AND s.delete_yn = 0
+        WHERE c.company_id = ?
+          AND c.reporting_year = ?
+          AND c.cycle_status = 'active'
+          AND c.cycle_type IN ('POST_DMA_DISCLOSURE', 'PRE_DMA_G0')
+          AND c.delete_yn = 0
+        GROUP BY c.id, c.cycle_type, c.reporting_year
+        HAVING matchedMetricCount = ?
+        ORDER BY
+            CASE c.cycle_type
+                WHEN 'POST_DMA_DISCLOSURE' THEN 1
+                WHEN 'PRE_DMA_G0' THEN 2
+                ELSE 3
+            END,
+            c.id DESC
+        LIMIT 1
+    """
+    return findOne(sql, (*metricIds, companyId, reportingYear, len(metricIds))) or {}
 
 def listSourceCompanyIds(batchId: int) -> list[int]:
     return [int(row["source_company_id"]) for row in listSources(batchId)]

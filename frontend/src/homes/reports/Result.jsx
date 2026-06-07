@@ -430,6 +430,14 @@ const PRIORITY_ITEMS = [
   { rank: "5순위", color: "#3b82f6", name: "친환경 제품 및 서비스 확대", score: "3.6" },
 ];
 
+const CAT_BADGE_STYLE = {
+  E: { bg: "#dcfce7", color: "#16a34a", text: "환경(E)" },
+  S: { bg: "#dbeafe", color: "#2563eb", text: "사회(S)" },
+  G: { bg: "#fee2e2", color: "#dc2626", text: "거버넌스(G)" },
+};
+
+
+
 const ONBOARDING_ROWS = [
   { name: "기후변화 대응", e: true, s: true, g: false, count: "8개", done: "3/8", doneColor: "#ef4444" },
   { name: "지속가능한 공급망 관리", e: false, s: true, g: true, count: "6개", done: "2/6", doneColor: "#ef4444" },
@@ -717,11 +725,11 @@ const Result = () => {
                       <div className="criteria-card-title">선정 기준</div>
                       <div className="criteria-item-list">
                         {[
-                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="11" y2="13"/><polyline points="13,12 14.5,13.5 17,11"/><line x1="8" y1="17" x2="11" y2="17"/><polyline points="13,16 14.5,17.5 17,15"/></svg>, text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
-                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="6"/><line x1="14.5" y1="14.5" x2="20" y2="20"/><polyline points="7,12 9,9 11,11 13,8"/></svg>, text: "2개 이상 분석축에서 반복 관측" },
-                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6"/><path d="M2.5 22v-6h6"/><path d="M2 11.5A10 10 0 0 1 18.8 7.2"/><path d="M22 12.5A10 10 0 0 1 5.2 16.8"/></svg>, text: "가치사슬 관련성 높음" },
-                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>, text: "이해관계자 관심도 높음" },
-                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 3.5a1 1 0 1 0 2 0 1 1 0 0 0-2 0"/><line x1="12" y1="4.5" x2="12" y2="20"/><line x1="2.5" y1="7.5" x2="21.5" y2="7.5"/><line x1="4" y1="7.5" x2="1" y2="14.5"/><line x1="4" y1="7.5" x2="4" y2="14.5"/><line x1="4" y1="7.5" x2="7" y2="14.5"/><path d="M1 14.5 Q4 18 7 14.5"/><line x1="20" y1="7.5" x2="17" y2="14.5"/><line x1="20" y1="7.5" x2="20" y2="14.5"/><line x1="20" y1="7.5" x2="23" y2="14.5"/><path d="M17 14.5 Q20 18 23 14.5"/><path d="M9 20h6" strokeWidth="2.2"/></svg>, text: "리스크/기회 요인으로서의 중요성 고려" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="11" y2="13" /><polyline points="13,12 14.5,13.5 17,11" /><line x1="8" y1="17" x2="11" y2="17" /><polyline points="13,16 14.5,17.5 17,15" /></svg>, text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="6" /><line x1="14.5" y1="14.5" x2="20" y2="20" /><polyline points="7,12 9,9 11,11 13,8" /></svg>, text: "2개 이상 분석축에서 반복 관측" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6" /><path d="M2.5 22v-6h6" /><path d="M2 11.5A10 10 0 0 1 18.8 7.2" /><path d="M22 12.5A10 10 0 0 1 5.2 16.8" /></svg>, text: "가치사슬 관련성 높음" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>, text: "이해관계자 관심도 높음" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 3.5a1 1 0 1 0 2 0 1 1 0 0 0-2 0" /><line x1="12" y1="4.5" x2="12" y2="20" /><line x1="2.5" y1="7.5" x2="21.5" y2="7.5" /><line x1="4" y1="7.5" x2="1" y2="14.5" /><line x1="4" y1="7.5" x2="4" y2="14.5" /><line x1="4" y1="7.5" x2="7" y2="14.5" /><path d="M1 14.5 Q4 18 7 14.5" /><line x1="20" y1="7.5" x2="17" y2="14.5" /><line x1="20" y1="7.5" x2="20" y2="14.5" /><line x1="20" y1="7.5" x2="23" y2="14.5" /><path d="M17 14.5 Q20 18 23 14.5" /><path d="M9 20h6" strokeWidth="2.2" /></svg>, text: "리스크/기회 요인으로서의 중요성 고려" },
                         ].map((item, i) => (
                           <div key={i} className="criteria-item-row">
                             <div className="icon-circle-sm">{item.icon}</div>
@@ -787,7 +795,7 @@ const Result = () => {
 
               </div>
             )}
-  
+
             {/* 탭 1: 점수 해석 */}
             {leftTab === 2 && (
               <div className="card-container result-tab-pane">
@@ -869,18 +877,83 @@ const Result = () => {
               <div className="card-container result-tab-pane" id="result-next-steps">
                 <div className="card-title">다음 단계 연결</div>
 
+
+
                 {/* 섹션 1: 보고서 반영 우선순위 */}
                 <div className="accordion">
                   <div className="accordion-head static">
                     <span className="accordion-title">1. 보고서 반영 우선순위</span>
                   </div>
-                  <div className="accordion-body" id="priority-body">
-                    {PRIORITY_ITEMS.map((item) => (
-                      <div key={item.rank} className="priority-row">
-                        <span className="priority-name">{item.name}</span>
-                        <span className="priority-score">중요도 <strong>{item.score}</strong></span>
-                      </div>
-                    ))}
+                  <div className="accordion-body">
+                    <table id="missing-table">
+                      <thead>
+                        <tr>
+                          <th className="left">이슈</th>
+                          <th>진행상태</th>
+                          <th>점수</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {PRIORITY_ITEMS.map((item, index) => {
+                          const percent = (Number(item.score) / 5) * 100;
+
+                          const category =
+                            item.name.includes("기후") || item.name.includes("친환경")
+                              ? { text: "E", bg: "#dcfce7", color: "#16a34a" }
+                              : item.name.includes("공급망") || item.name.includes("인재")
+                                ? { text: "S", bg: "#dbeafe", color: "#2563eb" }
+                                : { text: "G", bg: "#fee2e2", color: "#dc2626" };
+
+                          const status =
+                            index === 0
+                              ? { text: "작성중", color: "#f59e0b" }
+                              : index === 1
+                                ? { text: "미작성", color: "#ef4444" }
+                                : { text: "완료", color: "#22c55e" };
+
+                          return (
+                            <tr key={item.rank}>
+                              <td className="missing-name">
+                                <span style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+                                  <span style={{
+                                    width: "22px", height: "22px", borderRadius: "50%",
+                                    background: item.color, color: "#fff",
+                                    fontSize: "11px", fontWeight: 700,
+                                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                                    flexShrink: 0,
+                                  }}>
+                                    {index + 1}
+                                  </span>
+                                  <span style={{
+                                    padding: "2px 6px", borderRadius: "5px",
+                                    background: category.bg, color: category.color,
+                                    fontSize: "10px", fontWeight: 700, flexShrink: 0,
+                                  }}>
+                                    {category.text}
+                                  </span>
+                                  {item.name}
+                                </span>
+                              </td>
+                              <td>
+                                <span style={{ color: status.color, fontWeight: 700, fontSize: "12px" }}>
+                                  ● {status.text}
+                                </span>
+                              </td>
+                              <td>
+                                <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                  <span style={{ flex: 1, height: "8px", borderRadius: "4px", background: "#e5e7eb", overflow: "hidden" }}>
+                                    <span style={{ display: "block", width: `${percent}%`, height: "100%", background: item.color, borderRadius: "4px" }} />
+                                  </span>
+                                  <span style={{ minWidth: "34px", textAlign: "right", fontWeight: 600, color: item.color }}>
+                                    {item.score}
+                                  </span>
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
 
@@ -966,7 +1039,7 @@ const Result = () => {
                       {
                         bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onboard",
                         icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
-                      },                      
+                      },
                       {
                         bg: "#ede9fe", title: "보고서 초안 생성", desc: "선택 이슈 기반 초안 생성", path: "/draft",
                         icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>

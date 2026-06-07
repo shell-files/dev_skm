@@ -3,8 +3,8 @@
 // 모든 수치는 metrics 객체에서만 읽고, 각 요소에 data-source 부여
 // ============================================================
 import React from "react";
-import { SRChrome, MetricBar } from "./SRChrome";
-import { Narrative, mt, num, reductionFromBase, NARRATIVE_TEMPLATE_CLIMATE } from "./srHelpers";
+import { SRChrome, MetricBar } from "../../../core/SRChrome";
+import { Narrative, mt, num, reductionFromBase, NARRATIVE_TEMPLATE_CLIMATE } from "../../../core/srHelpers";
 
 export function ClimateTargetPageA(props) {
   const {
@@ -20,7 +20,7 @@ export function ClimateTargetPageA(props) {
 
   return (
     <SRChrome {...props}>
-      <Narrative narrativeText={narrativeText} template={template} metrics={metrics} mode={mode} highlight={highlight} />
+      <Narrative narrativeText={narrativeText} template={template} metrics={metrics} mode={mode} highlight={highlight} onNarrativeChange={props.onNarrativeChange} />
 
       {/* KPI strip — 타일마다 source metric 바인딩 */}
       <div className="sr-kpis">

@@ -97,7 +97,7 @@
 .sr-tcap{font-size:12px;font-weight:800;color:var(--brand);margin:16px 0 8px 0;display:flex;align-items:center;gap:7px;}
 .sr-tcap .num{width:16px;height:16px;border-radius:50%;background:var(--brand);color:#fff;font-size:9px;
   display:inline-flex;align-items:center;justify-content:center;font-weight:700;}
-table.sr-tbl{width:100%;border-collapse:collapse;font-size:10.5px;}
+table.sr-tbl{width:100%;table-layout:fixed;border-collapse:collapse;font-size:10.5px;}
 table.sr-tbl thead th{background:var(--band);color:#eaf6ef;font-weight:600;font-size:9.5px;padding:8px 11px;text-align:right;}
 table.sr-tbl thead th:first-child{text-align:left;}
 table.sr-tbl tbody td{padding:8px 11px;border-bottom:1px solid var(--line);text-align:right;color:var(--ink);font-weight:600;}
@@ -158,11 +158,18 @@ table.sr-tbl.nums tbody td:not(:first-child){white-space:nowrap;}
    - A4(210mm) 페이지를 좁은 preview 컬럼에 맞춰 축소
    - 인쇄/PDF 시에는 scale 해제 (원본 A4 크기 유지)
    ============================================================ */
-.draft-sr-preview{display:flex;justify-content:center;overflow:auto;padding:8px 0;}
-.draft-sr-preview .sr-page{transform:scale(0.6);transform-origin:top center;}
+.draft-sr-preview{display:block;overflow:auto;padding:8px 0;}
+/* 화면 미리보기: A4 고정폭(297mm) 해제 → 글자 크기는 그대로, 폭만 컨테이너에 맞춰 흐름.
+   (PDF 오프스크린 #pdf-render-root 의 .sr-page 는 기본 규칙대로 297mm 고정 유지) */
+.draft-sr-preview .sr-page{width:100%;max-width:100%;min-height:auto;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.10);}
+
+/* [수정] 본문 입력 시 세로 스크롤바가 생겼다 사라져도 내용 폭이 변하지 않도록
+   스크롤 컨테이너(.doc-content)의 스크롤바 자리를 항상 확보 → 입력창/미리보기 폭 고정.
+   scrollbar-gutter 미지원 브라우저까지 커버하려고 overflow-y:scroll 로 스크롤바를 상시 표시. */
+#draftDoc .doc-content{scrollbar-gutter:stable;overflow-y:scroll !important;}
 @media print{
-  .draft-sr-preview{display:block;overflow:visible;padding:0;}
-  .draft-sr-preview .sr-page{transform:none;}
+  .draft-sr-preview{padding:0;}
+  .draft-sr-preview .sr-page{box-shadow:none;}
 }
 
 /* ============================================================
@@ -204,3 +211,67 @@ table.sr-tbl.nums tbody td:not(:first-child){white-space:nowrap;}
   background:#03A94D;color:#fff;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:background .15s;}
 .sr-editor-save:hover{background:#02913f;}
 .sr-editor-hint{font-size:10.5px;color:#94a3b8;margin-bottom:8px;}
+
+/* ============================================================
+   [추가] 본문 인라인 편집 (오른쪽 페이지에서 값/토큰 클릭해 수정)
+   ============================================================ */
+/* 편집모드에서 단일 metric 값/토큰만 클릭 가능 표시 (파생/복합값 제외) */
+.draft-sr-preview.is-editing [data-source]:not([data-source*=","]) { cursor: pointer; }
+.draft-sr-preview.is-editing [data-source]:not([data-source*=","]):hover {
+  outline: 2px solid #03A94D; outline-offset: 2px; border-radius: 4px; background: rgba(3,169,77,.07);
+}
+/* 본문 토큰 */
+.sr-tok-edit { cursor: pointer; }
+.sr-tok-edit.empty {
+  color: #b04a3c; background: #fff4e6; border: 1px solid #e8c79a; border-radius: 4px; padding: 0 4px; font-weight: 600;
+}
+.draft-sr-preview.is-editing .sr-tok-edit:hover { outline: 2px solid #03A94D; outline-offset: 1px; border-radius: 4px; }
+
+/* 인라인 입력창 (클릭한 값 자리에 뜸) */
+.sr-inline-input {
+  font: 600 13px "Noto Sans KR", sans-serif; padding: 6px 9px;
+  border: 2px solid #03A94D; border-radius: 8px; background: #fff; color: #16241f;
+  box-shadow: 0 8px 24px rgba(0,0,0,.18); outline: none;
+}
+
+/* 본문 직접작성 토글 버튼 */
+.sr-prose-toggle {
+  margin-left: 10px; font: 600 11px "Noto Sans KR", sans-serif; padding: 4px 10px;
+  border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #1b5e44; cursor: pointer;
+}
+.sr-prose-toggle:hover { border-color: #03A94D; background: #f0fdf4; }
+
+/* ============================================================
+   [추가] 본문 인라인 편집 영역 (contentEditable) — 폰트는 본문 그대로 유지
+   ============================================================ */
+.draft-sr-preview.is-editing .sr-prose-edit{
+  outline: 2px dashed #03A94D; outline-offset: 4px; border-radius: 6px;
+  background: rgba(3,169,77,.04); cursor: text; white-space: pre-wrap;
+  min-height: 2.4em; transition: background .15s;
+}
+.draft-sr-preview.is-editing .sr-prose-edit:focus{
+  outline-style: solid; background: #f0fdf4;
+}
+
+/* ============================================================
+   [추가] 본문 강조 토큰 .sr-fig — 보기/편집/PDF 모두 동일하게 강조 유지
+   ============================================================ */
+.sr-fig{ font-weight:700; color:var(--brand); }                 /* 값이 채워진 토큰: 굵게 강조 */
+.sr-fig.empty{                                                  /* 미입력 토큰: 주황 칩(플레이스홀더) */
+  font-weight:700; color:#b04a3c; background:#fff4e6;
+  border:1px solid #e8c79a; border-radius:4px; padding:0 5px;
+}
+/* 편집 모드에서 토큰은 클릭해 값 수정 */
+.draft-sr-preview.is-editing .sr-fig{ cursor:pointer; }
+.draft-sr-preview.is-editing .sr-fig:hover{ outline:2px solid #03A94D; outline-offset:1px; border-radius:4px; }
+
+/* ============================================================
+   [추가] PDF 출력 시 본문 강조 제거 — #pdf-render-root 안에서는 일반 텍스트로
+   (화면 미리보기 .draft-sr-preview 의 강조는 그대로 유지)
+   ============================================================ */
+#pdf-render-root .sr-fig,
+#pdf-render-root .sr-fig.empty{
+  font-weight:inherit !important; color:inherit !important;
+  background:transparent !important; border:0 !important;
+  border-radius:0 !important; padding:0 !important;
+}

@@ -12,7 +12,7 @@
 // ============================================================
 
 /**
- * @typedef {import("./types").MetricsMap} MetricsMap
+ * @typedef {import("../../core/types").MetricsMap} MetricsMap
  */
 
 /** 표시값 생성: API displayValue 우선 → 숫자/문자 → placeholder */

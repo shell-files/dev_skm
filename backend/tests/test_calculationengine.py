@@ -374,6 +374,91 @@ class CalculationEngineTest(unittest.TestCase):
         )
         self.assertEqual(result["calculationStatus"], engine.STATUS_REFERENCE_SOURCE_AMBIGUOUS)
 
+    # ── Step 12-C2-R3 YOY direction tests ──
+
+    def _yoyRule(self, code, target, formula, direction=None):
+        r = rule(code, target, formula)
+        if direction is not None:
+            r["yoy_direction_code"] = direction
+        return r
+
+    def test_yoy_direction_default_missing_is_current_minus_prior(self):
+        """direction 미지정 → CURRENT_MINUS_PRIOR → current=90,prior=100 → diff=-10"""
+        result = firstResult(
+            [self._yoyRule("R1", "M__D1", "ENTITY_YOY_DIFF")],
+            [source("R1", "M__Q1", "CURRENT")],
+            [fact("M__Q1", 90)],
+            [fact("M__Q1", 100)],
+        )
+        self.assertEqual(result["calculationStatus"], engine.STATUS_CALCULATED)
+        self.assertEqual(result["valueNumeric"], -10)
+        self.assertEqual(result["calculationTrace"]["yoyDirectionCode"], engine.YOY_DIRECTION_CURRENT_MINUS_PRIOR)
+
+    def test_yoy_current_minus_prior_diff(self):
+        """CURRENT_MINUS_PRIOR diff: current=90,prior=100 → -10"""
+        result = firstResult(
+            [self._yoyRule("R1", "M__D1", "ENTITY_YOY_DIFF", "CURRENT_MINUS_PRIOR")],
+            [source("R1", "M__Q1", "CURRENT")],
+            [fact("M__Q1", 90)],
+            [fact("M__Q1", 100)],
+        )
+        self.assertEqual(result["valueNumeric"], -10)
+
+    def test_yoy_current_minus_prior_rate(self):
+        """CURRENT_MINUS_PRIOR rate: current=90,prior=100 → -10"""
+        result = firstResult(
+            [self._yoyRule("R1", "M__D1", "ENTITY_YOY_RATE", "CURRENT_MINUS_PRIOR")],
+            [source("R1", "M__Q1", "CURRENT")],
+            [fact("M__Q1", 90)],
+            [fact("M__Q1", 100)],
+        )
+        self.assertEqual(result["valueNumeric"], -10)
+
+    def test_yoy_prior_minus_current_diff(self):
+        """PRIOR_MINUS_CURRENT diff: current=90,prior=100 → 10"""
+        result = firstResult(
+            [self._yoyRule("R1", "M__D1", "ENTITY_YOY_DIFF", "PRIOR_MINUS_CURRENT")],
+            [source("R1", "M__Q1", "CURRENT")],
+            [fact("M__Q1", 90)],
+            [fact("M__Q1", 100)],
+        )
+        self.assertEqual(result["valueNumeric"], 10)
+        self.assertEqual(result["calculationTrace"]["yoyDirectionCode"], engine.YOY_DIRECTION_PRIOR_MINUS_CURRENT)
+
+    def test_yoy_prior_minus_current_rate(self):
+        """PRIOR_MINUS_CURRENT rate: current=90,prior=100 → 10"""
+        result = firstResult(
+            [self._yoyRule("R1", "M__D1", "ENTITY_YOY_RATE", "PRIOR_MINUS_CURRENT")],
+            [source("R1", "M__Q1", "CURRENT")],
+            [fact("M__Q1", 90)],
+            [fact("M__Q1", 100)],
+        )
+        self.assertEqual(result["valueNumeric"], 10)
+
+    def test_entity_yoy_diff_direction_metadata(self):
+        """ENTITY_YOY_DIFF: trace에 currentValue/priorValue/delta 포함"""
+        result = firstResult(
+            [self._yoyRule("R1", "M__D1", "ENTITY_YOY_DIFF", "CURRENT_MINUS_PRIOR")],
+            [source("R1", "M__Q1", "CURRENT")],
+            [fact("M__Q1", 90)],
+            [fact("M__Q1", 100)],
+        )
+        trace = result["calculationTrace"]
+        self.assertEqual(trace["currentValue"], 90)
+        self.assertEqual(trace["priorValue"], 100)
+        self.assertEqual(trace["delta"], -10)
+
+    def test_rollup_yoy_diff_direction_metadata(self):
+        """ROLLUP_YOY_DIFF: PRIOR_MINUS_CURRENT direction metadata 적용"""
+        result = firstResult(
+            [self._yoyRule("R1", "M__D1", "ROLLUP_YOY_DIFF", "PRIOR_MINUS_CURRENT")],
+            [source("R1", "M__Q1", "CURRENT")],
+            [fact("M__Q1", 90)],
+            [fact("M__Q1", 100)],
+        )
+        self.assertEqual(result["valueNumeric"], 10)
+        self.assertEqual(result["calculationTrace"]["yoyDirectionCode"], engine.YOY_DIRECTION_PRIOR_MINUS_CURRENT)
+
 
 if __name__ == "__main__":
     unittest.main()

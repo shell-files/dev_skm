@@ -31,7 +31,8 @@ def listActiveRules(
             rounding_policy,
             result_table,
             output_unit,
-            execution_order
+            execution_order,
+            yoy_direction_code
         FROM ESG_CALCULATION_RULE
         WHERE UPPER(COALESCE(execution_scope, '')) = ?
           AND active_yn = 1
@@ -64,7 +65,8 @@ def listActiveRulesTx(
             rounding_policy,
             result_table,
             output_unit,
-            execution_order
+            execution_order,
+            yoy_direction_code
         FROM ESG_CALCULATION_RULE
         WHERE UPPER(COALESCE(execution_scope, '')) = ?
           AND active_yn = 1
@@ -100,7 +102,8 @@ def listActiveRulesByTargetAtomicIds(
             rounding_policy,
             result_table,
             output_unit,
-            execution_order
+            execution_order,
+            yoy_direction_code
         FROM ESG_CALCULATION_RULE
         WHERE UPPER(COALESCE(execution_scope, '')) = ?
           AND active_yn = 1
@@ -136,7 +139,8 @@ def listActiveRulesByTargetAtomicIdsTx(
             rounding_policy,
             result_table,
             output_unit,
-            execution_order
+            execution_order,
+            yoy_direction_code
         FROM ESG_CALCULATION_RULE
         WHERE UPPER(COALESCE(execution_scope, '')) = ?
           AND active_yn = 1

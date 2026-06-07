@@ -28,6 +28,9 @@ FORMULA_ROLLUP_YOY_RATE = "ROLLUP_YOY_RATE"
 ZERO_DIVISION_RETURN_NULL_AND_FLAG = "RETURN_NULL_AND_FLAG"
 ZERO_DIVISION_NOT_APPLICABLE = "NOT_APPLICABLE"
 
+YOY_DIRECTION_CURRENT_MINUS_PRIOR = "CURRENT_MINUS_PRIOR"
+YOY_DIRECTION_PRIOR_MINUS_CURRENT = "PRIOR_MINUS_CURRENT"
+
 ROUNDING_2DP = "ROUND_2DP"
 ROUNDING_0 = "ROUND_0"
 
@@ -193,7 +196,14 @@ def calculateYoy(
     priorValue = sum(priorValues)
     if rateYn and priorValue == 0:
         return zeroDivision(base, priorSources)
-    value = ((currentValue - priorValue) / priorValue * 100) if rateYn else currentValue - priorValue
+
+    directionCode = normalizeYoyDirection(base.get("yoyDirectionCode"))
+    delta = (
+        priorValue - currentValue
+        if directionCode == YOY_DIRECTION_PRIOR_MINUS_CURRENT
+        else currentValue - priorValue
+    )
+    value = (delta / priorValue * 100) if rateYn else delta
     return calculated(
         base,
         valueNumeric=applyRounding(value, base.get("roundingPolicy")),
@@ -201,6 +211,10 @@ def calculateYoy(
         trace={
             "currentAtomicMetricIds": [source["sourceAtomicMetricId"] for source in currentSources],
             "priorAtomicMetricIds": [source["sourceAtomicMetricId"] for source in priorSources],
+            "yoyDirectionCode": directionCode,
+            "currentValue": currentValue,
+            "priorValue": priorValue,
+            "delta": delta,
         },
     )
 
@@ -425,7 +439,17 @@ def buildResultBase(rule: dict, formulaType: str) -> dict:
         "formulaType": formulaType,
         "zeroDivisionPolicy": rule.get("zero_division_policy") or rule.get("zeroDivisionPolicy"),
         "roundingPolicy": rule.get("rounding_policy") or rule.get("roundingPolicy"),
+        "yoyDirectionCode": normalizeYoyDirection(
+            rule.get("yoy_direction_code") or rule.get("yoyDirectionCode")
+        ),
     }
+
+
+def normalizeYoyDirection(value: Optional[str]) -> str:
+    normalized = str(value or "").strip().upper()
+    if normalized == YOY_DIRECTION_PRIOR_MINUS_CURRENT:
+        return YOY_DIRECTION_PRIOR_MINUS_CURRENT
+    return YOY_DIRECTION_CURRENT_MINUS_PRIOR
 
 
 def applyRounding(value: float, roundingPolicy: Optional[str]) -> float:
@@ -473,6 +497,9 @@ __all__ = [
     "STATUS_SOURCE_NOT_READY",
     "STATUS_ZERO_DIVISION",
     "STATUS_NOT_APPLICABLE",
+    "YOY_DIRECTION_CURRENT_MINUS_PRIOR",
+    "YOY_DIRECTION_PRIOR_MINUS_CURRENT",
+    "normalizeYoyDirection",
     "calculateRules",
     "calculateRule",
     "resolveAffectedRuleGraph",

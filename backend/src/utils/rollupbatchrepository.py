@@ -45,11 +45,28 @@ def getBatch(batchId: int) -> dict:
     """
     return findOne(sql, (batchId,)) or {}
 
-def listRequests(sourceCompanyId: int, rollupPurposeCode: str, metricScopeCode: str) -> list[dict]:
+def listRequests(
+    sourceCompanyId: int,
+    rollupPurposeCode: str,
+    metricScopeCode: str,
+    includeSentYn: bool = True,
+    transferStatus: Optional[str] = None,
+) -> list[dict]:
+    transferFilter = ""
+    requestFilter = ""
+    params = [sourceCompanyId, rollupPurposeCode, metricScopeCode]
+    normalizedTransferStatus = str(transferStatus or "").strip().lower()
+    if normalizedTransferStatus:
+        transferFilter = "AND LOWER(COALESCE(s.transfer_status, '')) = ?"
+        params.append(normalizedTransferStatus)
+    elif not includeSentYn:
+        requestFilter = "AND s.request_status = 'requested'"
+        transferFilter = "AND s.transfer_status = 'not_sent'"
     sql = """
         SELECT
             s.esg_rollup_batch_id AS batchId,
             b.rollup_batch_code AS batchCode,
+            b.source_cycle_id AS sourceCycleId,
             s.parent_company_id AS parentCompanyId,
             p.company_code AS parentCompanyCode,
             COALESCE(p.company_code, CAST(s.parent_company_id AS CHAR)) AS parentCompanyName,
@@ -71,20 +88,19 @@ def listRequests(sourceCompanyId: int, rollupPurposeCode: str, metricScopeCode: 
         WHERE s.source_company_id = ?
           AND s.source_company_id <> s.parent_company_id
           AND s.delete_yn = 0
-          AND s.request_status = 'requested'
-          AND s.transfer_status = 'not_sent'
           AND b.rollup_purpose_code = ?
           AND b.metric_scope_code = ?
+          {requestFilter}
+          {transferFilter}
           AND LOWER(COALESCE(b.batch_status, '')) NOT IN (
               'deleted',
               'cancelled',
               'canceled',
-              'archived',
-              'completed'
+              'archived'
           )
         ORDER BY s.updated_at DESC, s.id DESC
-    """
-    return findAll(sql, (sourceCompanyId, rollupPurposeCode, metricScopeCode)) or []
+    """.format(requestFilter=requestFilter, transferFilter=transferFilter)
+    return findAll(sql, tuple(params)) or []
 
 def getSource(batchId: int, sourceCompanyId: int) -> dict:
     sql = """
@@ -107,6 +123,80 @@ def listSources(batchId: int) -> list[dict]:
         ORDER BY s.source_company_id
     """
     return findAll(sql, (batchId,)) or []
+
+def listSourceDetails(batchId: int) -> list[dict]:
+    sql = """
+        SELECT
+            s.*,
+            p.company_code AS sourceCompanyCode,
+            COALESCE(p.company_code, CAST(s.source_company_id AS CHAR)) AS sourceCompanyName
+        FROM ESG_ROLLUP_SOURCE_STATUS s
+        LEFT JOIN ESG_COMPANY_PROFILE p
+          ON p.company_id = s.source_company_id
+         AND p.delete_yn = 0
+        WHERE s.esg_rollup_batch_id = ?
+          AND s.delete_yn = 0
+        ORDER BY s.source_company_id
+    """
+    return findAll(sql, (batchId,)) or []
+
+def getCompanyProfile(companyId: int) -> dict:
+    sql = """
+        SELECT
+            company_id AS companyId,
+            company_code AS companyCode,
+            COALESCE(company_code, CAST(company_id AS CHAR)) AS companyName
+        FROM ESG_COMPANY_PROFILE
+        WHERE company_id = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+    """
+    return findOne(sql, (companyId,)) or {
+        "companyId": companyId,
+        "companyCode": None,
+        "companyName": str(companyId),
+    }
+
+def findActiveInputWorkspace(companyId: int, reportingYear: int, requestedMetricIds: list[str]) -> dict:
+    metricIds = [
+        str(metricId or "").strip()
+        for metricId in requestedMetricIds or []
+        if str(metricId or "").strip()
+    ]
+    if not metricIds:
+        return {}
+    placeholders = ", ".join(["?"] * len(metricIds))
+    sql = f"""
+        SELECT
+            c.id AS cycleId,
+            c.cycle_type AS cycleType,
+            c.reporting_year AS reportingYear,
+            COUNT(DISTINCT s.metric_id) AS matchedMetricCount
+        FROM ESG_ONBOARDING_CYCLE c
+        JOIN ESG_ONBOARDING_CYCLE_METRIC_SCOPE s
+          ON s.esg_onboarding_cycle_id = c.id
+         AND s.company_id = c.company_id
+         AND s.metric_id IN ({placeholders})
+         AND s.active_yn = 1
+         AND s.delete_yn = 0
+        WHERE c.company_id = ?
+          AND c.reporting_year = ?
+          AND c.cycle_status = 'active'
+          AND c.cycle_type IN ('POST_DMA_DISCLOSURE', 'PRE_DMA_G0')
+          AND c.delete_yn = 0
+        GROUP BY c.id, c.cycle_type, c.reporting_year
+        HAVING matchedMetricCount = ?
+        ORDER BY
+            CASE c.cycle_type
+                WHEN 'POST_DMA_DISCLOSURE' THEN 1
+                WHEN 'PRE_DMA_G0' THEN 2
+                ELSE 3
+            END,
+            c.id DESC
+        LIMIT 1
+    """
+    return findOne(sql, (*metricIds, companyId, reportingYear, len(metricIds))) or {}
 
 def listSourceCompanyIds(batchId: int) -> list[int]:
     return [int(row["source_company_id"]) for row in listSources(batchId)]

@@ -213,6 +213,7 @@ const OnboardingStatCards = ({ stats, g0ProfileStatus }) => {
 
 const OnboardingWorkflowCta = ({
   activeBatchId,
+  hasAnySubsidiaryRequest,
   hasPendingSubsidiaryRequest,
   loadingWorkflow,
   variant = "action",
@@ -226,6 +227,8 @@ const OnboardingWorkflowCta = ({
   metricScopeCode,
   rollupScenario,
 }) => {
+  const isWaitingRollup = workflow?.nextAction === "WAIT_ROLLUP";
+
   if (variant === "noRun" || isNoRunWorkflow(workflow)) {
     return (
       <>
@@ -250,14 +253,14 @@ const OnboardingWorkflowCta = ({
   if (variant === "top") {
     return (
       <>
-        {hasPendingSubsidiaryRequest && (
+        {hasAnySubsidiaryRequest && (
           <div style={{ display: "flex", justifyContent: "flex-end", padding: "16px 24px 0 24px" }}>
             <button
               className="ob1-btn-input"
               onClick={onTransferModalOpen}
               style={{ padding: "8px 16px", background: "#f8fafc", color: "#1e293b", border: "1px solid #cbd5e1" }}
             >
-              지주사 요청 확인 및 전송
+              {hasPendingSubsidiaryRequest ? "지주사 요청 확인 및 전송" : "지주사 요청 이력"}
             </button>
           </div>
         )}
@@ -280,8 +283,8 @@ const OnboardingWorkflowCta = ({
     <div className="ob1-cta-container">
       <button
         className="ob1-btn-cta"
-        onClick={onCtaClick}
-        disabled={loadingWorkflow}
+        onClick={isWaitingRollup ? undefined : onCtaClick}
+        disabled={loadingWorkflow || isWaitingRollup}
       >
         {loadingWorkflow
           ? "로딩 중..."
@@ -292,7 +295,7 @@ const OnboardingWorkflowCta = ({
               : workflow.nextAction === "REQUEST_ROLLUP"
                 ? "자회사 데이터 요청하기"
                 : workflow.nextAction === "WAIT_ROLLUP"
-                  ? "롤업 대기"
+                  ? "자회사 데이터 대기"
                   : "입력 상태 확인"}
       </button>
     </div>
@@ -574,6 +577,10 @@ const OnBoard = () => {
   const g0ProfileStatus = useMemo(() => getProfileStatusFromItems(g0Items), [g0Items]);
   const hasPendingSubsidiaryRequest = useMemo(
     () => requests.some(isPendingSubsidiaryRequest),
+    [requests]
+  );
+  const hasAnySubsidiaryRequest = useMemo(
+    () => requests.length > 0,
     [requests]
   );
   const workflowError = workflowErrorPayload?.message || null;
@@ -903,6 +910,7 @@ const OnBoard = () => {
               <OnboardingWorkflowCta
                 variant="top"
                 activeBatchId={activeBatchId}
+                hasAnySubsidiaryRequest={hasAnySubsidiaryRequest}
                 hasPendingSubsidiaryRequest={hasPendingSubsidiaryRequest}
                 loadingWorkflow={loadingWorkflow}
                 workflow={displayWorkflow}
@@ -1000,8 +1008,7 @@ const OnBoard = () => {
         isOpen={isSubTransferModalOpen}
         onClose={() => setIsSubTransferModalOpen(false)}
         reportingYear={reportingYear}
-        onTransferred={async (batchId) => {
-          dispatch(setActiveBatchId(batchId));
+        onTransferred={async () => {
           await initializeOnboarding();
         }}
         onNavigateToInput={({ url }) => {

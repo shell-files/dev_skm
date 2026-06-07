@@ -47,7 +47,18 @@ const SubsidiaryRequestModal = ({
   const [error, setError] = useState(null);
 
   const requiresSourceCycle = rollupPurposeCode === "REPORT_DISCLOSURE";
-  const previewMetricItems = useMemo(() => asItems(scopePreview), [scopePreview]);
+  const previewMetricItems = useMemo(() => {
+    const items = asItems(scopePreview);
+    if (items.length > 0) return items;
+
+    if (Array.isArray(scopePreview?.metricIds)) {
+      return scopePreview.metricIds.map((metricId) => ({
+        metricId,
+      }));
+    }
+
+    return [];
+  }, [scopePreview]);
   const metricCount =
     scopePreview?.metricCount ??
     scopePreview?.requestedMetricCount ??
@@ -56,6 +67,7 @@ const SubsidiaryRequestModal = ({
     scopePreview?.atomicCount ??
     scopePreview?.requiredAtomicCount ??
     scopePreview?.resolvedExternalEntityAtomicCount ??
+    scopePreview?.requiredAtomicMetricIds?.length ??
     previewMetricItems.reduce((sum, metric) => sum + (metric.atomicCount || metric.atomicItems?.length || 0), 0);
 
   const loadData = useCallback(async () => {

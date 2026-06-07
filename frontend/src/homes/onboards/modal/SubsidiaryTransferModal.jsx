@@ -272,6 +272,13 @@ const SubsidiaryTransferModal = ({
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "560px", overflow: "auto" }}>
                 {requests.map((req) => {
                   const missing = req.currentMissingAtomicCount ?? req.missingAtomicCount ?? req.missingAtomicMetricIds?.length ?? 0;
+                  const approved =
+                    req.currentApprovedAtomicCount ??
+                    req.approvedAtomicCount ??
+                    0;
+                  const required =
+                    req.requiredAtomicCount ??
+                    0;
                   return (
                     <button
                       key={req.batchId}
@@ -298,6 +305,7 @@ const SubsidiaryTransferModal = ({
                       <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "8px" }}>
                         <span className="ob1-status-pill">{readinessLabel(req.readinessStatus)}</span>
                         <span className="ob1-status-pill">{transferLabel(req.transferStatus)}</span>
+                        <span className="ob1-status-pill">승인 Atomic {approved} / {required}</span>
                         {missing > 0 && <span className="ob1-status-pill not-started">누락 {missing}</span>}
                       </div>
                     </button>
@@ -353,7 +361,7 @@ const SubsidiaryTransferModal = ({
                       <strong>입력 Workspace</strong>
                       <div style={{ fontSize: "0.82rem", color: "#475569", marginTop: "6px" }}>
                         {inputWorkspace.availableYn
-                          ? `이동 가능: ${inputWorkspace.cycleType || "-"} / ${inputWorkspace.reportingYear || "-"}`
+                          ? `이동 가능: Cycle #${inputWorkspace.cycleId || "-"} · ${inputWorkspace.cycleType || "-"} · ${inputWorkspace.reportingYear || "-"}`
                           : `준비 필요: ${inputWorkspace.reason || "INPUT_WORKSPACE_NOT_READY"}`}
                       </div>
                       {actionableInputMetricIds.length > 0 && (

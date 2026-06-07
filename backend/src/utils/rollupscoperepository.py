@@ -288,6 +288,31 @@ def listScope(batchId: int) -> list[dict]:
     finally:
         conn.close()
 
+def listAtomicMetadata(atomicMetricIds: list[str]) -> list[dict]:
+    cleaned = [
+        str(atomicMetricId or "").strip()
+        for atomicMetricId in atomicMetricIds or []
+        if str(atomicMetricId or "").strip()
+    ]
+    if not cleaned:
+        return []
+    placeholders = ", ".join(["?"] * len(cleaned))
+    return findAll(
+        f"""
+        SELECT
+            metric_id AS metricId,
+            metric_name_kr AS metricName,
+            atomic_metric_id AS atomicMetricId,
+            atomic_name_kr AS atomicName
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE atomic_metric_id IN ({placeholders})
+          AND active_yn = 1
+          AND delete_yn = 0
+        ORDER BY metric_id, atomic_metric_id
+        """,
+        tuple(cleaned),
+    ) or []
+
 def resolveAllRuleSourceAtomicIdsFromScopes(scopes: list[dict]) -> list[str]:
     atomicIds = set()
     for s in scopes:

@@ -45,7 +45,23 @@ def getBatch(batchId: int) -> dict:
     """
     return findOne(sql, (batchId,)) or {}
 
-def listRequests(sourceCompanyId: int, rollupPurposeCode: str, metricScopeCode: str) -> list[dict]:
+def listRequests(
+    sourceCompanyId: int,
+    rollupPurposeCode: str,
+    metricScopeCode: str,
+    includeSentYn: bool = True,
+    transferStatus: Optional[str] = None,
+) -> list[dict]:
+    transferFilter = ""
+    requestFilter = ""
+    params = [sourceCompanyId, rollupPurposeCode, metricScopeCode]
+    normalizedTransferStatus = str(transferStatus or "").strip().lower()
+    if normalizedTransferStatus:
+        transferFilter = "AND LOWER(COALESCE(s.transfer_status, '')) = ?"
+        params.append(normalizedTransferStatus)
+    elif not includeSentYn:
+        requestFilter = "AND s.request_status = 'requested'"
+        transferFilter = "AND s.transfer_status = 'not_sent'"
     sql = """
         SELECT
             s.esg_rollup_batch_id AS batchId,
@@ -71,20 +87,19 @@ def listRequests(sourceCompanyId: int, rollupPurposeCode: str, metricScopeCode: 
         WHERE s.source_company_id = ?
           AND s.source_company_id <> s.parent_company_id
           AND s.delete_yn = 0
-          AND s.request_status = 'requested'
-          AND s.transfer_status = 'not_sent'
           AND b.rollup_purpose_code = ?
           AND b.metric_scope_code = ?
+          {requestFilter}
+          {transferFilter}
           AND LOWER(COALESCE(b.batch_status, '')) NOT IN (
               'deleted',
               'cancelled',
               'canceled',
-              'archived',
-              'completed'
+              'archived'
           )
         ORDER BY s.updated_at DESC, s.id DESC
-    """
-    return findAll(sql, (sourceCompanyId, rollupPurposeCode, metricScopeCode)) or []
+    """.format(requestFilter=requestFilter, transferFilter=transferFilter)
+    return findAll(sql, tuple(params)) or []
 
 def getSource(batchId: int, sourceCompanyId: int) -> dict:
     sql = """
@@ -107,6 +122,40 @@ def listSources(batchId: int) -> list[dict]:
         ORDER BY s.source_company_id
     """
     return findAll(sql, (batchId,)) or []
+
+def listSourceDetails(batchId: int) -> list[dict]:
+    sql = """
+        SELECT
+            s.*,
+            p.company_code AS sourceCompanyCode,
+            COALESCE(p.company_code, CAST(s.source_company_id AS CHAR)) AS sourceCompanyName
+        FROM ESG_ROLLUP_SOURCE_STATUS s
+        LEFT JOIN ESG_COMPANY_PROFILE p
+          ON p.company_id = s.source_company_id
+         AND p.delete_yn = 0
+        WHERE s.esg_rollup_batch_id = ?
+          AND s.delete_yn = 0
+        ORDER BY s.source_company_id
+    """
+    return findAll(sql, (batchId,)) or []
+
+def getCompanyProfile(companyId: int) -> dict:
+    sql = """
+        SELECT
+            company_id AS companyId,
+            company_code AS companyCode,
+            COALESCE(company_code, CAST(company_id AS CHAR)) AS companyName
+        FROM ESG_COMPANY_PROFILE
+        WHERE company_id = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+    """
+    return findOne(sql, (companyId,)) or {
+        "companyId": companyId,
+        "companyCode": None,
+        "companyName": str(companyId),
+    }
 
 def listSourceCompanyIds(batchId: int) -> list[int]:
     return [int(row["source_company_id"]) for row in listSources(batchId)]

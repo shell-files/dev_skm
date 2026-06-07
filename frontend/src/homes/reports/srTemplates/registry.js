@@ -19,8 +19,4 @@ export const allPages = subIssues.flatMap((si) =>
   si.pages.map((p) => ({ ...p, subIssueId: si.id, subIssueLabel: si.label }))
 );
 
-export const subIssues = [climateTarget /*, supplyChain, ... */];
-export const getSubIssue = (id) => subIssues.find((s) => s.id === id);
-
-
 export default subIssues;

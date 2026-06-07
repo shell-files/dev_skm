@@ -31,7 +31,8 @@ def listActiveRules(
             rounding_policy,
             result_table,
             output_unit,
-            execution_order
+            execution_order,
+            yoy_direction_code
         FROM ESG_CALCULATION_RULE
         WHERE UPPER(COALESCE(execution_scope, '')) = ?
           AND active_yn = 1
@@ -64,7 +65,8 @@ def listActiveRulesTx(
             rounding_policy,
             result_table,
             output_unit,
-            execution_order
+            execution_order,
+            yoy_direction_code
         FROM ESG_CALCULATION_RULE
         WHERE UPPER(COALESCE(execution_scope, '')) = ?
           AND active_yn = 1
@@ -100,7 +102,8 @@ def listActiveRulesByTargetAtomicIds(
             rounding_policy,
             result_table,
             output_unit,
-            execution_order
+            execution_order,
+            yoy_direction_code
         FROM ESG_CALCULATION_RULE
         WHERE UPPER(COALESCE(execution_scope, '')) = ?
           AND active_yn = 1
@@ -136,7 +139,8 @@ def listActiveRulesByTargetAtomicIdsTx(
             rounding_policy,
             result_table,
             output_unit,
-            execution_order
+            execution_order,
+            yoy_direction_code
         FROM ESG_CALCULATION_RULE
         WHERE UPPER(COALESCE(execution_scope, '')) = ?
           AND active_yn = 1
@@ -318,7 +322,8 @@ def listAffectedRules(
             cr.rounding_policy,
             cr.result_table,
             cr.output_unit,
-            cr.execution_order
+            cr.execution_order,
+            cr.yoy_direction_code
         FROM ESG_CALCULATION_RULE cr
         JOIN ESG_CALCULATION_RULE_SOURCE src
           ON src.calculation_rule_code = cr.calculation_rule_code
@@ -357,7 +362,8 @@ def listAffectedRulesTx(
             cr.rounding_policy,
             cr.result_table,
             cr.output_unit,
-            cr.execution_order
+            cr.execution_order,
+            cr.yoy_direction_code
         FROM ESG_CALCULATION_RULE cr
         JOIN ESG_CALCULATION_RULE_SOURCE src
           ON src.calculation_rule_code = cr.calculation_rule_code

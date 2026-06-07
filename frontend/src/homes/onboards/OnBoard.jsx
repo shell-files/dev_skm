@@ -37,6 +37,10 @@ import {
   fetchCurrentWorkflow,
   fetchOnboardingMetrics,
   fetchRollupRequests,
+  fetchActiveRollupBatch,
+  fetchRollupBatchStatus,
+  fetchRollupBatchSources,
+  initializePostDmaDisclosureScope,
   resetReportState,
   saveOnboardingMetric,
   setActiveBatchId,
@@ -575,13 +579,54 @@ const OnBoard = () => {
         return;
       }
 
-      if (nextWorkflow?.reportBasisType === "CONSOLIDATED") {
-        await dispatch(fetchRollupRequests()).unwrap();
+      const nextCycleType = resolveOnboardingCycleType(nextWorkflow, cycleTypeQuery);
+      const runId = nextWorkflow.runId;
+      let sourceCycleId;
+
+      if (nextCycleType === "POST_DMA_DISCLOSURE") {
+        const initializedRes = await dispatch(
+          initializePostDmaDisclosureScope({ runId })
+        ).unwrap();
+
+        const initializedScope = initializedRes?.data || initializedRes;
+        sourceCycleId = initializedScope?.cycleId;
       }
 
-      const nextCycleType = resolveOnboardingCycleType(nextWorkflow, cycleTypeQuery);
+      if (nextWorkflow?.reportBasisType === "CONSOLIDATED") {
+        const activeRes = await dispatch(
+          fetchActiveRollupBatch({
+            runId,
+            sourceCycleId,
+            rollupPurposeCode:
+              nextCycleType === "POST_DMA_DISCLOSURE"
+                ? "REPORT_DISCLOSURE"
+                : "DMA_PRECHECK",
+            metricScopeCode:
+              nextCycleType === "POST_DMA_DISCLOSURE"
+                ? "SELECTED_DISCLOSURE"
+                : "G0_02_FINANCIAL_BASIS",
+          })
+        ).unwrap();
+
+        const activeData = activeRes?.data || activeRes;
+
+        if (activeData?.batchId) {
+          await dispatch(
+            fetchRollupBatchStatus({ batchId: activeData.batchId })
+          ).unwrap();
+
+          await dispatch(
+            fetchRollupBatchSources({ batchId: activeData.batchId })
+          ).unwrap();
+        }
+      }
+
+      await dispatch(fetchRollupRequests({ includeSentYn: true, allPurposesYn: true })).unwrap();
+
+      const metricId = new URLSearchParams(location.search).get("metricId");
+      
       await dispatch(
-        fetchOnboardingMetrics({ companyId, reportingYear, cycleType: nextCycleType })
+        fetchOnboardingMetrics({ companyId, reportingYear, cycleType: nextCycleType, metricId })
       ).unwrap();
       await dispatch(
         fetchOnboardingAssignments({ companyId, reportingYear, cycleType: nextCycleType })
@@ -589,7 +634,7 @@ const OnBoard = () => {
     } catch (error) {
       console.error(error);
     }
-  }, [companyId, cycleTypeQuery, dispatch, reportingYear]);
+  }, [companyId, cycleTypeQuery, dispatch, reportingYear, location.search]);
 
   useEffect(() => {
     dispatch(resetReportState());

@@ -7,6 +7,7 @@ from src.utils.auth import get_token
 from src.models.rollup import (
     RollupBatchRequestDto,
     RollupBatchResponseDto,
+    RollupActiveBatchResponseDto,
     RollupBatchSourceListResponseDto,
     RollupBatchSummaryResponseDto,
     RollupCalculateResponseDto,
@@ -19,6 +20,7 @@ from src.models.rollup import (
 from src.services.rollups.service import (
     RollupError,
     calcBatch,
+    getActiveBatchStatus,
     getRequestDetail,
     getScopePreview,
     getStatus,
@@ -95,6 +97,28 @@ async def saveBatchRoute(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@_actionRouter.get(
+    "/batches/active",
+    response_model=RollupActiveBatchResponseDto,
+    summary="Get active rollup batch status",
+)
+async def getActiveBatchRoute(
+    runId: Optional[int] = Query(None),
+    sourceCycleId: Optional[int] = Query(None),
+    rollupPurposeCode: str = Query("DMA_PRECHECK"),
+    metricScopeCode: str = Query("G0_02_FINANCIAL_BASIS"),
+    userModel=Depends(get_token),
+):
+    try:
+        return getActiveBatchStatus(runId, sourceCycleId, rollupPurposeCode, metricScopeCode, userModel)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except RollupError as e:
+        return buildErrorResponse(e)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @_actionRouter.post(
     "/batches/{batchId}/calculate",
     response_model=RollupCalculateResponseDto,
@@ -121,10 +145,11 @@ async def listRequestsRoute(
     metricScopeCode: Optional[str] = Query("G0_02_FINANCIAL_BASIS"),
     includeSentYn: bool = Query(True),
     transferStatus: Optional[str] = Query(None),
+    allPurposesYn: bool = Query(False),
     userModel=Depends(get_token)
 ):
     try:
-        return listRequestsForSource(rollupPurposeCode, metricScopeCode, includeSentYn, transferStatus, userModel)
+        return listRequestsForSource(rollupPurposeCode, metricScopeCode, includeSentYn, transferStatus, allPurposesYn, userModel)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except RollupError as e:

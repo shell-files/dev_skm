@@ -59,6 +59,11 @@ class RollupBatchResponseDto(RollupBaseModel):
     data: RollupBatchStatusDto
 
 
+class RollupActiveBatchResponseDto(RollupBaseModel):
+    success: bool = True
+    data: Optional[RollupBatchStatusDto] = None
+
+
 class RollupResultDto(RollupBaseModel):
     groupAtomicMetricId: str
     sourceAtomicMetricIds: list[str]

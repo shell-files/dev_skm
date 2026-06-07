@@ -1,0 +1,277 @@
+/* ============================================================
+   SR PAGE STYLESHEET  (screen + A4 print)
+   ============================================================ */
+:root{
+  --ink:#16241f; --ink-soft:#42534c; --muted:#8c9893;
+  --line:#e2eae5; --paper:#ffffff; --tint:#f3f8f5;
+  --band:#0e2419; --brand:#1b5e44; --brand2:#34805c;
+  --sage:#8cc6a7; --sage2:#bfe2cd; --hl:#13533d;
+  --s1:#11352a; --s2:#357e5b; --danger:#b04a3c;
+  --token-bg:#fff4e6; --token-bd:#e8c79a; --token-ink:#9a6a1f;
+}
+/* [통합 수정] 전역 리셋을 SR 페이지 내부로 한정 — 기존 앱 CSS 오염 방지 */
+.sr-page,.sr-page *{margin:0;padding:0;box-sizing:border-box;}
+.sr-stage{background:#cdd6d1;padding:28px;display:flex;flex-direction:column;gap:28px;align-items:center;
+  font-family:"Noto Sans KR","Noto Sans CJK KR",-apple-system,sans-serif;}
+
+/* A4 portrait sheet: 210 x 297 mm */
+.sr-page{
+  font-family:"Noto Sans KR","Noto Sans CJK KR",-apple-system,sans-serif;
+  width:297mm; min-height:210mm; background:var(--paper); position:relative;
+  color:var(--ink); -webkit-font-smoothing:antialiased; overflow:hidden;
+  box-shadow:0 8px 40px rgba(0,0,0,.16); display:flex; flex-direction:column;
+}
+.sr-topband{height:6px;background:var(--band);flex:none;}
+
+/* nav */
+.sr-nav{display:flex;align-items:center;padding:12px 14mm 0 14mm;flex:none;}
+.sr-nav-icons{display:flex;gap:7px;}
+.sr-nav-icons span{width:18px;height:18px;border:1.2px solid #c4d0ca;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:9px;color:#7e8d86;}
+.sr-nav-items{display:flex;gap:13px;margin-left:18px;font-size:10px;color:#9aa8a1;}
+.sr-nav-item{padding-bottom:7px;font-weight:400;white-space:nowrap;}
+.sr-nav-item.active{color:var(--brand);font-weight:700;border-bottom:2px solid var(--brand);}
+.sr-pg{margin-left:auto;font-size:12px;color:var(--ink);font-weight:700;letter-spacing:.5px;}
+.sr-subnav{display:flex;gap:9px;padding:6px 14mm 0 calc(14mm + 43px);font-size:9px;color:#a7b3ad;font-weight:400;flex:none;}
+.sr-subnav .sa{color:var(--brand2);font-weight:700;}
+.sr-subnav .dot{color:#cfdad4;}
+.sr-rule{margin:9px 14mm 0 14mm;height:1px;background:var(--line);flex:none;}
+
+/* body */
+.sr-body{padding:14px 14mm 0 14mm;flex:1 1 auto;position:relative;}
+.sr-ghost{position:absolute;left:13mm;top:9px;font-size:44px;font-weight:900;color:#eef5f1;letter-spacing:1px;z-index:0;}
+.sr-head{display:flex;align-items:flex-end;justify-content:space-between;position:relative;z-index:1;}
+.sr-eyebrow{font-size:10px;letter-spacing:4px;color:var(--sage);font-weight:700;}
+.sr-title{font-size:27px;font-weight:800;color:var(--ink);margin-top:5px;letter-spacing:-.4px;line-height:1.15;}
+.sr-title .ac{color:var(--brand);}
+.sr-title-en{font-size:11px;color:var(--muted);font-weight:400;margin-top:3px;letter-spacing:.3px;}
+
+.sr-prose{font-size:11.5px;line-height:1.85;color:var(--ink-soft);font-weight:400;text-align:justify;margin-top:14px;}
+.sr-prose b{font-weight:700;color:var(--hl);}
+.sr-prose p+p{margin-top:9px;}
+.sr-prose .sr-token{background:var(--token-bg);border:1px solid var(--token-bd);color:var(--token-ink);
+  border-radius:3px;padding:0 4px;font-size:10px;font-family:ui-monospace,Menlo,monospace;font-weight:600;white-space:nowrap;}
+
+/* KPI strip (A) */
+.sr-kpis{display:flex;border:1px solid var(--line);border-radius:5px;overflow:hidden;margin-top:16px;}
+.sr-kpi{flex:1;padding:10px 13px;border-right:1px solid var(--line);}
+.sr-kpi:last-child{border-right:none;}
+.sr-kpi .kl{font-size:9.5px;color:var(--muted);font-weight:500;}
+.sr-kpi .kv{font-size:16px;font-weight:900;color:var(--ink);margin-top:3px;line-height:1.05;white-space:nowrap;}
+.sr-kpi .kv small{font-size:9.5px;font-weight:600;color:var(--muted);}
+.sr-kpi .kd{font-size:9.5px;font-weight:700;margin-top:4px;color:var(--brand);}
+.sr-kpi .kd.down::before{content:"▼ ";font-size:8px;}
+.sr-kpi .kd.up{color:var(--brand2);} .sr-kpi .kd.up::before{content:"▲ ";font-size:8px;}
+.sr-kpi .kd.flat{color:var(--brand2);font-weight:600;}
+
+/* roadmap (A) */
+.sr-road{background:var(--tint);border-radius:6px;padding:14px 18px 12px 18px;margin-top:16px;}
+.sr-road-h{display:flex;align-items:baseline;gap:9px;}
+.sr-road-h .t{font-size:12px;font-weight:800;color:var(--brand);}
+.sr-road-h .d{font-size:9px;color:var(--muted);}
+.sr-road-h .lg{margin-left:auto;display:flex;gap:11px;font-size:8.5px;color:var(--ink-soft);}
+.sr-road-h .lg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:0;}
+.sr-chart{display:flex;align-items:flex-end;height:158px;margin-top:14px;border-bottom:1.4px solid #c9d6cf;position:relative;}
+.sr-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative;}
+.sr-barval{font-size:10px;font-weight:800;color:var(--ink);margin-bottom:5px;text-align:center;line-height:1.2;}
+.sr-barval small{font-size:7.5px;font-weight:500;color:var(--muted);}
+.sr-bar{width:58px;border-radius:3px 3px 0 0;overflow:hidden;}
+.sr-bar .seg{width:100%;}
+.sr-bar .s1{background:var(--s1);} .sr-bar .s2{background:var(--s2);}
+.sr-bar.solid{background:var(--brand);}
+.sr-bar.target{background:repeating-linear-gradient(45deg,#e4f0ea,#e4f0ea 5px,#f3f8f5 5px,#f3f8f5 10px);
+  border:1.4px dashed var(--brand2);}
+.sr-bar.zero{height:4px;width:58px;background:var(--brand);border-radius:2px;}
+.sr-phase{position:absolute;top:18px;left:-22px;width:40px;height:40px;border-radius:50%;background:#fff;
+  border:1.5px solid var(--brand2);display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--brand);z-index:2;}
+.sr-phase .pl{font-size:6.5px;letter-spacing:.5px;color:var(--muted);}
+.sr-phase .pn{font-size:11px;font-weight:800;}
+.sr-mile{position:absolute;font-size:8.5px;color:var(--brand);font-weight:700;text-align:center;width:110px;line-height:1.3;}
+.sr-xrow{display:flex;margin-top:9px;}
+.sr-xc{flex:1;text-align:center;}
+.sr-xc .yr{font-size:11px;font-weight:800;color:var(--ink);}
+.sr-xc .ph{font-size:8.5px;color:var(--muted);margin-top:1px;}
+.sr-xc .ph b{color:var(--brand2);font-weight:700;}
+
+/* tables (B) */
+.sr-tcap{font-size:12px;font-weight:800;color:var(--brand);margin:16px 0 8px 0;display:flex;align-items:center;gap:7px;}
+.sr-tcap .num{width:16px;height:16px;border-radius:50%;background:var(--brand);color:#fff;font-size:9px;
+  display:inline-flex;align-items:center;justify-content:center;font-weight:700;}
+table.sr-tbl{width:100%;table-layout:fixed;border-collapse:collapse;font-size:10.5px;}
+table.sr-tbl thead th{background:var(--band);color:#eaf6ef;font-weight:600;font-size:9.5px;padding:8px 11px;text-align:right;}
+table.sr-tbl thead th:first-child{text-align:left;}
+table.sr-tbl tbody td{padding:8px 11px;border-bottom:1px solid var(--line);text-align:right;color:var(--ink);font-weight:600;}
+table.sr-tbl tbody td:first-child{text-align:left;color:var(--ink-soft);font-weight:500;}
+table.sr-tbl tbody tr:nth-child(even){background:var(--tint);}
+table.sr-tbl .unit{color:var(--muted);font-size:8.5px;font-weight:500;}
+table.sr-tbl .strong{color:var(--brand);font-weight:900;font-size:12px;}
+table.sr-tbl .delta{color:var(--brand);font-weight:700;} table.sr-tbl .delta::before{content:"▼ ";font-size:7px;}
+table.sr-tbl .up{color:var(--brand2);font-weight:700;} table.sr-tbl .up::before{content:"▲ ";font-size:7px;}
+.sr-yr{font-size:15px;font-weight:900;color:var(--brand);white-space:nowrap;}
+table.sr-tbl.nums tbody td:not(:first-child){white-space:nowrap;}
+.sr-measures{display:flex;align-items:center;gap:14px;border:1px solid var(--line);border-left:4px solid var(--brand);
+  border-radius:5px;padding:11px 16px;margin-top:16px;background:#fbfdfc;}
+.sr-measures .ml{font-size:10px;font-weight:800;color:var(--brand);white-space:nowrap;letter-spacing:.3px;}
+.sr-measures .mv{font-size:11px;color:var(--ink-soft);font-weight:500;line-height:1.55;}
+.sr-cols{display:flex;gap:18px;align-items:flex-start;}
+.sr-cols .c-main{flex:1.7;} .sr-cols .c-side{flex:1;}
+
+/* renewable progress (B) */
+.sr-gauge{background:var(--tint);border-radius:6px;padding:11px 14px;margin-top:14px;}
+.sr-gauge .gl{font-size:9.5px;color:var(--muted);font-weight:500;}
+.sr-gauge .gv{font-size:20px;font-weight:900;color:var(--brand);margin:2px 0 7px 0;}
+.sr-gauge .gv small{font-size:10px;color:var(--ink-soft);font-weight:600;}
+.sr-track{height:10px;background:#dde8e2;border-radius:5px;overflow:hidden;}
+.sr-fill{height:100%;background:linear-gradient(90deg,var(--brand2),var(--brand));border-radius:5px;}
+.sr-gx{display:flex;justify-content:space-between;font-size:8.5px;color:var(--muted);margin-top:3px;}
+.sr-note-card{background:var(--band);border-radius:6px;padding:12px 14px;margin-top:14px;}
+.sr-note-card .l{font-size:9px;color:#9fbfae;font-weight:500;}
+.sr-note-card .b{font-size:13px;color:#eaf6ef;font-weight:800;margin-top:4px;line-height:1.4;}
+.sr-note-card .s{font-size:9px;color:#9fbfae;font-weight:300;margin-top:5px;}
+
+/* footer */
+.sr-foot{margin-top:auto;padding:12px 14mm 12px 14mm;display:flex;align-items:flex-end;gap:14px;flex:none;}
+.sr-fn{font-size:8px;color:#9aa8a1;line-height:1.6;font-weight:400;}
+.sr-auto{margin-left:auto;font-size:7px;color:#bcc8c2;letter-spacing:.8px;text-transform:uppercase;text-align:right;white-space:nowrap;}
+
+/* screen toolbar — never printed */
+.sr-toolbar{position:fixed;top:12px;right:12px;z-index:99;display:flex;gap:8px;}
+.sr-toolbar button{font:600 12px/1 "Noto Sans KR";padding:9px 14px;border:none;border-radius:7px;
+  background:var(--brand);color:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.sr-tag{position:absolute;top:8px;left:8px;background:#0e2419;color:#cdebd8;font-size:9px;font-weight:700;
+  padding:4px 9px;border-radius:4px;letter-spacing:.5px;}
+
+/* ===================== PRINT / PDF ===================== */
+@page{ size:A4 landscape; margin:0; }
+@media print{
+  html,body{background:#fff;}
+  .sr-stage{background:#fff;padding:0;gap:0;display:block;}
+  .sr-toolbar,.sr-tag{display:none !important;}
+  .sr-page{box-shadow:none;margin:0;width:297mm;min-height:210mm;
+    page-break-after:always; break-after:page;}
+  .sr-page:last-child{page-break-after:auto;break-after:auto;}
+  .sr-page,.sr-page *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+}
+
+/* ============================================================
+   [통합 추가] Draft.jsx 보고서 미리보기 영역 wrapper
+   - A4(210mm) 페이지를 좁은 preview 컬럼에 맞춰 축소
+   - 인쇄/PDF 시에는 scale 해제 (원본 A4 크기 유지)
+   ============================================================ */
+.draft-sr-preview{display:block;overflow:auto;padding:8px 0;}
+/* 화면 미리보기: A4 고정폭(297mm) 해제 → 글자 크기는 그대로, 폭만 컨테이너에 맞춰 흐름.
+   (PDF 오프스크린 #pdf-render-root 의 .sr-page 는 기본 규칙대로 297mm 고정 유지) */
+.draft-sr-preview .sr-page{width:100%;max-width:100%;min-height:auto;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,.10);}
+
+/* [수정] 본문 입력 시 세로 스크롤바가 생겼다 사라져도 내용 폭이 변하지 않도록
+   스크롤 컨테이너(.doc-content)의 스크롤바 자리를 항상 확보 → 입력창/미리보기 폭 고정.
+   scrollbar-gutter 미지원 브라우저까지 커버하려고 overflow-y:scroll 로 스크롤바를 상시 표시. */
+#draftDoc .doc-content{scrollbar-gutter:stable;overflow-y:scroll !important;}
+@media print{
+  .draft-sr-preview{padding:0;}
+  .draft-sr-preview .sr-page{box-shadow:none;}
+}
+
+/* ============================================================
+   [통합 추가] 페이지 이동 바 (이전 · 다음) — 화면 전용
+   ============================================================ */
+.sr-pager{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px;}
+.sr-pager-btn{font:600 12px/1 "Noto Sans KR",sans-serif;padding:7px 14px;border:1px solid #e2e8f0;
+  border-radius:8px;background:#fff;color:#334155;cursor:pointer;transition:background .15s,border-color .15s;}
+.sr-pager-btn:hover:not(:disabled){background:#f0fdf4;border-color:#03A94D;color:#03A94D;}
+.sr-pager-btn:disabled{opacity:.4;cursor:not-allowed;}
+.sr-pager-info{font:700 13px/1 "Noto Sans KR",sans-serif;color:#64748b;min-width:48px;text-align:center;}
+@media print{ .sr-pager{display:none !important;} }
+
+/* ============================================================
+   [통합 추가] 웹 편집기 (PDF 내보내기 전 수정) — 화면 전용
+   #pdf-render-root 와 분리되어 PDF 캡처엔 포함되지 않음
+   ============================================================ */
+.sr-editor{border:1px solid #e2e8f0;border-radius:12px;padding:16px 18px;margin-bottom:16px;background:#f8fafc;
+  font-family:"Noto Sans KR",sans-serif;}
+.sr-editor-hd{font-size:12.5px;font-weight:700;color:#1b5e44;margin-bottom:12px;}
+.sr-editor-label{display:block;font-size:11px;font-weight:700;color:#64748b;margin:10px 0 5px;}
+.sr-editor-narrative{width:100%;box-sizing:border-box;min-height:120px;resize:vertical;padding:10px 12px;
+  border:1px solid #cbd5e1;border-radius:8px;font:13px/1.7 "Noto Sans KR",sans-serif;color:#334155;background:#fff;outline:none;}
+.sr-editor-narrative:focus{border-color:#03A94D;}
+.sr-editor-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px 14px;}
+.sr-editor-field{display:flex;flex-direction:column;gap:3px;}
+.sr-editor-fieldkey{font-size:10.5px;color:#475569;font-weight:600;display:flex;align-items:center;gap:6px;}
+.sr-editor-fieldkey code{font-size:9px;color:#94a3b8;font-weight:500;background:#eef2f7;padding:1px 5px;border-radius:4px;}
+.sr-editor-field input{padding:6px 9px;border:1px solid #cbd5e1;border-radius:7px;font:12.5px "Noto Sans KR",sans-serif;
+  color:#16241f;background:#fff;outline:none;}
+.sr-editor-field input:focus{border-color:#03A94D;}
+@media print{ .sr-editor{display:none !important;} }
+
+/* 편집기 헤더 바 / 저장 버튼 (화면 전용) */
+.sr-editor-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px;}
+.sr-editor-actions{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.sr-editor-saved{font-size:10.5px;color:#64748b;white-space:nowrap;}
+.sr-editor-save{font:700 12px/1 "Noto Sans KR",sans-serif;padding:8px 16px;border:none;border-radius:8px;
+  background:#03A94D;color:#fff;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:background .15s;}
+.sr-editor-save:hover{background:#02913f;}
+.sr-editor-hint{font-size:10.5px;color:#94a3b8;margin-bottom:8px;}
+
+/* ============================================================
+   [추가] 본문 인라인 편집 (오른쪽 페이지에서 값/토큰 클릭해 수정)
+   ============================================================ */
+/* 편집모드에서 단일 metric 값/토큰만 클릭 가능 표시 (파생/복합값 제외) */
+.draft-sr-preview.is-editing [data-source]:not([data-source*=","]) { cursor: pointer; }
+.draft-sr-preview.is-editing [data-source]:not([data-source*=","]):hover {
+  outline: 2px solid #03A94D; outline-offset: 2px; border-radius: 4px; background: rgba(3,169,77,.07);
+}
+/* 본문 토큰 */
+.sr-tok-edit { cursor: pointer; }
+.sr-tok-edit.empty {
+  color: #b04a3c; background: #fff4e6; border: 1px solid #e8c79a; border-radius: 4px; padding: 0 4px; font-weight: 600;
+}
+.draft-sr-preview.is-editing .sr-tok-edit:hover { outline: 2px solid #03A94D; outline-offset: 1px; border-radius: 4px; }
+
+/* 인라인 입력창 (클릭한 값 자리에 뜸) */
+.sr-inline-input {
+  font: 600 13px "Noto Sans KR", sans-serif; padding: 6px 9px;
+  border: 2px solid #03A94D; border-radius: 8px; background: #fff; color: #16241f;
+  box-shadow: 0 8px 24px rgba(0,0,0,.18); outline: none;
+}
+
+/* 본문 직접작성 토글 버튼 */
+.sr-prose-toggle {
+  margin-left: 10px; font: 600 11px "Noto Sans KR", sans-serif; padding: 4px 10px;
+  border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #1b5e44; cursor: pointer;
+}
+.sr-prose-toggle:hover { border-color: #03A94D; background: #f0fdf4; }
+
+/* ============================================================
+   [추가] 본문 인라인 편집 영역 (contentEditable) — 폰트는 본문 그대로 유지
+   ============================================================ */
+.draft-sr-preview.is-editing .sr-prose-edit{
+  outline: 2px dashed #03A94D; outline-offset: 4px; border-radius: 6px;
+  background: rgba(3,169,77,.04); cursor: text; white-space: pre-wrap;
+  min-height: 2.4em; transition: background .15s;
+}
+.draft-sr-preview.is-editing .sr-prose-edit:focus{
+  outline-style: solid; background: #f0fdf4;
+}
+
+/* ============================================================
+   [추가] 본문 강조 토큰 .sr-fig — 보기/편집/PDF 모두 동일하게 강조 유지
+   ============================================================ */
+.sr-fig{ font-weight:700; color:var(--brand); }                 /* 값이 채워진 토큰: 굵게 강조 */
+.sr-fig.empty{                                                  /* 미입력 토큰: 주황 칩(플레이스홀더) */
+  font-weight:700; color:#b04a3c; background:#fff4e6;
+  border:1px solid #e8c79a; border-radius:4px; padding:0 5px;
+}
+/* 편집 모드에서 토큰은 클릭해 값 수정 */
+.draft-sr-preview.is-editing .sr-fig{ cursor:pointer; }
+.draft-sr-preview.is-editing .sr-fig:hover{ outline:2px solid #03A94D; outline-offset:1px; border-radius:4px; }
+
+/* ============================================================
+   [추가] PDF 출력 시 본문 강조 제거 — #pdf-render-root 안에서는 일반 텍스트로
+   (화면 미리보기 .draft-sr-preview 의 강조는 그대로 유지)
+   ============================================================ */
+#pdf-render-root .sr-fig,
+#pdf-render-root .sr-fig.empty{
+  font-weight:inherit !important; color:inherit !important;
+  background:transparent !important; border:0 !important;
+  border-radius:0 !important; padding:0 !important;
+}

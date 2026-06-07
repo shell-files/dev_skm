@@ -595,6 +595,32 @@ class RollupCalculatorTest(unittest.TestCase):
         self.assertEqual([item["calculationTrace"]["evaluatedYear"] for item in results], [2026, 2026])
         self.assertEqual(results[1]["calculationTrace"]["historicalDependencies"][1]["evaluatedYear"], 2025)
 
+    # ── Step 12-C2-R3 ROLLUP YOY direction tests ──
+
+    def test_rollup_yoy_diff_prior_minus_current(self):
+        """ROLLUP_YOY_DIFF + PRIOR_MINUS_CURRENT: current=90,prior=100 → 10"""
+        r = rule("R1", "T1", "ROLLUP_YOY_DIFF")
+        r["yoy_direction_code"] = "PRIOR_MINUS_CURRENT"
+        results, warnings, success = calculate(
+            [r],
+            [source("R1", "S1", "CURRENT")],
+            [fact(1, "S1", 45), fact(2, "S1", 45)],
+            [fact(1, "S1", 50), fact(2, "S1", 50)],
+        )
+        self.assertTrue(success, warnings)
+        self.assertEqual(results[0]["valueNumeric"], 10)
+
+    def test_rollup_yoy_diff_current_minus_prior_default(self):
+        """ROLLUP_YOY_DIFF direction 미지정 → CURRENT_MINUS_PRIOR → current=90,prior=100 → -10"""
+        results, warnings, success = calculate(
+            [rule("R1", "T1", "ROLLUP_YOY_DIFF")],
+            [source("R1", "S1", "CURRENT")],
+            [fact(1, "S1", 45), fact(2, "S1", 45)],
+            [fact(1, "S1", 50), fact(2, "S1", 50)],
+        )
+        self.assertTrue(success, warnings)
+        self.assertEqual(results[0]["valueNumeric"], -10)
+
 
 if __name__ == "__main__":
     unittest.main()

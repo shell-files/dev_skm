@@ -1,9 +1,18 @@
 ﻿import json
-from typing import Optional
+from decimal import Decimal
+from typing import Any, Optional
 from src.utils.db import findAll, findOne
 
 BATCH_STATUS_PENDING = "pending"
 BATCH_STATUS_COMPLETED = "completed"
+
+def _jsonDefault(value: Any) -> Any:
+    if isinstance(value, Decimal):
+        return format(value, "f")
+    raise TypeError(f"Object of type {value.__class__.__name__} is not JSON serializable")
+
+def _jsonDumps(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False, default=_jsonDefault)
 
 def getActiveBatch(runId: Optional[int], sourceCycleId: Optional[int], rollupPurposeCode: str, metricScopeCode: str) -> dict:
     sql = """
@@ -404,16 +413,16 @@ def resultParams(
         int(batch["reporting_year"]),
         int(batch["parent_company_id"]),
         "CONSOLIDATED",
-        json.dumps(includedCompanyIds),
+        _jsonDumps(includedCompanyIds),
         groupMetricId,
         result["groupAtomicMetricId"],
         result.get("groupAtomicName") or result["groupAtomicMetricId"],
         result.get("valueNumeric"),
         result.get("valueText"),
         result.get("unit") or "KRW",
-        json.dumps(result.get("sourceCompanyValues") or {}),
+        _jsonDumps(result.get("sourceCompanyValues") or {}),
         result.get("formulaType"),
-        json.dumps(result.get("calculationTrace") or {}),
+        _jsonDumps(result.get("calculationTrace") or {}),
         actorUserId,
     )
     return baseParams

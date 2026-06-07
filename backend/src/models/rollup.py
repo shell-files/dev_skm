@@ -95,6 +95,11 @@ class RollupRequestItemDto(RollupBaseModel):
     transferStatus: str
     sendReadyYn: bool
     missingAtomicMetricIds: list[str]
+    metricCount: int = 0
+    requiredAtomicCount: int = 0
+    approvedAtomicCount: int = 0
+    missingAtomicCount: int = 0
+    metricIds: list[str] = Field(default_factory=list)
 
 
 class RollupRequestListDto(RollupBaseModel):
@@ -104,6 +109,93 @@ class RollupRequestListDto(RollupBaseModel):
 class RollupRequestResponseDto(RollupBaseModel):
     success: bool = True
     data: RollupRequestListDto
+
+
+class RollupScopePreviewDto(RollupBaseModel):
+    runId: Optional[int] = None
+    sourceCycleId: Optional[int] = None
+    parentCompanyId: int
+    reportingYear: int
+    rollupPurposeCode: str
+    metricScopeCode: str
+    metricCount: int
+    metricIds: list[str]
+    requiredAtomicCount: int
+    requiredAtomicMetricIds: list[str]
+
+
+class RollupScopePreviewResponseDto(RollupBaseModel):
+    success: bool = True
+    data: RollupScopePreviewDto
+
+
+class RollupRequestMetricItemDto(RollupBaseModel):
+    metricId: str
+    metricName: Optional[str] = None
+    requiredAtomicCount: int = 0
+    approvedAtomicCount: int = 0
+    missingAtomicMetricIds: list[str] = Field(default_factory=list)
+
+
+class RollupRequestDetailDto(RollupBaseModel):
+    batchId: int
+    batchCode: Optional[str] = None
+    parentCompanyId: int
+    parentCompanyCode: Optional[str] = None
+    parentCompanyName: Optional[str] = None
+    sourceCompanyId: int
+    sourceCompanyCode: Optional[str] = None
+    sourceCompanyName: Optional[str] = None
+    reportingYear: int
+    rollupPurposeCode: str
+    metricScopeCode: str
+    requestStatus: str
+    inputStatus: str
+    approvalStatus: str
+    transferStatus: str
+    sendReadyYn: bool
+    metricCount: int
+    requiredAtomicCount: int
+    approvedAtomicCount: int
+    missingAtomicCount: int
+    missingAtomicMetricIds: list[str]
+    metricIds: list[str]
+    items: list[RollupRequestMetricItemDto] = Field(default_factory=list)
+
+
+class RollupRequestDetailResponseDto(RollupBaseModel):
+    success: bool = True
+    data: RollupRequestDetailDto
+
+
+class RollupBatchSourceItemDto(RollupBaseModel):
+    sourceCompanyId: int
+    sourceCompanyCode: Optional[str] = None
+    sourceCompanyName: Optional[str] = None
+    requestStatus: str
+    inputStatus: str
+    approvalStatus: str
+    transferStatus: str
+    sendReadyYn: bool
+    requiredAtomicCount: int = 0
+    approvedAtomicCount: int = 0
+    missingAtomicCount: int = 0
+    sentAt: Optional[str] = None
+    receivedAt: Optional[str] = None
+
+
+class RollupBatchSourceListDto(RollupBaseModel):
+    batchId: int
+    parentCompanyId: int
+    reportingYear: int
+    rollupPurposeCode: str
+    metricScopeCode: str
+    items: list[RollupBatchSourceItemDto] = Field(default_factory=list)
+
+
+class RollupBatchSourceListResponseDto(RollupBaseModel):
+    success: bool = True
+    data: RollupBatchSourceListDto
 
 
 class RollupSourceSendStatusDto(RollupBaseModel):

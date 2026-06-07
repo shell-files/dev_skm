@@ -1,29 +1,57 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from src.utils.auth import get_token
 
 from src.models.rollup import (
     RollupBatchRequestDto,
     RollupBatchResponseDto,
+    RollupBatchSourceListResponseDto,
     RollupBatchSummaryResponseDto,
     RollupCalculateResponseDto,
+    RollupRequestDetailResponseDto,
     RollupRequestResponseDto,
+    RollupScopePreviewResponseDto,
     RollupSourceSendResponseDto,
     RollupSubsidiaryResponseDto,
 )
 from src.services.rollups.service import (
     RollupError,
     calcBatch,
+    getRequestDetail,
+    getScopePreview,
     getStatus,
-    listRequests,
+    listBatchSources,
+    listRequestsForSource,
     listSubsidiaries,
     saveBatch,
     sendSource,
 )
 
 _actionRouter = APIRouter()
+
+
+@_actionRouter.get(
+    "/scope-preview",
+    response_model=RollupScopePreviewResponseDto,
+    summary="Preview rollup metric and atomic scope",
+)
+async def getScopePreviewRoute(
+    runId: Optional[int] = Query(None),
+    sourceCycleId: Optional[int] = Query(None),
+    rollupPurposeCode: Optional[str] = Query("DMA_PRECHECK"),
+    metricScopeCode: Optional[str] = Query("G0_02_FINANCIAL_BASIS"),
+    userModel=Depends(get_token),
+):
+    try:
+        return getScopePreview(runId, sourceCycleId, rollupPurposeCode, metricScopeCode, userModel)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except RollupError as e:
+        return buildErrorResponse(e)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @_actionRouter.get(
@@ -91,10 +119,44 @@ async def calcBatchRoute(batchId: int, userModel=Depends(get_token)):
 async def listRequestsRoute(
     rollupPurposeCode: Optional[str] = Query("DMA_PRECHECK"),
     metricScopeCode: Optional[str] = Query("G0_02_FINANCIAL_BASIS"),
+    includeSentYn: bool = Query(True),
+    transferStatus: Optional[str] = Query(None),
     userModel=Depends(get_token)
 ):
     try:
-        return listRequests(rollupPurposeCode, metricScopeCode, userModel)
+        return listRequestsForSource(rollupPurposeCode, metricScopeCode, includeSentYn, transferStatus, userModel)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except RollupError as e:
+        return buildErrorResponse(e)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@_actionRouter.get(
+    "/requests/{batchId}",
+    response_model=RollupRequestDetailResponseDto,
+    summary="Get rollup transfer request detail for current source company",
+)
+async def getRequestDetailRoute(batchId: int, userModel=Depends(get_token)):
+    try:
+        return getRequestDetail(batchId, userModel)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except RollupError as e:
+        return buildErrorResponse(e)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@_actionRouter.get(
+    "/batches/{batchId}/sources",
+    response_model=RollupBatchSourceListResponseDto,
+    summary="List rollup batch source transfer status",
+)
+async def listBatchSourcesRoute(batchId: int, userModel=Depends(get_token)):
+    try:
+        return listBatchSources(batchId, userModel)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except RollupError as e:

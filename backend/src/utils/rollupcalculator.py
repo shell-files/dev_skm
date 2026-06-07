@@ -247,62 +247,76 @@ def calculateConsolidatedRulesByYear(
             return result
 
         activeRuleStack.add(memoKey)
-        ruleSources = groupedSources.get(code) or []
-        engineFactMap = {}
-        enginePriorFactMap = {}
-        sourceCompanyValuesTrace = {}
-        dependencyTrace = []
+        try:
+            ruleSources = groupedSources.get(code) or []
+            engineFactMap = {}
+            enginePriorFactMap = {}
+            sourceCompanyValuesTrace = {}
+            dependencyTrace = []
 
-        if isYoyFormula(rule):
-            currentSources, priorSources = splitYoySources(ruleSources)
-            for source in currentSources:
-                sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year, rule)
-                dependencyTrace.append(traceSource(source, sourceResult, year, "current"))
-                if sourceResult["status"] == STATUS_CALCULATED:
-                    engineFactMap[source["sourceAtomicMetricId"]] = normalizeEngineFact(sourceResult["fact"])
-                    sourceCompanyValuesTrace[source["sourceAtomicMetricId"]] = sourceCompanyValues(sourceResult)
-            for source in priorSources:
-                sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year - 1, rule)
-                dependencyTrace.append(traceSource(source, sourceResult, year - 1, "prior"))
-                if sourceResult["status"] == STATUS_CALCULATED:
-                    enginePriorFactMap[source["sourceAtomicMetricId"]] = normalizeEngineFact(sourceResult["fact"])
-        else:
-            for source in ruleSources:
-                sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year, rule)
-                dependencyTrace.append(traceSource(source, sourceResult, year, "current"))
-                if sourceResult["status"] == STATUS_CALCULATED:
-                    engineFactMap[source["sourceAtomicMetricId"]] = normalizeEngineFact(sourceResult["fact"])
-                    sourceCompanyValuesTrace[source["sourceAtomicMetricId"]] = sourceCompanyValues(sourceResult)
+            if isYoyFormula(rule):
+                currentSources, priorSources = splitYoySources(ruleSources)
+                for source in currentSources:
+                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year, rule)
+                    dependencyTrace.append(traceSource(source, sourceResult, year, "current"))
+                    if sourceResult["status"] == STATUS_CALCULATED:
+                        engineFactMap[source["sourceAtomicMetricId"]] = normalizeEngineFact(sourceResult["fact"])
+                        sourceCompanyValuesTrace[source["sourceAtomicMetricId"]] = sourceCompanyValues(sourceResult)
+                for source in priorSources:
+                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year - 1, rule)
+                    dependencyTrace.append(traceSource(source, sourceResult, year - 1, "prior"))
+                    if sourceResult["status"] == STATUS_CALCULATED:
+                        enginePriorFactMap[source["sourceAtomicMetricId"]] = normalizeEngineFact(sourceResult["fact"])
+            else:
+                for source in ruleSources:
+                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year, rule)
+                    dependencyTrace.append(traceSource(source, sourceResult, year, "current"))
+                    if sourceResult["status"] == STATUS_CALCULATED:
+                        engineFactMap[source["sourceAtomicMetricId"]] = normalizeEngineFact(sourceResult["fact"])
+                        sourceCompanyValuesTrace[source["sourceAtomicMetricId"]] = sourceCompanyValues(sourceResult)
 
-        engineResult = calculateRule(rule, ruleSources, engineFactMap, enginePriorFactMap)
-        result = buildRuleResult(rule, ruleSources, engineResult.get("calculationStatus"), year)
-        result.update(
-            {
-                "valueNumeric": engineResult.get("valueNumeric"),
-                "valueText": engineResult.get("valueText"),
-                "unit": engineResult.get("unit"),
-                "sourceCompanyValues": buildSourceTrace(sourceCompanyValuesTrace),
-                "calculationTrace": {
-                    "reportingYear": reportingYear,
-                    "evaluatedYear": year,
-                    "historicalLookbackDepth": historicalLookbackDepth,
-                    "currentPreAggregatedMap": engineFactMap,
-                    "priorPreAggregatedMap": enginePriorFactMap,
-                    "historicalDependencies": dependencyTrace,
-                    "engineTrace": engineResult.get("calculationTrace"),
-                },
+            engineResult = calculateRule(rule, ruleSources, engineFactMap, enginePriorFactMap)
+            result = buildRuleResult(rule, ruleSources, engineResult.get("calculationStatus"), year)
+            result.update(
+                {
+                    "valueNumeric": engineResult.get("valueNumeric"),
+                    "valueText": engineResult.get("valueText"),
+                    "unit": engineResult.get("unit"),
+                    "sourceCompanyValues": buildSourceTrace(sourceCompanyValuesTrace),
+                    "calculationTrace": {
+                        "reportingYear": reportingYear,
+                        "evaluatedYear": year,
+                        "historicalLookbackDepth": historicalLookbackDepth,
+                        "currentPreAggregatedMap": engineFactMap,
+                        "priorPreAggregatedMap": enginePriorFactMap,
+                        "historicalDependencies": dependencyTrace,
+                        "engineTrace": engineResult.get("calculationTrace"),
+                    },
+                }
+            )
+
+            if result["calculationStatus"] == STATUS_CALCULATED:
+                consolidatedFactMapsByYear[int(year)][result["groupAtomicMetricId"]] = {
+                    "atomicMetricId": result["groupAtomicMetricId"],
+                    "valueNumeric": result.get("valueNumeric"),
+                    "valueText": result.get("valueText"),
+                    "unit": result.get("unit"),
+                }
+
+        except CalculationError as error:
+            result = buildRuleResult(rule, ruleSources, error.code, year)
+            result["calculationTrace"] = {
+                "reportingYear": reportingYear,
+                "evaluatedYear": year,
+                "historicalLookbackDepth": historicalLookbackDepth,
+                "errorCode": error.code,
+                "errorMessage": error.message,
+                "historicalDependencies": dependencyTrace,
             }
-        )
 
-        if result["calculationStatus"] == STATUS_CALCULATED:
-            consolidatedFactMapsByYear[int(year)][result["groupAtomicMetricId"]] = {
-                "atomicMetricId": result["groupAtomicMetricId"],
-                "valueNumeric": result.get("valueNumeric"),
-                "valueText": result.get("valueText"),
-                "unit": result.get("unit"),
-            }
+        finally:
+            activeRuleStack.discard(memoKey)
 
-        activeRuleStack.remove(memoKey)
         ruleMemo[memoKey] = result
         return result
 

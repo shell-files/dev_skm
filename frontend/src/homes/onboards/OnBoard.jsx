@@ -196,37 +196,25 @@ const OnboardingStatCards = ({ stats }) => {
   const notStartedPercent = (stats.notStartedCount / total) * 100;
 
   return (
-    <div className="ob1-cards">
-      <div className="ob1-stat-card">
-        <div className="ob1-stat-title">전체 지표</div>
-        <div className="ob1-stat-value">{stats.totalCount}</div>
+    <div style={{ display: 'flex', gap: '16px', fontSize: '13px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <span style={{ color: '#64748b' }}>전체 지표</span>
+        <span style={{ fontWeight: 600, fontSize: '16px' }}>{stats.totalCount}</span>
       </div>
-      <div className="ob1-stat-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
-          <div className="ob1-stat-title">입력 완료</div>
-          <div className="ob1-stat-value success" style={{ fontSize: '18px' }}>{stats.completedCount}</div>
-        </div>
-        <div style={{ width: '100%', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ width: `${completedPercent}%`, height: '100%', backgroundColor: '#10b981' }} />
-        </div>
+      <div style={{ width: '1px', backgroundColor: '#e2e8f0' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <span style={{ color: '#64748b' }}>입력 완료</span>
+        <span style={{ fontWeight: 600, fontSize: '16px', color: '#10b981' }}>{stats.completedCount}</span>
       </div>
-      <div className="ob1-stat-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
-          <div className="ob1-stat-title">진행 중</div>
-          <div className="ob1-stat-value warning" style={{ fontSize: '18px' }}>{stats.inProgressCount}</div>
-        </div>
-        <div style={{ width: '100%', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ width: `${inProgressPercent}%`, height: '100%', backgroundColor: '#f97316' }} />
-        </div>
+      <div style={{ width: '1px', backgroundColor: '#e2e8f0' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <span style={{ color: '#64748b' }}>진행 중</span>
+        <span style={{ fontWeight: 600, fontSize: '16px', color: '#f97316' }}>{stats.inProgressCount}</span>
       </div>
-      <div className="ob1-stat-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
-          <div className="ob1-stat-title">미입력</div>
-          <div className="ob1-stat-value" style={{ fontSize: '18px', color: '#64748b' }}>{stats.notStartedCount}</div>
-        </div>
-        <div style={{ width: '100%', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ width: `${notStartedPercent}%`, height: '100%', backgroundColor: '#94a3b8' }} />
-        </div>
+      <div style={{ width: '1px', backgroundColor: '#e2e8f0' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <span style={{ color: '#64748b' }}>미입력</span>
+        <span style={{ fontWeight: 600, fontSize: '16px', color: '#94a3b8' }}>{stats.notStartedCount}</span>
       </div>
     </div>
   );
@@ -412,15 +400,44 @@ const OnboardingMetricTable = ({
             const subMetrics = g0Items.filter((sub) => sub.metricId === item.metricId);
             const statusInfo = calculateMetricStatus(subMetrics);
 
-            const inputStatusLabel = item.inputStatus || statusInfo.label;
-            const inputStatusCls = inputStatusLabel === '작성중' ? 'draft' : inputStatusLabel === '제출완료' ? 'submitted' : inputStatusLabel === '입력 완료' ? 'approved' : 'not-started';
+            const formatInputStatus = (rawStatus, fallbackStatusInfo) => {
+              if (!rawStatus) return { label: fallbackStatusInfo.label, cls: fallbackStatusInfo.cls || 'not-started' };
+              const normalized = String(rawStatus).toLowerCase().trim();
+              switch (normalized) {
+                case 'approved': return { label: '입력 완료', cls: 'approved' };
+                case 'submitted': return { label: '제출 완료', cls: 'submitted' };
+                case 'rejected': return { label: '반려', cls: 'rejected' };
+                case 'in_progress':
+                case 'partial': return { label: '작성중', cls: 'draft' };
+                case 'not_started': return { label: '미입력', cls: 'not-started' };
+                case '입력 완료': return { label: '입력 완료', cls: 'approved' };
+                case '제출완료': return { label: '제출 완료', cls: 'submitted' };
+                case '작성중': return { label: '작성중', cls: 'draft' };
+                default: return { label: rawStatus, cls: 'not-started' };
+              }
+            };
 
-            const approvalStatusLabel = item.approvalStatus || '미제출';
-            let approvalStatusCls = 'not-started';
-            if (approvalStatusLabel === '검토대기') approvalStatusCls = 'draft';
-            else if (approvalStatusLabel === '검토완료') approvalStatusCls = 'reviewed';
-            else if (approvalStatusLabel === '승인완료') approvalStatusCls = 'approved';
-            else if (approvalStatusLabel === '반려') approvalStatusCls = 'rejected';
+            const formatApprovalStatus = (rawStatus) => {
+              if (!rawStatus) return { label: '미제출', cls: 'not-started' };
+              const normalized = String(rawStatus).toLowerCase().trim();
+              switch (normalized) {
+                case 'approved': return { label: '승인 완료', cls: 'approved' };
+                case 'submitted':
+                case 'pending': return { label: '승인 대기', cls: 'draft' };
+                case 'reviewed': return { label: '검토 완료', cls: 'reviewed' };
+                case 'rejected': return { label: '반려', cls: 'rejected' };
+                case '미제출': return { label: '미제출', cls: 'not-started' };
+                case '승인대기':
+                case '검토대기': return { label: '승인 대기', cls: 'draft' };
+                case '검토완료': return { label: '검토 완료', cls: 'reviewed' };
+                case '승인완료': return { label: '승인 완료', cls: 'approved' };
+                case '반려': return { label: '반려', cls: 'rejected' };
+                default: return { label: rawStatus, cls: 'not-started' };
+              }
+            };
+
+            const inputStatus = formatInputStatus(item.inputStatus, statusInfo);
+            const approvalStatus = formatApprovalStatus(item.approvalStatus);
 
             const isSelected = selectedMetricIds.includes(item.metricId);
             const isEsgManager = viewerRole === 'ESG 담당자' || viewerRole === '관리자' || viewerRole === 'ESG' || viewerRole === 'ADMIN';
@@ -475,14 +492,14 @@ const OnboardingMetricTable = ({
                 </td>
 
                 <td>
-                  <span className={`ob1-status-pill ${inputStatusCls}`}>
-                    {inputStatusLabel}
+                  <span className={`ob1-status-pill ${inputStatus.cls}`}>
+                    {inputStatus.label}
                   </span>
                 </td>
 
                 <td>
-                  <span className={`ob1-status-pill ${approvalStatusCls}`}>
-                    {approvalStatusLabel}
+                  <span className={`ob1-status-pill ${approvalStatus.cls}`}>
+                    {approvalStatus.label}
                   </span>
                 </td>
 
@@ -531,6 +548,8 @@ const OnBoard = () => {
   const cycleTypeQuery = searchParams.get("cycleType");
   const reportingYear = reportingYearQuery ? parseInt(reportingYearQuery, 10) : DEFAULT_REPORTING_YEAR;
 
+  const [viewMode, setViewMode] = useState("MY_PROJECT");
+
   // Preview States
   const [previewRole, setPreviewRole] = useState("ESG 담당자");
   const [previewOnboardingScenario, setPreviewOnboardingScenario] = useState(ONBOARDING_SCENARIOS.UNASSIGNED);
@@ -556,8 +575,11 @@ const OnBoard = () => {
 
   const displayWorkflow = STEP12_UI_FIXTURE_ENABLED ? PREVIEW_WORKFLOW : workflow;
   const activeCycleType = useMemo(
-    () => resolveOnboardingCycleType(displayWorkflow, cycleTypeQuery),
-    [displayWorkflow, cycleTypeQuery]
+    () => {
+      if (viewMode === "ROLLUP_RESPONSE") return "ROLLUP_RESPONSE";
+      return resolveOnboardingCycleType(displayWorkflow, cycleTypeQuery);
+    },
+    [viewMode, displayWorkflow, cycleTypeQuery]
   );
   const activeRollupContext = useMemo(
     () => resolveRollupContext(activeCycleType),
@@ -670,7 +692,7 @@ const OnBoard = () => {
     } catch (error) {
       console.error(error);
     }
-  }, [companyId, cycleTypeQuery, dispatch, reportingYear, location.search]);
+  }, [companyId, cycleTypeQuery, dispatch, reportingYear, location.search, viewMode]);
 
   useEffect(() => {
     dispatch(resetReportState());
@@ -894,6 +916,25 @@ const OnBoard = () => {
 
   return (
     <div id="ob1-page">
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+        <button
+          className="ob1-btn-input"
+          onClick={() => setViewMode("MY_PROJECT")}
+          style={{ padding: "8px 16px", background: viewMode === "MY_PROJECT" ? "#eff6ff" : "#f8fafc", color: viewMode === "MY_PROJECT" ? "#1d4ed8" : "#1e293b", border: `1px solid ${viewMode === "MY_PROJECT" ? "#3b82f6" : "#cbd5e1"}` }}
+        >
+          내 프로젝트
+        </button>
+        {hasAnySubsidiaryRequest && !STEP12_UI_FIXTURE_ENABLED && (
+          <button
+            className="ob1-btn-input"
+            onClick={() => setViewMode("ROLLUP_RESPONSE")}
+            style={{ padding: "8px 16px", background: viewMode === "ROLLUP_RESPONSE" ? "#eff6ff" : "#f8fafc", color: viewMode === "ROLLUP_RESPONSE" ? "#1d4ed8" : "#1e293b", border: `1px solid ${viewMode === "ROLLUP_RESPONSE" ? "#3b82f6" : "#cbd5e1"}` }}
+          >
+            {hasPendingSubsidiaryRequest ? "지주사 데이터 요청 대응 (대기중)" : "지주사 데이터 요청 대응"}
+          </button>
+        )}
+      </div>
+
       <div className="ob1-header-card" style={{ 
         display: 'flex', 
         alignItems: 'center', 
@@ -906,7 +947,7 @@ const OnBoard = () => {
         boxShadow: '0 1px 2px rgba(0,0,0,0.02)' 
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <h1 className="ob1-title" style={{ margin: 0, fontSize: '1.25rem' }}>온보딩 [{basisLabel}]</h1>
+          <h1 className="ob1-title" style={{ margin: 0, fontSize: '1.25rem' }}>온보딩 [{viewMode === "ROLLUP_RESPONSE" ? "요청 대응" : basisLabel}]</h1>
           {(() => {
             const statusInfo = getStatusInfo(g0ProfileStatus);
             const total = profileStats.totalCount || 1;
@@ -919,15 +960,36 @@ const OnBoard = () => {
           })()}
         </div>
 
-        <div style={{ flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <OnboardingStatCards stats={profileStats} />
+          {!isNoRunWorkflow(displayWorkflow) && viewMode === "MY_PROJECT" && (
+            <OnboardingWorkflowCta
+              variant="action"
+              loadingWorkflow={loadingWorkflow}
+              workflow={displayWorkflow}
+              isNoRunWorkflow={isNoRunWorkflow}
+              onBasisModalOpen={() => setIsBasisModalOpen(true)}
+              onCtaClick={handleCtaClick}
+            />
+          )}
+          {viewMode === "ROLLUP_RESPONSE" && (
+            <div className="ob1-cta-container">
+              <button
+                className="ob1-btn-cta"
+                onClick={() => setIsSubTransferModalOpen(true)}
+                disabled={loadingWorkflow}
+              >
+                데이터 전송
+              </button>
+            </div>
+          )}
         </div>
       </div>
       <div className="ob1-content-layout">
         <div className="ob1-sidebar-panel">
           <div className="ob1-sidebar-title">SUB-ISSUE</div>
           <ul className="ob1-sidebar-menu">
-            <li className="ob1-sidebar-menu-item active">1. 경영일반 - G0</li>
+            <li className="ob1-sidebar-menu-item active"> 경영일반 </li>
           </ul>
         </div>
 
@@ -950,7 +1012,7 @@ const OnBoard = () => {
             />
           ) : (
             <>
-              {canManageRollup && (
+              {canManageRollup && viewMode === "MY_PROJECT" && (
                 <>
                   <RollupSummaryPanel
                     batchId={activeBatchId}
@@ -1039,9 +1101,13 @@ const OnBoard = () => {
         onTransferred={async () => {
           await initializeOnboarding();
         }}
-        onNavigateToInput={({ url }) => {
+        onNavigateToInput={({ url, viewMode: newViewMode }) => {
           setIsSubTransferModalOpen(false);
-          navigate(url);
+          if (newViewMode) {
+            setViewMode(newViewMode);
+          } else if (url) {
+            navigate(url);
+          }
         }}
       />
 

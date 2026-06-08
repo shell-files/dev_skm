@@ -5,6 +5,7 @@ import {
   fetchRollupRequestDetail,
   fetchRollupRequests,
   sendRollupSource,
+  ensureRollupResponseWorkspace,
 } from "@stores/reportSlice";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
 
@@ -175,30 +176,20 @@ const SubsidiaryTransferModal = ({
     loadDetail(batchId);
   };
 
-  const handleNavigateInput = () => {
+  const handleNavigateInput = async () => {
     if (!canNavigateToInput) return;
-    const targetYear =
-      inputWorkspace.reportingYear ||
-      activeDetail?.reportingYear ||
-      selectedRequest?.reportingYear ||
-      reportingYear;
-    const targetCycleType =
-      inputWorkspace.cycleType ||
-      activeDetail?.inputCycleType ||
-      activeDetail?.cycleType ||
-      "POST_DMA_DISCLOSURE";
-    const metricId = actionableInputMetricIds[0] || activeDetail?.requestedMetricIds?.[0] || activeDetail?.metricIds?.[0];
-    const params = new URLSearchParams({
-      reportingYear: String(targetYear),
-      cycleType: targetCycleType,
-    });
-    if (metricId) params.set("metricId", metricId);
-    onNavigateToInput?.({
-      url: `/onb?${params.toString()}`,
-      reportingYear: targetYear,
-      cycleType: targetCycleType,
-      metricId,
-    });
+    try {
+      if (inputWorkspace.availableYn === true && inputWorkspace.cycleType === "ROLLUP_RESPONSE") {
+        onNavigateToInput?.({ batchId: selectedBatchId, viewMode: "ROLLUP_RESPONSE" });
+        return;
+      }
+      
+      await dispatch(ensureRollupResponseWorkspace({ batchId: selectedBatchId })).unwrap();
+      onNavigateToInput?.({ batchId: selectedBatchId, viewMode: "ROLLUP_RESPONSE" });
+    } catch (err) {
+      console.error(err);
+      showDefaultAlert("오류", err?.message || "입력 공간 준비에 실패했습니다.", "error");
+    }
   };
 
   const handleSend = async () => {

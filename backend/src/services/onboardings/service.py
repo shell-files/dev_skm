@@ -659,6 +659,8 @@ def checkMetricInputPermission(*, cycle: dict, companyId: int, metricId: str, us
         return
     if isConsultant(userModel):
         raise PermissionError("Consultants cannot input onboarding metrics")
+    if isAssignmentManager(userModel):
+        return
     actorUserId = getActorUserId(userModel)
     if actorUserId is None:
         raise PermissionError("Authenticated user id is required")

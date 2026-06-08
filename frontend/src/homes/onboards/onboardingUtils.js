@@ -1,5 +1,10 @@
 export const STRUCTURED_LOOKUP_IDS = new Set(["G0-05__QL0002", "G0-06__QL0001"]);
-export const EDITABLE_INPUT_MODES = new Set(["MANUAL_NUMBER", "MANUAL_TEXTAREA", "YEAR_RANGE"]);
+export const EDITABLE_INPUT_MODES = new Set([
+  "MANUAL_NUMBER",
+  "MANUAL_TEXTAREA",
+  "YEAR_RANGE",
+  "STRUCTURED_LOOKUP",
+]);
 
 export const getAtomicId = (item = {}) => item.atomicMetricId || item.issueId || "";
 

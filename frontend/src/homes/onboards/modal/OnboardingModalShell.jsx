@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import '@styles/onboardingModal.css';
 import { getAtomicId, isEditableItem, resolveG0InputMode } from '../onboardingUtils';
@@ -17,14 +17,14 @@ export default function OnboardingModalShell({
   metricItem,
   subMetrics,
   onSaveAndSubmit,
-  viewerRole,
   submitLabel,
   onOpenAssignment,
   onSubmitRequest,
+  canManageAssignments,
+  isConsultantViewer,
 }) {
   const [atomicValues, setAtomicValues] = useState({});
   const [atomicFiles, setAtomicFiles] = useState({});
-  const isConsultant = viewerRole === '컨설턴트' || viewerRole === 'CONSULTANT';
 
   useEffect(() => {
     if (!metricItem || !subMetrics) return;
@@ -38,7 +38,9 @@ export default function OnboardingModalShell({
       initialFiles[id] = null;
     });
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAtomicValues(initialValues);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setAtomicFiles(initialFiles);
   }, [metricItem, subMetrics]);
 
@@ -117,7 +119,7 @@ export default function OnboardingModalShell({
     const inputMode = resolveG0InputMode(sub);
     const value = atomicValues[id] || '';
 
-    if (isConsultant) {
+    if (isConsultantViewer) {
       return renderReadOnlyValue({ ...sub, valueText: value }, '읽기 전용입니다.');
     }
 
@@ -147,31 +149,57 @@ export default function OnboardingModalShell({
     }
 
     if (inputMode === 'YEAR_RANGE') {
+      const parts = value.includes('~') ? value.split('~').map(s => s.trim()) : [];
+      let startStr = parts[0] || '';
+      let endStr = parts[1] || '';
+      if (!value.includes('~') && value.trim().length === 4) {
+        startStr = `${value.trim()}-01-01`;
+        endStr = `${value.trim()}-12-31`;
+      }
+
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <input
-            type="text"
-            className="ob-table-input"
-            value={value}
-            onChange={(event) => handleInputChange(id, event.target.value)}
-            placeholder="예: 2025 또는 2025-01-01 ~ 2025-12-31"
-          />
-          <span style={{ color: '#64748b', fontSize: '0.78rem' }}>
-            기간 선택 UI는 후속 단계에서 연결합니다.
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>시작일</span>
+            <input
+              type="date"
+              className="ob-table-input"
+              value={startStr}
+              onChange={(e) => handleInputChange(id, `${e.target.value} ~ ${endStr}`)}
+            />
+            <span style={{ color: '#64748b' }}>~</span>
+            <span style={{ fontSize: '0.85rem', color: '#64748b' }}>종료일</span>
+            <input
+              type="date"
+              className="ob-table-input"
+              value={endStr}
+              onChange={(e) => handleInputChange(id, `${startStr} ~ ${e.target.value}`)}
+            />
+          </div>
         </div>
       );
     }
 
     if (inputMode === 'STRUCTURED_LOOKUP') {
+      const placeholder = id === 'G0-05__QL0002' 
+        ? "공시 대상 자회사 또는 법인명을 한 줄에 하나씩 입력해 주세요." 
+        : id === 'G0-06__QL0001'
+        ? "연결 범위에 포함할 자회사 또는 법인명을 한 줄에 하나씩 입력해 주세요."
+        : "목록을 한 줄에 하나씩 입력해 주세요.";
+
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <span style={{ color: '#475569', fontSize: '0.85rem' }}>
-            연결 범위 설정에서 관리합니다.
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <textarea
+            className="ob-table-input"
+            value={value}
+            onChange={(event) => handleInputChange(id, event.target.value)}
+            placeholder={placeholder}
+            rows={3}
+            style={{ resize: 'vertical', minHeight: '72px' }}
+          />
+          <span style={{ color: '#64748b', fontSize: '0.78rem' }}>
+            회사 관계 관리 기능 연결 후 선택형 입력으로 전환됩니다.
           </span>
-          <button type="button" className="ob-btn ob-btn-secondary" disabled>
-            범위 설정 준비중
-          </button>
         </div>
       );
     }
@@ -240,7 +268,7 @@ export default function OnboardingModalShell({
     return (
       <div className="ob-side-card ob-assignment-card">
         <h4>담당자</h4>
-        {isConsultant ? (
+        {isConsultantViewer ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
             <span style={{ fontWeight: 600, color: '#1e293b' }}>{assigneeName || '미지정'}</span>
             <span className="ob-assignment-card-status">읽기 전용 검토 화면</span>
@@ -279,7 +307,7 @@ export default function OnboardingModalShell({
           )}
         </div>
 
-        {!isConsultant && (
+        {canManageAssignments && (
           <button 
             type="button" 
             className="ob-assignment-card-btn"
@@ -430,7 +458,7 @@ export default function OnboardingModalShell({
 
   /* ─── Render: Footer ─── */
   const renderFooterActions = () => {
-    if (isConsultant) {
+    if (isConsultantViewer) {
       return (
         <div className="ob-modal-footer">
           <button type="button" className="ob-btn ob-btn-secondary" onClick={onClose}>

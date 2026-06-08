@@ -73,7 +73,7 @@ const SubsidiaryRequestModal = ({
   const loadData = useCallback(async () => {
     if (!isOpen) return;
     if (requiresSourceCycle && !sourceCycleId) {
-      setError("POST DMA 공시 롤업은 sourceCycleId가 필요합니다.");
+      setError("이중중대성평가 공시 연결기준은 sourceCycleId가 필요합니다.");
       return;
     }
 
@@ -132,7 +132,7 @@ const SubsidiaryRequestModal = ({
   const handleRequest = async () => {
     if (selectedIds.length === 0) return;
     if (requiresSourceCycle && !sourceCycleId) {
-      showDefaultAlert("요청 불가", "POST DMA 공시 롤업은 sourceCycleId가 필요합니다.", "warning");
+      showDefaultAlert("요청 불가", "이중중대성평가 공시 연결기준은 sourceCycleId가 필요합니다.", "warning");
       return;
     }
 

@@ -184,8 +184,6 @@ def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseD
             raise RollupError(403, "ROLLUP_SOURCE_SCOPE_FORBIDDEN", "Requested subsidiary is outside of allowed relation scope.")
         includedCompanyIds = normalizeCompanyIds([parentCompanyId, *selectedCompanyIds])
     else:
-        if parentCompanyId not in relation_ids:
-            raise RollupError(422, "ROLLUP_PARENT_SCOPE_MISSING", "Parent company relation scope is missing.")
         if not set(selectedCompanyIds).issubset(relation_ids):
             raise RollupError(403, "ROLLUP_SOURCE_SCOPE_FORBIDDEN", "Requested subsidiary is outside of allowed relation scope.")
         includedCompanyIds = normalizeCompanyIds([parentCompanyId, *selectedCompanyIds])
@@ -1011,7 +1009,12 @@ def ensureRollupResponseWorkspace(batchId: int, userModel) -> RollupRequestDetai
     reportingYear = int(batch["reporting_year"])
     actorUserId = getActorUserId(userModel)
 
-    missingAtomicIds = parseMissingAtomicIds(source)
+    readiness = rollupRepository.buildSourceReadiness(
+        batchId,
+        [sourceCompanyId],
+        reportingYear,
+    )
+    missingAtomicIds = readiness["missingByCompany"].get(str(sourceCompanyId), [])
     metricScope = buildBatchMetricScope(batch)
     requestedMetricIds = metricScope["requestedMetricIds"]
     dependencyMetricIds = metricScope["dependencyMetricIds"]

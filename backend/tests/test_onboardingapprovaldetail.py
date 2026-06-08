@@ -144,6 +144,7 @@ class OnboardingApprovalDetailRepositoryTest(unittest.TestCase):
                         "atomic_name_kr": "Energy use",
                         "data_value_type": "QUANT",
                         "atomic_data_role": "INPUT",
+                        "onboarding_input_yn": 1,
                         "unit": "kWh",
                     }
                 ],
@@ -193,6 +194,7 @@ class OnboardingApprovalDetailRepositoryTest(unittest.TestCase):
                         "atomic_name_kr": "Energy use",
                         "data_value_type": "QUANT",
                         "atomic_data_role": "INPUT",
+                        "onboarding_input_yn": 1,
                         "unit": "kWh",
                     }
                 ],
@@ -216,6 +218,39 @@ class OnboardingApprovalDetailRepositoryTest(unittest.TestCase):
 
         self.assertEqual(rows[0]["value_numeric"], 100.0)
         self.assertEqual(rows[0]["input_status"], "approved")
+
+    def test_repository_excludes_non_input_atomic_items(self):
+        with patch.object(approvalRepo.scopeRepo, "listMetricScopes", return_value=[{"metric_id": "E1-06"}]), \
+            patch.object(
+                approvalRepo.scopeRepo,
+                "listAtomicMaster",
+                return_value=[
+                    {
+                        "metric_id": "E1-06",
+                        "atomic_metric_id": "E1-06__Q0001",
+                        "onboarding_input_yn": 1,
+                        "atomic_name_kr": "Energy use",
+                        "data_value_type": "QUANT",
+                        "atomic_data_role": "INPUT",
+                        "unit": "kWh",
+                    },
+                    {
+                        "metric_id": "E1-06",
+                        "atomic_metric_id": "E1-06__G0001",
+                        "onboarding_input_yn": 0,
+                        "atomic_name_kr": "Derived use",
+                        "data_value_type": "QUANT",
+                        "atomic_data_role": "DERIVED",
+                        "unit": "kWh",
+                    }
+                ],
+            ), \
+            patch.object(approvalRepo, "listApprovalInputRows", return_value=[]), \
+            patch.object(approvalRepo, "listApprovalFactRows", return_value=[]):
+            rows = approvalRepo.listApprovalAtomicDetailRows(6, 2026, 17, "E1-06")
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["atomic_metric_id"], "E1-06__Q0001")
 
 
 if __name__ == "__main__":

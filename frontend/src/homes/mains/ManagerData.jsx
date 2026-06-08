@@ -105,7 +105,11 @@ const mapApprovalItemToInput = (item = {}) => {
     )
       ? "SUBMITTED"
       : "DRAFT",
-    reviewStatus: ["APPROVED", "REJECTED"].includes(approvalStatus)
+    reviewStatus: [
+      "REVIEWED",
+      "APPROVED",
+      "REJECTED",
+    ].includes(approvalStatus)
       ? "REVIEWED"
       : "PENDING",
     inputCompletedCount: completedCount,

@@ -45,7 +45,9 @@ const SubsidiaryTransferModal = ({
     }
   };
 
-  const total = activeRequest.missingAtomicCount || activeRequest.missingAtomicMetricIds?.length || 0;
+  const requestedMetricCount = activeRequest.requestedMetricCount || 0;
+  const requiredAtomicCount = activeRequest.requiredAtomicCount || 0;
+  const missingAtomicCount = activeRequest.missingAtomicCount || activeRequest.missingAtomicMetricIds?.length || 0;
   const isSendReady = activeRequest.sendReadyYn === true;
 
   return createPortal(
@@ -83,8 +85,20 @@ const SubsidiaryTransferModal = ({
               </div>
             </div>
             <div style={{ marginTop: "12px", paddingTop: "12px", borderTop: "1px dashed #cbd5e1" }}>
-               <span style={{ color: "#64748b", display: "block", fontSize: "0.8rem" }}>전송 Metric 수</span>
-               <strong style={{ color: "#1e293b" }}>{total} 개</strong>
+               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                 <span style={{ color: "#64748b", fontSize: "0.8rem" }}>요청 지표</span>
+                 <strong style={{ color: "#1e293b" }}>{requestedMetricCount}개</strong>
+               </div>
+               <div style={{ display: "flex", justifyContent: "space-between" }}>
+                 <span style={{ color: "#64748b", fontSize: "0.8rem" }}>전송 원천 데이터</span>
+                 <strong style={{ color: "#1e293b" }}>{requiredAtomicCount}개</strong>
+               </div>
+               {!isSendReady && missingAtomicCount > 0 && (
+                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}>
+                   <span style={{ color: "#ea580c", fontSize: "0.8rem", fontWeight: "600" }}>미승인 원천 데이터</span>
+                   <strong style={{ color: "#ea580c" }}>{missingAtomicCount}개</strong>
+                 </div>
+               )}
             </div>
           </div>
 

@@ -42,6 +42,7 @@ async def list_onboarding_metrics(
             reportingYear=reportingYear,
             cycleType=cycleType,
             metricId=metricId,
+            userModel=userModel,
         )
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -93,8 +94,8 @@ def statusForValueError(error: ValueError) -> int:
             "생성된 프로젝트를 먼저 초기화해 주세요.",
             "공시범위가 초기화되지 않았습니다.",
             "기존 프로젝트를 먼저 시작해 주세요.",
-            "받은 요청 프로젝트가 초기화되지 않았습니다.",
-            "받은 요청 데이터 범위가 초기화되지 않았습니다.",
+            "받은 요청함 프로젝트가 초기화되지 않았습니다.",
+            "받은 요청함 지표 범위가 초기화되지 않았습니다.",
             "공시범위가 준비되지 않았습니다.",
         )
     ):

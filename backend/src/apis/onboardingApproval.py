@@ -5,12 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from src.models.onboarding import (
     OnboardingApprovalActionResponseDto,
     OnboardingApprovalDecisionRequestDto,
+    OnboardingApprovalDetailResponseDto,
     OnboardingApprovalListResponseDto,
     OnboardingApprovalRequestDto,
     OnboardingApprovalStatusResponseDto,
 )
 from src.services.onboardings.service import (
     approveApproval,
+    getApprovalDetail,
     getApprovalStatus,
     listApprovals,
     rejectApproval,
@@ -103,6 +105,33 @@ async def listApprovalsRoute(
 
 
 @router.get(
+    "/detail",
+    response_model=OnboardingApprovalDetailResponseDto,
+    summary="Get onboarding approval detail",
+)
+@onboardingApprovalRouter.get(
+    "/detail",
+    response_model=OnboardingApprovalDetailResponseDto,
+    summary="Get onboarding approval detail",
+)
+async def getApprovalDetailRoute(
+    companyId: int = Query(...),
+    reportingYear: int = Query(...),
+    metricId: str = Query(...),
+    cycleType: str = Query(default="PRE_DMA_G0"),
+    userModel=Depends(get_token),
+):
+    try:
+        return getApprovalDetail(companyId, reportingYear, metricId, cycleType, userModel)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
     "/status",
     response_model=OnboardingApprovalStatusResponseDto,
     summary="Get PRE_DMA_G0 G0-02 approval status",
@@ -116,10 +145,11 @@ async def getApprovalStatusRoute(
     companyId: int = Query(...),
     reportingYear: int = Query(...),
     metricId: str = Query(default="G0-02"),
+    cycleType: str = Query(default="PRE_DMA_G0"),
     userModel=Depends(get_token),
 ):
     try:
-        return getApprovalStatus(companyId, reportingYear, metricId, userModel)
+        return getApprovalStatus(companyId, reportingYear, metricId, userModel, cycleType)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:

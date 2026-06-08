@@ -63,5 +63,26 @@ class OnboardingApprovalReviewRouteTest(unittest.TestCase):
         self.assertEqual(context.exception.status_code, 409)
 
 
+from src.services.onboardings import service
+
+class OnboardingApprovalReviewServiceTest(unittest.TestCase):
+    def test_reject_allows_consultant_and_blocks_employee(self):
+        mock_summary = {"companyId": 6, "reportingYear": 2026, "metricId": "E1-06", "approvalStatus": "REJECTED"}
+        with patch.object(service, "checkScope"), patch.object(service.approvalService, "rejectMetricApproval", return_value=mock_summary):
+            # Consultant (reviewer) allowed
+            service.rejectApproval(request(), {"id": 1, "role": "CONSULTANT"})
+
+            # Employee blocked
+            with self.assertRaises(PermissionError):
+                service.rejectApproval(request(), {"id": 2, "role": "EMPLOYEE"})
+
+    def test_approve_blocks_consultant(self):
+        mock_summary = {"companyId": 6, "reportingYear": 2026, "metricId": "E1-06", "approvalStatus": "APPROVED"}
+        with patch.object(service, "checkScope"), patch.object(service.approvalService, "approveMetricApproval", return_value=mock_summary):
+            # Consultant (not approver) blocked
+            with self.assertRaises(PermissionError):
+                service.approveApproval(request(), {"id": 1, "role": "CONSULTANT"})
+
+
 if __name__ == "__main__":
     unittest.main()

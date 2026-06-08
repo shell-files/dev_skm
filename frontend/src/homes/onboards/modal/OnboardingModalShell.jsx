@@ -632,7 +632,7 @@ export default function OnboardingModalShell({
         </button>
         <button
           type="button"
-          className="ob-btn ob-btn-primary"
+          className="ob-btn ob-btn-secondary"
           onClick={handleSaveDraft}
           disabled={saveDisabled}
           title={saveDisabled ? '수기 입력 가능한 항목이 없습니다.' : undefined}

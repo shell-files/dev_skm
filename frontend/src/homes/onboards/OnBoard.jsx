@@ -44,6 +44,7 @@ import {
   resetReportState,
   saveOnboardingMetric,
   setActiveBatchId,
+  submitOnboardingApproval,
 } from "@stores/reportSlice";
 
 const isNoRunWorkflow = (workflow) => workflow?.workflowStep === "NO_RUN";
@@ -736,13 +737,36 @@ const OnBoard = () => {
 
       await dispatch(saveOnboardingMetric({ metricId, payload })).unwrap();
 
-      showDefaultAlert(
-        "완료",
-        status === "DRAFT" ? "임시저장이 완료되었습니다." : "데이터 제출이 완료되었습니다.",
-        "success"
-      );
-      setIsModalOpen(false);
-      await initializeOnboarding();
+      if (status === "DRAFT") {
+        showDefaultAlert("완료", "임시저장이 완료되었습니다.", "success");
+        setIsModalOpen(false);
+        await initializeOnboarding();
+        return;
+      }
+
+      try {
+        await dispatch(
+          submitOnboardingApproval({
+            companyId,
+            reportingYear,
+            metricId,
+            cycleType: activeCycleType,
+          })
+        ).unwrap();
+        showDefaultAlert("완료", "승인 요청이 완료되었습니다.", "success");
+        setIsModalOpen(false);
+        await initializeOnboarding();
+      } catch (submitError) {
+        console.error(submitError);
+        const detail =
+          submitError?.message || submitError?.detail || submitError?.error?.message || "";
+        showDefaultAlert(
+          "오류",
+          `입력값은 저장되었지만 승인 요청에 실패했습니다.${detail ? `\n${detail}` : ""}`,
+          "error"
+        );
+        await initializeOnboarding();
+      }
     } catch (error) {
       console.error(error);
       showDefaultAlert("오류", "처리 중 오류가 발생했습니다.", "error");

@@ -76,6 +76,7 @@ const initialState = {
     projects: [],
     selectedProject: null,
     items: [],
+    selectedItemDetail: null,
     lastMutationResult: null,
     lastMutationError: null,
   },
@@ -99,6 +100,7 @@ const initialState = {
     unassignMetrics: false,
     approvalProjects: false,
     approvals: false,
+    approvalDetail: false,
     subsidiaries: false,
     rollupScopePreview: false,
     createBatch: false,
@@ -125,6 +127,7 @@ const initialState = {
     unassignMetrics: null,
     approvalProjects: null,
     approvals: null,
+    approvalDetail: null,
     subsidiaries: null,
     rollupScopePreview: null,
     createBatch: null,
@@ -365,6 +368,35 @@ export const fetchApprovalItems = createAsyncThunk(
       return rejectWithValue({
         status: false,
         message: "승인 작업함 조회 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const fetchOnboardingApprovalDetail = createAsyncThunk(
+  "report/fetchOnboardingApprovalDetail",
+  async (
+    {
+      companyId,
+      reportingYear = DEFAULT_REPORTING_YEAR,
+      metricId,
+      cycleType = "PRE_DMA_G0",
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const res = await GET(`${ONBOARDING_APPROVAL_API_ROOT}/detail`, {
+        companyId,
+        reportingYear,
+        metricId,
+        cycleType,
+      });
+      return rejectIfFailed(res, rejectWithValue, "온보딩 승인 상세 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "온보딩 승인 상세 조회 중 오류가 발생했습니다.",
       });
     }
   }
@@ -691,11 +723,17 @@ const reportSlice = createSlice({
     selectApprovalProject: (state, action) => {
       state.approval.selectedProject = action.payload ?? null;
       state.approval.items = [];
+      state.approval.selectedItemDetail = null;
     },
 
     clearApprovalProject: (state) => {
       state.approval.selectedProject = null;
       state.approval.items = [];
+      state.approval.selectedItemDetail = null;
+    },
+
+    clearApprovalDetail: (state) => {
+      state.approval.selectedItemDetail = null;
     },
   },
   extraReducers: (builder) => {
@@ -805,6 +843,21 @@ const reportSlice = createSlice({
       .addCase(fetchApprovalItems.rejected, (state, action) => {
         setRejected(state, "approvals", action);
         state.approval.items = [];
+      });
+
+    builder
+      .addCase(fetchOnboardingApprovalDetail.pending, (state) => {
+        setPending(state, "approvalDetail");
+        state.approval.selectedItemDetail = null;
+      })
+      .addCase(fetchOnboardingApprovalDetail.fulfilled, (state, action) => {
+        state.loading.approvalDetail = false;
+        state.error.approvalDetail = null;
+        state.approval.selectedItemDetail = dataOf(action.payload);
+      })
+      .addCase(fetchOnboardingApprovalDetail.rejected, (state, action) => {
+        setRejected(state, "approvalDetail", action);
+        state.approval.selectedItemDetail = null;
       });
 
     builder
@@ -989,6 +1042,7 @@ const reportSlice = createSlice({
 });
 
 export const {
+  clearApprovalDetail,
   clearApprovalProject,
   clearReportError,
   resetReportState,

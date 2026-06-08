@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { showDefaultAlert } from "@components/UI/ServiceAlert";
+import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
 
 const FIXTURE_ATOMIC_ITEMS = [
   { atomicMetricId: "E1-1-a", atomicMetricName: "Scope 1 온실가스 직접 배출량", value: "12,450", unit: "tCO₂e", inputType: "MANUAL_NUMBER", evidenceCount: 2, inputStatus: "COMPLETED" },
@@ -17,15 +17,20 @@ export default function ApprovalDetailModal({
   hasConsultant = false,
   readOnlyYn = false,
   modalActionMode = null,
+  loading = false,
+  error = null,
+  actionLoading = false,
   onReview,
   onApprove,
   onReject,
 }) {
-  const [rejectReason, setRejectReason] = useState("");
+  const [commentText, setCommentText] = useState("");
 
   useEffect(() => {
     if (isOpen) {
-      setRejectReason("");
+      queueMicrotask(() => {
+        setCommentText("");
+      });
     }
   }, [isOpen]);
 
@@ -36,20 +41,30 @@ export default function ApprovalDetailModal({
     String(viewerRole || "").toUpperCase().includes("CONSULTANT");
   const isReviewed = metricItem.reviewStatus === "REVIEWED";
   const canApprove = isConsultant ? false : !hasConsultant || isReviewed;
-  const rejectDisabled = readOnlyYn || !rejectReason.trim();
-  const approveDisabled = readOnlyYn || !canApprove;
+  const rejectDisabled = readOnlyYn || actionLoading || !commentText.trim();
+  const approveDisabled = readOnlyYn || actionLoading || !canApprove;
   const metricId = metricItem.metricId || metricItem.id;
   const isApproveMode = modalActionMode === "approve";
 
-  const atomicItems = metricItem.atomicItems || FIXTURE_ATOMIC_ITEMS;
+  const atomicItems =
+    metricItem.atomicItems ??
+    (STEP12_UI_FIXTURE_ENABLED ? FIXTURE_ATOMIC_ITEMS : []);
   const totalEvidenceCount = atomicItems.reduce((sum, item) => sum + (item.evidenceCount || 0), 0);
 
-  const handleApproveClick = () => {
-    showDefaultAlert("안내", "최종 승인 API 연결은 후속 단계에서 진행됩니다.", "info");
+  const handleApproveClick = async () => {
+    if (approveDisabled || actionLoading) return;
+    await onApprove?.({
+      metricId,
+      commentText: commentText.trim(),
+    });
   };
 
-  const handleReviewClick = () => {
-    showDefaultAlert("안내", "검토 완료 API 연결은 후속 단계에서 진행됩니다.", "info");
+  const handleReviewClick = async () => {
+    if (readOnlyYn || actionLoading) return;
+    await onReview?.({
+      metricId,
+      commentText: commentText.trim(),
+    });
   };
 
   return createPortal(
@@ -85,6 +100,20 @@ export default function ApprovalDetailModal({
             </div>
           )}
 
+          {loading && (
+            <div className="alert alert-info" style={readOnlyAlertStyle}>
+              상세 정보를 불러오는 중입니다.
+            </div>
+          )}
+
+          {error && (
+            <div className="alert alert-warning" style={readOnlyAlertStyle}>
+              {typeof error === "string"
+                ? error
+                : error.message || "승인 상세 조회에 실패했습니다."}
+            </div>
+          )}
+
           {isApproveMode && (
             <div style={{ marginBottom: '16px', padding: '12px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '0.85rem', color: '#92400e' }}>
               최종 승인 전에 아래 Atomic 상세 항목을 검토하세요.
@@ -116,27 +145,55 @@ export default function ApprovalDetailModal({
                   </tr>
                 </thead>
                 <tbody>
-                  {atomicItems.map((atomic, idx) => {
-                    const statusLabel = atomic.inputStatus === "COMPLETED" ? "완료" : atomic.inputStatus === "IN_PROGRESS" ? "작성중" : "미입력";
-                    const statusCls = atomic.inputStatus === "COMPLETED" ? "#16a34a" : atomic.inputStatus === "IN_PROGRESS" ? "#d97706" : "#94a3b8";
-                    return (
-                      <tr key={atomic.atomicMetricId || idx} style={tableRowStyle}>
-                        <td style={{ ...tdStyle, fontWeight: 600, fontSize: "0.8rem", color: "#475569" }}>{atomic.atomicMetricId}</td>
-                        <td style={tdStyle}>{atomic.atomicMetricName}</td>
-                        <td style={{ ...tdStyle, fontWeight: 600 }}>{atomic.value || "-"}</td>
-                        <td style={{ ...tdStyle, color: "#64748b" }}>{atomic.unit || "-"}</td>
-                        <td style={tdStyle}>
-                          <span style={{ fontSize: "11px", background: "#f1f5f9", padding: "2px 8px", borderRadius: "4px" }}>
-                            {atomic.inputType || "-"}
-                          </span>
-                        </td>
-                        <td style={{ ...tdStyle, textAlign: "center" }}>{atomic.evidenceCount || 0}</td>
-                        <td style={tdStyle}>
-                          <span style={{ fontSize: "12px", fontWeight: 600, color: statusCls }}>{statusLabel}</span>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {atomicItems.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" style={{ ...tdStyle, textAlign: "center", color: "#64748b" }}>
+                        표시할 Atomic 입력 상세가 없습니다.
+                      </td>
+                    </tr>
+                  ) : (
+                    atomicItems.map((atomic, idx) => {
+                      const normalizedStatus = String(atomic.inputStatus || "").trim().toUpperCase();
+                      const statusLabel =
+                        normalizedStatus === "COMPLETED" || normalizedStatus === "APPROVED"
+                          ? "완료"
+                          : normalizedStatus === "IN_PROGRESS" ||
+                              normalizedStatus === "SUBMITTED" ||
+                              normalizedStatus === "REVIEWED"
+                            ? "작성중"
+                            : "미입력";
+                      const statusCls =
+                        normalizedStatus === "COMPLETED" || normalizedStatus === "APPROVED"
+                          ? "#16a34a"
+                          : normalizedStatus === "IN_PROGRESS" ||
+                              normalizedStatus === "SUBMITTED" ||
+                              normalizedStatus === "REVIEWED"
+                            ? "#d97706"
+                            : "#94a3b8";
+                      const value =
+                        atomic.value ??
+                        atomic.valueText ??
+                        atomic.valueNumeric ??
+                        "-";
+                      return (
+                        <tr key={atomic.atomicMetricId || idx} style={tableRowStyle}>
+                          <td style={{ ...tdStyle, fontWeight: 600, fontSize: "0.8rem", color: "#475569" }}>{atomic.atomicMetricId}</td>
+                          <td style={tdStyle}>{atomic.atomicName || atomic.atomicMetricName || "-"}</td>
+                          <td style={{ ...tdStyle, fontWeight: 600 }}>{value}</td>
+                          <td style={{ ...tdStyle, color: "#64748b" }}>{atomic.unit || "-"}</td>
+                          <td style={tdStyle}>
+                            <span style={{ fontSize: "11px", background: "#f1f5f9", padding: "2px 8px", borderRadius: "4px" }}>
+                              {atomic.inputMode || atomic.inputType || "-"}
+                            </span>
+                          </td>
+                          <td style={{ ...tdStyle, textAlign: "center" }}>{atomic.evidenceCount || 0}</td>
+                          <td style={tdStyle}>
+                            <span style={{ fontSize: "12px", fontWeight: 600, color: statusCls }}>{statusLabel}</span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -155,13 +212,13 @@ export default function ApprovalDetailModal({
           </div>
 
           <div style={{ marginBottom: "8px" }}>
-            <h4 style={sectionTitleStyle}>Rejection reason</h4>
+            <h4 style={sectionTitleStyle}>검토 의견 / 반려 사유</h4>
             <textarea
               style={textareaStyle}
-              placeholder="Enter rejection reason."
-              value={rejectReason}
-              disabled={readOnlyYn}
-              onChange={(event) => setRejectReason(event.target.value)}
+              placeholder="검토 의견 또는 반려 사유를 입력하세요."
+              value={commentText}
+              disabled={readOnlyYn || actionLoading}
+              onChange={(event) => setCommentText(event.target.value)}
             />
           </div>
         </div>
@@ -179,12 +236,12 @@ export default function ApprovalDetailModal({
               cursor: rejectDisabled ? "not-allowed" : "pointer",
               opacity: rejectDisabled ? 0.5 : 1,
             }}
-            onClick={() => onReject?.({ metricId, commentText: rejectReason })}
+            onClick={() => onReject?.({ metricId, commentText: commentText.trim() })}
             disabled={rejectDisabled}
             title={
               readOnlyYn
                 ? "Completed projects are read-only."
-                : !rejectReason.trim()
+                : !commentText.trim()
                   ? "Enter rejection reason."
                   : ""
             }
@@ -198,11 +255,11 @@ export default function ApprovalDetailModal({
               className="ob-btn ob-btn-primary"
               style={{
                 ...primaryButtonStyle,
-                cursor: readOnlyYn ? "not-allowed" : "pointer",
-                opacity: readOnlyYn ? 0.5 : 1,
+                cursor: readOnlyYn || actionLoading ? "not-allowed" : "pointer",
+                opacity: readOnlyYn || actionLoading ? 0.5 : 1,
               }}
               onClick={handleReviewClick}
-              disabled={readOnlyYn}
+              disabled={readOnlyYn || actionLoading}
               title={readOnlyYn ? "Completed projects are read-only." : ""}
             >
               Mark reviewed

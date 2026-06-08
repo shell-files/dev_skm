@@ -99,6 +99,11 @@ const DataTab = ({
   fetchData,
   setDataPage,
   handleAction,
+  actionLoading = false,
+  approvalDetail = null,
+  approvalDetailLoading = false,
+  approvalDetailError = null,
+  fetchApprovalDetail,
 }) => {
   const [previewRole, setPreviewRole] = useState("ESG_MANAGER");
   const [previewOnboardingScenario, setPreviewOnboardingScenario] = useState(
@@ -240,6 +245,7 @@ const DataTab = ({
 
   const canBulkApprove =
     !readOnlyYn &&
+    !actionLoading &&
     !isConsultant &&
     selectedSupportedRows.length > 0 &&
     selectedSupportedRows.every(
@@ -247,29 +253,34 @@ const DataTab = ({
     );
 
   const handleBulkReview = () => {
-    if (!selectedSupportedRows.length) return;
+    if (actionLoading || !selectedSupportedRows.length) return;
     handleBulkAction("REVIEWED");
   };
 
   const handleBulkApprove = () => {
-    if (!canBulkApprove) return;
+    if (actionLoading || !canBulkApprove) return;
     handleBulkAction("APPROVED");
   };
 
   const handleBulkReject = () => {
-    if (!selectedSupportedRows.length) return;
+    if (actionLoading || !selectedSupportedRows.length) return;
     setBulkRejectReason("");
     setIsBulkRejectModalOpen(true);
   };
 
-  const handleOpenApprovalDetail = (item, actionMode = null) => {
+  const handleOpenApprovalDetail = async (item, actionMode = null) => {
     setSelectedItemForDetail(item);
     setModalActionMode(actionMode);
     setIsDetailModalOpen(true);
+    try {
+      await fetchApprovalDetail?.(item.metricId || item.id);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleToggleSelectAll = () => {
-    if (readOnlyYn) return;
+    if (readOnlyYn || actionLoading) return;
 
     const visibleIds = visibleInputs.map((item) => item.id);
     const allSelected =
@@ -282,17 +293,30 @@ const DataTab = ({
   };
 
   const toggleSelect = (id) => {
-    if (readOnlyYn) return;
+    if (readOnlyYn || actionLoading) return;
 
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
     );
   };
 
-  const runAction = (item, status, commentText = "") => {
-    if (!isActionSupported(item, readOnlyYn)) return;
-    handleAction(item.id, status, commentText);
+  const runAction = async (item, status, commentText = "") => {
+    if (!isActionSupported(item, readOnlyYn) || actionLoading) return false;
+    return handleAction(item.id, status, commentText);
   };
+
+  const closeDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setModalActionMode(null);
+  };
+
+  const detailMetricItem =
+    approvalDetail?.metricId === selectedItemForDetail?.metricId
+      ? {
+          ...selectedItemForDetail,
+          ...approvalDetail,
+        }
+      : selectedItemForDetail;
 
   return (
     <section id="datatap_page" className="fade-in">
@@ -329,7 +353,7 @@ const DataTab = ({
                         label: "검토 완료 상태로 변경",
                         onClick: handleBulkReview,
                         className: "submit",
-                        disabled: !selectedSupportedRows.length,
+                        disabled: actionLoading || !selectedSupportedRows.length,
                       },
                     ]
                   : [
@@ -337,22 +361,22 @@ const DataTab = ({
                         label: "선택 항목 최종 승인",
                         onClick: handleBulkApprove,
                         className: "submit",
-                        disabled: !canBulkApprove,
+                        disabled: actionLoading || !canBulkApprove,
                       },
                     ]),
                 {
                   label: "선택 항목 반려",
                   onClick: handleBulkReject,
                   className: "reject",
-                  disabled: !selectedSupportedRows.length,
+                  disabled: actionLoading || !selectedSupportedRows.length,
                 },
               ]}
             />
           </div>
 
           <div style={{ display: "flex", gap: "8px" }}>
-            <button className="btn-primary" onClick={fetchData} disabled={isLoading}>
-              {isLoading ? "Loading..." : "데이터 새로고침"}
+            <button className="btn-primary" onClick={fetchData} disabled={isLoading || actionLoading}>
+              {isLoading || actionLoading ? "Loading..." : "데이터 새로고침"}
             </button>
           </div>
         </div>
@@ -395,7 +419,7 @@ const DataTab = ({
                           visibleInputs.length > 0 &&
                           visibleInputs.every((item) => selectedIds.includes(item.id))
                         }
-                        disabled={readOnlyYn}
+                        disabled={readOnlyYn || actionLoading}
                         onChange={handleToggleSelectAll}
                       />
                     </th>
@@ -490,6 +514,7 @@ const DataTab = ({
                               <button
                                 className="ob-act-btn ob-act-draft ob-detail-btn"
                                 onClick={() => handleOpenApprovalDetail(item)}
+                                disabled={actionLoading}
                               >
                                 상세 확인
                               </button>
@@ -498,7 +523,7 @@ const DataTab = ({
                                   <button
                                     className="ob-act-btn ob-act-submit"
                                     onClick={() => runAction(item, "REVIEWED")}
-                                    disabled={!supported}
+                                    disabled={actionLoading || !supported}
                                     title={unsupportedTitle}
                                   >
                                     검토 완료
@@ -507,7 +532,7 @@ const DataTab = ({
                                     type="button"
                                     className="ob-act-btn ob-act-reject"
                                     onClick={() => runAction(item, "REJECTED")}
-                                    disabled={!supported}
+                                    disabled={actionLoading || !supported}
                                     title={unsupportedTitle}
                                   >
                                     반려
@@ -518,7 +543,7 @@ const DataTab = ({
                                   <button
                                     className="ob-act-btn ob-act-submit"
                                     onClick={() => handleOpenApprovalDetail(item, "approve")}
-                                    disabled={!canApprove}
+                                    disabled={actionLoading || !canApprove}
                                     title={
                                       !supported
                                         ? unsupportedTitle
@@ -534,7 +559,7 @@ const DataTab = ({
                                     type="button"
                                     className="ob-act-btn ob-act-reject"
                                     onClick={() => runAction(item, "REJECTED")}
-                                    disabled={!supported}
+                                    disabled={actionLoading || !supported}
                                     title={unsupportedTitle}
                                   >
                                     반려
@@ -575,33 +600,33 @@ const DataTab = ({
 
       <ApprovalDetailModal
         isOpen={isDetailModalOpen}
-        onClose={() => { setIsDetailModalOpen(false); setModalActionMode(null); }}
-        metricItem={selectedItemForDetail}
+        onClose={closeDetailModal}
+        metricItem={detailMetricItem}
         viewerRole={effectiveViewerRole}
         hasConsultant={effectiveHasConsultant}
         readOnlyYn={readOnlyYn}
         modalActionMode={modalActionMode}
-        onReview={({ commentText }) => {
-          if (isActionSupported(selectedItemForDetail, readOnlyYn)) {
-            runAction(selectedItemForDetail, "REVIEWED", commentText);
+        loading={approvalDetailLoading}
+        error={approvalDetailError}
+        actionLoading={actionLoading}
+        onReview={async ({ commentText }) => {
+          const success = await runAction(selectedItemForDetail, "REVIEWED", commentText);
+          if (success) {
+            closeDetailModal();
           }
-          setIsDetailModalOpen(false);
-          setModalActionMode(null);
         }}
-        onApprove={({ commentText }) => {
-          if (isActionSupported(selectedItemForDetail, readOnlyYn)) {
-            runAction(selectedItemForDetail, "APPROVED", commentText);
+        onApprove={async ({ commentText }) => {
+          const success = await runAction(selectedItemForDetail, "APPROVED", commentText);
+          if (success) {
+            closeDetailModal();
           }
-          setIsDetailModalOpen(false);
-          setModalActionMode(null);
         }}
-        onReject={({ commentText }) => {
+        onReject={async ({ commentText }) => {
           if (!commentText?.trim()) return;
-          if (isActionSupported(selectedItemForDetail, readOnlyYn)) {
-            runAction(selectedItemForDetail, "REJECTED", commentText);
+          const success = await runAction(selectedItemForDetail, "REJECTED", commentText);
+          if (success) {
+            closeDetailModal();
           }
-          setIsDetailModalOpen(false);
-          setModalActionMode(null);
         }}
       />
 
@@ -642,9 +667,11 @@ const DataTab = ({
                 className="btn-confirm"
                 disabled={!bulkRejectReason.trim()}
                 title={!bulkRejectReason.trim() ? "Enter rejection reason." : ""}
-                onClick={() => {
-                  handleBulkAction("REJECTED", bulkRejectReason.trim());
-                  setIsBulkRejectModalOpen(false);
+                onClick={async () => {
+                  const success = await handleBulkAction("REJECTED", bulkRejectReason.trim());
+                  if (success) {
+                    setIsBulkRejectModalOpen(false);
+                  }
                 }}
               >
                 Confirm reject

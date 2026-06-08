@@ -9,6 +9,7 @@ import OnboardingModalShell from "./modal/OnboardingModalShell";
 import SubsidiaryRequestModal from "./modal/SubsidiaryRequestModal";
 import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
 import RollupSummaryPanel from "./RollupSummaryPanel";
+import RollupInboxPanel from "./RollupInboxPanel";
 import MetricAssignmentModal from "./modal/MetricAssignmentModal";
 import UiPreviewPanel from "@/dev/step12UiPreview/UiPreviewPanel";
 import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
@@ -103,6 +104,11 @@ const flattenOnboardingItems = (metrics = []) =>
       ...atomic,
       metricId: atomic.metricId || metric.metricId,
       metricName: atomic.metricName || metric.metricName,
+      issueDomain: metric.issueDomain,
+      subIssueId: metric.subIssueId,
+      subIssueCode: metric.subIssueCode,
+      subIssueName: metric.subIssueName,
+      scopeSourceType: metric.scopeSourceType,
       approvalPolicyCode: metric.approvalPolicyCode,
       assignment: metric.assignment,
     }))
@@ -563,7 +569,8 @@ const OnBoard = () => {
   const cycleTypeQuery = searchParams.get("cycleType");
   const reportingYear = reportingYearQuery ? parseInt(reportingYearQuery, 10) : DEFAULT_REPORTING_YEAR;
 
-  const [viewMode, setViewMode] = useState(new URLSearchParams(window.location.search).get("mode") === "ROLLUP_RESPONSE" ? "ROLLUP_RESPONSE" : "MY_PROJECT");
+  const viewMode = searchParams.get("mode") === "ROLLUP_RESPONSE" ? "ROLLUP_RESPONSE" : "MY_PROJECT";
+  const batchIdQuery = searchParams.get("batchId");
 
   // Preview States
   const [previewRole, setPreviewRole] = useState("ESG 담당자");
@@ -622,37 +629,26 @@ const OnBoard = () => {
     return flattened;
   }, [rawMetrics, rawAssignments, previewOnboardingScenario]);
 
-  const [selectedSubIssue, setSelectedSubIssue] = useState("");
 
-  const uniqueSubIssues = useMemo(() => {
-    const issues = new Set();
-    g0Items.forEach((item) => {
-      if (item.subIssueName) {
-        issues.add(item.subIssueName);
-      }
-    });
-    return Array.from(issues);
-  }, [g0Items]);
-
-  useEffect(() => {
-    if (uniqueSubIssues.length > 0 && (!selectedSubIssue || !uniqueSubIssues.includes(selectedSubIssue))) {
-      setSelectedSubIssue(uniqueSubIssues[0]);
-    }
-  }, [uniqueSubIssues, selectedSubIssue]);
-
-  const filteredG0Items = useMemo(() => {
-    if (!selectedSubIssue) return g0Items;
-    return g0Items.filter((item) => item.subIssueName === selectedSubIssue);
-  }, [g0Items, selectedSubIssue]);
 
   const [selectedSubIssue, setSelectedSubIssue] = useState("");
 
   const filteredG0ItemsForUser = useMemo(() => {
+    let items = g0Items;
     if (viewMode === "ROLLUP_RESPONSE" && isEmployeeViewer) {
-      return g0Items.filter((item) => item.assignmentStatus === "ASSIGNED" || item.assignmentStatus === "assigned" || item.selfAssignedYn === true);
+      items = g0Items.filter((item) => item.assignmentStatus === "ASSIGNED" || item.assignmentStatus === "assigned" || item.selfAssignedYn === true);
     }
-    return g0Items;
-  }, [g0Items, viewMode, isEmployeeViewer]);
+    
+    if (viewMode === "ROLLUP_RESPONSE" && requests && requests.length > 0 && batchIdQuery) {
+      const batchId = parseInt(batchIdQuery, 10);
+      const activeReq = requests.find(r => r.batchId === batchId) || {};
+      const actionableIds = activeReq.actionableInputMetricIds || [];
+      if (actionableIds.length > 0) {
+        items = items.filter((item) => actionableIds.includes(item.metricId));
+      }
+    }
+    return items;
+  }, [g0Items, viewMode, isEmployeeViewer, requests, batchIdQuery]);
 
   const uniqueSubIssues = useMemo(() => {
     const issues = new Set();
@@ -694,6 +690,34 @@ const OnBoard = () => {
     }
 
     try {
+      if (viewMode === "ROLLUP_RESPONSE") {
+        setActiveSourceCycleId(null);
+        await dispatch(fetchRollupRequests({ includeSentYn: true, allPurposesYn: true })).unwrap();
+        
+        if (!batchIdQuery) {
+          return;
+        }
+
+        const batchId = parseInt(batchIdQuery, 10);
+        await dispatch(fetchRollupRequestDetail({ batchId })).unwrap();
+        const ensuredRes = await dispatch(ensureRollupResponseWorkspace({ batchId })).unwrap();
+        
+        const ensured = ensuredRes?.data || ensuredRes;
+        const responseYear = ensured?.reportingYear || reportingYear;
+
+        const metricId = searchParams.get("metricId");
+        await dispatch(
+          fetchOnboardingMetrics({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE", metricId })
+        ).unwrap();
+        
+        if (canManageAssignments) {
+          await dispatch(
+            fetchOnboardingAssignments({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE" })
+          ).unwrap();
+        }
+        return;
+      }
+
       const workflowRes = await dispatch(
         fetchCurrentWorkflow({ companyId, reportingYear })
       ).unwrap();
@@ -743,16 +767,16 @@ const OnBoard = () => {
         }
       }
 
-      await dispatch(fetchRollupRequests({ includeSentYn: true, allPurposesYn: true })).unwrap();
-
-      const metricId = new URLSearchParams(location.search).get("metricId");
+      const metricId = searchParams.get("metricId");
       
       await dispatch(
         fetchOnboardingMetrics({ companyId, reportingYear, cycleType: nextCycleType, metricId })
       ).unwrap();
-      await dispatch(
-        fetchOnboardingAssignments({ companyId, reportingYear, cycleType: nextCycleType })
-      ).unwrap();
+      if (canManageAssignments) {
+        await dispatch(
+          fetchOnboardingAssignments({ companyId, reportingYear, cycleType: nextCycleType })
+        ).unwrap();
+      }
     } catch (error) {
       console.error(error);
     }
@@ -1017,7 +1041,7 @@ const OnBoard = () => {
               onCtaClick={handleCtaClick}
             />
           )}
-          {viewMode === "ROLLUP_RESPONSE" && (
+          {viewMode === "ROLLUP_RESPONSE" && batchIdQuery && (
             <div className="ob1-cta-container">
               <button
                 className="ob1-btn-cta"
@@ -1030,6 +1054,10 @@ const OnBoard = () => {
           )}
         </div>
       </div>
+      
+      {viewMode === "ROLLUP_RESPONSE" && !batchIdQuery ? (
+        <RollupInboxPanel requests={requests} />
+      ) : (
       <div className="ob1-content-layout">
         <div className="ob1-sidebar-panel">
           <div className="ob1-sidebar-title">SUB-ISSUE</div>
@@ -1106,6 +1134,7 @@ const OnBoard = () => {
           )}
         </div>
       </div>
+      )}
 
       <OnboardingModalShell
         isOpen={isModalOpen}

@@ -9,6 +9,17 @@ const FIXTURE_ATOMIC_ITEMS = [
   { atomicMetricId: "E1-1-d", atomicMetricName: "검증 여부", value: "", unit: "-", inputType: "MANUAL_TEXT", evidenceCount: 0, inputStatus: "NOT_STARTED" },
 ];
 
+const inputTypeLabel = (type) => {
+  const t = String(type || "").toUpperCase();
+  if (t === "MANUAL_NUMBER") return "숫자 입력";
+  if (t === "MANUAL_TEXT") return "텍스트 입력";
+  if (t === "SELECT") return "단일 선택";
+  if (t === "MULTI_SELECT") return "다중 선택";
+  if (t === "SYSTEM_AUTO") return "시스템 연동";
+  if (t === "CALCULATED") return "자동 계산";
+  return t || "-";
+};
+
 export default function ApprovalDetailModal({
   isOpen,
   onClose,
@@ -80,7 +91,7 @@ export default function ApprovalDetailModal({
       >
         <div className="ob-modal-header" style={headerStyle}>
           <h2 className="ob-modal-title" style={titleStyle}>
-            {isApproveMode ? "최종 승인 — Atomic 상세 검토" : "Approval detail"}
+            {isApproveMode ? "최종 승인 — 세부 항목 검토" : "승인 상세 내역"}
           </h2>
           <button
             type="button"
@@ -94,11 +105,6 @@ export default function ApprovalDetailModal({
         </div>
 
         <div className="ob-modal-body" style={bodyStyle}>
-          {readOnlyYn && (
-            <div className="alert alert-info" style={readOnlyAlertStyle}>
-              Completed projects are read-only.
-            </div>
-          )}
 
 
           {error && (
@@ -120,7 +126,7 @@ export default function ApprovalDetailModal({
 
           {/* Atomic detail table */}
           <div style={{ marginBottom: "24px" }}>
-            <h4 style={sectionTitleStyle}>Atomic Metric 상세</h4>
+            <h4 style={sectionTitleStyle}>입력 항목 상세</h4>
             <div style={tableBoxStyle}>
               <table style={tableStyle}>
                 <thead style={tableHeadStyle}>
@@ -173,7 +179,7 @@ export default function ApprovalDetailModal({
                           <td style={{ ...tdStyle, color: "#64748b" }}>{atomic.unit || "-"}</td>
                           <td style={tdStyle}>
                             <span style={{ fontSize: "11px", background: "#f1f5f9", padding: "2px 8px", borderRadius: "4px" }}>
-                              {atomic.inputMode || atomic.inputType || "-"}
+                              {inputTypeLabel(atomic.inputMode || atomic.inputType)}
                             </span>
                           </td>
                           <td style={{ ...tdStyle, textAlign: "center" }}>{atomic.evidenceCount || 0}</td>
@@ -190,7 +196,7 @@ export default function ApprovalDetailModal({
           </div>
 
           <div style={{ marginBottom: "24px" }}>
-            <h4 style={sectionTitleStyle}>Evidence</h4>
+            <h4 style={sectionTitleStyle}>증빙 자료</h4>
             {totalEvidenceCount > 0 ? (
               <div style={{ padding: "16px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", fontSize: "0.85rem", color: "#334155" }}>
                 첨부 증빙 {totalEvidenceCount}건<br />
@@ -215,7 +221,7 @@ export default function ApprovalDetailModal({
 
         <div className="ob-modal-footer" style={footerStyle}>
           <button type="button" className="ob-btn ob-btn-secondary" onClick={onClose} style={secondaryButtonStyle}>
-            Close
+            닫기
           </button>
 
           <button
@@ -236,7 +242,7 @@ export default function ApprovalDetailModal({
                   : ""
             }
           >
-            Reject
+            반려
           </button>
 
           {isConsultant ? (
@@ -252,7 +258,7 @@ export default function ApprovalDetailModal({
               disabled={readOnlyYn || actionLoading}
               title={readOnlyYn ? "Completed projects are read-only." : ""}
             >
-              Mark reviewed
+              검토 완료
             </button>
           ) : (
             <button
@@ -273,7 +279,7 @@ export default function ApprovalDetailModal({
                     : ""
               }
             >
-              {isApproveMode ? "최종 승인" : "Approve"}
+              {isApproveMode ? "최종 승인" : "승인"}
             </button>
           )}
         </div>

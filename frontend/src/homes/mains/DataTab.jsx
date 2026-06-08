@@ -72,12 +72,12 @@ const actionDisabledTitle = (item = {}, readOnlyYn = false) =>
     : item.actionDisabledReason ||
       "This item does not support approval actions in the current step.";
 
-const submitLabel = (status) => (status === "SUBMITTED" ? "Submitted" : "Draft");
-const reviewLabel = (status) => (status === "REVIEWED" ? "Reviewed" : "Pending");
+const submitLabel = (status) => (status === "SUBMITTED" ? "제출 완료" : "작성 중");
+const reviewLabel = (status) => (status === "REVIEWED" ? "검토 완료" : "대기");
 const approvalLabel = (status) => {
-  if (status === "APPROVED") return "Approved";
-  if (status === "REJECTED") return "Rejected";
-  return "Pending";
+  if (status === "APPROVED") return "승인";
+  if (status === "REJECTED") return "반려";
+  return "대기";
 };
 
 const DataTab = ({
@@ -425,22 +425,19 @@ const DataTab = ({
                     </th>
                     <th style={{ width: "100px" }}>Metric ID</th>
                     <th>지표명</th>
-                    <th style={{ width: "120px" }}>Sub-Issue</th>
                     <th style={{ width: "110px" }}>담당자</th>
-                    <th style={{ width: "80px" }}>입력 완료</th>
                     <th style={{ width: "80px" }}>미입력</th>
-                    <th style={{ width: "100px" }}>제출 상태</th>
                     <th style={{ width: "100px" }}>검토 상태</th>
                     <th style={{ width: "100px" }}>승인 상태</th>
-                    <th style={{ width: "120px" }}>제출일</th>
-                    <th style={{ width: "190px" }}>관리</th>
+                    <th style={{ width: "140px" }}>제출일</th>
+                    <th style={{ width: "280px" }}>관리</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibleInputs.length === 0 ? (
                     <tr>
                       <td
-                        colSpan="12"
+                        colSpan="9"
                         style={{
                           padding: "80px 0",
                           color: "#94a3b8",
@@ -481,17 +478,10 @@ const DataTab = ({
                             {item.metricId || item.id}
                           </td>
                           <td className="st-left">{item.metricName || item.checklistQuestion || "-"}</td>
-                          <td style={{ fontSize: "12px", color: "#64748b" }}>{normalizeSubIssueName(item) || "-"}</td>
                           <td>{item.assigneeName || item.userName || "-"}</td>
-                          <td className="ob-completion-cell">{item.inputCompletedCount || 0}</td>
                           <td className="ob-completion-cell">{item.inputMissingCount || 0}</td>
                           <td className="cell-status">
-                            <span className={`ob-status ${submitStatus === "SUBMITTED" ? "st-submitted" : "st-draft"}`}>
-                              {submitLabel(submitStatus)}
-                            </span>
-                          </td>
-                          <td className="cell-status">
-                            <span className={`ob-status ${reviewStatus === "REVIEWED" ? "st-approved" : "st-draft"}`}>
+                            <span className={`ob-status ${reviewStatus === "REVIEWED" ? "st-reviewed" : "st-pending"}`}>
                               {reviewLabel(reviewStatus)}
                             </span>
                           </td>
@@ -502,7 +492,7 @@ const DataTab = ({
                                   ? "st-approved"
                                   : approvalStatus === "REJECTED"
                                     ? "st-rejected"
-                                    : "st-draft"
+                                    : "st-pending"
                               }`}
                             >
                               {approvalLabel(approvalStatus)}

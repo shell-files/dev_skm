@@ -404,12 +404,12 @@
 }
 
 .ob-btn-primary {
-  background: #2563eb;
-  border: 1px solid #2563eb;
+  background: #03a94d;
+  border: 1px solid #03a94d;
   color: #ffffff;
 }
 
 .ob-btn-primary:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: #02873d;
+  border-color: #02873d;
 }

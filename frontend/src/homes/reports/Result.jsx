@@ -514,14 +514,6 @@ const Result = () => {
   ];
 
 
-  // const steps = [
-  //   { id: 1, title: "벤치마킹 분석",   icon: <img src={Benchmk}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/benchmk" },
-  //   { id: 2, title: "미디어 분석",     icon: <img src={Analyze}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/media" },
-  //   { id: 3, title: "이해관계자 설문",  icon: <img src={Survey}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>,path: "/survey" },
-  //   { id: 4, title: "전체 결과",       icon: <img src={Resu}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/result" },
-  //   { id: 5, title: "보고서 초안",     icon: <img src={Report}  width="20" height="20" alt="" style={{ objectFit: "contain" }}></img>, path: "/draft" },
-  // ];
-
   const [leftTab, setLeftTab] = useState(0);
   const [rightTab, setRightTab] = useState(0);
   const [openSections, setOpenSections] = useState({ 1: true, 2: true });

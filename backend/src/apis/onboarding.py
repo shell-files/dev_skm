@@ -69,7 +69,7 @@ async def patch_onboarding_metric_values(
 ):
     try:
         checkScope(request.companyId, userModel)
-        return saveMetricValues(metricId=metricId, request=request, userId=userId(userModel))
+        return saveMetricValues(metricId=metricId, request=request, userId=userId(userModel), userModel=userModel)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:

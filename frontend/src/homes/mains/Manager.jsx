@@ -11,7 +11,7 @@ import { useAuth } from '@hooks/AuthContext'
  *  true: mock 데이터
  *  false: 실제 API
  */
-const USE_DUMMY_API = true;
+const USE_DUMMY_API = false;
 
 const PAGE_SIZE = 10;
 

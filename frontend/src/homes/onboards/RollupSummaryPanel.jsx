@@ -13,7 +13,7 @@ import { getFixtureRollupStatus } from "@/dev/step12UiPreview/fixtures";
 const purposeLabel = (code) => {
   const value = String(code || "").toUpperCase();
   if (value === "REPORT_DISCLOSURE") return "보고서 연결 공시";
-  if (value === "DMA_PRECHECK") return "DMA 사전 계산";
+  if (value === "DMA_PRECHECK") return "이중중대성평가 사전 계산";
   return value || "-";
 };
 
@@ -81,7 +81,7 @@ const RollupSummaryPanel = ({
       ]);
     } catch (err) {
       console.error(err);
-      setError(err?.message || "롤업 배치 상태 조회에 실패했습니다.");
+      setError(err?.message || "데이터 취합 상태 조회에 실패했습니다.");
     }
   }, [batchId, dispatch]);
 
@@ -102,7 +102,7 @@ const RollupSummaryPanel = ({
       <div className="ob1-rollup-panel ob1-rollup-panel-v2">
         <div className="ob1-table-loading" style={{ padding: "16px", display: "flex", gap: "8px", alignItems: "center" }}>
           <div className="ob1-spinner" style={{ width: "20px", height: "20px" }} />
-          <p style={{ margin: 0, fontSize: "0.85rem", color: "#475569" }}>롤업 배치 상태를 불러오고 있습니다.</p>
+          <p style={{ margin: 0, fontSize: "0.85rem", color: "#475569" }}>데이터 취합 상태를 불러오고 있습니다.</p>
         </div>
       </div>
     );
@@ -163,11 +163,11 @@ const RollupSummaryPanel = ({
       } else {
         await new Promise((resolve) => setTimeout(resolve, 600));
       }
-      showDefaultAlert("성공", "롤업 계산이 완료되었습니다.", "success");
+      showDefaultAlert("성공", "데이터 취합이 완료되었습니다.", "success");
       onCalculated?.();
     } catch (err) {
       console.error(err);
-      showDefaultAlert("오류", err?.message || "롤업 계산에 실패했습니다.", "error");
+      showDefaultAlert("오류", err?.message || "데이터 취합에 실패했습니다.", "error");
     } finally {
       setCalculating(false);
     }
@@ -177,7 +177,7 @@ const RollupSummaryPanel = ({
     <div className="ob1-rollup-panel ob1-rollup-panel-v2" style={{ flexDirection: "column", alignItems: "stretch" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "16px", width: "100%" }}>
         <div className="ob1-rollup-info">
-          <h3 className="ob1-rollup-title">자회사 데이터 롤업</h3>
+          <h3 className="ob1-rollup-title">자회사 데이터 취합</h3>
           <span className="ob1-rollup-detail">
             Batch #{statusInfo.batchId || batchId} · {purposeLabel(statusInfo.rollupPurposeCode || rollupPurposeCode)}
             {metricScopeCode ? ` · ${statusInfo.metricScopeCode || metricScopeCode}` : ""}
@@ -187,9 +187,9 @@ const RollupSummaryPanel = ({
         <div className="ob1-rollup-stepper" style={{ flex: 1, margin: "0 24px", justifyContent: "center" }}>
           <div className="ob1-rollup-step completed">요청 생성</div>
           <div className={`ob1-rollup-step ${calculateReadyYn ? "completed" : "active"}`}>자회사 전송</div>
-          <div className={`ob1-rollup-step ${isCalculated ? "completed" : calculateReadyYn ? "active" : ""}`}>Rollup 계산</div>
+          <div className={`ob1-rollup-step ${isCalculated ? "completed" : calculateReadyYn ? "active" : ""}`}>데이터 취합</div>
           <div className={`ob1-rollup-step ${dmaReadyYn || reportReadyYn ? "completed" : ""}`}>
-            {rollupPurposeCode === "REPORT_DISCLOSURE" ? "보고서 준비" : "DMA 준비"}
+            {rollupPurposeCode === "REPORT_DISCLOSURE" ? "보고서 준비" : "이중중대성평가 준비"}
           </div>
         </div>
 
@@ -209,7 +209,7 @@ const RollupSummaryPanel = ({
             disabled={isCalculating || !calculateReadyYn || isCalculated}
             title={!calculateReadyYn ? "자회사 데이터 전송 완료 후 계산할 수 있습니다." : ""}
           >
-            {isCalculating ? "계산 중..." : isCalculated ? "Rollup 계산 완료" : calculateReadyYn ? "Rollup 계산 실행" : "자회사 데이터 대기"}
+            {isCalculating ? "계산 중..." : isCalculated ? "데이터 취합 완료" : calculateReadyYn ? "데이터 취합 실행" : "자회사 데이터 대기"}
           </button>
         </div>
       </div>

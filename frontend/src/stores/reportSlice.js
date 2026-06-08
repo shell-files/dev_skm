@@ -494,14 +494,14 @@ export const initializePostDmaDisclosureScope = createAsyncThunk(
   async ({ runId }, { rejectWithValue }) => {
     try {
       const res = await POST(`${REPORT_WORKFLOW_API_ROOT}/${runId}/post-dma-scope/initialize`);
-      return rejectIfFailed(res, rejectWithValue, "POST DMA 스코프 초기화에 실패했습니다.");
+      return rejectIfFailed(res, rejectWithValue, "이중중대성 평가 범위 초기화에 실패했습니다.");
     } catch (error) {
       console.error(error);
       return rejectWithValue({
         status: false,
         message:
           error?.message ||
-          "POST DMA 스코프 초기화 중 오류가 발생했습니다.",
+          "이중중대성 평가 범위 초기화 중 오류가 발생했습니다.",
       });
     }
   }
@@ -528,12 +528,12 @@ export const fetchRollupRequestDetail = createAsyncThunk(
   async ({ batchId }, { rejectWithValue }) => {
     try {
       const res = await GET(`${ROLLUP_API_ROOT}/requests/${batchId}`);
-      return rejectIfFailed(res, rejectWithValue, "롤업 요청 상세 조회에 실패했습니다.");
+      return rejectIfFailed(res, rejectWithValue, "데이터 취합 요청 상세 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "롤업 요청 상세 조회 중 오류가 발생했습니다.",
+        message: "데이터 취합 요청 상세 조회 중 오류가 발생했습니다.",
       });
     }
   }
@@ -544,12 +544,12 @@ export const fetchRollupBatchSources = createAsyncThunk(
   async ({ batchId }, { rejectWithValue }) => {
     try {
       const res = await GET(`${ROLLUP_API_ROOT}/batches/${batchId}/sources`);
-      return rejectIfFailed(res, rejectWithValue, "롤업 배치 자회사 목록 조회에 실패했습니다.");
+      return rejectIfFailed(res, rejectWithValue, "데이터 취합 자회사 목록 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "롤업 배치 자회사 목록 조회 중 오류가 발생했습니다.",
+        message: "데이터 취합 자회사 목록 조회 중 오류가 발생했습니다.",
       });
     }
   }
@@ -576,12 +576,12 @@ export const fetchRollupBatchStatus = createAsyncThunk(
   async ({ batchId }, { rejectWithValue }) => {
     try {
       const res = await GET(`${ROLLUP_API_ROOT}/batches/${batchId}/status`);
-      return rejectIfFailed(res, rejectWithValue, "롤업 배치 상태 조회에 실패했습니다.");
+      return rejectIfFailed(res, rejectWithValue, "데이터 취합 배치 상태 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "롤업 배치 상태 조회 중 오류가 발생했습니다.",
+        message: "데이터 취합 배치 상태 조회 중 오류가 발생했습니다.",
       });
     }
   }
@@ -592,12 +592,12 @@ export const calculateRollupBatch = createAsyncThunk(
   async ({ batchId }, { rejectWithValue }) => {
     try {
       const res = await POST(`${ROLLUP_API_ROOT}/batches/${batchId}/calculate`);
-      return rejectIfFailed(res, rejectWithValue, "롤업 계산에 실패했습니다.");
+      return rejectIfFailed(res, rejectWithValue, "데이터 취합에 실패했습니다.");
     } catch (error) {
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "롤업 계산 중 오류가 발생했습니다.",
+        message: "데이터 취합 중 오류가 발생했습니다.",
       });
     }
   }

@@ -352,8 +352,8 @@ const SubsidiaryTransferModal = ({
                       items={activeDetail?.items || []}
                     />
                     <MetricReadinessList
-                      title="계산 의존 Metric"
-                      description="Rollup 계산에 필요한 의존 입력입니다."
+                      title="데이터 취합에 필요한 의존 데이터 지표"
+                      description="데이터 취합에 필요한 의존 입력입니다."
                       items={activeDetail?.dependencyItems || []}
                     />
 

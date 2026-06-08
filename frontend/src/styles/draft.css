@@ -31,9 +31,8 @@
         .draft-header {
             background: #fff;
             padding: 20px 40px;
-            border-bottom: 1px solid var(--draft-border);
             flex-shrink: 0;
-            width: 100%; /* 좌우로 무조건 꽉 차게 */
+            width: 100%;
         }
         .draft-title { font-size: 1.3rem; font-weight: 850; margin: 0 0 15px 0; color: #1e293b; }
         .draft-stepper-row { display: flex; align-items: center; justify-content: space-between; max-width: 900px; margin: 0 auto; position: relative; }
@@ -320,7 +319,6 @@
 .doc-breadcrumb { display:flex; align-items:center; gap:5px; font-size:12px; color:#94a3b8; flex:1; }
 .bc-sep{color:#cbd5e1;} .bc-item{color:#64748b;cursor:pointer;} .bc-item.active{color:#1e293b;font-weight:700;}
 .doc-page-info { font-size:12px; color:#64748b; font-weight:600; white-space:nowrap; }
-.doc-actions { display:flex; gap:6px; }
 .doc-btn { display:flex; align-items:center; gap:5px; padding:6px 14px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; font-size:12px; font-weight:600; color:#475569; cursor:pointer; font-family:inherit; }
 .doc-btn:hover{background:#f8fafc;}
 .doc-btn-more { padding:6px 10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; font-size:14px; color:#475569; cursor:pointer; }
@@ -496,27 +494,12 @@
   color: #03A94D !important;
 }
 
-/* 툴바 안의 버튼 배치 정렬 보완 */
-.doc-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-
-
-/* 1. 우측 버튼 묶음 영역이 늘어나서 본문을 침범하지 않도록 고정 */
+/* 툴바 안의 버튼 배치 정렬 보완 — flex-shrink:0으로 본문 공간 침범 차단 */
 .doc-actions {
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
-  flex-shrink: 0 !important; /* 중요: 본문 공간을 절대 뺏어오지 못하게 차단 */
-}
-
-/* 2. 저장 드롭다운 내부 아이템 호버 효과 */
-.save-dropdown-menu li:hover {
-  background-color: #f1f5f9;
-  color: #03A94D !important;
+  flex-shrink: 0 !important;
 }
 
 /* 3. 혹시 breadcrumb 영역이 밀리는 걸 방지하기 위해 툴바 내부 정렬 강화 */
@@ -597,6 +580,12 @@
 
 /* ── 패널 빈 상태 ── */
 .panel-empty-text { padding: 40px; color: #64748b; text-align: center; }
+
+/* ── AI desc 변형 ── */
+.ai-desc-box.muted { margin-top: 12px; color: #64748b; }
+
+/* ── SR 인라인 편집 입력 ── */
+.sr-inline-input { position: fixed; z-index: 1000; }
 
 /* ── PDF 렌더 루트 (화면 밖) ── */
 .pdf-render-root    { position: fixed; left: -99999px; top: 0; width: 297mm; background: #fff; z-index: -1; }

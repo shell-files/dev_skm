@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import "@styles/draft.css";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import pptxgen from "pptxgenjs";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import * as XLSX from "xlsx";
 
@@ -425,6 +426,57 @@ const PAGES = subIssues.flatMap((si) =>
   }))
 );
 
+// metric_id → 지표명/소속 서브이슈 (근거 추적 패널용). metricFields 에서 자동 구성.
+const SR_FIELD_MAP = {};
+subIssues.forEach((si) =>
+  (si.metricFields || []).forEach((f) => {
+    SR_FIELD_MAP[f.id] = { label: f.label, subIssueLabel: si.label };
+  })
+);
+
+// 지표 상세 메타(단위·최신값·추이·구성·산식·AI근거). 실데이터/API 연결 시 여기에 채우면
+// 패널에 추이 차트·구성 표·산식이 자동 표시됨. 비어 있으면 "데이터 연동 예정"으로 표기.
+// ⚠ 아래는 패널 데모용 예시 값입니다. 실제 지표 API 연동 시 이 값들을 교체하세요.
+//    TrendChart 형식: trend: [{ y: "연도", v: 숫자값 }, ...]
+const metricMeta = {
+  "E1-05__G0003": {
+    unit: "tCO₂eq", latest: "112,500",
+    trend: [{ y: "2021", v: 128000 }, { y: "2022", v: 121000 }, { y: "2023", v: 116000 }, { y: "2024", v: 112500 }],
+    breakdown: [{ l: "Scope 1 (직접)", v: "41,200" }, { l: "Scope 2 (간접)", v: "71,300" }],
+    formula: "Scope 1 + Scope 2\nE1-05__G0001 + E1-05__G0002",
+    aiDesc: "기준연도 온실가스 총배출량(연결 기준)으로, 감축 목표·로드맵 산정의 기준점이 되는 핵심 지표입니다.",
+  },
+  "E1-06__G0003": {
+    unit: "tCO₂eq", latest: "104,800",
+    trend: [{ y: "2021", v: 128000 }, { y: "2022", v: 121000 }, { y: "2023", v: 112000 }, { y: "2024", v: 104800 }],
+    breakdown: [{ l: "Scope 1 (직접)", v: "37,900" }, { l: "Scope 2 (간접)", v: "66,900" }],
+    formula: "Scope 1 + Scope 2\nE1-06__G0001 + E1-06__G0002",
+    aiDesc: "보고연도 온실가스 총배출량으로, 기준연도 대비 감축 성과를 정량적으로 보여줍니다.",
+  },
+  "E1-06__G0004": {
+    unit: "tCO₂eq", latest: "7,200",
+    trend: [{ y: "2022", v: 7000 }, { y: "2023", v: 9000 }, { y: "2024", v: 7200 }],
+    breakdown: [{ l: "에너지 효율화", v: "3,100" }, { l: "재생에너지 전환", v: "2,800" }, { l: "공정 개선", v: "1,300" }],
+    formula: "전년도 배출량 − 보고연도 배출량",
+    aiDesc: "전년 대비 절대 감축량으로, 연간 감축 노력의 실효성을 나타냅니다.",
+  },
+  "E1-06__G0005": {
+    unit: "%", latest: "18.1",
+    trend: [{ y: "2021", v: 0 }, { y: "2022", v: 5.5 }, { y: "2023", v: 12.5 }, { y: "2024", v: 18.1 }],
+    breakdown: [{ l: "기준연도 대비 누적 감축률", v: "18.1%" }],
+    formula: "(기준연도 배출량 − 보고연도 배출량) / 기준연도 배출량 × 100",
+    aiDesc: "기준연도 대비 누적 감축률로, 중장기 감축 경로상의 진척도를 보여줍니다.",
+  },
+  "E1-07__G0003": {
+    unit: "%", latest: "31.4",
+    trend: [{ y: "2021", v: 12 }, { y: "2022", v: 19 }, { y: "2023", v: 26 }, { y: "2024", v: 31.4 }],
+    breakdown: [{ l: "PPA", v: "14.0%" }, { l: "REC 구매", v: "10.4%" }, { l: "자가발전", v: "7.0%" }],
+    formula: "재생에너지 사용량 / 총 전력 사용량 × 100",
+    aiDesc: "재생에너지 전환율로, RE100 및 Scope 2 감축 경로의 핵심 동인입니다.",
+  },
+};
+
+
 // 편집 입력값(displayValue) + 실제 row 를 해당 서브이슈 adapter 로 합쳐 metrics Map 생성.
 // 빈 입력은 미포함(템플릿이 토큰/—). 숫자 추출 가능하면 차트 스케일용 value 로.
 function buildMetricsFromEdits(adapter, editMetrics, rows) {
@@ -451,13 +503,15 @@ const Draft = () => {
   const [editMetricsByPage, setEditMetricsByPage] = useState({}); // { pageKey: { metric_id: 표시값 } }
   const [editNarrativeByPage, setEditNarrativeByPage] = useState({}); // { pageKey: 본문 }
   const [inlineEdit, setInlineEdit] = useState(null); // 본문 값 인라인 편집 팝업 {id, top, left, width, value}
+  const [trackId, setTrackId] = useState(null); // 근거 추적 패널: 선택된 metric_id
+  const [trackCtx, setTrackCtx] = useState(null); // { pageLabel, area, clicked, value }
   const [savedAt, setSavedAt] = useState(null); // 마지막 저장 시각
-  
+
   // ── 상태 정의 ──
   const [isEditing, setIsEditing] = useState(false); // 본문 수정 모드 상태
   const [texts, setTexts] = useState(paragraphTexts); // 실시간 수정 가능한 텍스트 데이터 상태
   const [exportMenuOpen, setExportMenuOpen] = useState(false); // 내보내기 드롭다운 상태
-  
+
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
@@ -519,11 +573,31 @@ const Draft = () => {
 
   // ── 본문(오른쪽 페이지)에서 값/토큰 클릭 → 그 자리에서 인라인 편집 ──
   const openInlineEdit = (e) => {
-    if (!isEditing) return;
     const el = e.target.closest("[data-source]");
     if (!el) return; // 본문의 일반 문구(토큰 아님)는 data-source가 없어 contentEditable 편집으로 넘어감
     const src = el.getAttribute("data-source");
-    if (!src || src.includes(",")) return; // 파생/복합값(예: 기준연도 대비 %)은 편집 제외
+    if (!src) return;
+
+    // ── 보기 모드: 근거 추적 패널 열기 ──
+    if (!isEditing) {
+      const id = src.split(",")[0].trim();
+      const m = buildPageMetrics(PAGES[currentPage]);
+      const value = (m[id] && m[id].displayValue) || null;
+      const area = el.closest(".sr-prose")
+        ? "본문"
+        : (el.tagName === "TD" || el.closest(".sr-tbl"))
+          ? "데이터 표"
+          : "지표 시각화(KPI·차트)";
+      const clicked = (el.innerText || "").trim().slice(0, 80);
+      if (trackId === id) { setTrackId(null); return; } // 같은 항목 재클릭 시 닫기
+      setTrackId(id);
+      setTrackCtx({ pageLabel: PAGES[currentPage].subIssueLabel + " · " + PAGES[currentPage].tabLabel, area, clicked, value });
+      setMetricOpen(true);
+      return;
+    }
+
+    // ── 수정 모드: 값 인라인 편집 ──
+    if (src.includes(",")) return; // 파생/복합값(예: 기준연도 대비 %)은 편집 제외
     e.stopPropagation();
     const r = el.getBoundingClientRect();
     const pk = PAGES[currentPage].key;
@@ -538,7 +612,7 @@ const Draft = () => {
     setInlineEdit(null);
   };
 
-   const steps = [
+  const steps = [
     { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
     { id: 2, title: "미디어 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><polyline points="5,13 8,10 11,12 14,8 19,6" /></svg>, path: "/media" },
     { id: 3, title: "이해관계자 설문", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" /><line x1="13" y1="11" x2="16" y2="11" /><line x1="13" y1="16" x2="16" y2="16" /></svg>, path: "/survey" },
@@ -569,167 +643,422 @@ const Draft = () => {
   }, []);
 
   const handleExport = async (type) => {
-  setExportMenuOpen(false);
+    setExportMenuOpen(false);
 
-  if (type === "PDF") {
-    // 1) 모든 서브이슈의 페이지를 화면 밖에 렌더(캡처용) → React 리렌더/레이아웃 대기
-    setPdfMode(true);
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    await new Promise((r) => setTimeout(r, 120));
+    if (type === "PDF") {
+      // 1) 모든 서브이슈의 페이지를 화면 밖에 렌더(캡처용) → React 리렌더/레이아웃 대기
+      setPdfMode(true);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise((r) => setTimeout(r, 120));
 
-    try {
-      const root = document.getElementById("pdf-render-root");
-      if (!root) return;
+      try {
+        const root = document.getElementById("pdf-render-root");
+        if (!root) return;
 
-      const renderEl = (el) =>
-        html2canvas(el, {
-          scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff",
-          width: el.offsetWidth, height: el.offsetHeight, windowWidth: el.offsetWidth,
-        });
+        const renderEl = (el) =>
+          html2canvas(el, {
+            scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff",
+            width: el.offsetWidth, height: el.offsetHeight, windowWidth: el.offsetWidth,
+          });
 
-      // ── 서브이슈별로 각각 독립 PDF 1개 생성 → 개별 파일로 저장 ──
-      for (const si of subIssues) {
-        const pdf = new jsPDF("l", "mm", "a4"); // SR 템플릿 A4 가로(landscape)
-        const pageW = pdf.internal.pageSize.getWidth();   // 297
-        const pageH = pdf.internal.pageSize.getHeight();  // 210
+        // ── 서브이슈별로 각각 독립 PDF 1개 생성 → 개별 파일로 저장 ──
+        for (const si of subIssues) {
+          const pdf = new jsPDF("l", "mm", "a4"); // SR 템플릿 A4 가로(landscape)
+          const pageW = pdf.internal.pageSize.getWidth();   // 297
+          const pageH = pdf.internal.pageSize.getHeight();  // 210
 
-        const pdfPageOf = {}; // page.key → 이 PDF 내 페이지 번호
-        const tocLinks = [];
-        const subnavLinks = [];
+          const pdfPageOf = {}; // page.key → 이 PDF 내 페이지 번호
+          const tocLinks = [];
+          const subnavLinks = [];
 
-        // PDF 1쪽: 이 서브이슈 목차
-        const tocEl = root.querySelector(`#pdf-toc-${si.id}`);
-        if (tocEl) {
-          const tocCanvas = await renderEl(tocEl);
-          const tocImgH = Math.min((tocCanvas.height * pageW) / tocCanvas.width, pageH);
-          pdf.addImage(tocCanvas.toDataURL("image/png"), "PNG", 0, 0, pageW, tocImgH);
-          const tocRect = tocEl.getBoundingClientRect();
-          const tocMmPerPx = pageW / tocRect.width;
-          si.pages.forEach((p) => {
-            const item = root.querySelector(`#pdf-tocitem-${si.id}-${p.key}`);
-            if (!item) return;
-            const r = item.getBoundingClientRect();
-            tocLinks.push({
-              key: p.key,
-              x: (r.left - tocRect.left) * tocMmPerPx,
-              y: (r.top - tocRect.top) * tocMmPerPx,
-              w: r.width * tocMmPerPx,
-              h: r.height * tocMmPerPx,
+          // PDF 1쪽: 이 서브이슈 목차
+          const tocEl = root.querySelector(`#pdf-toc-${si.id}`);
+          if (tocEl) {
+            const tocCanvas = await renderEl(tocEl);
+            const tocImgH = Math.min((tocCanvas.height * pageW) / tocCanvas.width, pageH);
+            pdf.addImage(tocCanvas.toDataURL("image/png"), "PNG", 0, 0, pageW, tocImgH);
+            const tocRect = tocEl.getBoundingClientRect();
+            const tocMmPerPx = pageW / tocRect.width;
+            si.pages.forEach((p) => {
+              const item = root.querySelector(`#pdf-tocitem-${si.id}-${p.key}`);
+              if (!item) return;
+              const r = item.getBoundingClientRect();
+              tocLinks.push({
+                key: p.key,
+                x: (r.left - tocRect.left) * tocMmPerPx,
+                y: (r.top - tocRect.top) * tocMmPerPx,
+                w: r.width * tocMmPerPx,
+                h: r.height * tocMmPerPx,
+              });
             });
-          });
-        }
+          }
 
-        // PDF 2~쪽: 이 서브이슈의 각 페이지
-        for (const page of si.pages) {
-          const sec = root.querySelector(`#pdf-sec-${si.id}-${page.key} .sr-page`);
-          if (!sec) continue;
-          const canvas = await renderEl(sec);
-          pdf.addPage();
-          const thisPdfPage = pdf.getNumberOfPages();
-          pdfPageOf[page.key] = thisPdfPage;
-          const imgH = (canvas.height * pageW) / canvas.width;
-          pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, pageW, imgH);
+          // PDF 2~쪽: 이 서브이슈의 각 페이지
+          for (const page of si.pages) {
+            const sec = root.querySelector(`#pdf-sec-${si.id}-${page.key} .sr-page`);
+            if (!sec) continue;
+            const canvas = await renderEl(sec);
+            pdf.addPage();
+            const thisPdfPage = pdf.getNumberOfPages();
+            pdfPageOf[page.key] = thisPdfPage;
+            const imgH = (canvas.height * pageW) / canvas.width;
+            pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, pageW, imgH);
 
-          // subnav 탭 → 같은 서브이슈 내 해당 페이지로 이동 링크
-          const secRect = sec.getBoundingClientRect();
-          const mmPerPx = pageW / secRect.width;
-          sec.querySelectorAll(".sr-subnav span:not(.dot)").forEach((tab, ti) => {
-            if (ti >= si.pages.length) return;
-            const r = tab.getBoundingClientRect();
-            subnavLinks.push({
-              onPdfPage: thisPdfPage,
-              x: (r.left - secRect.left) * mmPerPx,
-              y: (r.top - secRect.top) * mmPerPx,
-              w: r.width * mmPerPx,
-              h: r.height * mmPerPx,
-              targetKey: si.pages[ti].key,
+            // subnav 탭 → 같은 서브이슈 내 해당 페이지로 이동 링크
+            const secRect = sec.getBoundingClientRect();
+            const mmPerPx = pageW / secRect.width;
+            sec.querySelectorAll(".sr-subnav span:not(.dot)").forEach((tab, ti) => {
+              if (ti >= si.pages.length) return;
+              const r = tab.getBoundingClientRect();
+              subnavLinks.push({
+                onPdfPage: thisPdfPage,
+                x: (r.left - secRect.left) * mmPerPx,
+                y: (r.top - secRect.top) * mmPerPx,
+                w: r.width * mmPerPx,
+                h: r.height * mmPerPx,
+                targetKey: si.pages[ti].key,
+              });
             });
-          });
-        }
+          }
 
-        // 링크 주입: 목차(1쪽) → 페이지, 각 페이지 subnav 탭 → 페이지
-        if (tocLinks.length) {
-          pdf.setPage(1);
-          tocLinks.forEach((l) => {
-            const t = pdfPageOf[l.key];
-            if (t) pdf.link(l.x, l.y, l.w, Math.max(l.h, 4), { pageNumber: t });
+          // 링크 주입: 목차(1쪽) → 페이지, 각 페이지 subnav 탭 → 페이지
+          if (tocLinks.length) {
+            pdf.setPage(1);
+            tocLinks.forEach((l) => {
+              const t = pdfPageOf[l.key];
+              if (t) pdf.link(l.x, l.y, l.w, Math.max(l.h, 4), { pageNumber: t });
+            });
+          }
+          subnavLinks.forEach((l) => {
+            const t = pdfPageOf[l.targetKey];
+            if (!t) return;
+            pdf.setPage(l.onPdfPage);
+            pdf.link(l.x, l.y, l.w, Math.max(l.h, 4), { pageNumber: t });
           });
-        }
-        subnavLinks.forEach((l) => {
-          const t = pdfPageOf[l.targetKey];
-          if (!t) return;
-          pdf.setPage(l.onPdfPage);
-          pdf.link(l.x, l.y, l.w, Math.max(l.h, 4), { pageNumber: t });
-        });
 
-        // 서브이슈별 개별 파일로 저장 (climate-target.pdf 등)
-        pdf.save(`${si.exportName || si.id}.pdf`);
-        // 브라우저가 다중 다운로드를 막지 않도록 약간의 간격
-        await new Promise((r) => setTimeout(r, 300));
+          // 서브이슈별 개별 파일로 저장 (climate-target.pdf 등)
+          pdf.save(`${si.exportName || si.id}.pdf`);
+          // 브라우저가 다중 다운로드를 막지 않도록 약간의 간격
+          await new Promise((r) => setTimeout(r, 300));
+        }
+      } finally {
+        setPdfMode(false);
       }
-    } finally {
-      setPdfMode(false);
+      return;
     }
-    return;
-  }
 
-  if (type === "Word") {
-    const children = [
-      new Paragraph({ text: "기후목표·전환계획", heading: HeadingLevel.HEADING_1 }),
-      new Paragraph({ text: "전환 리스크에 선제적으로 대응하는 넷제로 로드맵", heading: HeadingLevel.HEADING_2 }),
-      new Paragraph({ text: "" }),
-    ];
+    if (type === "PPT") {
+      // PDF와 동일하게 화면 밖 풀사이즈 렌더 → 각 페이지를 한 슬라이드 이미지로
+      setPdfMode(true);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise((r) => setTimeout(r, 120));
+      try {
+        const root = document.getElementById("pdf-render-root");
+        if (!root) return;
 
-    Object.keys(paragraphData).forEach((pid) => {
-      const d = paragraphData[pid];
-      children.push(
-        new Paragraph({
-          children: [new TextRun({ text: d.tag, bold: true, color: "03A94D" })],
-          spacing: { before: 200 },
-        }),
-        new Paragraph({
-          children: [new TextRun({ text: texts[pid], size: 22 })],
-          spacing: { after: 160 },
-        })
+        const renderEl = (el) =>
+          html2canvas(el, {
+            scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff",
+            width: el.offsetWidth, height: el.offsetHeight, windowWidth: el.offsetWidth,
+          });
+
+        const SLIDE_W = 11.69, SLIDE_H = 8.27; // A4 가로(inch) — 보고서 페이지 비율과 동일
+
+        for (const si of subIssues) {
+          const pptx = new pptxgen();
+          pptx.defineLayout({ name: "A4L", width: SLIDE_W, height: SLIDE_H });
+          pptx.layout = "A4L";
+
+          const slideOf = {};      // page.key → 슬라이드 번호(1-based)
+          const createdSlides = {}; // 슬라이드 번호 → 슬라이드 객체
+          let slideNo = 0;
+          const tocAreas = [];     // 목차 클릭영역 {key,x,y,w,h}
+          const subnavAreas = [];  // subnav 클릭영역 {onSlide,targetKey,x,y,w,h}
+
+          // 1) 목차 슬라이드
+          const tocEl = root.querySelector(`#pdf-toc-${si.id}`);
+          if (tocEl) {
+            const tocCanvas = await renderEl(tocEl);
+            const tocSlide = pptx.addSlide(); slideNo++; createdSlides[slideNo] = tocSlide;
+            tocSlide.addImage({ data: tocCanvas.toDataURL("image/png"), x: 0, y: 0, w: SLIDE_W, h: SLIDE_H });
+            const tocRect = tocEl.getBoundingClientRect();
+            const inPerPx = SLIDE_W / tocRect.width;
+            si.pages.forEach((p) => {
+              const item = root.querySelector(`#pdf-tocitem-${si.id}-${p.key}`);
+              if (!item) return;
+              const r = item.getBoundingClientRect();
+              tocAreas.push({
+                key: p.key,
+                x: (r.left - tocRect.left) * inPerPx,
+                y: (r.top - tocRect.top) * inPerPx,
+                w: r.width * inPerPx,
+                h: r.height * inPerPx,
+              });
+            });
+          }
+
+          // 2) 각 페이지 슬라이드
+          for (const page of si.pages) {
+            const sec = root.querySelector(`#pdf-sec-${si.id}-${page.key} .sr-page`);
+            if (!sec) continue;
+            const canvas = await renderEl(sec);
+            const slide = pptx.addSlide(); slideNo++; createdSlides[slideNo] = slide;
+            slideOf[page.key] = slideNo;
+            slide.addImage({ data: canvas.toDataURL("image/png"), x: 0, y: 0, w: SLIDE_W, h: SLIDE_H });
+
+            const secRect = sec.getBoundingClientRect();
+            const inPerPx = SLIDE_W / secRect.width;
+            sec.querySelectorAll(".sr-subnav span:not(.dot)").forEach((tab, ti) => {
+              if (ti >= si.pages.length) return;
+              const r = tab.getBoundingClientRect();
+              subnavAreas.push({
+                onSlide: slideNo,
+                targetKey: si.pages[ti].key,
+                x: (r.left - secRect.left) * inPerPx,
+                y: (r.top - secRect.top) * inPerPx,
+                w: r.width * inPerPx,
+                h: r.height * inPerPx,
+              });
+            });
+          }
+
+          // 3) 클릭영역(투명 사각형) → 슬라이드 이동 하이퍼링크
+          const addLink = (slide, a, t) =>
+            slide.addShape(pptx.ShapeType.rect, {
+              x: a.x, y: a.y, w: a.w, h: Math.max(a.h, 0.12),
+              fill: { color: "FFFFFF", transparency: 100 },
+              line: { color: "FFFFFF", transparency: 100, width: 0 },
+              hyperlink: { slide: t },
+            });
+          tocAreas.forEach((a) => {
+            const t = slideOf[a.key];
+            if (t && createdSlides[1]) addLink(createdSlides[1], a, t);
+          });
+          subnavAreas.forEach((a) => {
+            const t = slideOf[a.targetKey];
+            const s = createdSlides[a.onSlide];
+            if (t && s) addLink(s, a, t);
+          });
+
+          await pptx.writeFile({ fileName: `${si.exportName || si.id}.pptx` });
+          await new Promise((r) => setTimeout(r, 300)); // 다중 다운로드 간격
+        }
+      } finally {
+        setPdfMode(false);
+      }
+      return;
+    }
+
+    if (type === "PPT_NATIVE") {
+      // 편집형: DOM을 읽어 텍스트=텍스트박스, 표=네이티브 표, 카드=도형+텍스트.
+      // 로드맵/게이지처럼 그래픽 블록만 이미지로 삽입.
+      setPdfMode(true);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise((r) => setTimeout(r, 120));
+      try {
+        const root = document.getElementById("pdf-render-root");
+        if (!root) return;
+        const SLIDE_W = 11.69, SLIDE_H = 8.27;
+        const FONT = "Malgun Gothic"; // PPT 기본 한글 폰트(없으면 PowerPoint가 대체)
+
+        const renderEl = (el) =>
+          html2canvas(el, {
+            scale: 2, useCORS: true, allowTaint: true, backgroundColor: null,
+            width: el.offsetWidth, height: el.offsetHeight, windowWidth: el.offsetWidth
+          });
+        const toHex = (rgb) => {
+          const m = (rgb || "").match(/\d+(\.\d+)?/g);
+          if (!m || m.length < 3) return null;
+          const [r, g, b] = m.map(Number);
+          return [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("").toUpperCase();
+        };
+
+        for (const si of subIssues) {
+          const pptx = new pptxgen();
+          pptx.defineLayout({ name: "A4L", width: SLIDE_W, height: SLIDE_H });
+          pptx.layout = "A4L";
+          const slideOf = {}; let slideNo = 0;
+
+          const makeCtx = (sec) => {
+            const pageRect = sec.getBoundingClientRect();
+            const k = SLIDE_W / pageRect.width;
+            const pos = (el) => { const r = el.getBoundingClientRect(); return { x: (r.left - pageRect.left) * k, y: (r.top - pageRect.top) * k, w: r.width * k, h: r.height * k }; };
+            const fpt = (el) => Math.max(6, parseFloat(getComputedStyle(el).fontSize) * k * 72);
+            return { k, pos, fpt };
+          };
+          const addTextEl = (slide, el, ctx, extra = {}) => {
+            const txt = (el.innerText || "").trim();
+            if (!txt) return;
+            const cs = getComputedStyle(el);
+            const p = ctx.pos(el);
+            slide.addText(txt, {
+              x: p.x, y: p.y, w: p.w, h: Math.max(p.h, 0.18),
+              fontSize: ctx.fpt(el), fontFace: FONT,
+              bold: parseInt(cs.fontWeight, 10) >= 600,
+              color: toHex(cs.color) || "16241F",
+              align: cs.textAlign === "right" ? "right" : cs.textAlign === "center" ? "center" : "left",
+              valign: "top", margin: 1, ...extra,
+            });
+          };
+
+          const buildSlide = async (sec) => {
+            const ctx = makeCtx(sec);
+            const slide = pptx.addSlide();
+
+            const topband = sec.querySelector(".sr-topband");
+            if (topband) { const p = ctx.pos(topband); slide.addShape(pptx.ShapeType.rect, { x: p.x, y: p.y, w: p.w, h: Math.max(p.h, 0.04), fill: { color: toHex(getComputedStyle(topband).backgroundColor) || "16241F" }, line: { width: 0 } }); }
+
+            const subnav = sec.querySelector(".sr-subnav");
+            if (subnav) addTextEl(slide, subnav, ctx, { color: "6b8378" });
+
+            ["sr-eyebrow", "sr-title", "sr-title-en"].forEach((cls) => { const el = sec.querySelector("." + cls); if (el) addTextEl(slide, el, ctx); });
+
+            const prose = sec.querySelector(".sr-prose");
+            if (prose) addTextEl(slide, prose, ctx);
+
+            // KPI 카드
+            sec.querySelectorAll(".sr-kpi").forEach((card) => {
+              const cs = getComputedStyle(card); const p = ctx.pos(card);
+              slide.addShape(pptx.ShapeType.roundRect, { x: p.x, y: p.y, w: p.w, h: p.h, rectRadius: 0.05, fill: { color: toHex(cs.backgroundColor) || "F4F8F6" }, line: { color: toHex(cs.borderTopColor) || "D7E2DC", width: 0.5 } });
+              ["kl", "kv", "kd"].forEach((c) => { const el = card.querySelector("." + c); if (el) addTextEl(slide, el, ctx); });
+            });
+
+            // 표 캡션 + 네이티브 표
+            sec.querySelectorAll(".sr-tcap").forEach((cap) => addTextEl(slide, cap, ctx, { bold: true }));
+            sec.querySelectorAll("table.sr-tbl").forEach((tbl) => {
+              const p = ctx.pos(tbl);
+              const rows = [];
+              tbl.querySelectorAll("tr").forEach((tr) => {
+                const cells = [];
+                tr.querySelectorAll("th,td").forEach((td) => {
+                  const cs = getComputedStyle(td);
+                  cells.push({
+                    text: (td.innerText || "").trim(), options: {
+                      bold: td.tagName === "TH" || parseInt(cs.fontWeight, 10) >= 600,
+                      color: toHex(cs.color) || "16241F",
+                      fill: { color: td.tagName === "TH" ? "EAF3EE" : "FFFFFF" },
+                      align: cs.textAlign === "right" ? "right" : cs.textAlign === "center" ? "center" : "left",
+                      fontSize: Math.max(7, ctx.fpt(td)), valign: "middle",
+                    }
+                  });
+                });
+                if (cells.length) rows.push(cells);
+              });
+              const headCells = tbl.querySelectorAll("tr:first-child th, tr:first-child td");
+              const colW = Array.from(headCells).map((c) => c.getBoundingClientRect().width * ctx.k);
+              if (rows.length) slide.addTable(rows, { x: p.x, y: p.y, w: p.w, colW: colW.length ? colW : undefined, border: { type: "solid", pt: 0.5, color: "D7E2DC" }, fontFace: FONT, autoPage: false, valign: "middle" });
+            });
+
+            // 그래픽 블록은 이미지로(로드맵·게이지)
+            for (const sel of [".sr-road", ".sr-gauge"]) {
+              const el = sec.querySelector(sel);
+              if (el) { const p = ctx.pos(el); const cv = await renderEl(el); slide.addImage({ data: cv.toDataURL("image/png"), x: p.x, y: p.y, w: p.w, h: p.h }); }
+            }
+
+            // 노트 카드(편집형)
+            sec.querySelectorAll(".sr-note-card").forEach((card) => {
+              const cs = getComputedStyle(card); const p = ctx.pos(card);
+              slide.addShape(pptx.ShapeType.roundRect, { x: p.x, y: p.y, w: p.w, h: p.h, rectRadius: 0.04, fill: { color: toHex(cs.backgroundColor) || "F4F8F6" }, line: { color: "D7E2DC", width: 0.5 } });
+              ["l", "b", "s"].forEach((c) => { const el = card.querySelector("." + c); if (el) addTextEl(slide, el, ctx); });
+            });
+
+            // 이행수단
+            const measures = sec.querySelector(".sr-measures");
+            if (measures) {
+              const cs = getComputedStyle(measures); const p = ctx.pos(measures);
+              slide.addShape(pptx.ShapeType.rect, { x: p.x, y: p.y, w: p.w, h: p.h, fill: { color: toHex(cs.backgroundColor) || "F4F8F6" }, line: { width: 0 } });
+              ["ml", "mv"].forEach((c) => { const el = measures.querySelector("." + c); if (el) addTextEl(slide, el, ctx); });
+            }
+
+            const foot = sec.querySelector(".sr-foot");
+            if (foot && (foot.innerText || "").trim()) addTextEl(slide, foot, ctx, { color: "8aa399" });
+
+            return slide;
+          };
+
+          // 목차 슬라이드(편집형 텍스트 + 슬라이드 점프 링크)
+          const tocSlide = pptx.addSlide(); slideNo++;
+          tocSlide.addText(si.label || si.id, { x: 0.6, y: 0.5, w: SLIDE_W - 1.2, h: 0.6, fontSize: 24, bold: true, color: "1B5E44", fontFace: FONT });
+          tocSlide.addText("목차", { x: 0.6, y: 1.2, w: 3, h: 0.4, fontSize: 13, color: "6B8378", fontFace: FONT });
+
+          const tocItems = [];
+          for (const page of si.pages) {
+            const sec = root.querySelector(`#pdf-sec-${si.id}-${page.key} .sr-page`);
+            if (!sec) continue;
+            await buildSlide(sec);
+            slideNo++; slideOf[page.key] = slideNo;
+            tocItems.push({ label: page.tabLabel || page.key, slide: slideNo });
+          }
+          tocItems.forEach((it, i) => {
+            tocSlide.addText(`${i + 1}. ${it.label}`, { x: 0.8, y: 1.7 + i * 0.5, w: SLIDE_W - 1.6, h: 0.42, fontSize: 15, color: "16241F", fontFace: FONT, hyperlink: { slide: it.slide } });
+          });
+
+          await pptx.writeFile({ fileName: `${si.exportName || si.id}-편집형.pptx` });
+          await new Promise((r) => setTimeout(r, 300));
+        }
+      } finally {
+        setPdfMode(false);
+      }
+      return;
+    }
+
+    if (type === "Word") {
+      const children = [
+        new Paragraph({ text: "기후목표·전환계획", heading: HeadingLevel.HEADING_1 }),
+        new Paragraph({ text: "전환 리스크에 선제적으로 대응하는 넷제로 로드맵", heading: HeadingLevel.HEADING_2 }),
+        new Paragraph({ text: "" }),
+      ];
+
+      Object.keys(paragraphData).forEach((pid) => {
+        const d = paragraphData[pid];
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: d.tag, bold: true, color: "03A94D" })],
+            spacing: { before: 200 },
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: texts[pid], size: 22 })],
+            spacing: { after: 160 },
+          })
+        );
+      });
+
+      const doc = new Document({ sections: [{ children }] });
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "sustainability_draft.docx";
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    if (type === "Excel") {
+      const rows = [["태그", "단락 ID", "본문 내용"]];
+      Object.keys(paragraphData).forEach((pid) => {
+        rows.push([paragraphData[pid].tag, paragraphData[pid].id, texts[pid]]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      ws["!cols"] = [{ wch: 14 }, { wch: 12 }, { wch: 80 }];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "본문");
+      XLSX.writeFile(wb, "sustainability_draft.xlsx");
+      return;
+    }
+
+    if (type === "JSON") {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(
+        JSON.stringify({ info: paragraphData, contents: texts }, null, 2)
       );
-    });
-
-    const doc = new Document({ sections: [{ children }] });
-    const blob = await Packer.toBlob(doc);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "sustainability_draft.docx";
-    a.click();
-    URL.revokeObjectURL(url);
-    return;
-  }
-
-  if (type === "Excel") {
-    const rows = [["태그", "단락 ID", "본문 내용"]];
-    Object.keys(paragraphData).forEach((pid) => {
-      rows.push([paragraphData[pid].tag, paragraphData[pid].id, texts[pid]]);
-    });
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws["!cols"] = [{ wch: 14 }, { wch: 12 }, { wch: 80 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "본문");
-    XLSX.writeFile(wb, "sustainability_draft.xlsx");
-    return;
-  }
-
-  if (type === "JSON") {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(
-      JSON.stringify({ info: paragraphData, contents: texts }, null, 2)
-    );
-    const a = document.createElement("a");
-    a.setAttribute("href", dataStr);
-    a.setAttribute("download", "sustainability_draft.json");
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+      const a = document.createElement("a");
+      a.setAttribute("href", dataStr);
+      a.setAttribute("download", "sustainability_draft.json");
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    };
   };
-};
 
 
   // 문단 선택 핸들러
@@ -754,10 +1083,30 @@ const Draft = () => {
   const data = currentPid ? paragraphData[currentPid] : null;
   const metric = data ? data.metrics[0] : null;
 
+  // ── 근거 추적 패널: 선택된 SR 지표 정보(실데이터 기반, 더미 없음) ──
+  const srMeta = trackId ? (metricMeta[trackId] || null) : null;
+  const srMetric = trackId
+    ? {
+      metricId: trackId,
+      disclosure: trackId.includes("__") ? trackId.split("__")[0] : "",
+      atomicId: trackId.includes("__") ? trackId.split("__").slice(1).join("__") : trackId,
+      name: (SR_FIELD_MAP[trackId] && SR_FIELD_MAP[trackId].label) || trackId,
+      subIssueLabel: (SR_FIELD_MAP[trackId] && SR_FIELD_MAP[trackId].subIssueLabel) || "",
+      dataType: /__QL/.test(trackId) ? "정성 (Qualitative)" : "정량 (Quantitative)",
+      value: (trackCtx && trackCtx.value) || null,
+      unit: (srMeta && srMeta.unit) || null,
+      latest: (srMeta && srMeta.latest) || null,
+      trend: (srMeta && srMeta.trend) || null,
+      breakdown: (srMeta && srMeta.breakdown) || null,
+      formula: (srMeta && srMeta.formula) || null,
+      aiDesc: (srMeta && srMeta.aiDesc) || null,
+    }
+    : null;
+
   return (
     <div className="draft-container">
       <header className="draft-header">
-     
+
         <div className="draft-stepper-row">
           {steps.map((step, index) => (
             <div key={step.id} className="stepper-step-wrap">
@@ -782,12 +1131,8 @@ const Draft = () => {
             <div className="draft-doc" id="draftDoc">
               <div className="doc-toolbar">
                 <div className="doc-breadcrumb">
-                  <span>🏠</span><span className="bc-sep">›</span>
-                  <span className="bc-item">환경경영</span><span className="bc-sep">›</span>
-                  <span className="bc-item active">기후변화와 대응</span>
+                  
                 </div>
-                <div className="doc-page-info">페이지 1 / 5</div>
-                
                 <div className="doc-actions">
                   {/* 1. 독립된 본문 수정 버튼 (Toggle 형태) */}
                   <button
@@ -806,9 +1151,7 @@ const Draft = () => {
                     {exportMenuOpen && (
                       <ul className="save-dropdown-menu">
                         <li className="dropdown-item" onClick={() => handleExport("PDF")}>📄 PDF 다운로드</li>
-                        <li className="dropdown-item" onClick={() => handleExport("Word")}>📝 Word (Docx) 저장</li>
-                        <li className="dropdown-item" onClick={() => handleExport("Excel")}>📊 Excel 데이터 추출</li>
-                        <li className="dropdown-item" onClick={() => handleExport("JSON")}>⚙️ JSON 데이터 추출</li>
+                        <li className="dropdown-item" onClick={() => handleExport("PPT_NATIVE")}>📊 PPT 다운로드</li>
                       </ul>
                     )}
                   </div>
@@ -912,7 +1255,7 @@ const Draft = () => {
                   <input
                     autoFocus
                     className="sr-inline-input"
-                    style={{ position: "fixed", top: inlineEdit.top, left: inlineEdit.left, width: inlineEdit.width, zIndex: 1000 }}
+                    style={{ top: inlineEdit.top, left: inlineEdit.left, width: inlineEdit.width }}
                     defaultValue={inlineEdit.value}
                     placeholder={inlineEdit.id}
                     onBlur={(e) => commitInlineEdit(e.target.value)}
@@ -925,32 +1268,32 @@ const Draft = () => {
               </div>
             </div>
 
-            {/* 우측 데이터 추적 패널 */}
-            <div className={`draft-panel ${currentPid && !isEditing ? "open" : ""}`} id="draftPanel">
-              {data && metric ? (
+            {/* 우측 데이터(근거) 추적 패널 — 보고서 본문/값을 클릭하면 해당 지표 근거 표시 */}
+            <div className={`draft-panel ${trackId && !isEditing ? "open" : ""}`} id="draftPanel">
+              {srMetric ? (
                 <div className="panel-inner">
                   <div className="panel-hd">
                     <span className="panel-hd-title">데이터 추적</span>
-                    <button className="panel-close-btn" onClick={() => setCurrentPid(null)}>✕</button>
+                    <button className="panel-close-btn" onClick={() => setTrackId(null)}>✕</button>
                   </div>
 
-                  {/* <div className="panel-section">
-                    <div className="panel-section-title">선택 문단</div>
-                    <span className={`para-chip ${data.tagType}`}>{data.tag}</span>
-                    <p className="para-preview-text">{texts[currentPid]}</p>
-                    <span className="para-id-link">문단 ID: {data.id}</span>
-                  </div> */}
+                  <div className="panel-section">
+                    <div className="panel-section-title">선택 위치</div>
+                    <span className="para-chip">{trackCtx?.area}</span>
+                    <p className="para-preview-text">{trackCtx?.clicked || "—"}</p>
+                    <span className="para-id-link">{trackCtx?.pageLabel}</span>
+                  </div>
 
                   <div className="panel-section">
-                    <div className="panel-section-title">참조 지표 ({data.metricCount})</div>
+                    <div className="panel-section-title">참조 지표</div>
                     <div className="metric-accordion">
                       <div
                         className={`metric-acc-header ${metricOpen ? "open" : ""}`}
                         onClick={() => setMetricOpen((v) => !v)}
                       >
                         <div className="metric-acc-header-left">
-                          <span className="metric-acc-name">{metric.name}</span>
-                          <span className={`metric-badge ${metric.badgeType}`}>{metric.badge}</span>
+                          <span className="metric-acc-name">{srMetric.name}</span>
+                          <span className="metric-badge">{/__QL/.test(srMetric.metricId) ? "정성" : "정량"}</span>
                         </div>
                         <span className="metric-acc-chevron">›</span>
                       </div>
@@ -959,55 +1302,57 @@ const Draft = () => {
                         <div className="metric-acc-body">
                           <div className="metric-row">
                             <span className="metric-row-key">metric_id</span>
-                            <span className="metric-row-val">{metric.metricId}</span>
+                            <span className="metric-row-val">{srMetric.metricId}</span>
+                          </div>
+                          <div className="metric-row">
+                            <span className="metric-row-key">공시 코드</span>
+                            <span className="metric-row-val">{srMetric.disclosure || "—"}</span>
                           </div>
                           <div className="metric-row">
                             <span className="metric-row-key">atomic_metric_id</span>
-                            <span className="metric-row-val">{metric.atomicId}</span>
+                            <span className="metric-row-val">{srMetric.atomicId}</span>
                           </div>
                           <div className="metric-row">
                             <span className="metric-row-key">지표명</span>
-                            <span className="metric-row-val">{metric.name}</span>
-                          </div>
-                          <div className="metric-row">
-                            <span className="metric-row-key">단위</span>
-                            <span className="metric-row-val">{metric.unit}</span>
+                            <span className="metric-row-val">{srMetric.name}</span>
                           </div>
                           <div className="metric-row">
                             <span className="metric-row-key">데이터 유형</span>
-                            <span className="metric-row-val">{metric.dataType}</span>
+                            <span className="metric-row-val">{srMetric.dataType}</span>
                           </div>
-                          <hr className="metric-divider" />
-                          <div className="metric-row">
-                            <span className="metric-row-key">설명</span>
-                            <span className="metric-row-val metric-row-val--muted">{metric.desc}</span>
-                          </div>
-                          <div className="metric-latest-box">
-                            <span className="metric-latest-label">최신 데이터 (2024)</span>
-                            <span className="metric-latest-val">{metric.latest}</span>
-                          </div>
-
-                          <div className="trend-section">
-                            <div className="trend-section-title">추이</div>
-                            <div className="trend-chart-wrap">
-                              <TrendChart trend={metric.trend} />
+                          {srMetric.unit && (
+                            <div className="metric-row">
+                              <span className="metric-row-key">단위</span>
+                              <span className="metric-row-val">{srMetric.unit}</span>
                             </div>
+                          )}
+                          <hr className="metric-divider" />
+                          <div className="metric-latest-box">
+                            <span className="metric-latest-label">현재 입력 값</span>
+                            <span className="metric-latest-val">{srMetric.value ?? "미입력"}</span>
                           </div>
 
-                          {metric.breakdown && (
-                            <div className="panel-subsection">
-                              <div className="trend-section-title">
-                                데이터 구성 ({metric.trend[metric.trend.length - 1].y})
+                          {srMetric.trend && srMetric.trend.length > 0 && (
+                            <div className="trend-section">
+                              <div className="trend-section-title">추이</div>
+                              <div className="trend-chart-wrap">
+                                <TrendChart trend={srMetric.trend} />
                               </div>
+                            </div>
+                          )}
+
+                          {srMetric.breakdown && srMetric.breakdown.length > 0 && (
+                            <div className="panel-subsection">
+                              <div className="trend-section-title">데이터 구성</div>
                               <table className="breakdown-table">
                                 <thead>
                                   <tr>
                                     <th>구분</th>
-                                    <th className="breakdown-val">값 ({metric.unit})</th>
+                                    <th className="breakdown-val">값{srMetric.unit ? ` (${srMetric.unit})` : ""}</th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {metric.breakdown.map((b, i) => (
+                                  {srMetric.breakdown.map((b, i) => (
                                     <tr key={i}>
                                       <td>{b.l}</td>
                                       <td className="breakdown-val">{b.v}</td>
@@ -1018,14 +1363,22 @@ const Draft = () => {
                             </div>
                           )}
 
-                          <div className="panel-subsection">
-                            <div className="trend-section-title">계산식/산출 방식</div>
-                            <div className="formula-box">
-                              {metric.formula.split("\n").map((line, i, arr) => (
-                                <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
-                              ))}
+                          {srMetric.formula && (
+                            <div className="panel-subsection">
+                              <div className="trend-section-title">계산식/산출 방식</div>
+                              <div className="formula-box">
+                                {srMetric.formula.split("\n").map((line, i, arr) => (
+                                  <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+                                ))}
+                              </div>
                             </div>
-                          </div>
+                          )}
+
+                          {!srMetric.trend && !srMetric.breakdown && !srMetric.formula && (
+                            <div className="ai-desc-box muted">
+                              이 지표의 상세(추이·구성·산식)는 데이터 소스 연동 시 표시됩니다.
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1033,20 +1386,16 @@ const Draft = () => {
 
                   <div className="panel-section">
                     <div className="panel-section-title">AI 근거 생성</div>
-                    <div className="ai-desc-box">{data.aiDesc}</div>
-                  </div>
-
-                  <div className="panel-section">
-                    <div className="panel-section-title">관련 문단</div>
-                    <div className="related-para-link">
-                      <span className="related-para-label">{data.related.id} {data.related.label}</span>
-                      <button className="related-para-btn">이동</button>
+                    <div className="ai-desc-box">
+                      {srMetric.aiDesc
+                        ? srMetric.aiDesc
+                        : `‘${srMetric.name}’ 지표가 본 문장(${trackCtx?.area})의 근거로 사용되었습니다. 상세 근거 문구는 데이터 연동 시 자동 생성됩니다.`}
                     </div>
                   </div>
                 </div>
               ) : (
                 <div className="panel-empty-text">
-                  문단을 선택하면 데이터 추적 정보가 표시됩니다.
+                  보고서 본문이나 KPI·표·차트의 값을 클릭하면 해당 지표의 근거가 표시됩니다.
                 </div>
               )}
             </div>
@@ -1064,9 +1413,13 @@ const Draft = () => {
               <div id={`pdf-toc-${si.id}`} className="pdf-toc-wrap">
                 <div className="pdf-toc-sublabel">{si.subLabel}</div>
                 <div className="pdf-toc-title">{si.label} · 목차</div>
-                <hr className="pdf-toc-rule" />
+                <div className="pdf-toc-rule" />
                 {si.pages.map((p, i) => (
-                  <div key={p.key} id={`pdf-tocitem-${si.id}-${p.key}`} className="pdf-toc-item">
+                  <div
+                    key={p.key}
+                    id={`pdf-tocitem-${si.id}-${p.key}`}
+                    className="pdf-toc-item"
+                  >
                     <span className="pdf-toc-item-num">{String(i + 1).padStart(2, "0")}</span>
                     <span className="pdf-toc-item-tag">{p.tocTag}</span>
                     <span className="pdf-toc-item-label">{p.tabLabel}</span>
@@ -1092,9 +1445,7 @@ const Draft = () => {
         </div>
       )}
     </div>
-);
+  );
 };
-
-
 
 export default Draft;

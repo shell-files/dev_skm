@@ -35,13 +35,13 @@ from src.services.onboardings import approval_service as approvalService
 from src.services.calculations.service import invalidateAffectedEntityFactsTx
 
 
-CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
-CYCLE_TYPE_POST_DMA_DISCLOSURE = "POST_DMA_DISCLOSURE"
-CYCLE_TYPE_ROLLUP_RESPONSE = "ROLLUP_RESPONSE"
-PRE_DMA_G0_CYCLE_NOT_READY = "PRE_DMA_G0_CYCLE_NOT_READY: 보고연도 프로젝트를 먼저 시작해 주세요."
-PRE_DMA_G0_SCOPE_NOT_READY = "PRE_DMA_G0_SCOPE_NOT_READY: 온보딩 지표 범위가 초기화되지 않았습니다. 기존 프로젝트를 재개해 주세요."
-POST_DMA_DISCLOSURE_CYCLE_NOT_READY = "POST_DMA_DISCLOSURE_CYCLE_NOT_READY: POST_DMA_DISCLOSURE cycle을 먼저 초기화해 주세요."
-POST_DMA_DISCLOSURE_SCOPE_NOT_READY = "POST_DMA_DISCLOSURE_SCOPE_NOT_READY: POST_DMA_DISCLOSURE 지표 범위가 초기화되지 않았습니다."
+CYCLE_TYPE_PRE_DMA_G0 = "경영일반 지표"
+CYCLE_TYPE_POST_DMA_DISCLOSURE = "중대성 이슈 지표"
+CYCLE_TYPE_ROLLUP_RESPONSE = "연결기준 데이터"
+PRE_DMA_G0_CYCLE_NOT_READY = "보고연도 프로젝트를 먼저 시작해 주세요."
+PRE_DMA_G0_SCOPE_NOT_READY = "온보딩 지표 범위가 초기화되지 않았습니다. 기존 프로젝트를 재개해 주세요."
+POST_DMA_DISCLOSURE_CYCLE_NOT_READY = "생성된 프로젝트를 먼저 초기화해 주세요."
+POST_DMA_DISCLOSURE_SCOPE_NOT_READY = "공시범위가 초기화되지 않았습니다."
 STRUCTURED_LOOKUP_IDS = {"G0-05__QL0002", "G0-06__QL0001"}
 EDITABLE_INPUT_MODES = {"MANUAL_NUMBER", "MANUAL_TEXTAREA", "YEAR_RANGE", "STRUCTURED_LOOKUP"}
 SUPPORTED_CYCLE_TYPE = "PRE_DMA_G0"
@@ -55,7 +55,7 @@ CONSULTANT_ROLES = {"CONSULTANT"}
 CONSULTANT_ROLE_NAMES = {"컨설턴트"}
 REVIEWER_ROLES = {"CONSULTANT", "ADMIN", "ESG"}
 REVIEWER_ROLE_NAMES = {"컨설턴트", "관리자", "ESG담당자", "ESG 담당자"}
-PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE = "PRE_DMA_G0_CYCLE_NOT_READY: 기존 PRE_DMA_G0 workflow를 먼저 시작해 주세요."
+PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE = "기존 프로젝트를 먼저 시작해 주세요."
 APPROVER_ROLES = {"ADMIN", "ESG"}
 APPROVER_ROLE_NAMES = {"관리자", "ESG담당자", "ESG 담당자"}
 
@@ -318,7 +318,7 @@ def cycleNotReadyMessage(cycleType: str) -> str:
     if normalizedCycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
         return POST_DMA_DISCLOSURE_CYCLE_NOT_READY
     if normalizedCycleType == CYCLE_TYPE_ROLLUP_RESPONSE:
-        return "ROLLUP_RESPONSE_CYCLE_NOT_READY: 받은 요청함 cycle이 초기화되지 않았습니다."
+        return "받은 요청함 프로젝트가 초기화되지 않았습니다."
     return PRE_DMA_G0_CYCLE_NOT_READY
 
 
@@ -327,7 +327,7 @@ def scopeNotReadyMessage(cycleType: str) -> str:
     if normalizedCycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
         return POST_DMA_DISCLOSURE_SCOPE_NOT_READY
     if normalizedCycleType == CYCLE_TYPE_ROLLUP_RESPONSE:
-        return "ROLLUP_RESPONSE_SCOPE_NOT_READY: 받은 요청함 지표 범위가 초기화되지 않았습니다."
+        return "받은 요청함 지표 범위가 초기화되지 않았습니다."
     return PRE_DMA_G0_SCOPE_NOT_READY
 
 
@@ -347,7 +347,7 @@ def resolveScopeMetadata(scope: dict, cycle: dict) -> dict:
     subIssueName = scope.get("sub_issue_name")
     if not issueDomain or subIssueId is None or not subIssueCode or not subIssueName:
         raise ValueError(
-            "POST_DMA_SUB_ISSUE_METADATA_NOT_READY: "
+            "공시범위 메타데이터가 준비되지 않았습니다. "
             f"cycleId={cycle.get('id')}, "
             f"metricId={scope.get('metric_id')}, "
             f"subIssueCode={scope.get('source_sub_issue_code') or subIssueCode}"

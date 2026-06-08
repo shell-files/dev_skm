@@ -100,7 +100,7 @@ const RollupSummaryPanel = ({
     };
   }, [fetchRollupState]);
 
-  if (!batchId && !STEP12_UI_FIXTURE_ENABLED && workflow?.nextAction !== "REQUEST_ROLLUP") return null;
+  if (!batchId && !STEP12_UI_FIXTURE_ENABLED) return null;
 
   if (batchId && (loadingStatus || loadingSources) && !statusInfo && !STEP12_UI_FIXTURE_ENABLED) {
     return (
@@ -188,7 +188,7 @@ const RollupSummaryPanel = ({
     btnText = "자회사 데이터 요청하기";
     btnClass = "primary";
     btnDisabled = false;
-    btnAction = onSendSource || onCtaClick;
+    btnAction = onCtaClick;
   } else if (nextAction === "WAIT_ROLLUP") {
     if (isCalculating) {
       btnText = "계산 중...";

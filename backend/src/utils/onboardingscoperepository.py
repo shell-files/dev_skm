@@ -1267,7 +1267,14 @@ def seedRollupMetricScopeTx(cur, companyId: int, reportingYear: int, actorUserId
             (cycleId, companyId, metricId, displayIndex * 10, actorUserId)
         )
 
-def ensureRollupResponseWorkspaceTx(cur, companyId: int, reportingYear: int, batchId: int, actorUserId: Optional[int] = None) -> None:
+def ensureRollupResponseWorkspaceTx(
+    cur,
+    companyId: int,
+    reportingYear: int,
+    batchId: int,
+    actionableInputMetricIds: list[str],
+    actorUserId: Optional[int] = None,
+) -> None:
     cur.execute(
         """
         SELECT *
@@ -1312,19 +1319,8 @@ def ensureRollupResponseWorkspaceTx(cur, companyId: int, reportingYear: int, bat
     else:
         cycleId = cycle["id"]
 
-    cur.execute(
-        """
-        SELECT metric_id
-        FROM ESG_ROLLUP_BATCH_ATOMIC_SCOPE
-        WHERE esg_rollup_batch_id = ? AND delete_yn = 0
-        GROUP BY metric_id
-        """,
-        (batchId,)
-    )
-    metrics = cur.fetchall() or []
-    
-    for displayIndex, m in enumerate(metrics, start=1):
-        metricId = m["metric_id"]
+    for displayIndex, metricId in enumerate(actionableInputMetricIds, start=1):
+        approvalPolicy = resolveDefaultApprovalPolicyTx(cur, metricId)
         cur.execute(
             """
             INSERT INTO ESG_ONBOARDING_CYCLE_METRIC_SCOPE (
@@ -1341,7 +1337,7 @@ def ensureRollupResponseWorkspaceTx(cur, companyId: int, reportingYear: int, bat
                 active_yn,
                 created_by_user_id,
                 delete_yn
-            ) VALUES (?, ?, ?, ?, 1, 1, 1, 'INPUT_APPROVAL_ONLY', 0, ?, 1, ?, 0)
+            ) VALUES (?, ?, ?, ?, 1, 1, 1, ?, 0, ?, 1, ?, 0)
             ON DUPLICATE KEY UPDATE
                 scope_source_type = VALUES(scope_source_type),
                 required_yn = VALUES(required_yn),
@@ -1353,5 +1349,5 @@ def ensureRollupResponseWorkspaceTx(cur, companyId: int, reportingYear: int, bat
                 active_yn = VALUES(active_yn),
                 updated_at = CURRENT_TIMESTAMP
             """,
-            (cycleId, companyId, metricId, SCOPE_SOURCE_TYPE_ROLLUP_RESPONSE, displayIndex * 10, actorUserId)
+            (cycleId, companyId, metricId, SCOPE_SOURCE_TYPE_ROLLUP_RESPONSE, approvalPolicy, displayIndex * 10, actorUserId)
         )

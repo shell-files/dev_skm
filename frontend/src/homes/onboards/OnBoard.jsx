@@ -49,7 +49,7 @@ const normalizeViewerRole = (role) => String(role || "").trim().toUpperCase();
 
 const isAssignmentManagerRole = (role) => {
   const normalized = normalizeViewerRole(role);
-  return ["ADMIN", "ESG", "관리자", "ESG담당자", "ESG 담당자"].includes(normalized);
+  return ["ADMIN", "ESG", "담당자", "ESG담당자", "ESG 담당자"].includes(normalized);
 };
 
 const isEmployeeRole = (role) => {
@@ -440,7 +440,7 @@ const OnboardingMetricTable = ({
             const approvalStatus = formatApprovalStatus(item.approvalStatus);
 
             const isSelected = selectedMetricIds.includes(item.metricId);
-            const isEsgManager = viewerRole === 'ESG 담당자' || viewerRole === '관리자' || viewerRole === 'ESG' || viewerRole === 'ADMIN';
+            const isEsgManager = viewerRole === 'ESG 담당자' || viewerRole === '담당자' || viewerRole === 'ESG' || viewerRole === 'ADMIN';
             const isAssigned = item.assignmentStatus === 'ASSIGNED' || item.assignmentStatus === 'assigned';
             const isInvitePending = item.inviteStatus === 'PENDING';
             const isSelfAssigned = item.selfAssignedYn === true;
@@ -606,6 +606,29 @@ const OnBoard = () => {
     }
     return flattened;
   }, [rawMetrics, rawAssignments, previewOnboardingScenario]);
+
+  const [selectedSubIssue, setSelectedSubIssue] = useState("");
+
+  const uniqueSubIssues = useMemo(() => {
+    const issues = new Set();
+    g0Items.forEach((item) => {
+      if (item.subIssueName) {
+        issues.add(item.subIssueName);
+      }
+    });
+    return Array.from(issues);
+  }, [g0Items]);
+
+  useEffect(() => {
+    if (uniqueSubIssues.length > 0 && (!selectedSubIssue || !uniqueSubIssues.includes(selectedSubIssue))) {
+      setSelectedSubIssue(uniqueSubIssues[0]);
+    }
+  }, [uniqueSubIssues, selectedSubIssue]);
+
+  const filteredG0Items = useMemo(() => {
+    if (!selectedSubIssue) return g0Items;
+    return g0Items.filter((item) => item.subIssueName === selectedSubIssue);
+  }, [g0Items, selectedSubIssue]);
 
   const g0ProfileStatus = useMemo(() => getProfileStatusFromItems(g0Items), [g0Items]);
   const hasPendingSubsidiaryRequest = useMemo(
@@ -989,7 +1012,15 @@ const OnBoard = () => {
         <div className="ob1-sidebar-panel">
           <div className="ob1-sidebar-title">SUB-ISSUE</div>
           <ul className="ob1-sidebar-menu">
-            <li className="ob1-sidebar-menu-item active"> 경영일반 </li>
+            {uniqueSubIssues.map((issue) => (
+              <li
+                key={issue}
+                className={`ob1-sidebar-menu-item ${selectedSubIssue === issue ? "active" : ""}`}
+                onClick={() => setSelectedSubIssue(issue)}
+              >
+                {issue}
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -1030,7 +1061,7 @@ const OnBoard = () => {
 
               <OnboardingMetricTable
                 g0Error={displayG0Error}
-                g0Items={g0Items}
+                g0Items={filteredG0Items}
                 loadingG0={STEP12_UI_FIXTURE_ENABLED ? false : loadingG0}
                 selectedMetricIds={selectedMetricIds}
                 onSelectMetric={handleSelectMetric}

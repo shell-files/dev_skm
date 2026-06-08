@@ -35,9 +35,15 @@ from src.services.onboardings import approval_service as approvalService
 from src.services.calculations.service import invalidateAffectedEntityFactsTx
 
 
-CYCLE_TYPE_PRE_DMA_G0 = "경영일반 지표"
-CYCLE_TYPE_POST_DMA_DISCLOSURE = "중대성 이슈 지표"
-CYCLE_TYPE_ROLLUP_RESPONSE = "연결기준 데이터"
+CYCLE_TYPE_PRE_DMA_G0 = repo.CYCLE_TYPE_PRE_DMA_G0
+CYCLE_TYPE_POST_DMA_DISCLOSURE = repo.CYCLE_TYPE_POST_DMA_DISCLOSURE
+CYCLE_TYPE_ROLLUP_RESPONSE = repo.CYCLE_TYPE_ROLLUP_RESPONSE
+
+CYCLE_TYPE_LABELS = {
+    "PRE_DMA_G0": "경영일반 지표",
+    "POST_DMA_DISCLOSURE": "중대성 이슈 지표",
+    "ROLLUP_RESPONSE": "지주사 요청 대응 데이터",
+}
 PRE_DMA_G0_CYCLE_NOT_READY = "보고연도 프로젝트를 먼저 시작해 주세요."
 PRE_DMA_G0_SCOPE_NOT_READY = "온보딩 지표 범위가 초기화되지 않았습니다. 기존 프로젝트를 재개해 주세요."
 POST_DMA_DISCLOSURE_CYCLE_NOT_READY = "생성된 프로젝트를 먼저 초기화해 주세요."
@@ -86,11 +92,12 @@ def listMetrics(
             raise ValueError(f"Unsupported metricId for cycle scope: {metricId}")
     metricIds = [row["metric_id"] for row in scopes]
     masterRows = repo.listAtomicMaster(metricIds)
+    actualCycleType = str(cycle.get("cycle_type") or cycleType).strip().upper()
     valueRows = repo.listValueRows(
         companyId, 
         year, 
         metricIds,
-        includeGroupRollupResultYn=(cycleType != CYCLE_TYPE_ROLLUP_RESPONSE),
+        includeGroupRollupResultYn=(actualCycleType != repo.CYCLE_TYPE_ROLLUP_RESPONSE),
     )
     assignmentByMetric = {row["metric_id"]: buildAssignment(row) for row in assignmentRows}
     atomicRowsByMetric = groupBy(masterRows, "metric_id")
@@ -331,32 +338,68 @@ def scopeNotReadyMessage(cycleType: str) -> str:
     return PRE_DMA_G0_SCOPE_NOT_READY
 
 
-def resolveScopeMetadata(scope: dict, cycle: dict) -> dict:
-    cycleType = str(cycle.get("cycle_type") or "").strip().upper()
-    if cycleType != CYCLE_TYPE_POST_DMA_DISCLOSURE:
-        return {
-            "issueDomain": "general",
-            "subIssueId": None,
-            "subIssueCode": None,
-            "subIssueName": None,
-        }
+def syntheticGeneralMetadata():
+    return {
+        "issueDomain": "general",
+        "subIssueId": None,
+        "subIssueCode": "GENERAL_MANAGEMENT",
+        "subIssueName": "경영일반",
+    }
 
+def syntheticDependencyMetadata():
+    return {
+        "issueDomain": "general",
+        "subIssueId": None,
+        "subIssueCode": "DEPENDENCY_INPUT",
+        "subIssueName": "추가 입력 필요 데이터",
+    }
+
+def requireMappedSubIssueMetadata(scope: dict, cycle: dict):
     issueDomain = normalizeIssueDomain(scope.get("sub_issue_domain"))
-    subIssueId = scope.get("sub_issue_id")
-    subIssueCode = scope.get("sub_issue_code")
+    subIssueId = scope.get("source_selected_sub_issue_id") or scope.get("sub_issue_id")
+    subIssueCode = scope.get("source_sub_issue_code") or scope.get("sub_issue_code")
     subIssueName = scope.get("sub_issue_name")
+    
+    # If sub_issue_name is missing from JOIN but we have subIssueCode
+    if subIssueCode and not subIssueName:
+        subIssueName = subIssueCode
+        
     if not issueDomain or subIssueId is None or not subIssueCode or not subIssueName:
         raise ValueError(
             "공시범위 메타데이터가 준비되지 않았습니다. "
             f"cycleId={cycle.get('id')}, "
             f"metricId={scope.get('metric_id')}, "
-            f"subIssueCode={scope.get('source_sub_issue_code') or subIssueCode}"
+            f"subIssueCode={subIssueCode}"
         )
     return {
         "issueDomain": issueDomain,
         "subIssueId": int(subIssueId),
         "subIssueCode": subIssueCode,
         "subIssueName": subIssueName,
+    }
+
+def resolveScopeMetadata(scope: dict, cycle: dict) -> dict:
+    cycleType = str(cycle.get("cycle_type") or "").strip().upper()
+    
+    if cycleType == CYCLE_TYPE_PRE_DMA_G0:
+        return syntheticGeneralMetadata()
+
+    if cycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
+        return requireMappedSubIssueMetadata(scope, cycle)
+        
+    if cycleType == CYCLE_TYPE_ROLLUP_RESPONSE:
+        if scope.get("source_sub_issue_code"):
+            return requireMappedSubIssueMetadata(scope, cycle)
+        scopeSourceType = str(scope.get("scope_source_type") or "").strip().upper()
+        if scopeSourceType == "PRE_DMA_G0":
+            return syntheticGeneralMetadata()
+        return syntheticDependencyMetadata()
+
+    return {
+        "issueDomain": "general",
+        "subIssueId": None,
+        "subIssueCode": None,
+        "subIssueName": None,
     }
 
 

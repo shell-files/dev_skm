@@ -1277,6 +1277,30 @@ def ensureRollupResponseWorkspaceTx(
 ) -> None:
     cur.execute(
         """
+        SELECT source_cycle_id 
+        FROM ESG_ROLLUP_BATCH 
+        WHERE id = ? AND delete_yn = 0
+        """,
+        (batchId,)
+    )
+    batch = cur.fetchone()
+    sourceCycleId = batch["source_cycle_id"] if batch else None
+
+    parentScopeByMetric = {}
+    if sourceCycleId:
+        cur.execute(
+            """
+            SELECT metric_id, scope_source_type, source_materiality_run_id, source_selected_sub_issue_id, source_sub_issue_code
+            FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE
+            WHERE esg_onboarding_cycle_id = ? AND delete_yn = 0
+            """,
+            (sourceCycleId,)
+        )
+        for row in cur.fetchall():
+            parentScopeByMetric[row["metric_id"]] = row
+
+    cur.execute(
+        """
         SELECT *
         FROM ESG_ONBOARDING_CYCLE
         WHERE company_id = ?
@@ -1318,9 +1342,27 @@ def ensureRollupResponseWorkspaceTx(
         cycleId = cur.lastrowid
     else:
         cycleId = cycle["id"]
+        cur.execute(
+            """
+            UPDATE ESG_ONBOARDING_CYCLE
+            SET parent_rollup_batch_id = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (batchId, cycleId)
+        )
+        cur.execute(
+            """
+            UPDATE ESG_ONBOARDING_CYCLE_METRIC_SCOPE
+            SET active_yn = 0, updated_at = CURRENT_TIMESTAMP
+            WHERE esg_onboarding_cycle_id = ?
+            """,
+            (cycleId,)
+        )
 
     for displayIndex, metricId in enumerate(actionableInputMetricIds, start=1):
         approvalPolicy = resolveDefaultApprovalPolicyTx(cur, metricId)
+        parentScope = parentScopeByMetric.get(metricId) or {}
+        
         cur.execute(
             """
             INSERT INTO ESG_ONBOARDING_CYCLE_METRIC_SCOPE (
@@ -1328,6 +1370,9 @@ def ensureRollupResponseWorkspaceTx(
                 company_id,
                 metric_id,
                 scope_source_type,
+                source_materiality_run_id,
+                source_selected_sub_issue_id,
+                source_sub_issue_code,
                 required_yn,
                 input_required_yn,
                 approval_required_yn,
@@ -1337,9 +1382,12 @@ def ensureRollupResponseWorkspaceTx(
                 active_yn,
                 created_by_user_id,
                 delete_yn
-            ) VALUES (?, ?, ?, ?, 1, 1, 1, ?, 0, ?, 1, ?, 0)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?, 0, ?, 1, ?, 0)
             ON DUPLICATE KEY UPDATE
                 scope_source_type = VALUES(scope_source_type),
+                source_materiality_run_id = VALUES(source_materiality_run_id),
+                source_selected_sub_issue_id = VALUES(source_selected_sub_issue_id),
+                source_sub_issue_code = VALUES(source_sub_issue_code),
                 required_yn = VALUES(required_yn),
                 input_required_yn = VALUES(input_required_yn),
                 approval_required_yn = VALUES(approval_required_yn),
@@ -1348,6 +1396,18 @@ def ensureRollupResponseWorkspaceTx(
                 display_order = VALUES(display_order),
                 active_yn = VALUES(active_yn),
                 updated_at = CURRENT_TIMESTAMP
+
             """,
-            (cycleId, companyId, metricId, SCOPE_SOURCE_TYPE_ROLLUP_RESPONSE, approvalPolicy, displayIndex * 10, actorUserId)
+            (
+                cycleId, 
+                companyId, 
+                metricId, 
+                parentScope.get("scope_source_type") or SCOPE_SOURCE_TYPE_ROLLUP_RESPONSE,
+                parentScope.get("source_materiality_run_id"),
+                parentScope.get("source_selected_sub_issue_id"),
+                parentScope.get("source_sub_issue_code"),
+                approvalPolicy,
+                displayIndex * 10,
+                actorUserId
+            )
         )

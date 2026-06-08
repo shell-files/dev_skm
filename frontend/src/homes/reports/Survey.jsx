@@ -382,7 +382,7 @@ const Survey = () => {
                 <div className="step-icon-circle">
                   {step.icon}
                 </div>
-                  
+
                 <div
                   style={{
                     fontSize: "0.8rem",

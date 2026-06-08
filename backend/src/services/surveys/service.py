@@ -52,6 +52,11 @@ EXTERNAL_SHEETS = [
     "투자자·금융기관",
     "산업·ESG 전문가"
 ]
+ALL_SURVEY_SHEETS = (
+    EMPLOYEE_SHEETS
+    + MANAGEMENT_SHEETS
+    + EXTERNAL_SHEETS
+)
 # =========================
 # Apps Script URL
 # =========================
@@ -251,6 +256,7 @@ def getSheetType(sheet_name):
         return "external"
 
     return "unknown"
+
 async def getSurveyResultProcess(
     sheet_id,
     token
@@ -269,6 +275,7 @@ async def getSurveyResultProcess(
         sheet_names = [
             s["properties"]["title"]
             for s in spreadsheet["sheets"]
+            if s["properties"]["title"] in ALL_SURVEY_SHEETS
         ]
 
         employee_count = 0
@@ -315,7 +322,7 @@ async def getSurveyResultProcess(
 
             elif sheet_type == "external":
                 external_count += response_count
-
+            
             sheet_results.append({
                 "name": sheet_name,
                 "type": sheet_type,
@@ -408,7 +415,7 @@ async def exportCsvProcess(sheet_id, token):
             sheet_names = [
                 s["properties"]["title"]
                 for s in spreadsheet["sheets"]
-                if "응답" in s["properties"]["title"]
+                if s["properties"]["title"] in ALL_SURVEY_SHEETS
             ]
 
             merged_rows = []

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { useDispatch } from "react-redux";
@@ -32,21 +32,21 @@ import stepOnboardingImg from "@assets/reportbasis/steps/step-onboarding.png";
 import stepReportImg from "@assets/reportbasis/steps/step-report.png";
 
 const ENTITY_STEPS = [
-  { img: stepBasisImg, label: "기준 선택", sub: "보고서 발행 기준 결정" },
-  { img: stepG0Img, label: "G0 입력·승인", sub: "G0 지표 입력 및 승인" },
-  { img: stepDmaImg, label: "이중중대성평가", sub: "DMA 평가 수행" },
-  { img: stepOnboardingImg, label: "선정 지표 입력·승인", sub: "확정 지표 입력 및 승인" },
-  { img: stepReportImg, label: "보고서 생성", sub: "최종 보고서 작성 및 발행" },
+  { img: stepBasisImg, label: "발행 기준 선택" },
+  { img: stepG0Img, label: "일반 입력·승인" },
+  { img: stepDmaImg, label: "중대성평가 수행" },
+  { img: stepOnboardingImg, label: "선정 지표 입력·승인" },
+  { img: stepReportImg, label: "AI 공시 보고서 발행" },
 ];
 
 const CONSOLIDATED_STEPS = [
-  { img: stepBasisImg, label: "기준 선택", sub: "보고서 발행 기준 결정" },
-  { img: stepG0Img, label: "본사 G0 입력·승인", sub: "G0 지표 입력 및 승인" },
-  { img: stepSubsidiaryTransferImg, label: "자회사 G0 요청·전송", sub: "자회사 데이터 요청 및 수집" },
-  { img: stepRollupImg, label: "G0 연결 롤업", sub: "데이터 연결 및 결과 확인" },
-  { img: stepDmaImg, label: "이중중대성평가", sub: "DMA 평가 수행" },
-  { img: stepOnboardingImg, label: "선정 지표 수집·롤업", sub: "확정 지표 수집 및 롤업" },
-  { img: stepReportImg, label: "보고서 생성", sub: "최종 보고서 작성 및 발행" },
+  { img: stepBasisImg, label: "발행 기준 선택" },
+  { img: stepG0Img, label: "일반 입력·승인" },
+  { img: stepSubsidiaryTransferImg, label: "자회사 경영일반 전송" },
+  { img: stepRollupImg, label: "경영일반 데이터 취합" },
+  { img: stepDmaImg, label: "중대성평가 수행" },
+  { img: stepOnboardingImg, label: "선정 지표 입력·승인" },
+  { img: stepReportImg, label: "AI 보고서 발행" },
 ];
 
 const ReportBasisSelectModal = ({
@@ -57,17 +57,21 @@ const ReportBasisSelectModal = ({
 }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState("ENTITY");
   const [selectedYear, setSelectedYear] = useState(reportingYear);
   const [workflowStatus, setWorkflowStatus] = useState(null);
   const [currentRunId, setCurrentRunId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const statusCacheRef = useRef({});
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      statusCacheRef.current = {};
+      return;
+    }
     setSelectedYear(reportingYear);
-    setSelected(null);
+    setSelected("ENTITY");
     setWorkflowStatus(null);
     setCurrentRunId(null);
     setError(null);
@@ -75,6 +79,12 @@ const ReportBasisSelectModal = ({
 
   useEffect(() => {
     if (!isOpen || !companyId) return;
+
+    if (statusCacheRef.current[selectedYear]) {
+      setWorkflowStatus(statusCacheRef.current[selectedYear].status);
+      setCurrentRunId(statusCacheRef.current[selectedYear].runId);
+      return;
+    }
 
     let isMounted = true;
     const fetchCurrent = async () => {
@@ -90,11 +100,14 @@ const ReportBasisSelectModal = ({
         if (res?.status === false || res?.success === false || !res?.data) {
           setError(res?.error?.message || "워크플로우 조회에 실패했습니다.");
         } else if (res?.data?.workflowStep === "NO_RUN") {
+          statusCacheRef.current[selectedYear] = { status: "NO_RUN", runId: null };
           setWorkflowStatus("NO_RUN");
           setCurrentRunId(null);
         } else {
+          const runId = res?.data?.runId ?? null;
+          statusCacheRef.current[selectedYear] = { status: "EXISTS", runId };
           setWorkflowStatus("EXISTS");
-          setCurrentRunId(res?.data?.runId ?? null);
+          setCurrentRunId(runId);
         }
       } catch (err) {
         console.error("[ReportBasisSelectModal] probeCurrentWorkflow error:", err);
@@ -113,12 +126,16 @@ const ReportBasisSelectModal = ({
 
   if (!isOpen) return null;
 
-  const steps =
-    selected === "ENTITY"
-      ? ENTITY_STEPS
-      : selected === "CONSOLIDATED"
-        ? CONSOLIDATED_STEPS
-        : [];
+  const steps = CONSOLIDATED_STEPS;
+
+  const isStepActive = (idx) => {
+    if (selected === "ENTITY") {
+      return idx !== 2 && idx !== 3;
+    } else if (selected === "CONSOLIDATED") {
+      return true;
+    }
+    return idx === 0;
+  };
 
   const handleConfirm = async () => {
     if (loading) return;
@@ -195,7 +212,7 @@ const ReportBasisSelectModal = ({
 
   return createPortal(
     <div className="rbm-overlay" role="dialog" aria-modal="true" aria-labelledby="rbm-title">
-      <div className="rbm-layout">
+      <div className="rbm-layout" style={{ maxWidth: workflowStatus === "NO_RUN" ? "1040px" : "640px", animation: "rbmModalFloatUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards" }}>
         <div className="rbm-main">
           <div className="rbm-header">
             <button className="rbm-close" onClick={onClose} aria-label="닫기">×</button>
@@ -210,11 +227,18 @@ const ReportBasisSelectModal = ({
                 id="reportingYearSelect"
                 value={selectedYear}
                 onChange={(e) => {
-                  setSelectedYear(Number(e.target.value));
-                  setSelected(null);
-                  setWorkflowStatus(null);
-                  setCurrentRunId(null);
+                  const newYear = Number(e.target.value);
+                  setSelectedYear(newYear);
+                  setSelected("ENTITY");
                   setError(null);
+                  
+                  if (statusCacheRef.current[newYear]) {
+                    setWorkflowStatus(statusCacheRef.current[newYear].status);
+                    setCurrentRunId(statusCacheRef.current[newYear].runId);
+                  } else {
+                    setWorkflowStatus(null);
+                    setCurrentRunId(null);
+                  }
                 }}
                 style={{ padding: "6px 12px", borderRadius: "4px", border: "1px solid #ccc" }}
               >
@@ -225,25 +249,45 @@ const ReportBasisSelectModal = ({
               </select>
             </div>
 
-            {workflowStatus !== "EXISTS" && (
-              <div className="rbm-banner">
-                <span className="rbm-banner-icon">i</span>
-                발행 기준에 따라 보고 범위, 데이터 수집 방식, 보고 절차가 달라집니다.
-              </div>
-            )}
+            <style>{`
+              @keyframes rbmModalFloatUp {
+                from { opacity: 0; transform: translateY(20px); }
+                to { opacity: 1; transform: translateY(0); }
+              }
+              @keyframes rbmFadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              @keyframes rbmSpin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
           </div>
 
-          {workflowStatus === "EXISTS" ? (
-            <div className="rbm-exists-message" style={{ padding: "40px 20px", textAlign: "center", background: "#f8fafc", borderRadius: "8px", margin: "20px 0" }}>
-              <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "#1e293b" }}>
-                이미 생성된 {selectedYear}년 보고서 프로젝트가 있습니다.
-              </h3>
-              <p style={{ color: "#64748b" }}>
-                아래 [해당 연도로 이동하기] 버튼을 눌러 프로젝트를 계속 진행하세요.
-              </p>
-            </div>
-          ) : (
-            <div className="rbm-cards">
+          <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+            {workflowStatus === null ? (
+              <div key="status-null" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", color: "#64748b", padding: "60px 0", animation: "rbmFadeIn 0.3s ease-out" }}>
+                {/* 
+                <svg width="32" height="32" viewBox="0 0 24 24" style={{ animation: "rbmSpin 1s linear infinite", marginBottom: "16px", color: "#03A94D" }}>
+                  <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
+                </svg>
+                <p>프로젝트 정보를 확인하고 있습니다...</p>
+                */}
+              </div>
+            ) : workflowStatus === "EXISTS" ? (
+              <div key="status-exists" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 0", animation: "rbmFadeIn 0.3s ease-out" }}>
+                <div className="rbm-exists-message" style={{ padding: "40px 30px", textAlign: "center", background: "#f8fafc", borderRadius: "12px", margin: "0", border: "1px solid #e2e8f0", width: "100%" }}>
+                  <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "#1e293b" }}>
+                    이미 생성된 {selectedYear}년 보고서 프로젝트가 있습니다.
+                  </h3>
+                  <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
+                    아래 [해당 연도로 이동하기] 버튼을 눌러 프로젝트를 계속 진행하세요.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div key="status-norun" className="rbm-cards" style={{ flex: 1, animation: "rbmFadeIn 0.3s ease-out" }}>
               <button
                 type="button"
                 className={`rbm-card ${selected === "ENTITY" ? "rbm-card--selected" : ""}`}
@@ -300,7 +344,7 @@ const ReportBasisSelectModal = ({
                     <h3 className="rbm-card-title">연결기준 (CONSOLIDATED)</h3>
                     <p className="rbm-card-text">
                       본사와 자회사를 연결하여 보고서를 작성합니다.<br />
-                      자회사 데이터를 수집하고, 연결(롤업)하여<br />
+                      자회사 데이터를 수집하고, 연결하여<br />
                       그룹 전체 보고서를 발행합니다.
                     </p>
                     <div className="rbm-card-recommend">
@@ -314,24 +358,21 @@ const ReportBasisSelectModal = ({
                 </div>
               </button>
             </div>
-          )}
+            )}
 
-          {error && <div className="rbm-error">{error}</div>}
+            {error && <div className="rbm-error">{error}</div>}
 
-          {workflowStatus !== "EXISTS" && (
-            <div className="rbm-footer">
-              <button type="button" className="rbm-btn-cancel" onClick={onClose}>취소</button>
-              <div className="rbm-footer-info">
-                <span className="rbm-info-icon">i</span>
-                발행 기준 설정은 보고서 작성 시작 후 언제든 변경할 수 있습니다.
-                <button type="button" className="rbm-link">자세히 알아보기 &rsaquo;</button>
+            {workflowStatus === "NO_RUN" && (
+              <div className="rbm-footer">
+                <button type="button" className="rbm-btn-cancel" onClick={onClose}>취소</button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <div className="rbm-side">
-          <h3 className="rbm-side-heading">발행 기준 안내</h3>
+        {workflowStatus === "NO_RUN" && (
+          <div className="rbm-side">
+            <h3 className="rbm-side-heading">발행 기준 안내</h3>
           <p className="rbm-side-desc">
             지속가능경영보고서를 작성할 때<br />
             데이터 수집 범위와 연결 방식을<br />
@@ -375,22 +416,24 @@ const ReportBasisSelectModal = ({
           </div>
 
           <div className="rbm-side-tip">
-            <span className="rbm-side-tip-icon">i</span>
             <strong>선택 전 고려사항</strong>
             <ul>
-              <li>보고 범위: 단일 회사 또는 그룹 전체</li>
               <li>자회사 데이터 수집 가능 여부</li>
-              <li>내부 보고 체계 및 외부 규제 요구사항</li>
-              <li>보고서 작성 전까지 변경 가능</li>
+              <li>내부 보고 체계 및 규제 요구사항</li>
             </ul>
           </div>
         </div>
+        )}
       </div>
 
-      <div className="rbm-process-bar">
-        <div className="rbm-process-inner">
-          {workflowStatus === "EXISTS" ? (
-            <div className="rbm-process-actions" style={{ justifyContent: "center" }}>
+      <div className="rbm-process-bar" style={{ maxWidth: workflowStatus === "NO_RUN" ? "1040px" : "640px", animation: "rbmModalFloatUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards" }}>
+        <div className="rbm-process-inner" style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          {workflowStatus === null ? (
+            <div key="process-null" className="rbm-process-placeholder" style={{ padding: "20px 0", display: "flex", alignItems: "center", justifyContent: "center", animation: "rbmFadeIn 0.3s ease-out" }}>
+              {/* <span style={{ color: "#94a3b8" }}>확인 중...</span> */}
+            </div>
+          ) : workflowStatus === "EXISTS" ? (
+            <div key="process-exists" className="rbm-process-actions" style={{ justifyContent: "center", animation: "rbmFadeIn 0.3s ease-out" }}>
               <button
                 type="button"
                 className={`rbm-btn-confirm ${loading ? "rbm-btn-confirm--loading" : ""}`}
@@ -401,28 +444,24 @@ const ReportBasisSelectModal = ({
               </button>
             </div>
           ) : (
-            <>
+            <div key="process-norun" style={{ animation: "rbmFadeIn 0.3s ease-out", width: "100%" }}>
               <h4 className="rbm-process-title">선택 후 진행 과정</h4>
-              {selected ? (
-                <div className="rbm-steps">
-                  {steps.map((step, idx) => (
-                    <div key={step.label} className="rbm-step-group">
-                      <div className={`rbm-step ${idx === 0 ? "rbm-step--active" : ""}`}>
-                        <div className="rbm-step-img-wrap">
-                          <img src={step.img} alt={step.label} className="rbm-step-img" />
-                        </div>
-                        <span className="rbm-step-num">{idx + 1}. {step.label}</span>
-                        <span className="rbm-step-sub">{step.sub}</span>
+              <div className="rbm-steps">
+                {steps.map((step, idx) => (
+                  <div key={step.label} className="rbm-step-group">
+                    <div className={`rbm-step ${isStepActive(idx) ? "rbm-step--active" : ""}`}>
+                      <div className="rbm-step-img-wrap">
+                        <img src={step.img} alt={step.label} className="rbm-step-img" />
                       </div>
-                      {idx < steps.length - 1 && (
-                        <span className="rbm-step-arrow">→</span>
-                      )}
+                      <span className="rbm-step-num">{idx + 1}. {step.label}</span>
+                      <span className="rbm-step-sub">{step.sub}</span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="rbm-process-placeholder">발행 기준을 선택하면 진행 과정이 표시됩니다.</p>
-              )}
+                    {idx < steps.length - 1 && (
+                      <span className="rbm-step-arrow">→</span>
+                    )}
+                  </div>
+                ))}
+              </div>
 
               {selected && (
                 <div className="rbm-process-actions">
@@ -440,7 +479,7 @@ const ReportBasisSelectModal = ({
                   </button>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>

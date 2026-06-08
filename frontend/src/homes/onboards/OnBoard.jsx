@@ -10,7 +10,6 @@ import SubsidiaryRequestModal from "./modal/SubsidiaryRequestModal";
 import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
 import RollupSummaryPanel from "./RollupSummaryPanel";
 import MetricAssignmentModal from "./modal/MetricAssignmentModal";
-import RollupStatusModal from "./modal/RollupStatusModal";
 import UiPreviewPanel from "@/dev/step12UiPreview/UiPreviewPanel";
 import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
 import {
@@ -50,12 +49,12 @@ const normalizeViewerRole = (role) => String(role || "").trim().toUpperCase();
 
 const isAssignmentManagerRole = (role) => {
   const normalized = normalizeViewerRole(role);
-  return ["ADMIN", "ESG", "관리자", "ESG담당자"].includes(normalized);
+  return ["ADMIN", "ESG", "관리자", "ESG담당자", "ESG 담당자"].includes(normalized);
 };
 
 const isEmployeeRole = (role) => {
   const normalized = normalizeViewerRole(role);
-  return ["EMPLOYEE", "ASSIGNEE", "부서담당자"].includes(normalized);
+  return ["EMPLOYEE", "ASSIGNEE", "부서담당자", "부서 담당자"].includes(normalized);
 };
 
 const isConsultantRole = (role) => {
@@ -190,38 +189,43 @@ const DonutChart = ({ percent, color, emptyColor = "#f1f5f9" }) => {
   );
 };
 
-const OnboardingStatCards = ({ stats, g0ProfileStatus }) => {
-  const statusInfo = getStatusInfo(g0ProfileStatus);
+const OnboardingStatCards = ({ stats }) => {
   const total = stats.totalCount || 1;
   const completedPercent = (stats.completedCount / total) * 100;
+  const inProgressPercent = (stats.inProgressCount / total) * 100;
   const notStartedPercent = (stats.notStartedCount / total) * 100;
 
   return (
     <div className="ob1-cards">
       <div className="ob1-stat-card">
-        <div className="ob1-stat-title">전체 데이터 입력 항목</div>
+        <div className="ob1-stat-title">전체 지표</div>
         <div className="ob1-stat-value">{stats.totalCount}</div>
       </div>
-      <div className="ob1-stat-card" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div>
+      <div className="ob1-stat-card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
           <div className="ob1-stat-title">입력 완료</div>
-          <div className="ob1-stat-value success">{stats.completedCount}</div>
+          <div className="ob1-stat-value success" style={{ fontSize: '18px' }}>{stats.completedCount}</div>
         </div>
-        <DonutChart percent={completedPercent} color="#10b981" />
+        <div style={{ width: '100%', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ width: `${completedPercent}%`, height: '100%', backgroundColor: '#10b981' }} />
+        </div>
       </div>
-      <div className="ob1-stat-card" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div>
+      <div className="ob1-stat-card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
+          <div className="ob1-stat-title">진행 중</div>
+          <div className="ob1-stat-value warning" style={{ fontSize: '18px' }}>{stats.inProgressCount}</div>
+        </div>
+        <div style={{ width: '100%', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ width: `${inProgressPercent}%`, height: '100%', backgroundColor: '#f97316' }} />
+        </div>
+      </div>
+      <div className="ob1-stat-card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
           <div className="ob1-stat-title">미입력</div>
-          <div className="ob1-stat-value warning">{stats.notStartedCount}</div>
+          <div className="ob1-stat-value" style={{ fontSize: '18px', color: '#64748b' }}>{stats.notStartedCount}</div>
         </div>
-        <DonutChart percent={notStartedPercent} color="#f97316" />
-      </div>
-      <div className="ob1-stat-card" style={{ boxShadow: '0 4px 12px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
-        <div className="ob1-stat-title">프로필 상태</div>
-        <div className="ob1-stat-value">
-          <span className={`ob1-status-pill ${statusInfo.cls}`}>
-            프로필 상태: {statusInfo.label}
-          </span>
+        <div style={{ width: '100%', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ width: `${notStartedPercent}%`, height: '100%', backgroundColor: '#94a3b8' }} />
         </div>
       </div>
     </div>
@@ -229,18 +233,12 @@ const OnboardingStatCards = ({ stats, g0ProfileStatus }) => {
 };
 
 const OnboardingWorkflowCta = ({
-  activeBatchId,
-  hasAnySubsidiaryRequest,
-  hasPendingSubsidiaryRequest,
   loadingWorkflow,
   variant = "action",
   workflow,
   isNoRunWorkflow,
   onBasisModalOpen,
   onCtaClick,
-  onTransferModalOpen,
-  canManageRollup,
-  setIsRollupStatusModalOpen,
 }) => {
   const isWaitingRollup = workflow?.nextAction === "WAIT_ROLLUP";
 
@@ -265,31 +263,7 @@ const OnboardingWorkflowCta = ({
     );
   }
 
-  if (variant === "top") {
-    if (!canManageRollup) return null;
-    return (
-      <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", padding: "16px 24px 0 24px" }}>
-        {hasAnySubsidiaryRequest && (
-          <button
-            className="ob1-btn-input"
-            onClick={onTransferModalOpen}
-            style={{ padding: "8px 16px", background: "#f8fafc", color: "#1e293b", border: "1px solid #cbd5e1" }}
-          >
-            {hasPendingSubsidiaryRequest ? "자회사 요청함 (대기중)" : "자회사 요청함"}
-          </button>
-        )}
-        {(activeBatchId || STEP12_UI_FIXTURE_ENABLED) && (
-          <button
-            className="ob1-btn-input"
-            onClick={() => setIsRollupStatusModalOpen(true)}
-            style={{ padding: "8px 16px", background: "#e0e7ff", color: "#3730a3", border: "1px solid #a5b4fc" }}
-          >
-            자회사 롤업 현황
-          </button>
-        )}
-      </div>
-    );
-  }
+
 
   return (
     <div className="ob1-cta-container">
@@ -365,14 +339,14 @@ const OnboardingMetricTable = ({
     <div className="ob1-table-container">
       <table className="ob1-table">
         <colgroup>
-          {canManageAssignments && <col style={{ width: "44px" }} />}
-          <col style={{ width: "90px" }} />
-          <col style={{ width: "auto" }} />
-          <col style={{ width: "150px" }} />
-          <col style={{ width: "110px" }} />
-          <col style={{ width: "130px" }} />
-          <col style={{ width: "110px" }} />
-          <col style={{ width: "140px" }} />
+          {canManageAssignments && <col style={{ width: "4%" }} />}
+          <col style={{ width: "8%" }} />
+          <col style={{ width: "28%" }} />
+          <col style={{ width: "12%" }} />
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "13%" }} />
+          <col style={{ width: "13%" }} />
+          <col style={{ width: "8%" }} />
         </colgroup>
         <thead className={selectedMetricIds.length > 0 && canManageAssignments ? "ob1-thead-selected" : ""}>
           {selectedMetricIds.length > 0 && canManageAssignments ? (
@@ -413,7 +387,7 @@ const OnboardingMetricTable = ({
           ) : (
             <tr>
               {canManageAssignments && (
-                <th style={{ width: "44px" }}>
+                <th style={{ width: "4%" }}>
                   <input
                     type="checkbox"
                     className="ob1-checkbox"
@@ -423,13 +397,13 @@ const OnboardingMetricTable = ({
                   />
                 </th>
               )}
-              <th>Metric ID</th>
-              <th>입력 데이터 설명</th>
-              <th>담당자</th>
-              <th>제출 기한</th>
-              <th>입력 상태</th>
-              <th>승인 상태</th>
-              <th>관리</th>
+              <th style={{ width: "8%" }}>Data ID</th>
+              <th style={{ width: "28%" }}>입력 데이터 설명</th>
+              <th style={{ width: "12%" }}>담당자</th>
+              <th style={{ width: "14%" }}>제출 기한</th>
+              <th style={{ width: "13%" }}>입력 상태</th>
+              <th style={{ width: "13%" }}>승인 상태</th>
+              <th style={{ width: "8%" }}>관리</th>
             </tr>
           )}
         </thead>
@@ -600,7 +574,6 @@ const OnBoard = () => {
   // New States for UI-1 & UI-2
   const [selectedMetricIds, setSelectedMetricIds] = useState([]);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
-  const [isRollupStatusModalOpen, setIsRollupStatusModalOpen] = useState(false);
   const [assignmentMode, setAssignmentMode] = useState('single');
   const [assignmentTargetIds, setAssignmentTargetIds] = useState([]);
 
@@ -921,19 +894,38 @@ const OnBoard = () => {
 
   return (
     <div id="ob1-page">
-      <div className="ob1-header">
-        <h1 className="ob1-title">온보딩 [{basisLabel}]</h1>
-      </div>
+      <div className="ob1-header-card" style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        background: '#ffffff', 
+        border: '1px solid #e2e8f0', 
+        borderRadius: '8px', 
+        padding: '16px 24px', 
+        marginBottom: '24px', 
+        boxShadow: '0 1px 2px rgba(0,0,0,0.02)' 
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <h1 className="ob1-title" style={{ margin: 0, fontSize: '1.25rem' }}>온보딩 [{basisLabel}]</h1>
+          {(() => {
+            const statusInfo = getStatusInfo(g0ProfileStatus);
+            const total = profileStats.totalCount || 1;
+            const percent = Math.round((profileStats.completedCount / total) * 100);
+            return (
+              <span className={`ob1-status-pill ${statusInfo.cls}`} style={{ fontSize: '14px', padding: '6px 12px' }}>
+                진행률 {percent}% · {statusInfo.label}
+              </span>
+            );
+          })()}
+        </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
-        <OnboardingStatCards
-          stats={profileStats}
-          g0ProfileStatus={g0ProfileStatus}
-        />
+        <div style={{ flexShrink: 0 }}>
+          <OnboardingStatCards stats={profileStats} />
+        </div>
       </div>
       <div className="ob1-content-layout">
         <div className="ob1-sidebar-panel">
-          <div className="ob1-sidebar-title">할당 항목</div>
+          <div className="ob1-sidebar-title">SUB-ISSUE</div>
           <ul className="ob1-sidebar-menu">
             <li className="ob1-sidebar-menu-item active">1. 경영일반 - G0</li>
           </ul>
@@ -958,23 +950,21 @@ const OnBoard = () => {
             />
           ) : (
             <>
-              <OnboardingWorkflowCta
-                variant="top"
-                activeBatchId={activeBatchId}
-                hasAnySubsidiaryRequest={hasAnySubsidiaryRequest}
-                hasPendingSubsidiaryRequest={hasPendingSubsidiaryRequest}
-                loadingWorkflow={loadingWorkflow}
-                workflow={displayWorkflow}
-                isNoRunWorkflow={isNoRunWorkflow}
-                onCalculated={() => initializeOnboarding()}
-                onCtaClick={handleCtaClick}
-                onTransferModalOpen={() => setIsSubTransferModalOpen(true)}
-                rollupPurposeCode={activeRollupContext.rollupPurposeCode}
-                metricScopeCode={activeRollupContext.metricScopeCode}
-                rollupScenario={previewRollupScenario}
-                canManageRollup={canManageRollup}
-                setIsRollupStatusModalOpen={setIsRollupStatusModalOpen}
-              />
+              {canManageRollup && (
+                <>
+                  <RollupSummaryPanel
+                    batchId={activeBatchId}
+                    workflow={displayWorkflow}
+                    onCtaClick={handleCtaClick}
+                    onCalculated={() => initializeOnboarding()}
+                    rollupPurposeCode={activeRollupContext.rollupPurposeCode}
+                    metricScopeCode={activeRollupContext.metricScopeCode}
+                    rollupScenario={previewRollupScenario}
+                    onSendSource={() => setIsSubTransferModalOpen(true)}
+                  />
+
+                </>
+              )}
 
               <OnboardingMetricTable
                 g0Error={displayG0Error}
@@ -997,12 +987,6 @@ const OnBoard = () => {
                 isEmployeeViewer={isEmployeeViewer}
                 isConsultantViewer={isConsultantViewer}
               />
-              <OnboardingWorkflowCta
-                loadingWorkflow={loadingWorkflow}
-                workflow={displayWorkflow}
-                isNoRunWorkflow={isNoRunWorkflow}
-                onCtaClick={handleCtaClick}
-              />
             </>
           )}
         </div>
@@ -1015,21 +999,12 @@ const OnBoard = () => {
         subMetrics={selectedItem?.metrics || []}
         onSaveAndSubmit={handleSaveAndSubmit}
         viewerRole={viewerRole}
+        canManageAssignments={canManageAssignments}
+        isConsultantViewer={isConsultantViewer}
         onOpenAssignment={() => handleRowAssignRequested(selectedItem?.parent?.metricId)}
       />
 
-      {isRollupStatusModalOpen && (
-        <RollupStatusModal
-          isOpen={isRollupStatusModalOpen}
-          onClose={() => setIsRollupStatusModalOpen(false)}
-          activeBatchId={activeBatchId}
-          onCalculated={() => initializeOnboarding()}
-          rollupPurposeCode={activeRollupContext.rollupPurposeCode}
-          metricScopeCode={activeRollupContext.metricScopeCode}
-          rollupScenario={previewRollupScenario}
-          onSendSource={() => setIsSubTransferModalOpen(true)}
-        />
-      )}
+
 
       <MetricAssignmentModal
         isOpen={isAssignmentModalOpen}

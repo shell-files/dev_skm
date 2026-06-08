@@ -93,13 +93,42 @@ export const calculateMetricStatus = (subMetrics = []) => {
 };
 
 export const calculateProfileStats = (items = []) => {
-  const editableItems = items.filter((item) => isEditableItem(item));
-  const completedCount = editableItems.filter((item) => hasAtomicValue(item)).length;
+  const metricsMap = new Map();
+  items.forEach((item) => {
+    if (!item.metricId) return;
+    if (!metricsMap.has(item.metricId)) {
+      metricsMap.set(item.metricId, []);
+    }
+    metricsMap.get(item.metricId).push(item);
+  });
+
+  let totalCount = 0;
+  let completedCount = 0;
+  let inProgressCount = 0;
+  let notStartedCount = 0;
+
+  for (const subItems of metricsMap.values()) {
+    const editableItems = subItems.filter(isEditableItem);
+    if (editableItems.length === 0) {
+      // Exclude auto-calculated / read-only metrics from the count
+      continue;
+    }
+    totalCount++;
+    const filledCount = editableItems.filter(hasAtomicValue).length;
+    if (filledCount === 0) {
+      notStartedCount++;
+    } else if (filledCount < editableItems.length) {
+      inProgressCount++;
+    } else {
+      completedCount++;
+    }
+  }
 
   return {
-    totalCount: items.length,
+    totalCount,
     completedCount,
-    notStartedCount: Math.max(0, editableItems.length - completedCount),
+    inProgressCount,
+    notStartedCount,
   };
 };
 

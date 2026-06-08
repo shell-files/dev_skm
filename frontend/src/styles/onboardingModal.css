@@ -172,13 +172,13 @@
 }
 
 .ob-input-table th {
-  background: #f8fafc;
-  color: #475569;
+  background: #e2e8f0;
+  color: #334155;
   font-size: 0.85rem;
   font-weight: 600;
   text-align: left;
   padding: 12px 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #cbd5e1;
 }
 
 .ob-input-table td {
@@ -190,10 +190,10 @@
 
 .ob-table-input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   transition: all 0.2s;
 }
 
@@ -238,6 +238,33 @@
   font-size: 0.95rem;
   color: #0f766e;
 }
+
+/* Type & State Badges for new UI */
+.ob-type-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-right: 6px;
+}
+.ob-type-badge.rollup { background: #f1f5f9; color: #475569; }
+.ob-type-badge.manual { background: #eff6ff; color: #2563eb; }
+.ob-type-badge.ref { background: #f0fdf4; color: #16a34a; }
+.ob-type-badge.calc { background: #fdf4ff; color: #c026d3; }
+
+.ob-state-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ob-state-badge.wait { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
+.ob-state-badge.ref-state { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+.ob-state-badge.done { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.ob-state-badge.need { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
 
 /* 6. Evidence & Validation (Right Panel) */
 .ob-side-card {

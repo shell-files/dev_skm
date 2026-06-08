@@ -65,20 +65,24 @@ export default function MetricAssignmentModal({
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div className="ob-modal-body" style={{ padding: '20px 24px', flex: 1, overflowY: 'auto' }}>
-            <p className="ob-assignment-info" style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '20px' }}>
-              선택한 지표의 입력 담당자를 지정합니다.<br />
-              담당자 계정 유무에 따라 지정 알림 또는 회원가입 초대 메일이 발송됩니다.
-            </p>
+            <div style={{ marginBottom: '20px', fontSize: '0.85rem', color: '#64748b', background: '#f1f5f9', padding: '12px', borderRadius: '6px' }}>
+              기존 계정이 확인되면 담당자 지정 알림 메일이 발송됩니다.<br />
+              미가입자는 회원가입 초대 메일을 받습니다.
+            </div>
 
-            <div style={{ marginBottom: '20px', padding: '12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+            <div style={{ marginBottom: '24px', padding: '12px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
               <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '8px' }}>대상 지표</div>
               {mode === 'single' ? (
-                <div style={{ fontWeight: 600, color: '#1e293b' }}>{selectedMetricIds[0]}</div>
+                <div style={{ display: 'inline-block', padding: '4px 10px', background: '#e2e8f0', borderRadius: '6px', fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>{selectedMetricIds[0]}</div>
               ) : (
                 <>
-                  <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '8px' }}>선택한 {selectedMetricIds.length}개 metric_id</div>
-                  <div style={{ maxHeight: '100px', overflowY: 'auto', fontSize: '0.85rem', color: '#475569', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {selectedMetricIds.map(id => <div key={id}>{id}</div>)}
+                  <div style={{ fontWeight: 600, color: '#1e293b', marginBottom: '10px' }}>선택한 {selectedMetricIds.length}개 항목</div>
+                  <div style={{ maxHeight: '120px', overflowY: 'auto', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', padding: '0 10px' }}>
+                    {selectedMetricIds.map(id => (
+                      <div key={id} style={{ padding: '4px 10px', background: '#e2e8f0', borderRadius: '6px', fontSize: '0.85rem', color: '#334155', fontWeight: 500 }}>
+                        {id}
+                      </div>
+                    ))}
                   </div>
                 </>
               )}
@@ -98,12 +102,6 @@ export default function MetricAssignmentModal({
                 <input type="date" className="ob-table-input ob-assignment-field" value={dueDate} onChange={e => setDueDate(e.target.value)} />
               </div>
             </div>
-
-            <div style={{ marginTop: '20px', fontSize: '0.85rem', color: '#64748b', background: '#f1f5f9', padding: '12px', borderRadius: '6px' }}>
-              기존 계정이 확인되면 담당자 지정 알림 메일이 발송됩니다.<br />
-              미가입자는 회원가입 초대 메일을 받습니다.
-            </div>
-
             {renderPreview()}
           </div>
 

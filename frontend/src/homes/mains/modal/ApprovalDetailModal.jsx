@@ -100,11 +100,6 @@ export default function ApprovalDetailModal({
             </div>
           )}
 
-          {loading && (
-            <div className="alert alert-info" style={readOnlyAlertStyle}>
-              상세 정보를 불러오는 중입니다.
-            </div>
-          )}
 
           {error && (
             <div className="alert alert-warning" style={readOnlyAlertStyle}>
@@ -114,18 +109,13 @@ export default function ApprovalDetailModal({
             </div>
           )}
 
-          {isApproveMode && (
-            <div style={{ marginBottom: '16px', padding: '12px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fde68a', fontSize: '0.85rem', color: '#92400e' }}>
-              최종 승인 전에 아래 Atomic 상세 항목을 검토하세요.
-            </div>
-          )}
 
           <div style={summaryStyle}>
-            <InfoRow label="Metric" value={metricItem.metricName || metricItem.checklistQuestion || "-"} />
-            <InfoRow label="Metric ID" value={metricItem.metricId || metricItem.id || "-"} />
-            <InfoRow label="Sub-Issue" value={metricItem.subIssueName || metricItem.sub_issue_name || metricItem.subIssueCode || "-"} />
-            <InfoRow label="Assignee" value={metricItem.assigneeName || metricItem.userName || "-"} />
-            <InfoRow label="Submitted" value={metricItem.submittedAt || "-"} />
+            <InfoRow label="지표" value={metricItem.metricName || metricItem.checklistQuestion || "-"} />
+            <InfoRow label="지표 ID" value={metricItem.metricId || metricItem.id || "-"} />
+            <InfoRow label="중대성 이슈" value={metricItem.subIssueName || metricItem.sub_issue_name || metricItem.subIssueCode || "-"} />
+            <InfoRow label="담당자" value={metricItem.assigneeName || metricItem.userName || "-"} />
+            <InfoRow label="제출일" value={metricItem.submittedAt || "-"} />
           </div>
 
           {/* Atomic detail table */}
@@ -135,7 +125,7 @@ export default function ApprovalDetailModal({
               <table style={tableStyle}>
                 <thead style={tableHeadStyle}>
                   <tr>
-                    <th style={thStyle}>Atomic Metric ID</th>
+                    <th style={thStyle}>Data ID</th>
                     <th style={thStyle}>입력 항목명</th>
                     <th style={thStyle}>입력값</th>
                     <th style={thStyle}>단위</th>

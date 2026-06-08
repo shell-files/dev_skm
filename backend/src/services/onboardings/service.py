@@ -4,6 +4,9 @@ from typing import Optional
 
 from src.models.onboarding import (
     OnboardingApprovalActionResponseDto,
+    OnboardingApprovalAtomicDetailItemDto,
+    OnboardingApprovalDetailDataDto,
+    OnboardingApprovalDetailResponseDto,
     OnboardingApprovalItemDto,
     OnboardingApprovalListDataDto,
     OnboardingApprovalListResponseDto,
@@ -809,6 +812,27 @@ def getApprovalStatus(
     return OnboardingApprovalStatusResponseDto(data=statusDto(summary, userModel))
 
 
+def getApprovalDetail(
+    companyId: int,
+    reportingYear: int,
+    metricId: str,
+    cycleType: str,
+    userModel,
+) -> OnboardingApprovalDetailResponseDto:
+    checkScope(companyId, userModel)
+    cycle = requireCycle(companyId, reportingYear, cycleType)
+    summary = approvalService.buildMetricApprovalSummary(companyId, reportingYear, metricId, cycleType)
+    if not checkMetricStatusPermission(summary, userModel):
+        raise PermissionError("Only approvers, reviewers, or the assigned employee can view approval status")
+    scopes = repo.listMetricScopes(int(cycle["id"]), companyId, metricId)
+    if not scopes:
+        raise ValueError("Metric is not in active cycle scope")
+    atomicRows = repo.listApprovalAtomicDetailRows(companyId, reportingYear, int(cycle["id"]), metricId)
+    return OnboardingApprovalDetailResponseDto(
+        data=detailDto(summary, atomicRows, userModel)
+    )
+
+
 def ensureWorkflowPreDmaG0Cycle(run: dict, actorUserId: Optional[int] = None) -> dict:
     if not run:
         return {}
@@ -863,6 +887,35 @@ def statusDto(summary: dict, userModel) -> OnboardingApprovalStatusDataDto:
             and promotedQuantAtomicCount > 0
             and approvedPromotedFactCount >= promotedQuantAtomicCount
         ),
+    )
+
+
+def detailDto(
+    summary: dict,
+    atomicRows: list[dict],
+    userModel,
+) -> OnboardingApprovalDetailDataDto:
+    base = statusDto(summary, userModel)
+    payload = base.model_dump() if hasattr(base, "model_dump") else base.dict()
+    return OnboardingApprovalDetailDataDto(
+        **payload,
+        atomicItems=[
+            OnboardingApprovalAtomicDetailItemDto(
+                atomicMetricId=row["atomic_metric_id"],
+                atomicName=row.get("atomic_name"),
+                dataValueType=row.get("data_value_type"),
+                atomicDataRole=row.get("atomic_data_role"),
+                inputMode=row.get("input_mode"),
+                valueText=row.get("value_text"),
+                valueNumeric=row.get("value_numeric"),
+                unit=row.get("unit"),
+                inputStatus=row.get("input_status"),
+                updatedAt=row.get("updated_at"),
+                evidenceCount=int(row.get("evidence_count") or 0),
+            )
+            for row in atomicRows
+            if row.get("atomic_metric_id")
+        ],
     )
 
 

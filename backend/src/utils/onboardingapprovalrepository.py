@@ -272,6 +272,51 @@ def listApprovalFactRows(companyId: int, reportingYear: int, metricIds: list[str
     ) or []
 
 
+def listApprovalAtomicDetailRows(
+    companyId: int,
+    reportingYear: int,
+    cycleId: int,
+    metricId: str,
+) -> list[dict]:
+    scopes = scopeRepo.listMetricScopes(cycleId, companyId, metricId)
+    if not scopes:
+        return []
+
+    masterRows = scopeRepo.listAtomicMaster([metricId])
+    inputRows = listApprovalInputRows(companyId, reportingYear, [metricId])
+    factRows = listApprovalFactRows(companyId, reportingYear, [metricId])
+    inputByAtomic = {row.get("atomic_metric_id"): row for row in inputRows}
+    factByAtomic = {row.get("atomic_metric_id"): row for row in factRows}
+
+    items = []
+    for master in masterRows:
+        atomicMetricId = master.get("atomic_metric_id")
+        if not atomicMetricId:
+            continue
+
+        inputRow = inputByAtomic.get(atomicMetricId) or {}
+        factRow = factByAtomic.get(atomicMetricId) or {}
+        valueRow = inputRow if inputRepo.hasMetricValue(inputRow) else factRow
+        valueNumeric = valueRow.get("value_numeric")
+
+        items.append(
+            {
+                "atomic_metric_id": atomicMetricId,
+                "atomic_name": master.get("atomic_name_kr"),
+                "data_value_type": master.get("data_value_type"),
+                "atomic_data_role": master.get("atomic_data_role"),
+                "input_mode": None,
+                "value_text": valueRow.get("value_text"),
+                "value_numeric": float(valueNumeric) if valueNumeric is not None else None,
+                "unit": valueRow.get("unit") or master.get("unit"),
+                "input_status": valueRow.get("input_status"),
+                "updated_at": inputRepo.formatDatetime(valueRow.get("updated_at")),
+                "evidence_count": 0,
+            }
+        )
+    return items
+
+
 def listLatestApprovalHistories(
     companyId: int,
     reportingYear: int,
@@ -538,6 +583,7 @@ __all__ = [
     "resolveActionSupport",
     "listApprovalInputRows",
     "listApprovalFactRows",
+    "listApprovalAtomicDetailRows",
     "listLatestApprovalHistories",
     "resolveCycleApprovalStatus",
     "listApprovalSummaries",

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useSearchParams } from "react-router";
 import "@styles/Manager.css";
 import DataTab from "./DataTab.jsx";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
@@ -11,12 +12,20 @@ import {
   DEFAULT_REPORTING_YEAR,
   clearApprovalProject,
   fetchApprovalItems,
+  fetchOnboardingApprovalDetail,
   fetchApprovalProjects,
+  approveOnboardingApproval,
   selectApprovalProject,
+  rejectOnboardingApproval,
+  reviewOnboardingApproval,
 } from "@stores/reportSlice";
 
-const USE_LEGACY_USER_FIXTURE = true;
+const USE_LEGACY_USER_FIXTURE = STEP12_UI_FIXTURE_ENABLED;
 const PAGE_SIZE = 10;
+const SUPPORTED_APPROVAL_CYCLE_TYPES = [
+  "PRE_DMA_G0",
+  "POST_DMA_DISCLOSURE",
+];
 
 const LEGACY_USER_FIXTURE_CATEGORY_MAP = {
   general: ["General", "Business model", "Report basis", "Management"],
@@ -129,9 +138,28 @@ const runStatusLabel = (runStatus) => {
 
 const ManagerData = () => {
   const dispatch = useDispatch();
+  const [searchParams, setSearchParams] = useSearchParams();
   const approvalItems = useSelector((state) => state.report?.approval?.items ?? []);
   const approvalLoading = useSelector((state) => state.report?.loading?.approvals ?? false);
   const approvalError = useSelector((state) => state.report?.error?.approvals ?? null);
+  const approvalDetail = useSelector(
+    (state) => state.report?.approval?.selectedItemDetail ?? null
+  );
+  const approvalDetailLoading = useSelector(
+    (state) => state.report?.loading?.approvalDetail ?? false
+  );
+  const approvalDetailError = useSelector(
+    (state) => state.report?.error?.approvalDetail ?? null
+  );
+  const reviewLoading = useSelector(
+    (state) => state.report?.loading?.onboardingApprovalReview ?? false
+  );
+  const approveLoading = useSelector(
+    (state) => state.report?.loading?.onboardingApprovalApprove ?? false
+  );
+  const rejectLoading = useSelector(
+    (state) => state.report?.loading?.onboardingApprovalReject ?? false
+  );
   const approvalProjectsFromStore = useSelector(
     (state) => state.report?.approval?.projects ?? []
   );
@@ -169,7 +197,14 @@ const ManagerData = () => {
     selectedCompany?.reporting_year ??
     selectedCompany?.reportingYear ??
     DEFAULT_REPORTING_YEAR;
-  const cycleType = "PRE_DMA_G0";
+  const cycleTypeQuery = String(searchParams.get("cycleType") || "")
+    .trim()
+    .toUpperCase();
+  const [approvalCycleType, setApprovalCycleType] = useState(
+    SUPPORTED_APPROVAL_CYCLE_TYPES.includes(cycleTypeQuery)
+      ? cycleTypeQuery
+      : "PRE_DMA_G0"
+  );
 
   const selectedCompanyName =
     selectedCompany?.name ??
@@ -215,6 +250,37 @@ const ManagerData = () => {
   const displayApprovalProject =
     selectedApprovalProject ?? fallbackApprovalProject;
 
+  useEffect(() => {
+    if (
+      SUPPORTED_APPROVAL_CYCLE_TYPES.includes(cycleTypeQuery) &&
+      cycleTypeQuery !== approvalCycleType
+    ) {
+      queueMicrotask(() => {
+        setApprovalCycleType(cycleTypeQuery);
+        setSelectedIds([]);
+        setDataPage(1);
+        setIsRejectModalOpen(false);
+      });
+    }
+  }, [approvalCycleType, cycleTypeQuery]);
+
+  const handleApprovalCycleTypeChange = useCallback(
+    (event) => {
+      const nextCycleType = String(event.target.value || "").trim().toUpperCase();
+      const normalized = SUPPORTED_APPROVAL_CYCLE_TYPES.includes(nextCycleType)
+        ? nextCycleType
+        : "PRE_DMA_G0";
+      setApprovalCycleType(normalized);
+      setSelectedIds([]);
+      setDataPage(1);
+      setIsRejectModalOpen(false);
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set("cycleType", normalized);
+      setSearchParams(nextParams);
+    },
+    [searchParams, setSearchParams]
+  );
+
   const handleSelectApprovalProject = useCallback(
     (project) => {
       dispatch(selectApprovalProject(project));
@@ -227,14 +293,18 @@ const ManagerData = () => {
 
   useEffect(() => {
     dispatch(clearApprovalProject());
-    setInputs([]);
-    setSelectedIds([]);
-    setDataPage(1);
+    queueMicrotask(() => {
+      setInputs([]);
+      setSelectedIds([]);
+      setDataPage(1);
+    });
 
     if (!companyId) return;
 
     if (STEP12_UI_FIXTURE_ENABLED) {
-      setIsApprovalProjectModalOpen(true);
+      queueMicrotask(() => {
+        setIsApprovalProjectModalOpen(true);
+      });
       return;
     }
 
@@ -268,7 +338,7 @@ const ManagerData = () => {
         fetchApprovalItems({
           companyId,
           reportingYear: approvalReportingYear,
-          cycleType,
+          cycleType: approvalCycleType,
           assignedOnlyYn: true,
         })
       ).unwrap();
@@ -279,20 +349,24 @@ const ManagerData = () => {
       setInputs([]);
     }
   }, [
+    approvalCycleType,
     approvalReportingYear,
     companyId,
-    cycleType,
     dispatch,
     selectedApprovalProject,
   ]);
 
   useEffect(() => {
-    fetchData();
+    queueMicrotask(() => {
+      fetchData();
+    });
   }, [fetchData]);
 
   useEffect(() => {
     if (STEP12_UI_FIXTURE_ENABLED) return;
-    setInputs(safeArray(approvalItems).map(mapApprovalItemToInput));
+    queueMicrotask(() => {
+      setInputs(safeArray(approvalItems).map(mapApprovalItemToInput));
+    });
   }, [approvalItems]);
 
   const kpi = useMemo(
@@ -315,10 +389,56 @@ const ManagerData = () => {
     [inputs]
   );
 
+  const isLoading = approvalLoading || approvalProjectsLoading;
+  const approvalMutationLoading = reviewLoading || approveLoading || rejectLoading;
+
+  const buildApprovalPayload = useCallback(
+    (metricId, commentText = "") => ({
+      companyId,
+      reportingYear: approvalReportingYear,
+      cycleType: approvalCycleType,
+      metricId,
+      ...(commentText?.trim() ? { commentText: commentText.trim() } : {}),
+    }),
+    [approvalCycleType, approvalReportingYear, companyId]
+  );
+
+  const dispatchApprovalMutation = useCallback(
+    async (metricId, status, commentText = "") => {
+      const payload = buildApprovalPayload(metricId, commentText);
+      if (status === "REVIEWED") {
+        return dispatch(reviewOnboardingApproval(payload)).unwrap();
+      }
+      if (status === "APPROVED") {
+        return dispatch(approveOnboardingApproval(payload)).unwrap();
+      }
+      if (status === "REJECTED") {
+        return dispatch(rejectOnboardingApproval(payload)).unwrap();
+      }
+      throw new Error(`Unsupported approval action: ${status}`);
+    },
+    [buildApprovalPayload, dispatch]
+  );
+
+  const handleFetchApprovalDetail = useCallback(
+    async (metricId) => {
+      const response = await dispatch(
+        fetchOnboardingApprovalDetail({
+          companyId,
+          reportingYear: approvalReportingYear,
+          metricId,
+          cycleType: approvalCycleType,
+        })
+      ).unwrap();
+      return response?.data || response;
+    },
+    [approvalCycleType, approvalReportingYear, companyId, dispatch]
+  );
+
   const handleAction = async (id, status, commentText = "") => {
     if (selectedProjectReadOnlyYn) {
       showDefaultAlert("Notice", "Completed projects are read-only.", "info");
-      return;
+      return false;
     }
 
     const normalizedStatus = normalizeStatus(status);
@@ -326,54 +446,69 @@ const ManagerData = () => {
       setRejectTargetId(id);
       setRejectReason("");
       setIsRejectModalOpen(true);
-      return;
+      return false;
     }
 
     const ok = await showConfirmAlert("Confirm", "Process this item?", "question");
-    if (!ok) return;
+    if (!ok) return false;
 
-    setInputs((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              status: normalizedStatus,
-              approvalStatus: normalizedStatus,
-              ...(normalizedStatus === "REJECTED"
-                ? { reason: commentText.trim() }
-                : {}),
-            }
-          : item
-      )
-    );
+    try {
+      await dispatchApprovalMutation(id, normalizedStatus, commentText);
+      await fetchData();
+      showDefaultAlert("완료", "승인 작업이 처리되었습니다.", "success");
+      return true;
+    } catch (error) {
+      console.error(error);
+      showDefaultAlert(
+        "오류",
+        error?.message || error?.detail || "승인 작업 처리에 실패했습니다.",
+        "error"
+      );
+      return false;
+    }
   };
 
   const handleBulkAction = async (status, commentText = "") => {
     if (selectedProjectReadOnlyYn) {
       showDefaultAlert("Notice", "Completed projects are read-only.", "info");
-      return;
+      return false;
     }
-    if (!selectedIds.length) return;
+    if (!selectedIds.length) return false;
 
     const ok = await showConfirmAlert("Bulk action", "Continue?", "question");
-    if (!ok) return;
+    if (!ok) return false;
 
     const normalizedStatus = normalizeStatus(status);
-    setInputs((prev) =>
-      prev.map((item) =>
-        selectedIds.includes(item.id)
-          ? {
-              ...item,
-              status: normalizedStatus,
-              approvalStatus: normalizedStatus,
-              ...(normalizedStatus === "REJECTED"
-                ? { reason: commentText.trim() }
-                : {}),
-            }
-          : item
-      )
-    );
+    if (normalizedStatus === "REJECTED" && !commentText?.trim()) {
+      showDefaultAlert("Notice", "Enter rejection reason.", "info");
+      return false;
+    }
+
+    const succeeded = [];
+    const failed = [];
+    for (const metricId of selectedIds) {
+      try {
+        await dispatchApprovalMutation(metricId, normalizedStatus, commentText);
+        succeeded.push(metricId);
+      } catch (error) {
+        failed.push({
+          metricId,
+          message: error?.message || error?.detail || "처리 실패",
+        });
+      }
+    }
+    await fetchData();
     setSelectedIds([]);
+    if (failed.length) {
+      showDefaultAlert(
+        "주의",
+        `${succeeded.length}건 처리, ${failed.length}건 실패했습니다.`,
+        "warning"
+      );
+      return false;
+    }
+    showDefaultAlert("완료", `${succeeded.length}건 처리되었습니다.`, "success");
+    return true;
   };
 
   const handleMainCategoryChange = useCallback((category) => {
@@ -381,8 +516,6 @@ const ManagerData = () => {
     setActiveSubCategory("all");
     setDataPage(1);
   }, []);
-
-  const isLoading = approvalLoading || approvalProjectsLoading;
 
   return (
     <div id="manager_page">
@@ -412,6 +545,27 @@ const ManagerData = () => {
           </div>
 
           <div className="approval-project-context-actions">
+            <label
+              className="approval-cycle-type-control"
+              style={{ display: "flex", alignItems: "center", gap: "8px" }}
+            >
+              <span className="approval-project-context-label">Approval scope</span>
+              <select
+                value={approvalCycleType}
+                onChange={handleApprovalCycleTypeChange}
+                disabled={isLoading || approvalMutationLoading}
+                style={{
+                  height: "34px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "6px",
+                  padding: "0 8px",
+                  fontSize: "0.85rem",
+                }}
+              >
+                <option value="PRE_DMA_G0">사전 경영일반 승인</option>
+                <option value="POST_DMA_DISCLOSURE">보고서 연결 공시 승인</option>
+              </select>
+            </label>
             {displayApprovalProject.readOnlyYn && (
               <span className="approval-project-readonly-chip">Read-only</span>
             )}
@@ -489,6 +643,11 @@ const ManagerData = () => {
               fetchData={fetchData}
               setDataPage={setDataPage}
               handleAction={handleAction}
+              actionLoading={approvalMutationLoading}
+              approvalDetail={approvalDetail}
+              approvalDetailLoading={approvalDetailLoading}
+              approvalDetailError={approvalDetailError}
+              fetchApprovalDetail={handleFetchApprovalDetail}
             />
           </div>
         )}
@@ -530,8 +689,10 @@ const ManagerData = () => {
                       showDefaultAlert("Notice", "Enter rejection reason.", "info");
                       return;
                     }
-                    await handleAction(rejectTargetId, "REJECTED", rejectReason);
-                    setIsRejectModalOpen(false);
+                    const success = await handleAction(rejectTargetId, "REJECTED", rejectReason);
+                    if (success) {
+                      setIsRejectModalOpen(false);
+                    }
                   }}
                 >
                   Confirm reject

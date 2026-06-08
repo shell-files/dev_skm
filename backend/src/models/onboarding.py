@@ -245,6 +245,29 @@ class OnboardingApprovalStatusResponseDto(BaseModel):
     data: OnboardingApprovalStatusDataDto
 
 
+class OnboardingApprovalAtomicDetailItemDto(BaseModel):
+    atomicMetricId: str
+    atomicName: Optional[str] = None
+    dataValueType: Optional[str] = None
+    atomicDataRole: Optional[str] = None
+    inputMode: Optional[str] = None
+    valueText: Optional[str] = None
+    valueNumeric: Optional[float] = None
+    unit: Optional[str] = None
+    inputStatus: Optional[str] = None
+    updatedAt: Optional[str] = None
+    evidenceCount: int = 0
+
+
+class OnboardingApprovalDetailDataDto(OnboardingApprovalStatusDataDto):
+    atomicItems: List[OnboardingApprovalAtomicDetailItemDto] = Field(default_factory=list)
+
+
+class OnboardingApprovalDetailResponseDto(BaseModel):
+    success: bool = True
+    data: OnboardingApprovalDetailDataDto
+
+
 class OnboardingApprovalActionResponseDto(BaseModel):
     success: bool = True
     data: OnboardingApprovalStatusDataDto

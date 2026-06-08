@@ -174,6 +174,23 @@ async def getRequestDetailRoute(batchId: int, userModel=Depends(get_token)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@_actionRouter.post(
+    "/requests/{batchId}/workspace/ensure",
+    response_model=RollupRequestDetailResponseDto,
+    summary="Ensure and return rollup response workspace",
+)
+async def ensureRollupResponseWorkspaceRoute(batchId: int, userModel=Depends(get_token)):
+    from src.services.rollups.service import ensureRollupResponseWorkspace
+    try:
+        return ensureRollupResponseWorkspace(batchId, userModel)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except RollupError as e:
+        return buildErrorResponse(e)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @_actionRouter.get(
     "/batches/{batchId}/sources",
     response_model=RollupBatchSourceListResponseDto,

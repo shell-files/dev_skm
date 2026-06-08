@@ -1,4 +1,4 @@
-﻿import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { GET, POST, PATCH } from "@utils/Network";
 
 export const DEFAULT_REPORTING_YEAR = new Date().getFullYear();
@@ -539,6 +539,22 @@ export const fetchRollupRequestDetail = createAsyncThunk(
   }
 );
 
+export const ensureRollupResponseWorkspace = createAsyncThunk(
+  "report/ensureRollupResponseWorkspace",
+  async ({ batchId }, { rejectWithValue }) => {
+    try {
+      const res = await POST(`${ROLLUP_API_ROOT}/requests/${batchId}/workspace/ensure`);
+      return rejectIfFailed(res, rejectWithValue, "작업 공간 생성에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "작업 공간 생성 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
 export const fetchRollupBatchSources = createAsyncThunk(
   "report/fetchRollupBatchSources",
   async ({ batchId }, { rejectWithValue }) => {
@@ -952,6 +968,17 @@ const reportSlice = createSlice({
       .addCase(fetchRollupRequestDetail.rejected, (state, action) => {
         setRejected(state, "rollupRequestDetail", action);
         state.rollup.selectedRequestDetail = null;
+      });
+
+    builder
+      .addCase(ensureRollupResponseWorkspace.pending, (state) => setPending(state, "ensureRollupResponseWorkspace"))
+      .addCase(ensureRollupResponseWorkspace.fulfilled, (state, action) => {
+        state.loading.ensureRollupResponseWorkspace = false;
+        state.error.ensureRollupResponseWorkspace = null;
+        state.rollup.selectedRequestDetail = dataOf(action.payload);
+      })
+      .addCase(ensureRollupResponseWorkspace.rejected, (state, action) => {
+        setRejected(state, "ensureRollupResponseWorkspace", action);
       });
 
     builder

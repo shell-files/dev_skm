@@ -473,7 +473,7 @@ const DataTab = ({
                               className="ob-checkbox"
                               aria-label={`Select ${item.metricId || item.id}`}
                               checked={selectedIds.includes(item.id)}
-                              disabled={readOnlyYn}
+                              disabled={readOnlyYn || actionLoading}
                               onChange={() => toggleSelect(item.id)}
                             />
                           </td>

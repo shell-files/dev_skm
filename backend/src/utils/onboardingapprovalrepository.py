@@ -290,6 +290,9 @@ def listApprovalAtomicDetailRows(
 
     items = []
     for master in masterRows:
+        if not inputRepo.truthy(master.get("onboarding_input_yn")):
+            continue
+
         atomicMetricId = master.get("atomic_metric_id")
         if not atomicMetricId:
             continue

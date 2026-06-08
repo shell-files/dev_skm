@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from typing import Optional
 
@@ -759,7 +759,7 @@ def approveApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
 
 def rejectApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
     checkScope(request.companyId, userModel)
-    checkApprover(userModel)
+    checkReviewer(userModel)
     commentText = (getattr(request, "commentText", None) or "").strip()
     if not commentText:
         raise ValueError("commentText is required for rejection")

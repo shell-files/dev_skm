@@ -9,7 +9,7 @@ import csv
 import os
 import copy
 
-from src.utils.db import findAll, saveMany
+from src.utils.db import findAll
 
 from datetime import datetime
 
@@ -29,33 +29,6 @@ sheetsService = build(
     "sheets",
     "v4",
     credentials=creds
-)
-
-EMPLOYEE_SHEETS = [
-    "전략기획",
-    "재무·회계",
-    "구매·공급망",
-    "환경·안전",
-    "법무·컴플라이언스",
-    "리스크관리·내부감사",
-    "인사·노무",
-    "생산·연구개발·품질",
-    "영업·홍보·일반지원·기타"
-]
-
-MANAGEMENT_SHEETS = [
-    "경영진"
-]
-
-EXTERNAL_SHEETS = [
-    "지역사회·시민사회",
-    "투자자·금융기관",
-    "산업·ESG 전문가"
-]
-ALL_SURVEY_SHEETS = (
-    EMPLOYEE_SHEETS
-    + MANAGEMENT_SHEETS
-    + EXTERNAL_SHEETS
 )
 # =========================
 # Apps Script URL
@@ -133,39 +106,6 @@ def buildQuestion(question, issues):
         ]
     }
     
-def saveSurveyFormMap(run_id, company_id, year, master_sheet_id, forms):
-
-    rows = []
-
-    for respondent_type, respondent_data in forms.items():
-        for respondent_name, form in respondent_data.items():
-
-            rows.append((
-                run_id,
-                company_id,
-                year,
-                master_sheet_id,
-                form["formId"],
-                respondent_type,
-                respondent_name,
-                form.get("route", "all")   # ⭐ 수정 핵심
-            ))
-
-    sql = """
-        INSERT INTO ESG_SURVEY_FORM_MAP (
-            run_id,
-            company_id,
-            reporting_year,
-            master_sheet_id,
-            form_id,
-            respondent_type,
-            respondent_name,
-            route
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """
-
-    saveMany(sql, rows)
-    
 def buildRespondent(template, respondentType):
 
     respondent = next(
@@ -235,7 +175,7 @@ def buildRespondent(template, respondentType):
     else:
 
         variants.append({
-            "label": respondent["label"],
+            "label": "Default",
             "route": "all",
             "order": [
                 "common",
@@ -276,62 +216,6 @@ def buildSurveyPayload(template):
 
         "version": "v2"
     }
-    
-def getSheetType(sheet_name):
-
-    if sheet_name in EMPLOYEE_SHEETS:
-        return "employee"
-
-    if sheet_name in MANAGEMENT_SHEETS:
-        return "management"
-
-    if sheet_name in EXTERNAL_SHEETS:
-        return "external"
-
-    return "unknown"
-
-def getSurveyResultProcess(sheet_id, token):
-
-    sql = """
-        SELECT form_id, respondent_type, respondent_name
-        FROM ESG_SURVEY_FORM_MAP
-        WHERE master_sheet_id = ?
-    """
-
-    forms = findAll(sql, (sheet_id,))
-
-    summary = {
-        "employee": 0,
-        "management": 0,
-        "external": 0
-    }
-
-    sheet_results = []
-
-    for f in forms:
-
-        values = sheetsService.spreadsheets().values().get(
-            spreadsheetId=sheet_id,
-            range=f"{f['respondent_name']}!A:ZZ"
-        ).execute().get("values", [])
-
-        count = max(len(values) - 1, 0)
-
-        summary[f["respondent_type"]] += count
-
-        sheet_results.append({
-            "form_id": f["form_id"],
-            "respondent_name": f["respondent_name"],
-            "type": f["respondent_type"],
-            "count": count
-        })
-
-    return {
-        "status": "success",
-        "summary": summary,
-        "forms": sheet_results
-    }
-    
 # =========================
 # CREATE FORM 
 # =========================
@@ -371,13 +255,7 @@ async def createFormProcess(req, token):
                 "message": "Apps Script error",
                 "detail": data
             }
-        saveSurveyFormMap(
-            req.runId,
-            req.companyId,
-            req.year,
-            data["data"]["masterSheetId"],
-            data["data"]["forms"]
-        )
+
         return {
             "status": "success",
             "masterSheetId": data["data"]["masterSheetId"],
@@ -404,7 +282,7 @@ async def exportCsvProcess(sheet_id, token):
             sheet_names = [
                 s["properties"]["title"]
                 for s in spreadsheet["sheets"]
-                if s["properties"]["title"] in ALL_SURVEY_SHEETS
+                if "응답" in s["properties"]["title"]
             ]
 
             merged_rows = []

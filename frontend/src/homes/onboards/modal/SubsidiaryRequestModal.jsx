@@ -14,7 +14,7 @@ import { showDefaultAlert } from "@components/UI/ServiceAlert";
 const purposeLabel = (code) => {
   const value = String(code || "").toUpperCase();
   if (value === "REPORT_DISCLOSURE") return "보고서 연결 공시";
-  if (value === "DMA_PRECHECK") return "DMA 사전 계산";
+  if (value === "DMA_PRECHECK") return "중대성 평가 사전 입력";
   return value || "-";
 };
 
@@ -191,9 +191,9 @@ const SubsidiaryRequestModal = ({
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: "8px", marginBottom: "16px" }}>
             {[
               ["보고연도", reportingYear || "-"],
-              ["롤업 목적", purposeLabel(rollupPurposeCode)],
-              ["Metric", metricCount || 0],
-              ["Atomic", atomicCount || 0],
+              ["데이터 요청 목적", purposeLabel(rollupPurposeCode)],
+              ["Data Id", metricCount || 0],
+              ["입력 데이터 수", atomicCount || 0],
             ].map(([label, value]) => (
               <div key={label} style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: "8px", background: "#f8fafc" }}>
                 <div style={{ fontSize: "0.75rem", color: "#64748b", marginBottom: "4px" }}>{label}</div>
@@ -203,14 +203,14 @@ const SubsidiaryRequestModal = ({
           </div>
 
           <div style={{ marginBottom: "16px" }}>
-            <div style={{ fontWeight: 700, marginBottom: "8px", color: "#0f172a" }}>요청 Metric 미리보기</div>
+            <div style={{ fontWeight: 700, marginBottom: "8px", color: "#0f172a" }}>요청 데이터 미리보기</div>
             {loadingPreview && !scopePreview ? (
               <div style={{ padding: "14px", color: "#64748b", border: "1px dashed #cbd5e1", borderRadius: "8px" }}>
                 롤업 범위를 확인하고 있습니다.
               </div>
             ) : previewMetricItems.length === 0 ? (
               <div style={{ padding: "14px", color: "#64748b", border: "1px dashed #cbd5e1", borderRadius: "8px" }}>
-                표시할 Metric 미리보기가 없습니다.
+                표시할 데이터 미리보기가 없습니다.
               </div>
             ) : (
               <div style={{ maxHeight: "132px", overflow: "auto", display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "8px" }}>
@@ -327,15 +327,8 @@ const SubsidiaryRequestModal = ({
             취소
           </button>
           <button
-            style={{
-              padding: "8px 16px",
-              background: "#1d4ed8",
-              color: "#fff",
-              border: "none",
-              borderRadius: "4px",
-              cursor: disabled ? "not-allowed" : "pointer",
-              opacity: disabled ? 0.5 : 1,
-            }}
+            className="ob1-request-btn"
+            style={{ opacity: disabled ? 0.5 : 1 }}
             onClick={handleRequest}
             disabled={disabled}
           >

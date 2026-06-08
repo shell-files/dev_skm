@@ -116,6 +116,7 @@ const initialState = {
     onboardingApprovalReject: false,
     initializePostDmaDisclosureScope: false,
     fetchActiveRollupBatch: false,
+    ensureRollupResponseWorkspace: false,
   },
 
   error: {
@@ -143,6 +144,7 @@ const initialState = {
     onboardingApprovalReject: null,
     initializePostDmaDisclosureScope: null,
     fetchActiveRollupBatch: null,
+    ensureRollupResponseWorkspace: null,
   },
 };
 

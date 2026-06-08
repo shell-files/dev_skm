@@ -28,6 +28,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
     // 아코디언 상태 관리
     const [expanded, setExpanded] = useState({
+        onboarding: false,
         service: true,
         admin: false,
         settings: false
@@ -194,8 +195,41 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
                     {showOnboarding && (
                         <div className="nav-group">
-                            <div className="nav-item" onClick={handleReportNav}>
-                                <span>데이터 입력</span>
+                            <div
+                                className="nav-item"
+                                onClick={() => toggleAccordion("onboarding")}
+                            >
+                                <div className="nav-accordion-header">
+                                    <span>데이터 입력</span>
+                                    <svg className={`nav-arrow ${expanded.onboarding ? "expanded" : ""}`} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div className={`nav-accordion-content ${expanded.onboarding ? "expanded" : ""}`}>
+                                <div className="inner-wrapper">
+                                    <div className="nav-item sub-item" onClick={() => {
+                                        if (!companyId) {
+                                            showDefaultAlert("오류", "회사를 먼저 선택해주세요", "error");
+                                            return;
+                                        }
+                                        handleReportNav();
+                                        if(window.innerWidth <= 800) setIsOpen(false);
+                                    }}>
+                                        내 프로젝트
+                                    </div>
+                                    <div className="nav-item sub-item" onClick={() => {
+                                        if (!companyId) {
+                                            showDefaultAlert("오류", "회사를 먼저 선택해주세요", "error");
+                                            return;
+                                        }
+                                        navigate("/onb?mode=ROLLUP_RESPONSE");
+                                        if(window.innerWidth <= 800) setIsOpen(false);
+                                    }}>
+                                        데이터 요청 목록
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}

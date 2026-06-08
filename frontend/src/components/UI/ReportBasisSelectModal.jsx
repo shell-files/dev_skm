@@ -267,21 +267,21 @@ const ReportBasisSelectModal = ({
 
           <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
             {workflowStatus === null ? (
-              <div key="status-null" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", color: "#64748b", padding: "60px 0", animation: "rbmFadeIn 0.3s ease-out" }}>
-                {/* 
-                <svg width="32" height="32" viewBox="0 0 24 24" style={{ animation: "rbmSpin 1s linear infinite", marginBottom: "16px", color: "#03A94D" }}>
-                  <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
-                </svg>
-                <p>프로젝트 정보를 확인하고 있습니다...</p>
-                */}
+              <div key="status-null" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 0", animation: "rbmFadeIn 0.3s ease-out" }}>
+                <div className="rbm-exists-message" style={{ padding: "40px 30px", textAlign: "center", background: "#f8fafc", borderRadius: "12px", margin: "0", border: "1px solid #e2e8f0", width: "100%", minHeight: "140px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" style={{ animation: "rbmSpin 1s linear infinite", marginBottom: "12px", color: "#03A94D" }}>
+                    <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
+                  </svg>
+                  <p style={{ color: "#64748b", fontSize: "0.9rem", margin: 0 }}>프로젝트 정보를 확인하고 있습니다...</p>
+                </div>
               </div>
             ) : workflowStatus === "EXISTS" ? (
               <div key="status-exists" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 0", animation: "rbmFadeIn 0.3s ease-out" }}>
-                <div className="rbm-exists-message" style={{ padding: "40px 30px", textAlign: "center", background: "#f8fafc", borderRadius: "12px", margin: "0", border: "1px solid #e2e8f0", width: "100%" }}>
-                  <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "#1e293b" }}>
+                <div className="rbm-exists-message" style={{ padding: "40px 30px", textAlign: "center", background: "#f8fafc", borderRadius: "12px", margin: "0", border: "1px solid #e2e8f0", width: "100%", minHeight: "140px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                  <h3 style={{ fontSize: "18px", margin: "0 0 12px 0", color: "#1e293b" }}>
                     이미 생성된 {selectedYear}년 보고서 프로젝트가 있습니다.
                   </h3>
-                  <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
+                  <p style={{ color: "#64748b", fontSize: "0.9rem", margin: 0 }}>
                     아래 [해당 연도로 이동하기] 버튼을 눌러 프로젝트를 계속 진행하세요.
                   </p>
                 </div>
@@ -429,8 +429,14 @@ const ReportBasisSelectModal = ({
       <div className="rbm-process-bar" style={{ maxWidth: workflowStatus === "NO_RUN" ? "1040px" : "640px", animation: "rbmModalFloatUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards" }}>
         <div className="rbm-process-inner" style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
           {workflowStatus === null ? (
-            <div key="process-null" className="rbm-process-placeholder" style={{ padding: "20px 0", display: "flex", alignItems: "center", justifyContent: "center", animation: "rbmFadeIn 0.3s ease-out" }}>
-              {/* <span style={{ color: "#94a3b8" }}>확인 중...</span> */}
+            <div key="process-null" className="rbm-process-actions" style={{ justifyContent: "center", animation: "rbmFadeIn 0.3s ease-out" }}>
+              <button
+                type="button"
+                className="rbm-btn-confirm rbm-btn-confirm--loading"
+                disabled={true}
+              >
+                조회 중...
+              </button>
             </div>
           ) : workflowStatus === "EXISTS" ? (
             <div key="process-exists" className="rbm-process-actions" style={{ justifyContent: "center", animation: "rbmFadeIn 0.3s ease-out" }}>

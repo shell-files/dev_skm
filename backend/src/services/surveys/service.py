@@ -30,6 +30,28 @@ sheetsService = build(
     "v4",
     credentials=creds
 )
+
+EMPLOYEE_SHEETS = [
+    "전략기획",
+    "재무·회계",
+    "구매·공급망",
+    "환경·안전",
+    "법무·컴플라이언스",
+    "리스크관리·내부감사",
+    "인사·노무",
+    "생산·연구개발·품질",
+    "영업·홍보·일반지원·기타"
+]
+
+MANAGEMENT_SHEETS = [
+    "경영진"
+]
+
+EXTERNAL_SHEETS = [
+    "지역사회·시민사회",
+    "투자자·금융기관",
+    "산업·ESG 전문가"
+]
 # =========================
 # Apps Script URL
 # =========================
@@ -216,6 +238,110 @@ def buildSurveyPayload(template):
 
         "version": "v2"
     }
+    
+def getSheetType(sheet_name):
+
+    if sheet_name in EMPLOYEE_SHEETS:
+        return "employee"
+
+    if sheet_name in MANAGEMENT_SHEETS:
+        return "management"
+
+    if sheet_name in EXTERNAL_SHEETS:
+        return "external"
+
+    return "unknown"
+async def getSurveyResultProcess(
+    sheet_id,
+    token
+):
+    try:
+
+        spreadsheet = (
+            sheetsService
+            .spreadsheets()
+            .get(
+                spreadsheetId=sheet_id
+            )
+            .execute()
+        )
+
+        sheet_names = [
+            s["properties"]["title"]
+            for s in spreadsheet["sheets"]
+        ]
+
+        employee_count = 0
+        management_count = 0
+        external_count = 0
+
+        sheet_results = []
+
+        for sheet_name in sheet_names:
+
+            sheet_type = getSheetType(
+                sheet_name
+            )
+
+            if sheet_type == "unknown":
+                continue
+
+            result = (
+                sheetsService
+                .spreadsheets()
+                .values()
+                .get(
+                    spreadsheetId=sheet_id,
+                    range=f"{sheet_name}!A:ZZ"
+                )
+                .execute()
+            )
+
+            values = result.get(
+                "values",
+                []
+            )
+
+            response_count = max(
+                len(values) - 1,
+                0
+            )
+
+            if sheet_type == "employee":
+                employee_count += response_count
+
+            elif sheet_type == "management":
+                management_count += response_count
+
+            elif sheet_type == "external":
+                external_count += response_count
+
+            sheet_results.append({
+                "name": sheet_name,
+                "type": sheet_type,
+                "count": response_count
+            })
+
+        return {
+            "status": "success",
+            "summary": {
+                "employee": employee_count,
+                "management": management_count,
+                "external": external_count,
+                "total": (
+                    employee_count
+                    + management_count
+                    + external_count
+                )
+            },
+            "sheets": sheet_results
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
 # =========================
 # CREATE FORM 
 # =========================

@@ -997,6 +997,34 @@ def loadRepository():
     from src.utils import rolluprepository
     return rolluprepository
 
+def ensureRollupResponseWorkspace(batchId: int, userModel) -> RollupRequestDetailResponseDto:
+    rollupRepository = loadRepository()
+    sourceCompanyId = getSource(userModel)
+    batch = rollupRepository.getBatch(batchId)
+    if not batch:
+        raise RollupError(404, "ROLLUP_BATCH_NOT_FOUND", "Rollup batch was not found.")
+    
+    source = rollupRepository.getSource(batchId, sourceCompanyId)
+    if not source or int(source.get("source_company_id") or 0) == int(batch["parent_company_id"]):
+        raise RollupError(404, "ROLLUP_SOURCE_REQUEST_NOT_FOUND", "Rollup source transfer request was not found.")
+        
+    reportingYear = int(batch["reporting_year"])
+    actorUserId = getActorUserId(userModel)
+
+    conn = rollupRepository.getConn()
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            from src.utils.onboardingscoperepository import ensureRollupResponseWorkspaceTx
+            ensureRollupResponseWorkspaceTx(cur, sourceCompanyId, reportingYear, batchId, actorUserId)
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise RollupError(500, "ROLLUP_RESPONSE_WORKSPACE_FAILED", f"Failed to ensure rollup response workspace: {str(e)}")
+    finally:
+        conn.close()
+
+    return getRequestDetail(batchId, userModel)
+
 def loadCalculator():
     from src.utils import rollupcalculator
     return rollupcalculator
@@ -1009,6 +1037,7 @@ __all__ = [
     "listRequestsForSource",
     "getScopePreview",
     "getRequestDetail",
+    "ensureRollupResponseWorkspace",
     "listBatchSources",
     "sendSource",
     "getStatus",

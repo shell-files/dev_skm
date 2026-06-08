@@ -35,17 +35,17 @@ const ENTITY_STEPS = [
   { img: stepBasisImg, label: "발행 기준 선택" },
   { img: stepG0Img, label: "일반 입력·승인" },
   { img: stepDmaImg, label: "중대성평가 수행" },
-  { img: stepOnboardingImg, label: "선정 지표 입력·승인" },
+  { img: stepOnboardingImg, label: "선정 지표 입력" },
   { img: stepReportImg, label: "AI 공시 보고서 발행" },
 ];
 
 const CONSOLIDATED_STEPS = [
   { img: stepBasisImg, label: "발행 기준 선택" },
   { img: stepG0Img, label: "일반 입력·승인" },
-  { img: stepSubsidiaryTransferImg, label: "자회사 경영일반 전송" },
-  { img: stepRollupImg, label: "경영일반 데이터 취합" },
+  { img: stepSubsidiaryTransferImg, label: "연결 데이터 요청" },
+  { img: stepRollupImg, label: "연결 데이터 취합" },
   { img: stepDmaImg, label: "중대성평가 수행" },
-  { img: stepOnboardingImg, label: "선정 지표 입력·승인" },
+  { img: stepOnboardingImg, label: "선정 지표 입력" },
   { img: stepReportImg, label: "AI 보고서 발행" },
 ];
 
@@ -299,14 +299,14 @@ const ReportBasisSelectModal = ({
                   <div className="rbm-card-illust">
                     <img
                       src={entityCardImg}
-                      alt="별도기준 ENTITY 일러스트"
+                      alt="독립기준 ENTITY 일러스트"
                       width={132}
                       height={132}
                       style={{ width: 132, height: 132, objectFit: "contain" }}
                     />
                   </div>
                   <div className="rbm-card-info">
-                    <h3 className="rbm-card-title">별도기준 (ENTITY)</h3>
+                    <h3 className="rbm-card-title">독립기준 (ENTITY)</h3>
                     <p className="rbm-card-text">
                       본사 단독으로 보고서를 작성합니다.<br />
                       자회사 데이터를 포함하지 않으며<br />
@@ -380,7 +380,7 @@ const ReportBasisSelectModal = ({
           </p>
 
           <div className="rbm-side-section">
-            <h4 className="rbm-side-label rbm-side-label--entity">별도기준 (ENTITY)</h4>
+            <h4 className="rbm-side-label rbm-side-label--entity">독립기준 (ENTITY)</h4>
             <ul className="rbm-side-list">
               <li>
                 <img src={entityReportIcon} alt="본사 단독 보고" width={34} height={34} style={{ width: 34, height: 34, objectFit: "contain" }} />
@@ -474,7 +474,7 @@ const ReportBasisSelectModal = ({
                     {loading
                       ? "시작하는 중..."
                       : selected === "ENTITY"
-                        ? "별도기준으로 시작하기"
+                        ? "독립기준으로 시작하기"
                         : "연결기준으로 시작하기"}
                   </button>
                 </div>

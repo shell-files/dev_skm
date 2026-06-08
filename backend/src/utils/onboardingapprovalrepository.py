@@ -10,6 +10,7 @@ from src.utils.onboardingassignmentrepository import listAssignmentRows
 
 CYCLE_TYPE_PRE_DMA_G0 = scopeRepo.CYCLE_TYPE_PRE_DMA_G0
 CYCLE_TYPE_POST_DMA_DISCLOSURE = scopeRepo.CYCLE_TYPE_POST_DMA_DISCLOSURE
+CYCLE_TYPE_ROLLUP_RESPONSE = scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE
 APPROVAL_POLICY_ROLLUP_READONLY = scopeRepo.APPROVAL_POLICY_ROLLUP_READONLY
 APPROVAL_POLICY_NO_APPROVAL_REQUIRED = scopeRepo.APPROVAL_POLICY_NO_APPROVAL_REQUIRED
 METRIC_ID_G0_02 = scopeRepo.METRIC_ID_G0_02
@@ -45,7 +46,7 @@ def listCycleApprovalInboxRows(
     assignedOnlyYn: bool = True,
 ) -> list[dict]:
     normalizedCycleType = str(cycleType or CYCLE_TYPE_PRE_DMA_G0).strip().upper()
-    if normalizedCycleType not in {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}:
+    if normalizedCycleType not in {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE, CYCLE_TYPE_ROLLUP_RESPONSE}:
         return []
 
     year = scopeRepo.resolveReportingYear(companyId, reportingYear)
@@ -578,6 +579,7 @@ def rejectG002Approval(companyId: int, reportingYear: int, actorUserId: Optional
 __all__ = [
     "CYCLE_TYPE_PRE_DMA_G0",
     "CYCLE_TYPE_POST_DMA_DISCLOSURE",
+    "CYCLE_TYPE_ROLLUP_RESPONSE",
     "APPROVAL_POLICY_ROLLUP_READONLY",
     "APPROVAL_POLICY_NO_APPROVAL_REQUIRED",
     "METRIC_ID_G0_02",

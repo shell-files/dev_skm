@@ -81,6 +81,9 @@
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid #e2e8f0;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: center;
 }
 .ob1-sidebar-menu {
   list-style: none;
@@ -97,13 +100,14 @@
   color: #475569;
   cursor: pointer;
   transition: all 0.2s;
+  text-align: center;
 }
 .ob1-sidebar-menu-item:hover {
   background: #f1f5f9;
 }
 .ob1-sidebar-menu-item.active {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: #f0fdf4;
+  color: #03a94d;
   font-weight: 600;
 }
 
@@ -235,20 +239,21 @@
 }
 .ob1-btn-cta {
   padding: 12px 24px;
-  background-color: #1d4ed8;
+  background-color: #03a94d;
   color: #ffffff;
   border: none;
   border-radius: 6px;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.2s;
 }
-.ob1-btn-cta:hover {
-  background-color: #1e40af;
+.ob1-btn-cta:hover:not(:disabled) {
+  background-color: #028a3e;
+  transform: translateY(-1px);
 }
 .ob1-btn-cta:disabled {
-  background-color: #94a3b8;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -473,7 +478,7 @@
 
 .ob1-rollup-btn {
   padding: 8px 16px;
-  background: #1d4ed8;
+  background: #03a94d;
   color: #fff;
   border: none;
   border-radius: 4px;
@@ -484,12 +489,11 @@
   white-space: nowrap;
 }
 .ob1-rollup-btn:hover:not(:disabled) {
-  background: #1e40af;
+  background: #028a3e;
 }
 .ob1-rollup-btn:disabled {
-  background: #94a3b8;
   cursor: not-allowed;
-  opacity: 0.7;
+  opacity: 0.5;
 }
 .ob1-rollup-btn.calculated {
   background: #10b981;
@@ -663,9 +667,9 @@
 }
 
 .ob1-rollup-btn.primary {
-  background: #2563eb;
+  background: #03a94d;
   color: #fff;
-  border-color: #2563eb;
+  border-color: #03a94d;
 }
 
 .ob1-rollup-btn.secondary {
@@ -715,4 +719,74 @@
 }
 .ob1-btn-batch-cancel-header:hover {
   background-color: #e2e8f0;
+}
+
+/* Pagination matching DataTab (#03a94d green) */
+.ob1-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 30px;
+  margin-bottom: 30px;
+}
+
+.ob1-page-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #dee2e6;
+  background-color: #fff;
+  color: #495057;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.ob1-page-btn.nav-btn {
+  width: auto;
+  padding: 0 12px;
+}
+
+.ob1-page-btn:hover:not(.active):not(:disabled) {
+  background-color: #f1f3f5;
+  border-color: #ced4da;
+}
+
+.ob1-page-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: #f8f9fa;
+}
+
+.ob1-page-btn.active {
+  background-color: #03a94d;
+  color: #fff;
+  border-color: #03a94d;
+  box-shadow: 0 2px 6px rgba(3, 169, 77, 0.3);
+}
+
+/* Modal and Request Button matching Data Approval */
+.ob1-request-btn {
+  background-color: #03a94d;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.ob1-request-btn:hover:not(:disabled) {
+  background-color: #028a3e;
+  transform: translateY(-1px);
+}
+
+.ob1-request-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

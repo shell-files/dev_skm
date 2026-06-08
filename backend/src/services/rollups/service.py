@@ -1011,11 +1011,18 @@ def ensureRollupResponseWorkspace(batchId: int, userModel) -> RollupRequestDetai
     reportingYear = int(batch["reporting_year"])
     actorUserId = getActorUserId(userModel)
 
+    missingAtomicIds = parseMissingAtomicIds(source)
+    metricScope = buildBatchMetricScope(batch)
+    requestedMetricIds = metricScope["requestedMetricIds"]
+    dependencyMetricIds = metricScope["dependencyMetricIds"]
+    dependencyItems = buildMetricReadinessItems(batchId, missingAtomicIds, dependencyMetricIds)
+    actionableInputMetricIds = buildActionableInputMetricIds(requestedMetricIds, dependencyItems)
+
     conn = rollupRepository.getConn()
     try:
         with conn.cursor(dictionary=True) as cur:
             from src.utils.onboardingscoperepository import ensureRollupResponseWorkspaceTx
-            ensureRollupResponseWorkspaceTx(cur, sourceCompanyId, reportingYear, batchId, actorUserId)
+            ensureRollupResponseWorkspaceTx(cur, sourceCompanyId, reportingYear, batchId, actionableInputMetricIds, actorUserId)
         conn.commit()
     except Exception as e:
         conn.rollback()

@@ -42,7 +42,7 @@ PRE_DMA_G0_SCOPE_NOT_READY = "PRE_DMA_G0_SCOPE_NOT_READY: 온보딩 지표 범�
 POST_DMA_DISCLOSURE_CYCLE_NOT_READY = "POST_DMA_DISCLOSURE_CYCLE_NOT_READY: POST_DMA_DISCLOSURE cycle을 먼저 초기화해 주세요."
 POST_DMA_DISCLOSURE_SCOPE_NOT_READY = "POST_DMA_DISCLOSURE_SCOPE_NOT_READY: POST_DMA_DISCLOSURE 지표 범위가 초기화되지 않았습니다."
 STRUCTURED_LOOKUP_IDS = {"G0-05__QL0002", "G0-06__QL0001"}
-EDITABLE_INPUT_MODES = {"MANUAL_NUMBER", "MANUAL_TEXTAREA", "YEAR_RANGE"}
+EDITABLE_INPUT_MODES = {"MANUAL_NUMBER", "MANUAL_TEXTAREA", "YEAR_RANGE", "STRUCTURED_LOOKUP"}
 SUPPORTED_CYCLE_TYPE = "PRE_DMA_G0"
 SUPPORTED_INPUT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
 SUPPORTED_ASSIGNMENT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
@@ -424,7 +424,8 @@ def latestValueForInputMode(rows: list[dict], atomicMetricId: str, inputMode: st
         allowedSources = {"group_rollup_result"}
         priority = {"group_rollup_result": 0}
     elif inputMode == "STRUCTURED_LOOKUP":
-        return {}
+        allowedSources = {"onboarding_input"}
+        priority = {"onboarding_input": 0}
     else:
         allowedSources = {"onboarding_input", "kpi_fact"}
         priority = {"onboarding_input": 0, "kpi_fact": 1}
@@ -659,6 +660,8 @@ def checkMetricInputPermission(*, cycle: dict, companyId: int, metricId: str, us
         return
     if isConsultant(userModel):
         raise PermissionError("Consultants cannot input onboarding metrics")
+    if isAssignmentManager(userModel):
+        return
     actorUserId = getActorUserId(userModel)
     if actorUserId is None:
         raise PermissionError("Authenticated user id is required")

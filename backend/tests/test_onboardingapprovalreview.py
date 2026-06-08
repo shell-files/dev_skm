@@ -83,6 +83,47 @@ class OnboardingApprovalReviewServiceTest(unittest.TestCase):
             with self.assertRaises(PermissionError):
                 service.approveApproval(request(), {"id": 1, "role": "CONSULTANT"})
 
+class OnboardingInputPermissionTest(unittest.TestCase):
+    def setUp(self):
+        self.cycle = {"id": 1}
+        self.companyId = 6
+        self.metricId = "G0-01"
+
+    @patch("src.services.onboardings.service.assignmentRepo.listAssignmentRows")
+    def test_manager_bypasses_assignment(self, mock_list):
+        userModel = {"id": 1, "role": "ESG"}
+        # 1 & 2. ESG 담당자는 assignment 없이 save 및 submit (input check) 가능
+        mock_list.return_value = []
+        service.checkMetricInputPermission(cycle=self.cycle, companyId=self.companyId, metricId=self.metricId, userModel=userModel)
+        
+        # 3. ESG 담당자는 타인에게 할당된 Metric도 save/submit 가능
+        mock_list.return_value = [{"metric_id": "G0-01", "assignment_status": "assigned", "assignee_user_id": 999}]
+        service.checkMetricInputPermission(cycle=self.cycle, companyId=self.companyId, metricId=self.metricId, userModel=userModel)
+
+    @patch("src.services.onboardings.service.assignmentRepo.listAssignmentRows")
+    def test_employee_assignment_rules(self, mock_list):
+        userModel = {"id": 100, "role": "EMPLOYEE"}
+
+        # 5. 일반 담당자는 미지정 Metric save/submit 차단
+        mock_list.return_value = []
+        with self.assertRaises(PermissionError):
+            service.checkMetricInputPermission(cycle=self.cycle, companyId=self.companyId, metricId=self.metricId, userModel=userModel)
+
+        # 6. 일반 담당자는 타인 할당 Metric save/submit 차단
+        mock_list.return_value = [{"metric_id": "G0-01", "assignment_status": "assigned", "assignee_user_id": 999}]
+        with self.assertRaises(PermissionError):
+            service.checkMetricInputPermission(cycle=self.cycle, companyId=self.companyId, metricId=self.metricId, userModel=userModel)
+
+        # 4 & 8. 일반 담당자는 본인 ASSIGNED Metric만 save/submit 가능
+        mock_list.return_value = [{"metric_id": "G0-01", "assignment_status": "assigned", "assignee_user_id": 100}]
+        service.checkMetricInputPermission(cycle=self.cycle, companyId=self.companyId, metricId=self.metricId, userModel=userModel)
+
+    def test_consultant_blocked(self):
+        # 7. 컨설턴트 save/submit 차단
+        userModel = {"id": 200, "role": "CONSULTANT"}
+        with self.assertRaises(PermissionError):
+            service.checkMetricInputPermission(cycle=self.cycle, companyId=self.companyId, metricId=self.metricId, userModel=userModel)
+
 
 if __name__ == "__main__":
     unittest.main()

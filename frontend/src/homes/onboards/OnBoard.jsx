@@ -49,7 +49,7 @@ const normalizeViewerRole = (role) => String(role || "").trim().toUpperCase();
 
 const isAssignmentManagerRole = (role) => {
   const normalized = normalizeViewerRole(role);
-  return ["ADMIN", "ESG", "담당자", "ESG담당자", "ESG 담당자"].includes(normalized);
+  return ["ADMIN", "ESG", "관리자", "ESG담당자", "ESG 담당자"].includes(normalized);
 };
 
 const isEmployeeRole = (role) => {
@@ -191,30 +191,45 @@ const DonutChart = ({ percent, color, emptyColor = "#f1f5f9" }) => {
 
 const OnboardingStatCards = ({ stats }) => {
   const total = stats.totalCount || 1;
-  const completedPercent = (stats.completedCount / total) * 100;
-  const inProgressPercent = (stats.inProgressCount / total) * 100;
-  const notStartedPercent = (stats.notStartedCount / total) * 100;
+  const completed = stats.completedCount || 0;
+  const inProgress = stats.inProgressCount || 0;
+  const notStarted = stats.notStartedCount || 0;
+
+  const getPercent = (count) => Math.round((count / total) * 100);
 
   return (
-    <div style={{ display: 'flex', gap: '16px', fontSize: '13px' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <span style={{ color: '#64748b' }}>전체 지표</span>
-        <span style={{ fontWeight: 600, fontSize: '16px' }}>{stats.totalCount}</span>
+    <div style={{ display: 'flex', gap: '24px', background: '#ffffff', padding: '12px 24px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingRight: '24px' }}>
+        <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>전체 지표</span>
+        <span style={{ fontSize: '1.25rem', color: '#0f172a', fontWeight: '700' }}>{stats.totalCount || 0}</span>
       </div>
-      <div style={{ width: '1px', backgroundColor: '#e2e8f0' }} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <span style={{ color: '#64748b' }}>입력 완료</span>
-        <span style={{ fontWeight: 600, fontSize: '16px', color: '#10b981' }}>{stats.completedCount}</span>
+      <div style={{ width: '1px', background: '#e2e8f0' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+          <span style={{ color: '#64748b', fontWeight: '600' }}>입력 완료</span>
+          <span style={{ color: '#16a34a', fontWeight: '700' }}>{completed}</span>
+        </div>
+        <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${getPercent(completed)}%`, background: '#16a34a' }} />
+        </div>
       </div>
-      <div style={{ width: '1px', backgroundColor: '#e2e8f0' }} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <span style={{ color: '#64748b' }}>진행 중</span>
-        <span style={{ fontWeight: 600, fontSize: '16px', color: '#f97316' }}>{stats.inProgressCount}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+          <span style={{ color: '#64748b', fontWeight: '600' }}>진행 중</span>
+          <span style={{ color: '#f97316', fontWeight: '700' }}>{inProgress}</span>
+        </div>
+        <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${getPercent(inProgress)}%`, background: '#f97316' }} />
+        </div>
       </div>
-      <div style={{ width: '1px', backgroundColor: '#e2e8f0' }} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-        <span style={{ color: '#64748b' }}>미입력</span>
-        <span style={{ fontWeight: 600, fontSize: '16px', color: '#94a3b8' }}>{stats.notStartedCount}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+          <span style={{ color: '#64748b', fontWeight: '600' }}>미입력</span>
+          <span style={{ color: '#94a3b8', fontWeight: '700' }}>{notStarted}</span>
+        </div>
+        <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${getPercent(notStarted)}%`, background: '#94a3b8' }} />
+        </div>
       </div>
     </div>
   );
@@ -236,7 +251,7 @@ const OnboardingWorkflowCta = ({
         <div className="ob1-empty-state">
           <p className="ob1-empty-title">보고서 발행 기준 선택이 필요합니다.</p>
           <p className="ob1-empty-desc">
-          먼저 보고서 워크플로우를 생성해 주세요.
+          보고서 워크플로우를 생성해 주세요.
           </p>
           <button type="button" className="ob1-btn-cta" onClick={onBasisModalOpen}>
             보고서 발행 기준 선택
@@ -440,7 +455,7 @@ const OnboardingMetricTable = ({
             const approvalStatus = formatApprovalStatus(item.approvalStatus);
 
             const isSelected = selectedMetricIds.includes(item.metricId);
-            const isEsgManager = viewerRole === 'ESG 담당자' || viewerRole === '담당자' || viewerRole === 'ESG' || viewerRole === 'ADMIN';
+            const isEsgManager = viewerRole === 'ESG 담당자' || viewerRole === '관리자' || viewerRole === 'ESG' || viewerRole === 'ADMIN';
             const isAssigned = item.assignmentStatus === 'ASSIGNED' || item.assignmentStatus === 'assigned';
             const isInvitePending = item.inviteStatus === 'PENDING';
             const isSelfAssigned = item.selfAssignedYn === true;
@@ -548,7 +563,7 @@ const OnBoard = () => {
   const cycleTypeQuery = searchParams.get("cycleType");
   const reportingYear = reportingYearQuery ? parseInt(reportingYearQuery, 10) : DEFAULT_REPORTING_YEAR;
 
-  const [viewMode, setViewMode] = useState("MY_PROJECT");
+  const [viewMode, setViewMode] = useState(new URLSearchParams(window.location.search).get("mode") === "ROLLUP_RESPONSE" ? "ROLLUP_RESPONSE" : "MY_PROJECT");
 
   // Preview States
   const [previewRole, setPreviewRole] = useState("ESG 담당자");
@@ -630,7 +645,33 @@ const OnBoard = () => {
     return g0Items.filter((item) => item.subIssueName === selectedSubIssue);
   }, [g0Items, selectedSubIssue]);
 
-  const g0ProfileStatus = useMemo(() => getProfileStatusFromItems(g0Items), [g0Items]);
+  const [selectedSubIssue, setSelectedSubIssue] = useState("");
+
+  const filteredG0ItemsForUser = useMemo(() => {
+    if (viewMode === "ROLLUP_RESPONSE" && isEmployeeViewer) {
+      return g0Items.filter((item) => item.assignmentStatus === "ASSIGNED" || item.assignmentStatus === "assigned" || item.selfAssignedYn === true);
+    }
+    return g0Items;
+  }, [g0Items, viewMode, isEmployeeViewer]);
+
+  const uniqueSubIssues = useMemo(() => {
+    const issues = new Set();
+    filteredG0ItemsForUser.forEach((item) => {
+      if (item.subIssueName) {
+        issues.add(item.subIssueName);
+      }
+    });
+    return Array.from(issues);
+  }, [filteredG0ItemsForUser]);
+
+  const activeSubIssue = selectedSubIssue || (uniqueSubIssues.length > 0 ? uniqueSubIssues[0] : "");
+
+  const filteredG0Items = useMemo(() => {
+    if (!activeSubIssue) return filteredG0ItemsForUser;
+    return filteredG0ItemsForUser.filter((item) => item.subIssueName === activeSubIssue);
+  }, [filteredG0ItemsForUser, activeSubIssue]);
+
+  const g0ProfileStatus = useMemo(() => getProfileStatusFromItems(filteredG0ItemsForUser), [filteredG0ItemsForUser]);
   const hasPendingSubsidiaryRequest = useMemo(
     () => requests.some(isPendingSubsidiaryRequest),
     [requests]
@@ -939,25 +980,6 @@ const OnBoard = () => {
 
   return (
     <div id="ob1-page">
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-        <button
-          className="ob1-btn-input"
-          onClick={() => setViewMode("MY_PROJECT")}
-          style={{ padding: "8px 16px", background: viewMode === "MY_PROJECT" ? "#eff6ff" : "#f8fafc", color: viewMode === "MY_PROJECT" ? "#1d4ed8" : "#1e293b", border: `1px solid ${viewMode === "MY_PROJECT" ? "#3b82f6" : "#cbd5e1"}` }}
-        >
-          내 프로젝트
-        </button>
-        {hasAnySubsidiaryRequest && !STEP12_UI_FIXTURE_ENABLED && (
-          <button
-            className="ob1-btn-input"
-            onClick={() => setViewMode("ROLLUP_RESPONSE")}
-            style={{ padding: "8px 16px", background: viewMode === "ROLLUP_RESPONSE" ? "#eff6ff" : "#f8fafc", color: viewMode === "ROLLUP_RESPONSE" ? "#1d4ed8" : "#1e293b", border: `1px solid ${viewMode === "ROLLUP_RESPONSE" ? "#3b82f6" : "#cbd5e1"}` }}
-          >
-            {hasPendingSubsidiaryRequest ? "지주사 데이터 요청 대응 (대기중)" : "지주사 데이터 요청 대응"}
-          </button>
-        )}
-      </div>
-
       <div className="ob1-header-card" style={{ 
         display: 'flex', 
         alignItems: 'center', 
@@ -985,7 +1007,7 @@ const OnBoard = () => {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <OnboardingStatCards stats={profileStats} />
-          {!isNoRunWorkflow(displayWorkflow) && viewMode === "MY_PROJECT" && (
+          {!isNoRunWorkflow(displayWorkflow) && viewMode === "MY_PROJECT" && !canManageRollup && (
             <OnboardingWorkflowCta
               variant="action"
               loadingWorkflow={loadingWorkflow}

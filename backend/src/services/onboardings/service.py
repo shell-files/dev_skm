@@ -37,6 +37,7 @@ from src.services.calculations.service import invalidateAffectedEntityFactsTx
 
 CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
 CYCLE_TYPE_POST_DMA_DISCLOSURE = "POST_DMA_DISCLOSURE"
+CYCLE_TYPE_ROLLUP_RESPONSE = "ROLLUP_RESPONSE"
 PRE_DMA_G0_CYCLE_NOT_READY = "PRE_DMA_G0_CYCLE_NOT_READY: 보고연도 프로젝트를 먼저 시작해 주세요."
 PRE_DMA_G0_SCOPE_NOT_READY = "PRE_DMA_G0_SCOPE_NOT_READY: 온보딩 지표 범위가 초기화되지 않았습니다. 기존 프로젝트를 재개해 주세요."
 POST_DMA_DISCLOSURE_CYCLE_NOT_READY = "POST_DMA_DISCLOSURE_CYCLE_NOT_READY: POST_DMA_DISCLOSURE cycle을 먼저 초기화해 주세요."
@@ -44,8 +45,8 @@ POST_DMA_DISCLOSURE_SCOPE_NOT_READY = "POST_DMA_DISCLOSURE_SCOPE_NOT_READY: POST
 STRUCTURED_LOOKUP_IDS = {"G0-05__QL0002", "G0-06__QL0001"}
 EDITABLE_INPUT_MODES = {"MANUAL_NUMBER", "MANUAL_TEXTAREA", "YEAR_RANGE", "STRUCTURED_LOOKUP"}
 SUPPORTED_CYCLE_TYPE = "PRE_DMA_G0"
-SUPPORTED_INPUT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
-SUPPORTED_ASSIGNMENT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
+SUPPORTED_INPUT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE, CYCLE_TYPE_ROLLUP_RESPONSE}
+SUPPORTED_ASSIGNMENT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE, CYCLE_TYPE_ROLLUP_RESPONSE}
 ASSIGNMENT_MANAGER_ROLES = {"ADMIN", "ESG"}
 ASSIGNMENT_MANAGER_ROLE_NAMES = {"관리자", "ESG담당자", "ESG 담당자"}
 EMPLOYEE_ROLES = {"EMPLOYEE", "ASSIGNEE"}
@@ -85,7 +86,12 @@ def listMetrics(
             raise ValueError(f"Unsupported metricId for cycle scope: {metricId}")
     metricIds = [row["metric_id"] for row in scopes]
     masterRows = repo.listAtomicMaster(metricIds)
-    valueRows = repo.listValueRows(companyId, year, metricIds)
+    valueRows = repo.listValueRows(
+        companyId, 
+        year, 
+        metricIds,
+        includeGroupRollupResultYn=(cycleType != CYCLE_TYPE_ROLLUP_RESPONSE),
+    )
     assignmentByMetric = {row["metric_id"]: buildAssignment(row) for row in assignmentRows}
     atomicRowsByMetric = groupBy(masterRows, "metric_id")
 
@@ -300,7 +306,7 @@ def saveMetricValueGroups(groups: list[dict]) -> int:
 def requireCycle(companyId: int, reportingYear: int, cycleType: str) -> dict:
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType not in SUPPORTED_INPUT_CYCLE_TYPES:
-        raise ValueError("Only PRE_DMA_G0 or POST_DMA_DISCLOSURE cycleType is supported")
+        raise ValueError("Only PRE_DMA_G0, POST_DMA_DISCLOSURE, or ROLLUP_RESPONSE cycleType is supported")
     cycle = repo.getCycle(companyId, reportingYear, normalizedCycleType)
     if not cycle or str(cycle.get("cycle_status") or "").strip().lower() != "active":
         raise ValueError(cycleNotReadyMessage(normalizedCycleType))
@@ -311,6 +317,8 @@ def cycleNotReadyMessage(cycleType: str) -> str:
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
         return POST_DMA_DISCLOSURE_CYCLE_NOT_READY
+    if normalizedCycleType == CYCLE_TYPE_ROLLUP_RESPONSE:
+        return "ROLLUP_RESPONSE_CYCLE_NOT_READY: 받은 요청함 cycle이 초기화되지 않았습니다."
     return PRE_DMA_G0_CYCLE_NOT_READY
 
 
@@ -318,6 +326,8 @@ def scopeNotReadyMessage(cycleType: str) -> str:
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
         return POST_DMA_DISCLOSURE_SCOPE_NOT_READY
+    if normalizedCycleType == CYCLE_TYPE_ROLLUP_RESPONSE:
+        return "ROLLUP_RESPONSE_SCOPE_NOT_READY: 받은 요청함 지표 범위가 초기화되지 않았습니다."
     return PRE_DMA_G0_SCOPE_NOT_READY
 
 
@@ -424,8 +434,14 @@ def latestValueForInputMode(rows: list[dict], atomicMetricId: str, inputMode: st
         allowedSources = {"group_rollup_result"}
         priority = {"group_rollup_result": 0}
     elif inputMode == "STRUCTURED_LOOKUP":
-        allowedSources = {"onboarding_input"}
-        priority = {"onboarding_input": 0}
+        allowedSources = {
+            "onboarding_input",
+            "kpi_fact",
+        }
+        priority = {
+            "onboarding_input": 0,
+            "kpi_fact": 1,
+        }
     else:
         allowedSources = {"onboarding_input", "kpi_fact"}
         priority = {"onboarding_input": 0, "kpi_fact": 1}
@@ -626,7 +642,7 @@ def checkCycleType(cycleType: str) -> None:
 def checkAssignmentCycleType(cycleType: str) -> str:
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType not in SUPPORTED_ASSIGNMENT_CYCLE_TYPES:
-        raise ValueError("Only PRE_DMA_G0 or POST_DMA_DISCLOSURE cycleType is supported")
+        raise ValueError("Only PRE_DMA_G0, POST_DMA_DISCLOSURE, or ROLLUP_RESPONSE cycleType is supported")
     return normalizedCycleType
 
 

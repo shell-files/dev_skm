@@ -8,7 +8,7 @@ from langchain_core.output_parsers import StrOutputParser
 from sentence_transformers import SentenceTransformer
 from pgvector.psycopg import register_vector
 
-from src.utils.db import findAll
+from src.utils.db import findAll, save, addKey, saveMany
 from src.utils.settings import settings
 
 
@@ -75,6 +75,101 @@ def validateReport(text):
     text = re.sub(r'[\U00010000-\U0010ffff]', '', text, flags=re.UNICODE)
     return text.strip()
 
+# ==================================================
+# DB 저장 핵심 함수
+# ==================================================
+
+def saveReportRun(
+    companyId,
+    reportingYear,
+    subIssueId,
+    sectionNo,
+    llmModel,
+    promptVersion,
+    templateSnapshot,
+    filledTemplate,
+    reportText
+):
+    sql = """
+        INSERT INTO ESG_REPORT_AI_RUN (
+            materiality_run_id,
+            company_id,
+            reporting_year,
+            sub_issue_id,
+            section_no,
+            template_snapshot,
+            filled_template,
+            report_content,
+            llm_model,
+            prompt_version
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+
+    params = (
+        None,
+        companyId,
+        reportingYear,
+        subIssueId,
+        sectionNo,
+        templateSnapshot,
+        filledTemplate,
+        reportText,
+        llmModel,
+        promptVersion
+    )
+
+    success, run_id = addKey(sql, params)
+    return run_id
+
+def saveSection(runId, sectionNo, subIssueId, template, filledText, reportText):
+
+    sql = """
+        INSERT INTO ESG_REPORT_AI_SECTION (
+            ai_run_id,
+            section_no,
+            sub_issue_id,
+            template_snapshot,
+            filled_template,
+            report_text
+        )
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """
+
+    return addKey(sql, (
+        runId,
+        sectionNo,
+        subIssueId,
+        template,
+        filledText,
+        reportText
+    ))
+    
+def saveMetricTrace(sectionId, usedMetrics, factData):
+
+    sql = """
+        INSERT INTO ESG_REPORT_AI_METRIC_TRACE (
+            section_id,
+            atomic_metric_id,
+            metric_source_version,
+            value_numeric,
+            value_text,
+            unit
+        )
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """
+
+    rows = []
+
+    for m in usedMetrics:
+        fact = factData.get(m)
+        if not fact:
+            continue
+
+        rows.append((sectionId, m, "v1", fact.get("value"), None, fact.get("unit")))
+
+    if rows:
+        saveMany(sql, rows)
 # ==================================================
 # KPI 조회
 # ==================================================
@@ -292,8 +387,15 @@ def compressSrContext(rows):
 # ==================================================
 
 def generateIssueReport(
+    companyId,
+    reportingYear,
+    subIssueId,
+    sectionNo,
+    template,
     filledText,
-    compressedContext
+    compressedContext,
+    factData,
+    usedMetrics 
 ):
 
     systemInstruction = """
@@ -350,4 +452,42 @@ def generateIssueReport(
         "compressed_context": compressedContext
     })
 
-    return validateReport(result)
+    result = validateReport(result)
+    
+    # ==================================================
+    # 1. RUN 저장
+    # ==================================================
+    run_id   = saveReportRun(
+        companyId,
+        reportingYear,
+        subIssueId,
+        sectionNo,
+        "gemma4:e4b",
+        "v1",
+        template,
+        filledText,
+        result
+    )
+
+    # ==================================================
+    # 2. SECTION 저장
+    # ==================================================
+    section_id = saveSection(
+        run_id  ,
+        sectionNo,
+        subIssueId,
+        template,
+        filledText,
+        result
+    )
+
+    # ==================================================
+    # 3. METRIC TRACE 저장
+    # ==================================================
+    saveMetricTrace(
+        section_id,
+        usedMetrics,
+        factData
+    )
+
+    return {"report": result, "run_id": run_id  }

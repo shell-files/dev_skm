@@ -665,7 +665,7 @@ def listPromotableInputAtomicRowsTx(cur, metricId: str) -> list[dict]:
           AND onboarding_input_yn = 1
           AND active_yn = 1
           AND delete_yn = 0
-          AND UPPER(COALESCE(atomic_data_role, '')) NOT IN ('DERIVED', 'ROLLUP_READONLY')
+          AND UPPER(COALESCE(atomic_data_role, '')) = 'INPUT'
         ORDER BY atomic_metric_id
         """,
         (metricId,),
@@ -686,7 +686,7 @@ def listPromotableInputAtomicIds(metricId: str) -> list[str]:
           AND onboarding_input_yn = 1
           AND active_yn = 1
           AND delete_yn = 0
-          AND UPPER(COALESCE(atomic_data_role, '')) NOT IN ('DERIVED', 'ROLLUP_READONLY')
+          AND UPPER(COALESCE(atomic_data_role, '')) = 'INPUT'
         ORDER BY atomic_metric_id
         """,
         (metricId,),

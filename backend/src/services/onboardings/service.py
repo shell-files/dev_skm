@@ -107,6 +107,12 @@ def listMetrics(
     metricIds = [row["metric_id"] for row in scopes]
     masterRows = repo.listAtomicMaster(metricIds)
     actualCycleType = str(cycle.get("cycle_type") or cycleType).strip().upper()
+    
+    if actualCycleType == repo.CYCLE_TYPE_ROLLUP_RESPONSE and batchId:
+        from src.utils import rolluprepository as rollupRepo
+        snapshotAtomicIds = set(rollupRepo.resolveExternalEntitySourceAtomicIds(int(batchId)))
+        masterRows = [row for row in masterRows if row.get("atomic_metric_id") in snapshotAtomicIds]
+
     valueRows = repo.listValueRows(
         companyId, 
         year, 

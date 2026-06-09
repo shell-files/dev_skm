@@ -9,6 +9,7 @@ import OnboardingModalShell from "./modal/OnboardingModalShell";
 import SubsidiaryRequestModal from "./modal/SubsidiaryRequestModal";
 import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
 import RollupSummaryPanel from "./RollupSummaryPanel";
+import RollupInboxPanel from "./RollupInboxPanel";
 import MetricAssignmentModal from "./modal/MetricAssignmentModal";
 import UiPreviewPanel from "@/dev/step12UiPreview/UiPreviewPanel";
 import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
@@ -38,6 +39,8 @@ import {
   fetchActiveRollupBatch,
   fetchRollupBatchStatus,
   fetchRollupBatchSources,
+  fetchRollupRequestDetail,
+  ensureRollupResponseWorkspace,
   initializePostDmaDisclosureScope,
   resetReportState,
   saveOnboardingMetric,
@@ -103,6 +106,11 @@ const flattenOnboardingItems = (metrics = []) =>
       ...atomic,
       metricId: atomic.metricId || metric.metricId,
       metricName: atomic.metricName || metric.metricName,
+      issueDomain: metric.issueDomain,
+      subIssueId: metric.subIssueId,
+      subIssueCode: metric.subIssueCode,
+      subIssueName: metric.subIssueName,
+      scopeSourceType: metric.scopeSourceType,
       approvalPolicyCode: metric.approvalPolicyCode,
       assignment: metric.assignment,
     }))
@@ -191,41 +199,44 @@ const DonutChart = ({ percent, color, emptyColor = "#f1f5f9" }) => {
 
 const OnboardingStatCards = ({ stats }) => {
   const total = stats.totalCount || 1;
-  const completedPercent = (stats.completedCount / total) * 100;
-  const inProgressPercent = (stats.inProgressCount / total) * 100;
-  const notStartedPercent = (stats.notStartedCount / total) * 100;
+  const completed = stats.completedCount || 0;
+  const inProgress = stats.inProgressCount || 0;
+  const notStarted = stats.notStartedCount || 0;
+
+  const getPercent = (count) => Math.round((count / total) * 100);
 
   return (
-    <div className="ob1-cards">
-      <div className="ob1-stat-card">
-        <div className="ob1-stat-title">전체 지표</div>
-        <div className="ob1-stat-value">{stats.totalCount}</div>
+    <div style={{ display: 'flex', gap: '24px', background: '#ffffff', padding: '12px 24px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingRight: '24px' }}>
+        <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>전체 지표</span>
+        <span style={{ fontSize: '1.25rem', color: '#0f172a', fontWeight: '700' }}>{stats.totalCount || 0}</span>
       </div>
-      <div className="ob1-stat-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
-          <div className="ob1-stat-title">입력 완료</div>
-          <div className="ob1-stat-value success" style={{ fontSize: '18px' }}>{stats.completedCount}</div>
+      <div style={{ width: '1px', background: '#e2e8f0' }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+          <span style={{ color: '#64748b', fontWeight: '600' }}>입력 완료</span>
+          <span style={{ color: '#16a34a', fontWeight: '700' }}>{completed}</span>
         </div>
-        <div style={{ width: '100%', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ width: `${completedPercent}%`, height: '100%', backgroundColor: '#10b981' }} />
-        </div>
-      </div>
-      <div className="ob1-stat-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
-          <div className="ob1-stat-title">진행 중</div>
-          <div className="ob1-stat-value warning" style={{ fontSize: '18px' }}>{stats.inProgressCount}</div>
-        </div>
-        <div style={{ width: '100%', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ width: `${inProgressPercent}%`, height: '100%', backgroundColor: '#f97316' }} />
+        <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${getPercent(completed)}%`, background: '#16a34a' }} />
         </div>
       </div>
-      <div className="ob1-stat-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
-          <div className="ob1-stat-title">미입력</div>
-          <div className="ob1-stat-value" style={{ fontSize: '18px', color: '#64748b' }}>{stats.notStartedCount}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+          <span style={{ color: '#64748b', fontWeight: '600' }}>진행 중</span>
+          <span style={{ color: '#f97316', fontWeight: '700' }}>{inProgress}</span>
         </div>
-        <div style={{ width: '100%', height: '4px', backgroundColor: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ width: `${notStartedPercent}%`, height: '100%', backgroundColor: '#94a3b8' }} />
+        <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${getPercent(inProgress)}%`, background: '#f97316' }} />
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+          <span style={{ color: '#64748b', fontWeight: '600' }}>미입력</span>
+          <span style={{ color: '#94a3b8', fontWeight: '700' }}>{notStarted}</span>
+        </div>
+        <div style={{ height: '4px', background: '#e2e8f0', borderRadius: '2px', overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${getPercent(notStarted)}%`, background: '#94a3b8' }} />
         </div>
       </div>
     </div>
@@ -248,7 +259,7 @@ const OnboardingWorkflowCta = ({
         <div className="ob1-empty-state">
           <p className="ob1-empty-title">보고서 발행 기준 선택이 필요합니다.</p>
           <p className="ob1-empty-desc">
-          먼저 보고서 워크플로우를 생성해 주세요.
+          보고서 워크플로우를 생성해 주세요.
           </p>
           <button type="button" className="ob1-btn-cta" onClick={onBasisModalOpen}>
             보고서 발행 기준 선택
@@ -412,15 +423,44 @@ const OnboardingMetricTable = ({
             const subMetrics = g0Items.filter((sub) => sub.metricId === item.metricId);
             const statusInfo = calculateMetricStatus(subMetrics);
 
-            const inputStatusLabel = item.inputStatus || statusInfo.label;
-            const inputStatusCls = inputStatusLabel === '작성중' ? 'draft' : inputStatusLabel === '제출완료' ? 'submitted' : inputStatusLabel === '입력 완료' ? 'approved' : 'not-started';
+            const formatInputStatus = (rawStatus, fallbackStatusInfo) => {
+              if (!rawStatus) return { label: fallbackStatusInfo.label, cls: fallbackStatusInfo.cls || 'not-started' };
+              const normalized = String(rawStatus).toLowerCase().trim();
+              switch (normalized) {
+                case 'approved': return { label: '입력 완료', cls: 'approved' };
+                case 'submitted': return { label: '제출 완료', cls: 'submitted' };
+                case 'rejected': return { label: '반려', cls: 'rejected' };
+                case 'in_progress':
+                case 'partial': return { label: '작성중', cls: 'draft' };
+                case 'not_started': return { label: '미입력', cls: 'not-started' };
+                case '입력 완료': return { label: '입력 완료', cls: 'approved' };
+                case '제출완료': return { label: '제출 완료', cls: 'submitted' };
+                case '작성중': return { label: '작성중', cls: 'draft' };
+                default: return { label: rawStatus, cls: 'not-started' };
+              }
+            };
 
-            const approvalStatusLabel = item.approvalStatus || '미제출';
-            let approvalStatusCls = 'not-started';
-            if (approvalStatusLabel === '검토대기') approvalStatusCls = 'draft';
-            else if (approvalStatusLabel === '검토완료') approvalStatusCls = 'reviewed';
-            else if (approvalStatusLabel === '승인완료') approvalStatusCls = 'approved';
-            else if (approvalStatusLabel === '반려') approvalStatusCls = 'rejected';
+            const formatApprovalStatus = (rawStatus) => {
+              if (!rawStatus) return { label: '미제출', cls: 'not-started' };
+              const normalized = String(rawStatus).toLowerCase().trim();
+              switch (normalized) {
+                case 'approved': return { label: '승인 완료', cls: 'approved' };
+                case 'submitted':
+                case 'pending': return { label: '승인 대기', cls: 'draft' };
+                case 'reviewed': return { label: '검토 완료', cls: 'reviewed' };
+                case 'rejected': return { label: '반려', cls: 'rejected' };
+                case '미제출': return { label: '미제출', cls: 'not-started' };
+                case '승인대기':
+                case '검토대기': return { label: '승인 대기', cls: 'draft' };
+                case '검토완료': return { label: '검토 완료', cls: 'reviewed' };
+                case '승인완료': return { label: '승인 완료', cls: 'approved' };
+                case '반려': return { label: '반려', cls: 'rejected' };
+                default: return { label: rawStatus, cls: 'not-started' };
+              }
+            };
+
+            const inputStatus = formatInputStatus(item.inputStatus, statusInfo);
+            const approvalStatus = formatApprovalStatus(item.approvalStatus);
 
             const isSelected = selectedMetricIds.includes(item.metricId);
             const isEsgManager = viewerRole === 'ESG 담당자' || viewerRole === '관리자' || viewerRole === 'ESG' || viewerRole === 'ADMIN';
@@ -475,14 +515,14 @@ const OnboardingMetricTable = ({
                 </td>
 
                 <td>
-                  <span className={`ob1-status-pill ${inputStatusCls}`}>
-                    {inputStatusLabel}
+                  <span className={`ob1-status-pill ${inputStatus.cls}`}>
+                    {inputStatus.label}
                   </span>
                 </td>
 
                 <td>
-                  <span className={`ob1-status-pill ${approvalStatusCls}`}>
-                    {approvalStatusLabel}
+                  <span className={`ob1-status-pill ${approvalStatus.cls}`}>
+                    {approvalStatus.label}
                   </span>
                 </td>
 
@@ -531,6 +571,9 @@ const OnBoard = () => {
   const cycleTypeQuery = searchParams.get("cycleType");
   const reportingYear = reportingYearQuery ? parseInt(reportingYearQuery, 10) : DEFAULT_REPORTING_YEAR;
 
+  const viewMode = searchParams.get("mode") === "ROLLUP_RESPONSE" ? "ROLLUP_RESPONSE" : "MY_PROJECT";
+  const batchIdQuery = searchParams.get("batchId");
+
   // Preview States
   const [previewRole, setPreviewRole] = useState("ESG 담당자");
   const [previewOnboardingScenario, setPreviewOnboardingScenario] = useState(ONBOARDING_SCENARIOS.UNASSIGNED);
@@ -548,6 +591,8 @@ const OnBoard = () => {
   const rawAssignments = useSelector((state) => state.report.onboarding.assignments);
   const activeBatchId = useSelector((state) => state.report.rollup.activeBatchId);
   const requests = useSelector((state) => state.report.rollup.requests);
+  const selectedRequestDetail = useSelector((state) => state.report.rollup.selectedRequestDetail);
+  const activeReportingYear = viewMode === "ROLLUP_RESPONSE" ? (selectedRequestDetail?.reportingYear || reportingYear) : reportingYear;
   const loadingWorkflow = useSelector((state) => state.report.loading.workflow);
   const loadingG0 = useSelector((state) => state.report.loading.onboarding);
   const assigningMetrics = useSelector((state) => state.report.loading.assignMetrics);
@@ -556,8 +601,11 @@ const OnBoard = () => {
 
   const displayWorkflow = STEP12_UI_FIXTURE_ENABLED ? PREVIEW_WORKFLOW : workflow;
   const activeCycleType = useMemo(
-    () => resolveOnboardingCycleType(displayWorkflow, cycleTypeQuery),
-    [displayWorkflow, cycleTypeQuery]
+    () => {
+      if (viewMode === "ROLLUP_RESPONSE") return "ROLLUP_RESPONSE";
+      return resolveOnboardingCycleType(displayWorkflow, cycleTypeQuery);
+    },
+    [viewMode, displayWorkflow, cycleTypeQuery]
   );
   const activeRollupContext = useMemo(
     () => resolveRollupContext(activeCycleType),
@@ -577,15 +625,68 @@ const OnBoard = () => {
   const [assignmentMode, setAssignmentMode] = useState('single');
   const [assignmentTargetIds, setAssignmentTargetIds] = useState([]);
 
+  const currentUserId = user?.id ?? user?.user_id ?? user?.userId;
+
   const g0Items = useMemo(() => {
-    const flattened = mergeAssignmentIntoItems(flattenOnboardingItems(rawMetrics), rawAssignments);
+    const flattened = mergeAssignmentIntoItems(
+      flattenOnboardingItems(rawMetrics),
+      rawAssignments
+    ).map((item) => ({
+      ...item,
+      selfAssignedYn:
+        item.assigneeUserId != null &&
+        currentUserId != null &&
+        Number(item.assigneeUserId) === Number(currentUserId),
+    }));
+
     if (STEP12_UI_FIXTURE_ENABLED) {
       return mergeOnboardingFixtureRows(flattened, previewOnboardingScenario);
     }
-    return flattened;
-  }, [rawMetrics, rawAssignments, previewOnboardingScenario]);
 
-  const g0ProfileStatus = useMemo(() => getProfileStatusFromItems(g0Items), [g0Items]);
+    return flattened;
+  }, [rawMetrics, rawAssignments, previewOnboardingScenario, currentUserId]);
+
+
+
+  const [selectedSubIssue, setSelectedSubIssue] = useState("");
+
+  const filteredG0ItemsForUser = useMemo(() => {
+    let items = g0Items;
+    if (viewMode === "ROLLUP_RESPONSE" && isEmployeeViewer) {
+      items = items.filter((item) => item.selfAssignedYn === true);
+    }
+    
+    if (viewMode === "ROLLUP_RESPONSE" && batchIdQuery) {
+      const actionableIds = selectedRequestDetail?.actionableInputMetricIds || [];
+      items = items.filter((item) => actionableIds.includes(item.metricId));
+    }
+    return items;
+  }, [g0Items, viewMode, isEmployeeViewer, batchIdQuery, selectedRequestDetail]);
+
+  const uniqueSubIssues = useMemo(() => {
+    const issues = new Set();
+    filteredG0ItemsForUser.forEach((item) => {
+      if (item.subIssueName) {
+        issues.add(item.subIssueName);
+      }
+    });
+    return Array.from(issues);
+  }, [filteredG0ItemsForUser]);
+
+  useEffect(() => {
+    if (selectedSubIssue && !uniqueSubIssues.includes(selectedSubIssue)) {
+      setSelectedSubIssue("");
+    }
+  }, [uniqueSubIssues, selectedSubIssue]);
+
+  const activeSubIssue = selectedSubIssue || (uniqueSubIssues.length > 0 ? uniqueSubIssues[0] : "");
+
+  const filteredG0Items = useMemo(() => {
+    if (!activeSubIssue) return filteredG0ItemsForUser;
+    return filteredG0ItemsForUser.filter((item) => item.subIssueName === activeSubIssue);
+  }, [filteredG0ItemsForUser, activeSubIssue]);
+
+  const g0ProfileStatus = useMemo(() => getProfileStatusFromItems(filteredG0ItemsForUser), [filteredG0ItemsForUser]);
   const hasPendingSubsidiaryRequest = useMemo(
     () => requests.some(isPendingSubsidiaryRequest),
     [requests]
@@ -608,6 +709,34 @@ const OnBoard = () => {
     }
 
     try {
+      if (viewMode === "ROLLUP_RESPONSE") {
+        setActiveSourceCycleId(null);
+        await dispatch(fetchRollupRequests({ includeSentYn: true, allPurposesYn: true })).unwrap();
+        
+        if (!batchIdQuery) {
+          return;
+        }
+
+        const batchId = parseInt(batchIdQuery, 10);
+        await dispatch(fetchRollupRequestDetail({ batchId })).unwrap();
+        const ensuredRes = await dispatch(ensureRollupResponseWorkspace({ batchId })).unwrap();
+        
+        const ensured = ensuredRes?.data || ensuredRes;
+        const responseYear = ensured?.reportingYear || reportingYear;
+
+        const metricId = searchParams.get("metricId");
+        await dispatch(
+          fetchOnboardingMetrics({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE", metricId })
+        ).unwrap();
+        
+        if (canManageAssignments) {
+          await dispatch(
+            fetchOnboardingAssignments({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE" })
+          ).unwrap();
+        }
+        return;
+      }
+
       const workflowRes = await dispatch(
         fetchCurrentWorkflow({ companyId, reportingYear })
       ).unwrap();
@@ -657,20 +786,20 @@ const OnBoard = () => {
         }
       }
 
-      await dispatch(fetchRollupRequests({ includeSentYn: true, allPurposesYn: true })).unwrap();
-
-      const metricId = new URLSearchParams(location.search).get("metricId");
+      const metricId = searchParams.get("metricId");
       
       await dispatch(
         fetchOnboardingMetrics({ companyId, reportingYear, cycleType: nextCycleType, metricId })
       ).unwrap();
-      await dispatch(
-        fetchOnboardingAssignments({ companyId, reportingYear, cycleType: nextCycleType })
-      ).unwrap();
+      if (canManageAssignments) {
+        await dispatch(
+          fetchOnboardingAssignments({ companyId, reportingYear, cycleType: nextCycleType })
+        ).unwrap();
+      }
     } catch (error) {
       console.error(error);
     }
-  }, [companyId, cycleTypeQuery, dispatch, reportingYear, location.search]);
+  }, [companyId, cycleTypeQuery, dispatch, reportingYear, location.search, viewMode]);
 
   useEffect(() => {
     dispatch(resetReportState());
@@ -681,7 +810,7 @@ const OnBoard = () => {
     location.state?.workflowStartedAt,
   ]);
 
-  const profileStats = calculateProfileStats(g0Items);
+  const profileStats = calculateProfileStats(filteredG0ItemsForUser);
   const basisLabel =
     displayWorkflow?.reportBasisType === "CONSOLIDATED"
       ? "연결기준"
@@ -722,7 +851,7 @@ const OnBoard = () => {
       }
       const payload = {
         companyId,
-        reportingYear,
+        reportingYear: activeReportingYear,
         cycleType: activeCycleType,
         values: selectedItem.metrics
           .filter((item) => isEditableItem(item))
@@ -758,7 +887,7 @@ const OnBoard = () => {
         await dispatch(
           submitOnboardingApproval({
             companyId,
-            reportingYear,
+            reportingYear: activeReportingYear,
             metricId,
             cycleType: activeCycleType,
           })
@@ -850,7 +979,7 @@ const OnBoard = () => {
       const response = await dispatch(
         bulkAssignOnboardingMetrics({
           companyId,
-          reportingYear,
+          reportingYear: activeReportingYear,
           cycleType: activeCycleType,
           metricIds,
           assigneeName: payload.assigneeName,
@@ -861,8 +990,8 @@ const OnBoard = () => {
       ).unwrap();
       const result = response?.data || response;
 
-      await dispatch(fetchOnboardingMetrics({ companyId, reportingYear, cycleType: activeCycleType })).unwrap();
-      await dispatch(fetchOnboardingAssignments({ companyId, reportingYear, cycleType: activeCycleType })).unwrap();
+      await dispatch(fetchOnboardingMetrics({ companyId, reportingYear: activeReportingYear, cycleType: activeCycleType })).unwrap();
+      await dispatch(fetchOnboardingAssignments({ companyId, reportingYear: activeReportingYear, cycleType: activeCycleType })).unwrap();
 
       setSelectedMetricIds([]);
       setAssignmentTargetIds([]);
@@ -906,7 +1035,7 @@ const OnBoard = () => {
         boxShadow: '0 1px 2px rgba(0,0,0,0.02)' 
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <h1 className="ob1-title" style={{ margin: 0, fontSize: '1.25rem' }}>온보딩 [{basisLabel}]</h1>
+          <h1 className="ob1-title" style={{ margin: 0, fontSize: '1.25rem' }}>온보딩 [{viewMode === "ROLLUP_RESPONSE" ? "요청 대응" : basisLabel}]</h1>
           {(() => {
             const statusInfo = getStatusInfo(g0ProfileStatus);
             const total = profileStats.totalCount || 1;
@@ -919,15 +1048,48 @@ const OnBoard = () => {
           })()}
         </div>
 
-        <div style={{ flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <OnboardingStatCards stats={profileStats} />
+          {!isNoRunWorkflow(displayWorkflow) && viewMode === "MY_PROJECT" && !canManageRollup && (
+            <OnboardingWorkflowCta
+              variant="action"
+              loadingWorkflow={loadingWorkflow}
+              workflow={displayWorkflow}
+              isNoRunWorkflow={isNoRunWorkflow}
+              onBasisModalOpen={() => setIsBasisModalOpen(true)}
+              onCtaClick={handleCtaClick}
+            />
+          )}
+          {viewMode === "ROLLUP_RESPONSE" && batchIdQuery && (
+            <div className="ob1-cta-container">
+              <button
+                className="ob1-btn-cta"
+                onClick={() => setIsSubTransferModalOpen(true)}
+                disabled={loadingWorkflow}
+              >
+                데이터 전송
+              </button>
+            </div>
+          )}
         </div>
       </div>
+      
+      {viewMode === "ROLLUP_RESPONSE" && !batchIdQuery ? (
+        <RollupInboxPanel requests={requests} />
+      ) : (
       <div className="ob1-content-layout">
         <div className="ob1-sidebar-panel">
           <div className="ob1-sidebar-title">SUB-ISSUE</div>
           <ul className="ob1-sidebar-menu">
-            <li className="ob1-sidebar-menu-item active">1. 경영일반 - G0</li>
+            {uniqueSubIssues.map((issue) => (
+              <li
+                key={issue}
+                className={`ob1-sidebar-menu-item ${selectedSubIssue === issue ? "active" : ""}`}
+                onClick={() => setSelectedSubIssue(issue)}
+              >
+                {issue}
+              </li>
+            ))}
           </ul>
         </div>
 
@@ -950,7 +1112,7 @@ const OnBoard = () => {
             />
           ) : (
             <>
-              {canManageRollup && (
+              {canManageRollup && viewMode === "MY_PROJECT" && (
                 <>
                   <RollupSummaryPanel
                     batchId={activeBatchId}
@@ -968,7 +1130,7 @@ const OnBoard = () => {
 
               <OnboardingMetricTable
                 g0Error={displayG0Error}
-                g0Items={g0Items}
+                g0Items={filteredG0Items}
                 loadingG0={STEP12_UI_FIXTURE_ENABLED ? false : loadingG0}
                 selectedMetricIds={selectedMetricIds}
                 onSelectMetric={handleSelectMetric}
@@ -991,6 +1153,7 @@ const OnBoard = () => {
           )}
         </div>
       </div>
+      )}
 
       <OnboardingModalShell
         isOpen={isModalOpen}
@@ -1035,13 +1198,9 @@ const OnBoard = () => {
       <SubsidiaryTransferModal
         isOpen={isSubTransferModalOpen}
         onClose={() => setIsSubTransferModalOpen(false)}
-        reportingYear={reportingYear}
+        reportingYear={activeReportingYear}
         onTransferred={async () => {
           await initializeOnboarding();
-        }}
-        onNavigateToInput={({ url }) => {
-          setIsSubTransferModalOpen(false);
-          navigate(url);
         }}
       />
 

@@ -35,17 +35,24 @@ from src.services.onboardings import approval_service as approvalService
 from src.services.calculations.service import invalidateAffectedEntityFactsTx
 
 
-CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
-CYCLE_TYPE_POST_DMA_DISCLOSURE = "POST_DMA_DISCLOSURE"
-PRE_DMA_G0_CYCLE_NOT_READY = "PRE_DMA_G0_CYCLE_NOT_READY: 보고연도 프로젝트를 먼저 시작해 주세요."
-PRE_DMA_G0_SCOPE_NOT_READY = "PRE_DMA_G0_SCOPE_NOT_READY: 온보딩 지표 범위가 초기화되지 않았습니다. 기존 프로젝트를 재개해 주세요."
-POST_DMA_DISCLOSURE_CYCLE_NOT_READY = "POST_DMA_DISCLOSURE_CYCLE_NOT_READY: POST_DMA_DISCLOSURE cycle을 먼저 초기화해 주세요."
-POST_DMA_DISCLOSURE_SCOPE_NOT_READY = "POST_DMA_DISCLOSURE_SCOPE_NOT_READY: POST_DMA_DISCLOSURE 지표 범위가 초기화되지 않았습니다."
+CYCLE_TYPE_PRE_DMA_G0 = repo.CYCLE_TYPE_PRE_DMA_G0
+CYCLE_TYPE_POST_DMA_DISCLOSURE = repo.CYCLE_TYPE_POST_DMA_DISCLOSURE
+CYCLE_TYPE_ROLLUP_RESPONSE = repo.CYCLE_TYPE_ROLLUP_RESPONSE
+
+CYCLE_TYPE_LABELS = {
+    "PRE_DMA_G0": "경영일반 지표",
+    "POST_DMA_DISCLOSURE": "중대성 이슈 지표",
+    "ROLLUP_RESPONSE": "지주사 요청 대응 데이터",
+}
+PRE_DMA_G0_CYCLE_NOT_READY = "보고연도 프로젝트를 먼저 시작해 주세요."
+PRE_DMA_G0_SCOPE_NOT_READY = "온보딩 지표 범위가 초기화되지 않았습니다. 기존 프로젝트를 재개해 주세요."
+POST_DMA_DISCLOSURE_CYCLE_NOT_READY = "생성된 프로젝트를 먼저 초기화해 주세요."
+POST_DMA_DISCLOSURE_SCOPE_NOT_READY = "공시범위가 초기화되지 않았습니다."
 STRUCTURED_LOOKUP_IDS = {"G0-05__QL0002", "G0-06__QL0001"}
 EDITABLE_INPUT_MODES = {"MANUAL_NUMBER", "MANUAL_TEXTAREA", "YEAR_RANGE", "STRUCTURED_LOOKUP"}
 SUPPORTED_CYCLE_TYPE = "PRE_DMA_G0"
-SUPPORTED_INPUT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
-SUPPORTED_ASSIGNMENT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE}
+SUPPORTED_INPUT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE, CYCLE_TYPE_ROLLUP_RESPONSE}
+SUPPORTED_ASSIGNMENT_CYCLE_TYPES = {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE, CYCLE_TYPE_ROLLUP_RESPONSE}
 ASSIGNMENT_MANAGER_ROLES = {"ADMIN", "ESG"}
 ASSIGNMENT_MANAGER_ROLE_NAMES = {"관리자", "ESG담당자", "ESG 담당자"}
 EMPLOYEE_ROLES = {"EMPLOYEE", "ASSIGNEE"}
@@ -54,7 +61,7 @@ CONSULTANT_ROLES = {"CONSULTANT"}
 CONSULTANT_ROLE_NAMES = {"컨설턴트"}
 REVIEWER_ROLES = {"CONSULTANT", "ADMIN", "ESG"}
 REVIEWER_ROLE_NAMES = {"컨설턴트", "관리자", "ESG담당자", "ESG 담당자"}
-PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE = "PRE_DMA_G0_CYCLE_NOT_READY: 기존 PRE_DMA_G0 workflow를 먼저 시작해 주세요."
+PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE = "기존 프로젝트를 먼저 시작해 주세요."
 APPROVER_ROLES = {"ADMIN", "ESG"}
 APPROVER_ROLE_NAMES = {"관리자", "ESG담당자", "ESG 담당자"}
 
@@ -85,7 +92,13 @@ def listMetrics(
             raise ValueError(f"Unsupported metricId for cycle scope: {metricId}")
     metricIds = [row["metric_id"] for row in scopes]
     masterRows = repo.listAtomicMaster(metricIds)
-    valueRows = repo.listValueRows(companyId, year, metricIds)
+    actualCycleType = str(cycle.get("cycle_type") or cycleType).strip().upper()
+    valueRows = repo.listValueRows(
+        companyId, 
+        year, 
+        metricIds,
+        includeGroupRollupResultYn=(actualCycleType != repo.CYCLE_TYPE_ROLLUP_RESPONSE),
+    )
     assignmentByMetric = {row["metric_id"]: buildAssignment(row) for row in assignmentRows}
     atomicRowsByMetric = groupBy(masterRows, "metric_id")
 
@@ -300,7 +313,7 @@ def saveMetricValueGroups(groups: list[dict]) -> int:
 def requireCycle(companyId: int, reportingYear: int, cycleType: str) -> dict:
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType not in SUPPORTED_INPUT_CYCLE_TYPES:
-        raise ValueError("Only PRE_DMA_G0 or POST_DMA_DISCLOSURE cycleType is supported")
+        raise ValueError("Only PRE_DMA_G0, POST_DMA_DISCLOSURE, or ROLLUP_RESPONSE cycleType is supported")
     cycle = repo.getCycle(companyId, reportingYear, normalizedCycleType)
     if not cycle or str(cycle.get("cycle_status") or "").strip().lower() != "active":
         raise ValueError(cycleNotReadyMessage(normalizedCycleType))
@@ -311,6 +324,8 @@ def cycleNotReadyMessage(cycleType: str) -> str:
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
         return POST_DMA_DISCLOSURE_CYCLE_NOT_READY
+    if normalizedCycleType == CYCLE_TYPE_ROLLUP_RESPONSE:
+        return "받은 요청함 프로젝트가 초기화되지 않았습니다."
     return PRE_DMA_G0_CYCLE_NOT_READY
 
 
@@ -318,35 +333,73 @@ def scopeNotReadyMessage(cycleType: str) -> str:
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
         return POST_DMA_DISCLOSURE_SCOPE_NOT_READY
+    if normalizedCycleType == CYCLE_TYPE_ROLLUP_RESPONSE:
+        return "받은 요청함 지표 범위가 초기화되지 않았습니다."
     return PRE_DMA_G0_SCOPE_NOT_READY
 
 
-def resolveScopeMetadata(scope: dict, cycle: dict) -> dict:
-    cycleType = str(cycle.get("cycle_type") or "").strip().upper()
-    if cycleType != CYCLE_TYPE_POST_DMA_DISCLOSURE:
-        return {
-            "issueDomain": "general",
-            "subIssueId": None,
-            "subIssueCode": None,
-            "subIssueName": None,
-        }
+def syntheticGeneralMetadata():
+    return {
+        "issueDomain": "general",
+        "subIssueId": None,
+        "subIssueCode": "GENERAL_MANAGEMENT",
+        "subIssueName": "경영일반",
+    }
 
+def syntheticDependencyMetadata():
+    return {
+        "issueDomain": "general",
+        "subIssueId": None,
+        "subIssueCode": "DEPENDENCY_INPUT",
+        "subIssueName": "추가 입력 필요 데이터",
+    }
+
+def requireMappedSubIssueMetadata(scope: dict, cycle: dict):
     issueDomain = normalizeIssueDomain(scope.get("sub_issue_domain"))
-    subIssueId = scope.get("sub_issue_id")
-    subIssueCode = scope.get("sub_issue_code")
+    subIssueId = scope.get("source_selected_sub_issue_id") or scope.get("sub_issue_id")
+    subIssueCode = scope.get("source_sub_issue_code") or scope.get("sub_issue_code")
     subIssueName = scope.get("sub_issue_name")
+    
+    # If sub_issue_name is missing from JOIN but we have subIssueCode
+    if subIssueCode and not subIssueName:
+        subIssueName = subIssueCode
+        
     if not issueDomain or subIssueId is None or not subIssueCode or not subIssueName:
         raise ValueError(
-            "POST_DMA_SUB_ISSUE_METADATA_NOT_READY: "
+            "공시범위 메타데이터가 준비되지 않았습니다. "
             f"cycleId={cycle.get('id')}, "
             f"metricId={scope.get('metric_id')}, "
-            f"subIssueCode={scope.get('source_sub_issue_code') or subIssueCode}"
+            f"subIssueCode={subIssueCode}"
         )
     return {
         "issueDomain": issueDomain,
         "subIssueId": int(subIssueId),
         "subIssueCode": subIssueCode,
         "subIssueName": subIssueName,
+    }
+
+def resolveScopeMetadata(scope: dict, cycle: dict) -> dict:
+    cycleType = str(cycle.get("cycle_type") or "").strip().upper()
+    
+    if cycleType == CYCLE_TYPE_PRE_DMA_G0:
+        return syntheticGeneralMetadata()
+
+    if cycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
+        return requireMappedSubIssueMetadata(scope, cycle)
+        
+    if cycleType == CYCLE_TYPE_ROLLUP_RESPONSE:
+        if scope.get("source_sub_issue_code"):
+            return requireMappedSubIssueMetadata(scope, cycle)
+        scopeSourceType = str(scope.get("scope_source_type") or "").strip().upper()
+        if scopeSourceType == "PRE_DMA_G0":
+            return syntheticGeneralMetadata()
+        return syntheticDependencyMetadata()
+
+    return {
+        "issueDomain": "general",
+        "subIssueId": None,
+        "subIssueCode": None,
+        "subIssueName": None,
     }
 
 
@@ -424,8 +477,14 @@ def latestValueForInputMode(rows: list[dict], atomicMetricId: str, inputMode: st
         allowedSources = {"group_rollup_result"}
         priority = {"group_rollup_result": 0}
     elif inputMode == "STRUCTURED_LOOKUP":
-        allowedSources = {"onboarding_input"}
-        priority = {"onboarding_input": 0}
+        allowedSources = {
+            "onboarding_input",
+            "kpi_fact",
+        }
+        priority = {
+            "onboarding_input": 0,
+            "kpi_fact": 1,
+        }
     else:
         allowedSources = {"onboarding_input", "kpi_fact"}
         priority = {"onboarding_input": 0, "kpi_fact": 1}
@@ -626,7 +685,7 @@ def checkCycleType(cycleType: str) -> None:
 def checkAssignmentCycleType(cycleType: str) -> str:
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType not in SUPPORTED_ASSIGNMENT_CYCLE_TYPES:
-        raise ValueError("Only PRE_DMA_G0 or POST_DMA_DISCLOSURE cycleType is supported")
+        raise ValueError("Only PRE_DMA_G0, POST_DMA_DISCLOSURE, or ROLLUP_RESPONSE cycleType is supported")
     return normalizedCycleType
 
 

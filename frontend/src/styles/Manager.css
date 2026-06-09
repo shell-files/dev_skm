@@ -847,14 +847,17 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-#datatap_page .st-submitted { background: #eff6ff; color: #2563eb; border: 1px solid #93c5fd; }
-#datatap_page .st-approved { background: #f0fdf4; color: #10b981; border: 1px solid #6ee7b7; }
-#datatap_page .st-rejected { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; }
+#datatap_page .st-draft { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+#datatap_page .st-pending { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+#datatap_page .st-submitted { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+#datatap_page .st-reviewed { background: #e0e7ff; color: #4338ca; border: 1px solid #a5b4fc; }
+#datatap_page .st-approved { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+#datatap_page .st-rejected { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
 
 /* 액션 버튼 */
 #datatap_page .ob-actions {
   display: flex;
-  gap: 6px;
+  gap: 10px;
   justify-content: center;
   align-items: center;
 }
@@ -867,6 +870,7 @@
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 #datatap_page .ob-act-btn:hover {

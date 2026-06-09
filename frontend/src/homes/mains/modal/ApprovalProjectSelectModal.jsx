@@ -3,15 +3,24 @@ import { createPortal } from "react-dom";
 
 const statusLabel = (project = {}) => {
   const status = String(project.runStatus || "ACTIVE").toUpperCase();
-  if (status === "COMPLETED") return "Completed";
-  if (status === "ARCHIVED") return "Archived";
-  return "In progress";
+  if (status === "COMPLETED") return "완료";
+  if (status === "ARCHIVED") return "보관됨";
+  return "진행 중";
 };
 
 const basisLabel = (basisType) => {
-  if (basisType === "CONSOLIDATED") return "Consolidated";
-  if (basisType === "ENTITY") return "Entity";
-  return "Basis not selected";
+  if (basisType === "CONSOLIDATED") return "연결 기준";
+  if (basisType === "ENTITY") return "독립 기준";
+  return "기준 미선택";
+};
+
+const formatStageLabel = (label) => {
+  if (!label) return "-";
+  const lower = String(label).toLowerCase();
+  if (lower.includes("g0") || lower.includes("pre_dma")) return "경영일반 입력";
+  if (lower.includes("all approvals") || lower.includes("completed")) return "데이터 승인 완료";
+  if (lower.includes("disclosure") || lower.includes("post_dma")) return "중대성 이슈 데이터";
+  return label;
 };
 
 export default function ApprovalProjectSelectModal({
@@ -44,10 +53,10 @@ export default function ApprovalProjectSelectModal({
         <div className="ob-modal-header" style={headerStyle}>
           <div>
             <h2 className="ob-modal-title" style={titleStyle}>
-              Select report project
+              보고서 프로젝트 선택
             </h2>
             <p style={descriptionStyle}>
-              Choose the yearly sustainability report project for the approval inbox.
+              조회할 연도별 지속가능경영보고서 프로젝트를 선택하세요.
             </p>
           </div>
           <button
@@ -63,8 +72,8 @@ export default function ApprovalProjectSelectModal({
         <div className="ob-modal-body approval-project-select-list" style={bodyStyle}>
           {sortedProjects.length === 0 ? (
             <div style={emptyStyle}>
-              <p style={emptyTitleStyle}>No report projects are available.</p>
-              <p style={descriptionStyle}>Start a report workflow project first.</p>
+              <p style={emptyTitleStyle}>조회 가능한 보고서 프로젝트가 없습니다.</p>
+              <p style={descriptionStyle}>먼저 보고서 워크플로우 프로젝트를 시작해 주세요.</p>
             </div>
           ) : (
             sortedProjects.map((project) => {
@@ -93,7 +102,7 @@ export default function ApprovalProjectSelectModal({
                     </div>
                     <div>
                       <h3 style={projectTitleStyle}>
-                        {project.reportingYear} Sustainability Report
+                        {project.reportingYear} 지속가능경영보고서
                       </h3>
                       <p style={projectMetaStyle}>
                         {basisLabel(project.reportBasisType)} · {statusLabel(project)}
@@ -107,18 +116,18 @@ export default function ApprovalProjectSelectModal({
                             color: isReadOnly ? "#4338ca" : "#15803d",
                           }}
                         >
-                          Current stage · {project.currentStageLabel || "-"}
+                          현재 단계 · {formatStageLabel(project.currentStageLabel)}
                         </span>
 
                         {!isReadOnly && Number(project.pendingCount || 0) > 0 && (
                           <span style={metaTextStyle}>
-                            Pending {project.pendingCount}
+                            대기 {project.pendingCount}건
                           </span>
                         )}
 
                         {isReadOnly && (
                           <span className="approval-project-readonly-chip" style={readonlyTextStyle}>
-                            Read-only
+                            읽기 전용
                           </span>
                         )}
                       </div>
@@ -129,15 +138,15 @@ export default function ApprovalProjectSelectModal({
                     type="button"
                     style={{
                       ...selectButtonStyle,
-                      background: isReadOnly ? "#fff" : "#059669",
-                      color: isReadOnly ? "#059669" : "#fff",
+                      background: isSelected ? "#059669" : "#fff",
+                      color: isSelected ? "#fff" : "#059669",
                     }}
                     onClick={(event) => {
                       event.stopPropagation();
                       onSelectProject?.(project);
                     }}
                   >
-                    {isReadOnly ? "View inbox" : "Open inbox"}
+                    조회하기
                   </button>
                 </div>
               );
@@ -291,4 +300,7 @@ const selectButtonStyle = {
   border: "1px solid #059669",
   fontWeight: 600,
   cursor: "pointer",
+  width: "120px",
+  textAlign: "center",
+  whiteSpace: "nowrap",
 };

@@ -403,7 +403,7 @@ def setMetricInputStatusTx(
 
 def normalizeCycleType(cycleType: str) -> str:
     normalizedCycleType = str(cycleType or scopeRepo.CYCLE_TYPE_PRE_DMA_G0).strip().upper()
-    if normalizedCycleType not in {scopeRepo.CYCLE_TYPE_PRE_DMA_G0, scopeRepo.CYCLE_TYPE_POST_DMA_DISCLOSURE}:
+    if normalizedCycleType not in {scopeRepo.CYCLE_TYPE_PRE_DMA_G0, scopeRepo.CYCLE_TYPE_POST_DMA_DISCLOSURE, scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE}:
         raise ValueError(f"Unsupported cycleType: {normalizedCycleType}")
     return normalizedCycleType
 

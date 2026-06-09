@@ -35,17 +35,17 @@ const ENTITY_STEPS = [
   { img: stepBasisImg, label: "발행 기준 선택" },
   { img: stepG0Img, label: "일반 입력·승인" },
   { img: stepDmaImg, label: "중대성평가 수행" },
-  { img: stepOnboardingImg, label: "선정 지표 입력·승인" },
+  { img: stepOnboardingImg, label: "선정 지표 입력" },
   { img: stepReportImg, label: "AI 공시 보고서 발행" },
 ];
 
 const CONSOLIDATED_STEPS = [
   { img: stepBasisImg, label: "발행 기준 선택" },
   { img: stepG0Img, label: "일반 입력·승인" },
-  { img: stepSubsidiaryTransferImg, label: "자회사 경영일반 전송" },
-  { img: stepRollupImg, label: "경영일반 데이터 취합" },
+  { img: stepSubsidiaryTransferImg, label: "연결 데이터 요청" },
+  { img: stepRollupImg, label: "연결 데이터 취합" },
   { img: stepDmaImg, label: "중대성평가 수행" },
-  { img: stepOnboardingImg, label: "선정 지표 입력·승인" },
+  { img: stepOnboardingImg, label: "선정 지표 입력" },
   { img: stepReportImg, label: "AI 보고서 발행" },
 ];
 
@@ -267,21 +267,21 @@ const ReportBasisSelectModal = ({
 
           <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
             {workflowStatus === null ? (
-              <div key="status-null" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", color: "#64748b", padding: "60px 0", animation: "rbmFadeIn 0.3s ease-out" }}>
-                {/* 
-                <svg width="32" height="32" viewBox="0 0 24 24" style={{ animation: "rbmSpin 1s linear infinite", marginBottom: "16px", color: "#03A94D" }}>
-                  <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
-                </svg>
-                <p>프로젝트 정보를 확인하고 있습니다...</p>
-                */}
+              <div key="status-null" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 0", animation: "rbmFadeIn 0.3s ease-out" }}>
+                <div className="rbm-exists-message" style={{ padding: "40px 30px", textAlign: "center", background: "#f8fafc", borderRadius: "12px", margin: "0", border: "1px solid #e2e8f0", width: "100%", minHeight: "140px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" style={{ animation: "rbmSpin 1s linear infinite", marginBottom: "12px", color: "#03A94D" }}>
+                    <path fill="currentColor" d="M12,4V2A10,10 0 0,0 2,12H4A8,8 0 0,1 12,4Z" />
+                  </svg>
+                  <p style={{ color: "#64748b", fontSize: "0.9rem", margin: 0 }}>프로젝트 정보를 확인하고 있습니다...</p>
+                </div>
               </div>
             ) : workflowStatus === "EXISTS" ? (
               <div key="status-exists" style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 0", animation: "rbmFadeIn 0.3s ease-out" }}>
-                <div className="rbm-exists-message" style={{ padding: "40px 30px", textAlign: "center", background: "#f8fafc", borderRadius: "12px", margin: "0", border: "1px solid #e2e8f0", width: "100%" }}>
-                  <h3 style={{ fontSize: "18px", marginBottom: "12px", color: "#1e293b" }}>
+                <div className="rbm-exists-message" style={{ padding: "40px 30px", textAlign: "center", background: "#f8fafc", borderRadius: "12px", margin: "0", border: "1px solid #e2e8f0", width: "100%", minHeight: "140px", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center" }}>
+                  <h3 style={{ fontSize: "18px", margin: "0 0 12px 0", color: "#1e293b" }}>
                     이미 생성된 {selectedYear}년 보고서 프로젝트가 있습니다.
                   </h3>
-                  <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
+                  <p style={{ color: "#64748b", fontSize: "0.9rem", margin: 0 }}>
                     아래 [해당 연도로 이동하기] 버튼을 눌러 프로젝트를 계속 진행하세요.
                   </p>
                 </div>
@@ -299,14 +299,14 @@ const ReportBasisSelectModal = ({
                   <div className="rbm-card-illust">
                     <img
                       src={entityCardImg}
-                      alt="별도기준 ENTITY 일러스트"
+                      alt="독립기준 ENTITY 일러스트"
                       width={132}
                       height={132}
                       style={{ width: 132, height: 132, objectFit: "contain" }}
                     />
                   </div>
                   <div className="rbm-card-info">
-                    <h3 className="rbm-card-title">별도기준 (ENTITY)</h3>
+                    <h3 className="rbm-card-title">독립기준 (ENTITY)</h3>
                     <p className="rbm-card-text">
                       본사 단독으로 보고서를 작성합니다.<br />
                       자회사 데이터를 포함하지 않으며<br />
@@ -380,7 +380,7 @@ const ReportBasisSelectModal = ({
           </p>
 
           <div className="rbm-side-section">
-            <h4 className="rbm-side-label rbm-side-label--entity">별도기준 (ENTITY)</h4>
+            <h4 className="rbm-side-label rbm-side-label--entity">독립기준 (ENTITY)</h4>
             <ul className="rbm-side-list">
               <li>
                 <img src={entityReportIcon} alt="본사 단독 보고" width={34} height={34} style={{ width: 34, height: 34, objectFit: "contain" }} />
@@ -429,8 +429,14 @@ const ReportBasisSelectModal = ({
       <div className="rbm-process-bar" style={{ maxWidth: workflowStatus === "NO_RUN" ? "1040px" : "640px", animation: "rbmModalFloatUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards" }}>
         <div className="rbm-process-inner" style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
           {workflowStatus === null ? (
-            <div key="process-null" className="rbm-process-placeholder" style={{ padding: "20px 0", display: "flex", alignItems: "center", justifyContent: "center", animation: "rbmFadeIn 0.3s ease-out" }}>
-              {/* <span style={{ color: "#94a3b8" }}>확인 중...</span> */}
+            <div key="process-null" className="rbm-process-actions" style={{ justifyContent: "center", animation: "rbmFadeIn 0.3s ease-out" }}>
+              <button
+                type="button"
+                className="rbm-btn-confirm rbm-btn-confirm--loading"
+                disabled={true}
+              >
+                조회 중...
+              </button>
             </div>
           ) : workflowStatus === "EXISTS" ? (
             <div key="process-exists" className="rbm-process-actions" style={{ justifyContent: "center", animation: "rbmFadeIn 0.3s ease-out" }}>
@@ -474,7 +480,7 @@ const ReportBasisSelectModal = ({
                     {loading
                       ? "시작하는 중..."
                       : selected === "ENTITY"
-                        ? "별도기준으로 시작하기"
+                        ? "독립기준으로 시작하기"
                         : "연결기준으로 시작하기"}
                   </button>
                 </div>

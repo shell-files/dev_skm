@@ -128,16 +128,25 @@ const mapApprovalItemToInput = (item = {}) => {
 };
 
 const basisLabel = (basisType) => {
-  if (basisType === "CONSOLIDATED") return "Consolidated";
-  if (basisType === "ENTITY") return "Entity";
-  return "Basis not selected";
+  if (basisType === "CONSOLIDATED") return "연결 기준";
+  if (basisType === "ENTITY") return "독립 기준";
+  return "기준 미선택";
 };
 
 const runStatusLabel = (runStatus) => {
   const status = String(runStatus || "ACTIVE").toUpperCase();
-  if (status === "COMPLETED") return "Completed";
-  if (status === "ARCHIVED") return "Archived";
-  return "In progress";
+  if (status === "COMPLETED") return "완료";
+  if (status === "ARCHIVED") return "보관됨";
+  return "진행 중";
+};
+
+const formatStageLabel = (label) => {
+  if (!label) return "-";
+  const lower = String(label).toLowerCase();
+  if (lower.includes("g0") || lower.includes("pre_dma")) return "경영일반 입력";
+  if (lower.includes("all approvals") || lower.includes("completed")) return "데이터 승인 완료";
+  if (lower.includes("disclosure") || lower.includes("post_dma")) return "보고서 연결 공시 승인";
+  return label;
 };
 
 const ManagerData = () => {
@@ -247,7 +256,7 @@ const ManagerData = () => {
       selectedCompany?.report_basis_type ?? selectedCompany?.reportBasisType ?? null,
     runStatus: "ACTIVE",
     workflowStep: "G0_ONBOARDING",
-    currentStageLabel: "G0 approval",
+    currentStageLabel: "경영일반 입력",
     readOnlyYn: false,
   };
 
@@ -441,7 +450,7 @@ const ManagerData = () => {
 
   const handleAction = async (id, status, commentText = "") => {
     if (selectedProjectReadOnlyYn) {
-      showDefaultAlert("Notice", "Completed projects are read-only.", "info");
+      showDefaultAlert("알림", "완료된 프로젝트는 읽기 전용입니다.", "info");
       return false;
     }
 
@@ -453,7 +462,7 @@ const ManagerData = () => {
       return false;
     }
 
-    const ok = await showConfirmAlert("Confirm", "Process this item?", "question");
+    const ok = await showConfirmAlert("확인", "해당 항목을 처리하시겠습니까?", "question");
     if (!ok) return false;
 
     try {
@@ -474,17 +483,17 @@ const ManagerData = () => {
 
   const handleBulkAction = async (status, commentText = "") => {
     if (selectedProjectReadOnlyYn) {
-      showDefaultAlert("Notice", "Completed projects are read-only.", "info");
+      showDefaultAlert("알림", "완료된 프로젝트는 읽기 전용입니다.", "info");
       return false;
     }
     if (!selectedIds.length) return false;
 
-    const ok = await showConfirmAlert("Bulk action", "Continue?", "question");
+    const ok = await showConfirmAlert("일괄 처리", "계속하시겠습니까?", "question");
     if (!ok) return false;
 
     const normalizedStatus = normalizeStatus(status);
     if (normalizedStatus === "REJECTED" && !commentText?.trim()) {
-      showDefaultAlert("Notice", "Enter rejection reason.", "info");
+      showDefaultAlert("알림", "반려 사유를 입력하세요.", "info");
       return false;
     }
 
@@ -526,15 +535,15 @@ const ManagerData = () => {
       <div className="manager-content-container">
         <div className="page-header">
           <div className="page-title-area">
-            <h2 className="page-title">ESG Integrated Management</h2>
+            <h2 className="page-title">ESG 통합 관리</h2>
           </div>
         </div>
 
         <section className="approval-project-context-bar">
           <div className="approval-project-context-main">
-            <p className="approval-project-context-label">Current report project</p>
+            <p className="approval-project-context-label">현재 보고서 프로젝트</p>
             <h3 className="approval-project-context-title">
-              {displayApprovalProject.reportingYear} Sustainability Report
+              {displayApprovalProject.reportingYear} 지속가능경영보고서
             </h3>
             <p className="approval-project-context-meta">
               {basisLabel(displayApprovalProject.reportBasisType)}
@@ -544,8 +553,8 @@ const ManagerData = () => {
           </div>
 
           <div className="approval-project-context-stage">
-            <p className="approval-project-context-label">Current stage</p>
-            <strong>{displayApprovalProject.currentStageLabel || "-"}</strong>
+            <p className="approval-project-context-label">현재 단계</p>
+            <strong>{formatStageLabel(displayApprovalProject.currentStageLabel)}</strong>
           </div>
 
           <div className="approval-project-context-actions">
@@ -553,7 +562,7 @@ const ManagerData = () => {
               className="approval-cycle-type-control"
               style={{ display: "flex", alignItems: "center", gap: "8px" }}
             >
-              <span className="approval-project-context-label">Approval scope</span>
+              <span className="approval-project-context-label">승인 범위</span>
               <select
                 value={approvalCycleType}
                 onChange={handleApprovalCycleTypeChange}
@@ -566,12 +575,12 @@ const ManagerData = () => {
                   fontSize: "0.85rem",
                 }}
               >
-                <option value="PRE_DMA_G0">사전 경영일반 승인</option>
-                <option value="POST_DMA_DISCLOSURE">보고서 연결 공시 승인</option>
+                <option value="PRE_DMA_G0">경영일반 데이터</option>
+                <option value="POST_DMA_DISCLOSURE">중대성 이슈 데이터</option>
               </select>
             </label>
             {displayApprovalProject.readOnlyYn && (
-              <span className="approval-project-readonly-chip">Read-only</span>
+              <span className="approval-project-context-readonly-chip">읽기 전용</span>
             )}
             <button
               type="button"
@@ -584,7 +593,7 @@ const ManagerData = () => {
               }
               onClick={() => setIsApprovalProjectModalOpen(true)}
             >
-              Change project
+              프로젝트 변경
             </button>
           </div>
         </section>
@@ -592,21 +601,21 @@ const ManagerData = () => {
         {approvalProjectsError && (
           <div className="alert alert-warning" style={{ marginBottom: "12px" }}>
             {approvalProjectsError.message ||
-              "Failed to fetch report project list."}
+              "보고서 프로젝트 목록을 불러오지 못했습니다."}
           </div>
         )}
 
         {approvalError && (
           <div className="alert alert-warning" style={{ marginBottom: "12px" }}>
-            {approvalError.message || "Failed to fetch approval inbox."}
+            {approvalError.message || "승인 목록을 불러오지 못했습니다."}
           </div>
         )}
 
         <div className="kpi-container">
           {[
-            { key: "APPROVED", label: "Approved", count: kpi.approved },
-            { key: "PENDING", label: "Pending", count: kpi.waiting },
-            { key: "REJECTED", label: "Rejected", count: kpi.rejected },
+            { key: "APPROVED", label: "승인됨", count: kpi.approved },
+            { key: "PENDING", label: "대기 중", count: kpi.waiting },
+            { key: "REJECTED", label: "반려됨", count: kpi.rejected },
           ].map((item) => (
             <button
               key={item.key}
@@ -660,7 +669,7 @@ const ManagerData = () => {
           <div className="modal-overlay">
             <div className="modal-window">
               <div className="modal-header">
-                <h3>Reject item</h3>
+                <h3>항목 반려</h3>
                 <button
                   type="button"
                   className="close-x"
@@ -672,7 +681,7 @@ const ManagerData = () => {
               <div className="modal-body">
                 <textarea
                   className="reject-textarea"
-                  placeholder="Enter rejection reason."
+                  placeholder="반려 사유를 입력하세요."
                   value={rejectReason}
                   onChange={(event) => setRejectReason(event.target.value)}
                   style={{
@@ -690,7 +699,7 @@ const ManagerData = () => {
                   className="btn-confirm"
                   onClick={async () => {
                     if (!rejectReason.trim()) {
-                      showDefaultAlert("Notice", "Enter rejection reason.", "info");
+                      showDefaultAlert("알림", "반려 사유를 입력하세요.", "info");
                       return;
                     }
                     const success = await handleAction(rejectTargetId, "REJECTED", rejectReason);
@@ -699,7 +708,7 @@ const ManagerData = () => {
                     }
                   }}
                 >
-                  Confirm reject
+                  반려 확인
                 </button>
               </div>
             </div>

@@ -44,6 +44,7 @@ class OnboardingMetricItemDto(BaseModel):
     inputRequiredYn: bool = True
     approvalRequiredYn: bool = True
     approvalPolicyCode: str = "INPUT_APPROVAL_ONLY"
+    approvalStatus: Optional[str] = None
     rollupReadonlyYn: bool = False
     displayOrder: int = 0
     assignment: Optional[OnboardingAssignmentDto] = None
@@ -184,6 +185,7 @@ class OnboardingApprovalRequestDto(BaseModel):
     reportingYear: int
     metricId: str
     cycleType: str = "PRE_DMA_G0"
+    batchId: Optional[int] = None
 
 
 class OnboardingApprovalDecisionRequestDto(OnboardingApprovalRequestDto):

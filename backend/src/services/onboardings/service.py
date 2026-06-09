@@ -112,6 +112,15 @@ def listMetrics(
     assignmentByMetric = {row["metric_id"]: buildAssignment(row) for row in assignmentRows}
     atomicRowsByMetric = groupBy(masterRows, "metric_id")
 
+    from src.utils.onboardingapprovalrepository import listCycleApprovalInboxRows
+    approvalSummaries = listCycleApprovalInboxRows(
+        companyId=companyId,
+        reportingYear=year,
+        cycleType=actualCycleType,
+        assignedOnlyYn=False,
+    )
+    approvalByMetric = {row["metricId"]: row.get("approvalStatus") for row in approvalSummaries}
+
     items = []
     for scope in scopes:
         scopedMetricId = scope["metric_id"]
@@ -133,6 +142,7 @@ def listMetrics(
                 inputRequiredYn=bool(scope.get("input_required_yn")),
                 approvalRequiredYn=bool(scope.get("approval_required_yn")),
                 approvalPolicyCode=scope.get("approval_policy_code") or "INPUT_APPROVAL_ONLY",
+                approvalStatus=approvalByMetric.get(scopedMetricId),
                 rollupReadonlyYn=bool(scope.get("rollup_readonly_yn")),
                 displayOrder=int(scope.get("display_order") or 0),
                 assignment=assignmentByMetric.get(scopedMetricId),
@@ -188,6 +198,17 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                 reportingYear = group["reportingYear"]
                 metricId = group["metricId"]
                 values = group["values"]
+                cycleId = group["cycleId"]
+                
+                # Check cycle writeability for ROLLUP_RESPONSE
+                cur.execute(
+                    "SELECT cycle_type, parent_rollup_batch_id FROM ESG_ONBOARDING_CYCLE WHERE id = ?",
+                    (cycleId,),
+                )
+                cycleRow = cur.fetchone()
+                if cycleRow:
+                    from src.services.onboardings.approval_service import requireWritableCycleTx
+                    requireWritableCycleTx(cur, cycleRow, companyId)
 
                 # Collect old values for change detection
                 oldByAtomic = {}
@@ -799,6 +820,7 @@ def submitApproval(request: OnboardingApprovalRequestDto, userModel) -> Onboardi
         metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
         commentText=getattr(request, "commentText", None),
+        batchId=getattr(request, "batchId", None),
     )
     return actionResponse(summary, "Submitted")
 
@@ -813,6 +835,7 @@ def reviewApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
         metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
         commentText=getattr(request, "commentText", None),
+        batchId=getattr(request, "batchId", None),
     )
     return actionResponse(summary, "Reviewed")
 
@@ -827,6 +850,7 @@ def approveApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
         metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
         commentText=getattr(request, "commentText", None),
+        batchId=getattr(request, "batchId", None),
     )
     return actionResponse(summary, "Approved")
 
@@ -844,6 +868,7 @@ def rejectApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
         metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
         commentText=commentText,
+        batchId=getattr(request, "batchId", None),
     )
     return actionResponse(summary, "Rejected")
 

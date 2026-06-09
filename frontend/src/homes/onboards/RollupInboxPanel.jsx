@@ -8,7 +8,7 @@ const purposeLabel = (code) => {
   return value || "-";
 };
 
-const RollupInboxPanel = ({ requests = [] }) => {
+const RollupInboxPanel = ({ requests = [], onRefresh }) => {
   const navigate = useNavigate();
 
   const handleDetail = (req) => {
@@ -17,7 +17,21 @@ const RollupInboxPanel = ({ requests = [] }) => {
 
   return (
     <div style={{ padding: "20px", background: "#fff", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-      <h2 style={{ fontSize: "1.2rem", fontWeight: "600", marginBottom: "16px", color: "#1e293b" }}>받은 요청함</h2>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+        <h2 style={{ fontSize: "1.2rem", fontWeight: "600", color: "#1e293b", margin: 0 }}>받은 요청함</h2>
+        {onRefresh && (
+          <button 
+            onClick={onRefresh}
+            style={{ padding: "6px 12px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "6px", cursor: "pointer", fontSize: "0.85rem", color: "#475569", display: "flex", alignItems: "center", gap: "6px" }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+            새로고침
+          </button>
+        )}
+      </div>
       <p style={{ marginBottom: "20px", color: "#64748b", fontSize: "0.9rem" }}>
         지주사에서 연결 공시 또는 중대성 평가를 위해 요청한 데이터 목록입니다.
       </p>
@@ -30,7 +44,7 @@ const RollupInboxPanel = ({ requests = [] }) => {
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.9rem" }}>
           <thead>
             <tr style={{ background: "#f1f5f9", borderBottom: "1px solid #e2e8f0" }}>
-              <th style={{ padding: "12px", textAlign: "left", color: "#475569", fontWeight: "600" }}>요청 기관</th>
+              <th style={{ padding: "12px", textAlign: "left", color: "#475569", fontWeight: "600" }}>요청 기업</th>
               <th style={{ padding: "12px", textAlign: "center", color: "#475569", fontWeight: "600" }}>보고연도</th>
               <th style={{ padding: "12px", textAlign: "left", color: "#475569", fontWeight: "600" }}>요청 유형</th>
               <th style={{ padding: "12px", textAlign: "center", color: "#475569", fontWeight: "600" }}>요청 지표</th>

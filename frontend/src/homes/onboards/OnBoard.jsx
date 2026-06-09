@@ -5,6 +5,7 @@ import "@styles/onboarding1.css";
 import { useAuth } from "@hooks/AuthContext.jsx";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 import ReportBasisSelectModal from "@components/UI/ReportBasisSelectModal.jsx";
+import ApprovalProjectSelectModal from "../mains/modal/ApprovalProjectSelectModal";
 import OnboardingModalShell from "./modal/OnboardingModalShell";
 import SubsidiaryRequestModal from "./modal/SubsidiaryRequestModal";
 import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
@@ -18,7 +19,8 @@ import {
   ONBOARDING_SCENARIOS,
   APPROVAL_SCENARIOS,
   ROLLUP_SCENARIOS,
-  PREVIEW_WORKFLOW
+  PREVIEW_WORKFLOW,
+  APPROVAL_PROJECT_PREVIEW_ROWS
 } from "@/dev/step12UiPreview/fixtures";
 import {
   calculateMetricStatus,
@@ -46,6 +48,7 @@ import {
   saveOnboardingMetric,
   setActiveBatchId,
   submitOnboardingApproval,
+  fetchApprovalProjects,
 } from "@stores/reportSlice";
 
 const normalizeViewerRole = (role) => String(role || "").trim().toUpperCase();
@@ -112,6 +115,7 @@ const flattenOnboardingItems = (metrics = []) =>
       subIssueName: metric.subIssueName,
       scopeSourceType: metric.scopeSourceType,
       approvalPolicyCode: metric.approvalPolicyCode,
+      approvalStatus: metric.approvalStatus,
       assignment: metric.assignment,
     }))
   );
@@ -564,6 +568,11 @@ const OnBoard = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { selectedCompany, user } = useAuth();
+
+  const [isApprovalProjectModalOpen, setIsApprovalProjectModalOpen] = useState(false);
+  const [filteredProjects, setFilteredProjects] = useState([]);
+  const approvalProjectsFromStore = useSelector((state) => state.report?.approval?.projects ?? []);
+
   const location = useLocation();
   const companyId = selectedCompany?.company_id ?? selectedCompany?.companyId;
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -810,6 +819,16 @@ const OnBoard = () => {
     location.state?.workflowStartedAt,
   ]);
 
+  useEffect(() => {
+    const handleFocus = () => {
+      initializeOnboarding();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [initializeOnboarding]);
+
   const profileStats = calculateProfileStats(filteredG0ItemsForUser);
   const basisLabel =
     displayWorkflow?.reportBasisType === "CONSOLIDATED"
@@ -961,6 +980,43 @@ const OnBoard = () => {
     setIsAssignmentModalOpen(true);
   };
 
+  const handleOpenApprovalProjectModal = useCallback(async () => {
+    if (companyId && !STEP12_UI_FIXTURE_ENABLED) {
+      try {
+        const res = await dispatch(fetchApprovalProjects({ companyId })).unwrap();
+        let projects = res?.data?.items || res?.items || [];
+        
+        if (isEmployeeRole(viewerRole) && !isAssignmentManagerRole(viewerRole)) {
+          const assignedProjects = [];
+          for (const proj of projects) {
+            try {
+              const metricsRes = await dispatch(fetchOnboardingMetrics({
+                companyId,
+                reportingYear: proj.reportingYear,
+                cycleType: "PRE_DMA_G0"
+              })).unwrap();
+              const metrics = metricsRes?.data?.metrics || metricsRes?.metrics || [];
+              if (metrics.length > 0) {
+                assignedProjects.push(proj);
+              }
+            } catch (e) {
+               // ignore
+            }
+          }
+          setFilteredProjects(assignedProjects);
+        } else {
+          setFilteredProjects(projects);
+        }
+      } catch (e) {
+        console.error(e);
+        setFilteredProjects([]);
+      }
+    } else {
+       setFilteredProjects(STEP12_UI_FIXTURE_ENABLED ? APPROVAL_PROJECT_PREVIEW_ROWS : approvalProjectsFromStore); 
+    }
+    setIsApprovalProjectModalOpen(true);
+  }, [companyId, dispatch, viewerRole, approvalProjectsFromStore]);
+
   const handleSubmitAssignment = async (payload) => {
     if (STEP12_UI_FIXTURE_ENABLED) {
       showDefaultAlert("안내", "프리뷰 모드에서는 담당자 지정 API를 호출하지 않습니다.", "info");
@@ -1046,6 +1102,13 @@ const OnBoard = () => {
               </span>
             );
           })()}
+          <button 
+            type="button" 
+            style={{ padding: '6px 12px', fontSize: '14px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: 'pointer', color: '#374151', fontWeight: '500' }}
+            onClick={handleOpenApprovalProjectModal}
+          >
+            프로젝트 변경
+          </button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
@@ -1061,7 +1124,23 @@ const OnBoard = () => {
             />
           )}
           {viewMode === "ROLLUP_RESPONSE" && batchIdQuery && (
-            <div className="ob1-cta-container">
+            <div className="ob1-cta-container" style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className="ob1-btn-cta ob1-btn-secondary"
+                style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
+                onClick={() => {
+                  dispatch(selectApprovalProject({
+                    runId: workflow?.runId ?? null,
+                    reportingYear: activeReportingYear,
+                    cycleType: "ROLLUP_RESPONSE",
+                    readOnlyYn: false,
+                    currentStageLabel: "자회사 데이터 승인"
+                  }));
+                  navigate(`/managerData?cycleType=ROLLUP_RESPONSE`, { state: { skipProjectModal: true } });
+                }}
+              >
+                데이터 승인
+              </button>
               <button
                 className="ob1-btn-cta"
                 onClick={() => setIsSubTransferModalOpen(true)}
@@ -1075,7 +1154,7 @@ const OnBoard = () => {
       </div>
       
       {viewMode === "ROLLUP_RESPONSE" && !batchIdQuery ? (
-        <RollupInboxPanel requests={requests} />
+        <RollupInboxPanel requests={requests} onRefresh={initializeOnboarding} />
       ) : (
       <div className="ob1-content-layout">
         <div className="ob1-sidebar-panel">
@@ -1209,6 +1288,17 @@ const OnBoard = () => {
         onClose={() => setIsBasisModalOpen(false)}
         companyId={companyId}
         reportingYear={reportingYear}
+      />
+
+      <ApprovalProjectSelectModal
+        isOpen={isApprovalProjectModalOpen}
+        projects={filteredProjects}
+        selectedRunId={workflow?.runId ?? null}
+        onSelectProject={(project) => {
+          setIsApprovalProjectModalOpen(false);
+          navigate(`/onb?reportingYear=${project.reportingYear}`);
+        }}
+        onClose={() => setIsApprovalProjectModalOpen(false)}
       />
 
       <UiPreviewPanel

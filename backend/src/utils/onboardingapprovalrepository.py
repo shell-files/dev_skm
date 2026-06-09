@@ -90,7 +90,13 @@ def listCycleApprovalInboxRows(
         requiredAtomicIds = [
             row["atomic_metric_id"]
             for row in masterByMetric.get(metricId, [])
-            if row.get("atomic_metric_id") and inputRepo.truthy(row.get("onboarding_input_yn"))
+            if (
+                row.get("atomic_metric_id") 
+                and inputRepo.truthy(row.get("onboarding_input_yn"))
+                and inputRepo.truthy(row.get("active_yn", 1))
+                and not inputRepo.truthy(row.get("delete_yn", 0))
+                and str(row.get("atomic_data_role") or "").strip().upper() not in {"DERIVED", "ROLLUP_READONLY"}
+            )
         ]
         requiredAtomicSet = set(requiredAtomicIds)
         completedAtomicIds = {
@@ -130,6 +136,7 @@ def listCycleApprovalInboxRows(
             approvedAtomicCount=len(approvedAtomicIds),
             inputRows=metricInputRows,
             latestHistory=latestHistory,
+            requiredAtomicSet=requiredAtomicSet,
         )
         if statusFilter and approvalStatus != statusFilter:
             continue
@@ -359,16 +366,21 @@ def resolveCycleApprovalStatus(
     approvedAtomicCount: int,
     inputRows: list[dict],
     latestHistory: dict,
+    requiredAtomicSet: set[str],
 ) -> str:
     if requiredAtomicCount > 0 and approvedAtomicCount >= requiredAtomicCount:
         return "APPROVED"
     latestStatus = str(latestHistory.get("action_status") or "").strip().lower()
-    inputStatuses = {str(row.get("input_status") or "").strip().lower() for row in inputRows}
+    inputStatuses = {
+        str(row.get("input_status") or "").strip().lower() 
+        for row in inputRows
+        if row.get("atomic_metric_id") in requiredAtomicSet
+    }
     if latestStatus == "rejected" or "rejected" in inputStatuses:
         return "REJECTED"
     if latestStatus == "reviewed" or "reviewed" in inputStatuses:
         return "REVIEWED"
-    if completedAtomicCount > 0 and submittedAtomicCount >= completedAtomicCount:
+    if requiredAtomicCount > 0 and submittedAtomicCount >= requiredAtomicCount:
         return "SUBMITTED"
     if completedAtomicCount > 0:
         return "DRAFT"
@@ -464,7 +476,15 @@ def buildApprovalSummary(
         "subIssueId": int(scope["sub_issue_id"]) if scope.get("sub_issue_id") is not None else None,
         "subIssueCode": scope.get("sub_issue_code"),
         "subIssueName": scope.get("sub_issue_name"),
-        "approvalStatus": inputRepo.resolveApprovalStatus(inputs, facts, requiredAtomicIds),
+        "approvalStatus": resolveCycleApprovalStatus(
+            requiredAtomicCount=len(requiredAtomicSet),
+            completedAtomicCount=len(completedAtomicIds),
+            submittedAtomicCount=len(submittedAtomicIds),
+            approvedAtomicCount=len(approvedAtomicIds),
+            inputRows=inputs,
+            latestHistory=latestHistory,
+            requiredAtomicSet=requiredAtomicSet,
+        ),
         "approvalPolicyCode": approvalPolicyCode,
         "rollupReadonlyYn": inputRepo.truthy(scope.get("rollup_readonly_yn")),
         "promotedAtomicCount": len(promotedAtomicSet),

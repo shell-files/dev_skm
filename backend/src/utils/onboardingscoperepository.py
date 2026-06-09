@@ -1014,7 +1014,7 @@ def listQuantInputAtomicIdsTx(cur, metricId: str) -> list[str]:
           AND UPPER(COALESCE(atomic_data_role, '')) = 'INPUT'
           AND (
               UPPER(COALESCE(data_value_type, '')) IN ('QUANT', 'NUMBER', 'NUMERIC')
-              OR data_value_type = '?뺣웾'
+              OR data_value_type = '정량'
           )
         ORDER BY atomic_metric_id
         """,
@@ -1293,7 +1293,7 @@ def ensureRollupResponseWorkspaceTx(
             """
             SELECT metric_id, scope_source_type, source_materiality_run_id, source_selected_sub_issue_id, source_sub_issue_code
             FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE
-            WHERE esg_onboarding_cycle_id = ? AND delete_yn = 0
+            WHERE esg_onboarding_cycle_id = ? AND delete_yn = 0 AND active_yn = 1
             """,
             (sourceCycleId,)
         )

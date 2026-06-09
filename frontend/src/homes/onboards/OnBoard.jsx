@@ -625,13 +625,26 @@ const OnBoard = () => {
   const [assignmentMode, setAssignmentMode] = useState('single');
   const [assignmentTargetIds, setAssignmentTargetIds] = useState([]);
 
+  const currentUserId = user?.id ?? user?.user_id ?? user?.userId;
+
   const g0Items = useMemo(() => {
-    const flattened = mergeAssignmentIntoItems(flattenOnboardingItems(rawMetrics), rawAssignments);
+    const flattened = mergeAssignmentIntoItems(
+      flattenOnboardingItems(rawMetrics),
+      rawAssignments
+    ).map((item) => ({
+      ...item,
+      selfAssignedYn:
+        item.assigneeUserId != null &&
+        currentUserId != null &&
+        Number(item.assigneeUserId) === Number(currentUserId),
+    }));
+
     if (STEP12_UI_FIXTURE_ENABLED) {
       return mergeOnboardingFixtureRows(flattened, previewOnboardingScenario);
     }
+
     return flattened;
-  }, [rawMetrics, rawAssignments, previewOnboardingScenario]);
+  }, [rawMetrics, rawAssignments, previewOnboardingScenario, currentUserId]);
 
 
 
@@ -640,21 +653,15 @@ const OnBoard = () => {
   const filteredG0ItemsForUser = useMemo(() => {
     let items = g0Items;
     if (viewMode === "ROLLUP_RESPONSE" && isEmployeeViewer) {
-      const currentUserId = user?.id ?? user?.user_id ?? user?.userId;
-      items = g0Items.filter((item) => {
-        const isSelfAssigned = item.assigneeUserId != null && currentUserId != null && Number(item.assigneeUserId) === Number(currentUserId);
-        return item.assignmentStatus === "ASSIGNED" || item.assignmentStatus === "assigned" || isSelfAssigned;
-      });
+      items = items.filter((item) => item.selfAssignedYn === true);
     }
     
-    if (viewMode === "ROLLUP_RESPONSE" && requests && requests.length > 0 && batchIdQuery) {
+    if (viewMode === "ROLLUP_RESPONSE" && batchIdQuery) {
       const actionableIds = selectedRequestDetail?.actionableInputMetricIds || [];
-      if (actionableIds.length > 0) {
-        items = items.filter((item) => actionableIds.includes(item.metricId));
-      }
+      items = items.filter((item) => actionableIds.includes(item.metricId));
     }
     return items;
-  }, [g0Items, viewMode, isEmployeeViewer, requests, batchIdQuery, user, selectedRequestDetail]);
+  }, [g0Items, viewMode, isEmployeeViewer, batchIdQuery, selectedRequestDetail]);
 
   const uniqueSubIssues = useMemo(() => {
     const issues = new Set();
@@ -803,7 +810,7 @@ const OnBoard = () => {
     location.state?.workflowStartedAt,
   ]);
 
-  const profileStats = calculateProfileStats(g0Items);
+  const profileStats = calculateProfileStats(filteredG0ItemsForUser);
   const basisLabel =
     displayWorkflow?.reportBasisType === "CONSOLIDATED"
       ? "연결기준"
@@ -844,7 +851,7 @@ const OnBoard = () => {
       }
       const payload = {
         companyId,
-        reportingYear,
+        reportingYear: activeReportingYear,
         cycleType: activeCycleType,
         values: selectedItem.metrics
           .filter((item) => isEditableItem(item))
@@ -880,7 +887,7 @@ const OnBoard = () => {
         await dispatch(
           submitOnboardingApproval({
             companyId,
-            reportingYear,
+            reportingYear: activeReportingYear,
             metricId,
             cycleType: activeCycleType,
           })
@@ -972,7 +979,7 @@ const OnBoard = () => {
       const response = await dispatch(
         bulkAssignOnboardingMetrics({
           companyId,
-          reportingYear,
+          reportingYear: activeReportingYear,
           cycleType: activeCycleType,
           metricIds,
           assigneeName: payload.assigneeName,
@@ -983,8 +990,8 @@ const OnBoard = () => {
       ).unwrap();
       const result = response?.data || response;
 
-      await dispatch(fetchOnboardingMetrics({ companyId, reportingYear, cycleType: activeCycleType })).unwrap();
-      await dispatch(fetchOnboardingAssignments({ companyId, reportingYear, cycleType: activeCycleType })).unwrap();
+      await dispatch(fetchOnboardingMetrics({ companyId, reportingYear: activeReportingYear, cycleType: activeCycleType })).unwrap();
+      await dispatch(fetchOnboardingAssignments({ companyId, reportingYear: activeReportingYear, cycleType: activeCycleType })).unwrap();
 
       setSelectedMetricIds([]);
       setAssignmentTargetIds([]);

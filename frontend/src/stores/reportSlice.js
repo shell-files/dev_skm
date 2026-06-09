@@ -53,6 +53,21 @@ const normalizeApprovalDecisionPayload = (payload = {}) => {
   return normalized;
 };
 
+const attachExplicitBatchContext = (payload = {}, batchId) => {
+  const normalized = { ...payload };
+  if (batchId != null) {
+    normalized.batchId = Number(batchId);
+  }
+  const cycleType = String(normalized.cycleType || "").trim().toUpperCase();
+  if (
+    cycleType === "ROLLUP_RESPONSE" &&
+    (!Number.isInteger(Number(normalized.batchId)) || Number(normalized.batchId) <= 0)
+  ) {
+    throw new Error("batchId is required for ROLLUP_RESPONSE");
+  }
+  return normalized;
+};
+
 const itemsOf = (payload) => {
   const data = dataOf(payload);
   if (Array.isArray(data?.items)) return data.items;
@@ -244,11 +259,13 @@ export const fetchOnboardingMetrics = createAsyncThunk(
       reportingYear = DEFAULT_REPORTING_YEAR,
       cycleType = "PRE_DMA_G0",
       metricId,
+      batchId,
     },
     { rejectWithValue }
   ) => {
     const params = { companyId, reportingYear, cycleType };
     if (metricId) params.metricId = metricId;
+    if (batchId) params.batchId = batchId;
     try {
       const res = normalizeDirectDtoResponse(await GET("/onboarding", params));
       return rejectIfFailed(res, rejectWithValue, "G0 프로필 조회에 실패했습니다.");
@@ -264,9 +281,10 @@ export const fetchOnboardingMetrics = createAsyncThunk(
 
 export const saveOnboardingMetric = createAsyncThunk(
   "report/saveOnboardingMetric",
-  async ({ metricId, payload }, { rejectWithValue }) => {
+  async ({ metricId, payload, batchId }, { rejectWithValue }) => {
     try {
-      const res = normalizeDirectDtoResponse(await PATCH(`/onboarding/${metricId}`, payload));
+      const normalizedPayload = attachExplicitBatchContext(payload, batchId);
+      const res = normalizeDirectDtoResponse(await PATCH(`/onboarding/${metricId}`, normalizedPayload));
       return rejectIfFailed(res, rejectWithValue, "온보딩 지표 저장에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -285,16 +303,15 @@ export const fetchOnboardingAssignments = createAsyncThunk(
       companyId,
       reportingYear = DEFAULT_REPORTING_YEAR,
       cycleType = "PRE_DMA_G0",
+      batchId,
     },
     { rejectWithValue }
   ) => {
     try {
+      const params = { companyId, reportingYear, cycleType };
+      if (batchId) params.batchId = batchId;
       const res = normalizeDirectDtoResponse(
-        await GET(ONBOARDING_ASSIGNMENT_ROOT, {
-          companyId,
-          reportingYear,
-          cycleType,
-        })
+        await GET(ONBOARDING_ASSIGNMENT_ROOT, params)
       );
       return rejectIfFailed(res, rejectWithValue, "온보딩 담당자 목록 조회에 실패했습니다.");
     } catch (error) {
@@ -309,10 +326,11 @@ export const fetchOnboardingAssignments = createAsyncThunk(
 
 export const bulkAssignOnboardingMetrics = createAsyncThunk(
   "report/bulkAssignOnboardingMetrics",
-  async (payload, { rejectWithValue }) => {
+  async ({ payload, batchId }, { rejectWithValue }) => {
     try {
+      const normalizedPayload = attachExplicitBatchContext(payload, batchId);
       const res = normalizeDirectDtoResponse(
-        await POST(`${ONBOARDING_ASSIGNMENT_ROOT}/bulk-assign`, payload)
+        await POST(`${ONBOARDING_ASSIGNMENT_ROOT}/bulk-assign`, normalizedPayload)
       );
       return rejectIfFailed(res, rejectWithValue, "온보딩 담당자 지정에 실패했습니다.");
     } catch (error) {
@@ -327,10 +345,11 @@ export const bulkAssignOnboardingMetrics = createAsyncThunk(
 
 export const bulkUnassignOnboardingMetrics = createAsyncThunk(
   "report/bulkUnassignOnboardingMetrics",
-  async (payload, { rejectWithValue }) => {
+  async ({ payload, batchId }, { rejectWithValue }) => {
     try {
+      const normalizedPayload = attachExplicitBatchContext(payload, batchId);
       const res = normalizeDirectDtoResponse(
-        await POST(`${ONBOARDING_ASSIGNMENT_ROOT}/bulk-unassign`, payload)
+        await POST(`${ONBOARDING_ASSIGNMENT_ROOT}/bulk-unassign`, normalizedPayload)
       );
       return rejectIfFailed(res, rejectWithValue, "온보딩 담당자 해제에 실패했습니다.");
     } catch (error) {
@@ -352,6 +371,7 @@ export const fetchApprovalItems = createAsyncThunk(
       cycleType = "PRE_DMA_G0",
       status,
       assignedOnlyYn = true,
+      batchId,
     },
     { rejectWithValue }
   ) => {
@@ -362,6 +382,7 @@ export const fetchApprovalItems = createAsyncThunk(
       assignedOnlyYn,
     };
     if (status) params.status = status;
+    if (batchId) params.batchId = batchId;
     try {
       const res = await GET(`${ONBOARDING_APPROVAL_API_ROOT}`, params);
       return rejectIfFailed(res, rejectWithValue, "승인 작업함 조회에 실패했습니다.");
@@ -383,16 +404,14 @@ export const fetchOnboardingApprovalDetail = createAsyncThunk(
       reportingYear = DEFAULT_REPORTING_YEAR,
       metricId,
       cycleType = "PRE_DMA_G0",
+      batchId,
     },
     { rejectWithValue }
   ) => {
     try {
-      const res = await GET(`${ONBOARDING_APPROVAL_API_ROOT}/detail`, {
-        companyId,
-        reportingYear,
-        metricId,
-        cycleType,
-      });
+      const params = { companyId, reportingYear, metricId, cycleType };
+      if (batchId) params.batchId = batchId;
+      const res = await GET(`${ONBOARDING_APPROVAL_API_ROOT}/detail`, params);
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 상세 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -623,9 +642,10 @@ export const calculateRollupBatch = createAsyncThunk(
 
 export const submitOnboardingApproval = createAsyncThunk(
   "report/submitOnboardingApproval",
-  async (payload, { rejectWithValue }) => {
+  async ({ payload, batchId }, { rejectWithValue }) => {
     try {
-      const res = await POST(`${ONBOARDING_APPROVAL_API_ROOT}/submit`, payload);
+      const normalizedPayload = attachExplicitBatchContext(payload, batchId);
+      const res = await POST(`${ONBOARDING_APPROVAL_API_ROOT}/submit`, normalizedPayload);
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 요청에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -639,11 +659,12 @@ export const submitOnboardingApproval = createAsyncThunk(
 
 export const reviewOnboardingApproval = createAsyncThunk(
   "report/reviewOnboardingApproval",
-  async (payload, { rejectWithValue }) => {
+  async ({ payload, batchId }, { rejectWithValue }) => {
     try {
+      const normalizedPayload = attachExplicitBatchContext(payload, batchId);
       const res = await POST(
         `${ONBOARDING_APPROVAL_API_ROOT}/review`,
-        normalizeApprovalDecisionPayload(payload)
+        normalizeApprovalDecisionPayload(normalizedPayload)
       );
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 검토에 실패했습니다.");
     } catch (error) {
@@ -658,11 +679,12 @@ export const reviewOnboardingApproval = createAsyncThunk(
 
 export const approveOnboardingApproval = createAsyncThunk(
   "report/approveOnboardingApproval",
-  async (payload, { rejectWithValue }) => {
+  async ({ payload, batchId }, { rejectWithValue }) => {
     try {
+      const normalizedPayload = attachExplicitBatchContext(payload, batchId);
       const res = await POST(
         `${ONBOARDING_APPROVAL_API_ROOT}/approve`,
-        normalizeApprovalDecisionPayload(payload)
+        normalizeApprovalDecisionPayload(normalizedPayload)
       );
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 처리에 실패했습니다.");
     } catch (error) {
@@ -677,11 +699,12 @@ export const approveOnboardingApproval = createAsyncThunk(
 
 export const rejectOnboardingApproval = createAsyncThunk(
   "report/rejectOnboardingApproval",
-  async (payload, { rejectWithValue }) => {
+  async ({ payload, batchId }, { rejectWithValue }) => {
     try {
+      const normalizedPayload = attachExplicitBatchContext(payload, batchId);
       const res = await POST(
         `${ONBOARDING_APPROVAL_API_ROOT}/reject`,
-        normalizeApprovalDecisionPayload(payload)
+        normalizeApprovalDecisionPayload(normalizedPayload)
       );
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 반려에 실패했습니다.");
     } catch (error) {
@@ -965,7 +988,9 @@ const reportSlice = createSlice({
       .addCase(fetchRollupRequestDetail.fulfilled, (state, action) => {
         state.loading.rollupRequestDetail = false;
         state.error.rollupRequestDetail = null;
-        state.rollup.selectedRequestDetail = dataOf(action.payload);
+        const detail = dataOf(action.payload);
+        state.rollup.selectedRequestDetail = detail;
+        state.rollup.activeBatchId = detail?.batchId ?? state.rollup.activeBatchId;
       })
       .addCase(fetchRollupRequestDetail.rejected, (state, action) => {
         setRejected(state, "rollupRequestDetail", action);

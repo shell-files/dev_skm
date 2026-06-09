@@ -32,6 +32,7 @@ def submitMetricApproval(
     commentText: Optional[str] = None,
     reportBasisType: Optional[str] = None,
     sourceMaterialityRunId: Optional[int] = None,
+    batchId: Optional[int] = None,
 ) -> dict:
     conn = getConn()
     if not conn:
@@ -46,14 +47,22 @@ def submitMetricApproval(
                 reportBasisType=reportBasisType,
                 sourceMaterialityRunId=sourceMaterialityRunId,
                 actorUserId=actorUserId,
+                batchId=batchId,
             )
+            requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             scope = requireApprovalScopeTx(cur, cycle, companyId, metricId)
-            requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
+            requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             if checkRowsAllStatus(rows, requiredAtomicIds, STATE_SUBMITTED):
                 conn.commit()
-                return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
+                return buildMetricApprovalSummary(
+                    companyId,
+                    reportingYear,
+                    metricId,
+                    cycle.get("cycle_type") or cycleType,
+                    batchId=batchId,
+                )
             if checkRowsAnyStatus(rows, requiredAtomicIds, {STATE_REVIEWED, STATE_APPROVED}):
                 raise ValueError(f"Cannot resubmit {metricId} from reviewed or approved status")
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_DRAFT, STATE_REJECTED, STATE_SUBMITTED})
@@ -82,7 +91,13 @@ def submitMetricApproval(
                 commentText=commentText,
             )
         conn.commit()
-        return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
+        return buildMetricApprovalSummary(
+            companyId,
+            reportingYear,
+            metricId,
+            cycle.get("cycle_type") or cycleType,
+            batchId=batchId,
+        )
     except Exception:
         conn.rollback()
         raise
@@ -98,15 +113,17 @@ def reviewMetricApproval(
     metricId: str,
     actorUserId: Optional[int],
     commentText: Optional[str] = None,
+    batchId: Optional[int] = None,
 ) -> dict:
     conn = getConn()
     if not conn:
         raise RuntimeError("DB connection failed")
     try:
         with conn.cursor(dictionary=True) as cur:
-            cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType)
+            cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType, batchId=batchId)
+            requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             requireApprovalScopeTx(cur, cycle, companyId, metricId)
-            requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
+            requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED})
@@ -135,7 +152,13 @@ def reviewMetricApproval(
                 commentText=commentText,
             )
         conn.commit()
-        return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
+        return buildMetricApprovalSummary(
+            companyId,
+            reportingYear,
+            metricId,
+            cycle.get("cycle_type") or cycleType,
+            batchId=batchId,
+        )
     except Exception:
         conn.rollback()
         raise
@@ -151,32 +174,34 @@ def approveMetricApproval(
     metricId: str,
     actorUserId: Optional[int],
     commentText: Optional[str] = None,
+    batchId: Optional[int] = None,
 ) -> dict:
     conn = getConn()
     if not conn:
         raise RuntimeError("DB connection failed")
     try:
         with conn.cursor(dictionary=True) as cur:
-            cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType)
+            cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType, batchId=batchId)
+            requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             scope = requireApprovalScopeTx(cur, cycle, companyId, metricId)
-            requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
+            requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             policy = str(scope.get("approval_policy_code") or APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
-            promotedQuantAtomicIds = (
-                inputRepo.listQuantInputAtomicIdsTx(cur, metricId)
+            promotedAtomicIds = (
+                inputRepo.listPromotableInputAtomicIdsTx(cur, metricId)
                 if policy in {
                     APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
                     APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
                 }
                 else []
             )
-            requireKpiFactYn = bool(promotedQuantAtomicIds)
+            requireKpiFactYn = bool(promotedAtomicIds)
             if policy in {
                 APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
                 APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
-            } and not promotedQuantAtomicIds:
-                raise ValueError(f"No quantitative INPUT atomic metrics are available for KPI promotion: {metricId}")
+            } and not promotedAtomicIds:
+                raise ValueError(f"No INPUT atomic metrics are available for KPI promotion: {metricId}")
             if inputRepo.checkAlreadyApprovedTx(
                 cur,
                 rows,
@@ -184,14 +209,20 @@ def approveMetricApproval(
                 reportingYear,
                 metricId,
                 requiredAtomicIds,
-                expectedPromotedAtomicIds=promotedQuantAtomicIds,
+                expectedPromotedAtomicIds=promotedAtomicIds,
             ):
                 conn.commit()
-                return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
+                return buildMetricApprovalSummary(
+                    companyId,
+                    reportingYear,
+                    metricId,
+                    cycle.get("cycle_type") or cycleType,
+                    batchId=batchId,
+                )
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED, STATE_REVIEWED})
             calculationSummary = None
             if requireKpiFactYn:
-                quantAtomicIds = set(promotedQuantAtomicIds)
+                quantAtomicIds = set(promotedAtomicIds)
                 changedAtomicIds = []
                 for row in rows:
                     if row.get("atomic_metric_id") in quantAtomicIds:
@@ -233,6 +264,7 @@ def approveMetricApproval(
             companyId, reportingYear, metricId,
             cycle.get("cycle_type") or cycleType,
             calculationSummary=calculationSummary,
+            batchId=batchId,
         )
     except Exception:
         conn.rollback()
@@ -249,15 +281,17 @@ def rejectMetricApproval(
     metricId: str,
     actorUserId: Optional[int],
     commentText: str,
+    batchId: Optional[int] = None,
 ) -> dict:
     conn = getConn()
     if not conn:
         raise RuntimeError("DB connection failed")
     try:
         with conn.cursor(dictionary=True) as cur:
-            cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType)
+            cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType, batchId=batchId)
+            requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             requireApprovalScopeTx(cur, cycle, companyId, metricId)
-            requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
+            requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED, STATE_REVIEWED})
@@ -286,7 +320,13 @@ def rejectMetricApproval(
                 commentText=commentText,
             )
         conn.commit()
-        return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
+        return buildMetricApprovalSummary(
+            companyId,
+            reportingYear,
+            metricId,
+            cycle.get("cycle_type") or cycleType,
+            batchId=batchId,
+        )
     except Exception:
         conn.rollback()
         raise
@@ -300,8 +340,9 @@ def buildMetricApprovalSummary(
     metricId: str,
     cycleType: str = scopeRepo.CYCLE_TYPE_PRE_DMA_G0,
     calculationSummary: dict = None,
+    batchId: Optional[int] = None,
 ) -> dict:
-    summary = approvalRepo.buildApprovalSummary(companyId, reportingYear, metricId, cycleType)
+    summary = approvalRepo.buildApprovalSummary(companyId, reportingYear, metricId, cycleType, batchId=batchId)
     if calculationSummary:
         summary["calculationReadyYn"] = calculationSummary.get("calculationReadyYn")
         summary["affectedRuleCount"] = calculationSummary.get("affectedRuleCount", 0)
@@ -320,6 +361,7 @@ def resolveActiveCycleTx(
     reportBasisType: Optional[str],
     sourceMaterialityRunId: Optional[int],
     actorUserId: Optional[int],
+    batchId: Optional[int] = None,
 ) -> dict:
     normalizedCycleType = normalizeCycleType(cycleType)
     if normalizedCycleType == scopeRepo.CYCLE_TYPE_PRE_DMA_G0:
@@ -331,12 +373,12 @@ def resolveActiveCycleTx(
             sourceMaterialityRunId,
             actorUserId,
         )
-    return resolveExistingActiveCycleTx(cur, companyId, reportingYear, normalizedCycleType)
+    return resolveExistingActiveCycleTx(cur, companyId, reportingYear, normalizedCycleType, batchId=batchId)
 
 
-def resolveExistingActiveCycleTx(cur, companyId: int, reportingYear: int, cycleType: str) -> dict:
+def resolveExistingActiveCycleTx(cur, companyId: int, reportingYear: int, cycleType: str, batchId: Optional[int] = None) -> dict:
     normalizedCycleType = normalizeCycleType(cycleType)
-    cycle = scopeRepo.resolveCycle(cur, companyId, reportingYear, normalizedCycleType)
+    cycle = scopeRepo.resolveCycle(cur, companyId, reportingYear, normalizedCycleType, batchId=batchId)
     if not cycle:
         raise ValueError(f"{normalizedCycleType} cycle was not found")
     if str(cycle.get("cycle_status") or "").strip().lower() != "active":
@@ -400,6 +442,31 @@ def setMetricInputStatusTx(
         tuple(params),
     )
 
+
+def requireWritableCycleTx(cur, cycle: dict, companyId: int, batchId: Optional[int] = None) -> None:
+    scopeRepo.requireRollupResponseBatchContext(cycle, batchId)
+    if str(cycle.get("cycle_type") or "").strip().upper() != scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
+        return
+    dbBatchId = cycle.get("parent_rollup_batch_id")
+    if dbBatchId is None:
+        return
+    cur.execute(
+        """
+        SELECT transfer_status
+        FROM ESG_ROLLUP_SOURCE_STATUS
+        WHERE esg_rollup_batch_id = ?
+          AND source_company_id = ?
+          AND delete_yn = 0
+        LIMIT 1
+        FOR UPDATE
+        """,
+        (int(dbBatchId), companyId),
+    )
+    row = cur.fetchone()
+    if row and str(row.get("transfer_status") or "").lower() in {"sent", "received"}:
+        err = ValueError("ROLLUP_RESPONSE workspace is read-only after transfer.")
+        err.statusCode = 409
+        raise err
 
 def normalizeCycleType(cycleType: str) -> str:
     normalizedCycleType = str(cycleType or scopeRepo.CYCLE_TYPE_PRE_DMA_G0).strip().upper()

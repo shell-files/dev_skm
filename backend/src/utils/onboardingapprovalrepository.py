@@ -44,13 +44,14 @@ def listCycleApprovalInboxRows(
     status: Optional[str] = None,
     cycleType: Optional[str] = None,
     assignedOnlyYn: bool = True,
+    batchId: Optional[int] = None,
 ) -> list[dict]:
     normalizedCycleType = str(cycleType or CYCLE_TYPE_PRE_DMA_G0).strip().upper()
     if normalizedCycleType not in {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE, CYCLE_TYPE_ROLLUP_RESPONSE}:
         return []
 
     year = scopeRepo.resolveReportingYear(companyId, reportingYear)
-    cycle = scopeRepo.getCycle(companyId, year, normalizedCycleType)
+    cycle = scopeRepo.getCycle(companyId, year, normalizedCycleType, batchId=batchId)
     if not cycle or str(cycle.get("cycle_status") or "").strip().lower() != "active":
         return []
 
@@ -90,7 +91,13 @@ def listCycleApprovalInboxRows(
         requiredAtomicIds = [
             row["atomic_metric_id"]
             for row in masterByMetric.get(metricId, [])
-            if row.get("atomic_metric_id") and inputRepo.truthy(row.get("onboarding_input_yn"))
+            if (
+                row.get("atomic_metric_id") 
+                and inputRepo.truthy(row.get("onboarding_input_yn"))
+                and inputRepo.truthy(row.get("active_yn", 1))
+                and not inputRepo.truthy(row.get("delete_yn", 0))
+                and str(row.get("atomic_data_role") or "").strip().upper() not in {"DERIVED", "ROLLUP_READONLY"}
+            )
         ]
         requiredAtomicSet = set(requiredAtomicIds)
         completedAtomicIds = {
@@ -130,17 +137,18 @@ def listCycleApprovalInboxRows(
             approvedAtomicCount=len(approvedAtomicIds),
             inputRows=metricInputRows,
             latestHistory=latestHistory,
+            requiredAtomicSet=requiredAtomicSet,
         )
         if statusFilter and approvalStatus != statusFilter:
             continue
 
         actionSupportedYn, disabledReason = resolveActionSupport(scope)
         approvalPolicyCode = str(scope.get("approval_policy_code") or scopeRepo.APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
-        promotedQuantAtomicIds = (
+        promotedAtomicIds = (
             [
                 row["atomic_metric_id"]
                 for row in masterByMetric.get(metricId, [])
-                if isQuantInputMasterRow(row)
+                if isPromotableInputMasterRow(row)
             ]
             if approvalPolicyCode in {
                 scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
@@ -148,7 +156,7 @@ def listCycleApprovalInboxRows(
             }
             else []
         )
-        promotedQuantAtomicSet = set(promotedQuantAtomicIds)
+        promotedAtomicSet = set(promotedAtomicIds)
         approvedFactAtomicIds = {
             row.get("atomic_metric_id")
             for row in metricFactRows
@@ -180,8 +188,8 @@ def listCycleApprovalInboxRows(
                 ],
                 "approvalPolicyCode": approvalPolicyCode,
                 "rollupReadonlyYn": inputRepo.truthy(scope.get("rollup_readonly_yn")),
-                "promotedQuantAtomicCount": len(promotedQuantAtomicSet),
-                "approvedPromotedFactCount": len(approvedFactAtomicIds.intersection(promotedQuantAtomicSet)),
+                "promotedAtomicCount": len(promotedAtomicSet),
+                "approvedPromotedFactCount": len(approvedFactAtomicIds.intersection(promotedAtomicSet)),
                 "submittedAt": inputRepo.formatDatetime(inputRepo.submittedAt(metricInputRows, latestHistory)),
                 "approvedAt": inputRepo.formatDatetime(inputRepo.approvedAt(metricInputRows, metricFactRows, latestHistory)),
                 "commentText": latestHistory.get("comment_text"),
@@ -193,16 +201,11 @@ def listCycleApprovalInboxRows(
     return items
 
 
-def isQuantInputMasterRow(row: dict) -> bool:
-    dataValueType = str(row.get("data_value_type") or "").strip().upper()
+def isPromotableInputMasterRow(row: dict) -> bool:
     atomicRole = str(row.get("atomic_data_role") or "").strip().upper()
     return (
         inputRepo.truthy(row.get("onboarding_input_yn"))
         and atomicRole == "INPUT"
-        and (
-            dataValueType in {"QUANT", "NUMBER", "NUMERIC"}
-            or row.get("data_value_type") == "정량"
-        )
     )
 
 
@@ -364,16 +367,21 @@ def resolveCycleApprovalStatus(
     approvedAtomicCount: int,
     inputRows: list[dict],
     latestHistory: dict,
+    requiredAtomicSet: set[str],
 ) -> str:
     if requiredAtomicCount > 0 and approvedAtomicCount >= requiredAtomicCount:
         return "APPROVED"
     latestStatus = str(latestHistory.get("action_status") or "").strip().lower()
-    inputStatuses = {str(row.get("input_status") or "").strip().lower() for row in inputRows}
+    inputStatuses = {
+        str(row.get("input_status") or "").strip().lower() 
+        for row in inputRows
+        if row.get("atomic_metric_id") in requiredAtomicSet
+    }
     if latestStatus == "rejected" or "rejected" in inputStatuses:
         return "REJECTED"
     if latestStatus == "reviewed" or "reviewed" in inputStatuses:
         return "REVIEWED"
-    if completedAtomicCount > 0 and submittedAtomicCount >= completedAtomicCount:
+    if requiredAtomicCount > 0 and submittedAtomicCount >= requiredAtomicCount:
         return "SUBMITTED"
     if completedAtomicCount > 0:
         return "DRAFT"
@@ -395,25 +403,26 @@ def buildApprovalSummary(
     reportingYear: int,
     metricId: str,
     cycleType: str = CYCLE_TYPE_PRE_DMA_G0,
+    batchId: Optional[int] = None,
 ) -> dict:
-    cycle = scopeRepo.getCycle(companyId, reportingYear, cycleType) or {}
+    cycle = scopeRepo.getCycle(companyId, reportingYear, cycleType, batchId=batchId) or {}
     cycleId = int(cycle["id"]) if cycle.get("id") is not None else None
     scopes = scopeRepo.listMetricScopes(cycleId, companyId, metricId) if cycleId is not None else []
     scope = scopes[0] if scopes else {}
-    requiredAtomicIds = inputRepo.listRequiredAtomicIds(metricId)
+    requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIds(metricId)
     requiredAtomicSet = set(requiredAtomicIds)
     inputs = inputRepo.listMetricInputs(companyId, reportingYear, metricId)
     facts = inputRepo.listMetricKpiFacts(companyId, reportingYear, metricId)
     approvalPolicyCode = str(scope.get("approval_policy_code") or scopeRepo.APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
-    promotedQuantAtomicIds = (
-        inputRepo.listQuantInputAtomicIds(metricId)
+    promotedAtomicIds = (
+        inputRepo.listPromotableInputAtomicIds(metricId)
         if approvalPolicyCode in {
             scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
             scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
         }
         else []
     )
-    promotedQuantAtomicSet = set(promotedQuantAtomicIds)
+    promotedAtomicSet = set(promotedAtomicIds)
     assignment = {}
     if cycleId is not None:
         assignment = findOne(
@@ -469,11 +478,19 @@ def buildApprovalSummary(
         "subIssueId": int(scope["sub_issue_id"]) if scope.get("sub_issue_id") is not None else None,
         "subIssueCode": scope.get("sub_issue_code"),
         "subIssueName": scope.get("sub_issue_name"),
-        "approvalStatus": inputRepo.resolveApprovalStatus(inputs, facts, requiredAtomicIds),
+        "approvalStatus": resolveCycleApprovalStatus(
+            requiredAtomicCount=len(requiredAtomicSet),
+            completedAtomicCount=len(completedAtomicIds),
+            submittedAtomicCount=len(submittedAtomicIds),
+            approvedAtomicCount=len(approvedAtomicIds),
+            inputRows=inputs,
+            latestHistory=latestHistory,
+            requiredAtomicSet=requiredAtomicSet,
+        ),
         "approvalPolicyCode": approvalPolicyCode,
         "rollupReadonlyYn": inputRepo.truthy(scope.get("rollup_readonly_yn")),
-        "promotedQuantAtomicCount": len(promotedQuantAtomicSet),
-        "approvedPromotedFactCount": len(approvedFactAtomicIds.intersection(promotedQuantAtomicSet)),
+        "promotedAtomicCount": len(promotedAtomicSet),
+        "approvedPromotedFactCount": len(approvedFactAtomicIds.intersection(promotedAtomicSet)),
         "inputUserId": inputRepo.firstNonNull([row.get("input_user_id") for row in inputs]),
         "assigneeUserId": assignment.get("assignee_user_id"),
         "cycleId": cycleId,

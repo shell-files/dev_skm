@@ -44,6 +44,7 @@ class OnboardingMetricItemDto(BaseModel):
     inputRequiredYn: bool = True
     approvalRequiredYn: bool = True
     approvalPolicyCode: str = "INPUT_APPROVAL_ONLY"
+    approvalStatus: Optional[str] = None
     rollupReadonlyYn: bool = False
     displayOrder: int = 0
     assignment: Optional[OnboardingAssignmentDto] = None
@@ -73,6 +74,7 @@ class OnboardingMetricValuesRequestDto(BaseModel):
     companyId: int
     reportingYear: int
     cycleType: str
+    batchId: Optional[int] = None
     values: List[OnboardingValueItemDto]
 
 
@@ -91,6 +93,7 @@ class OnboardingAssignmentBulkAssignRequestDto(BaseModel):
     companyId: int
     reportingYear: int
     cycleType: str = "PRE_DMA_G0"
+    batchId: Optional[int] = None
     metricIds: List[str] = Field(..., min_length=1)
     assigneeEmail: EmailStr
     dueDate: Optional[date] = None
@@ -101,6 +104,7 @@ class OnboardingAssignmentBulkUnassignRequestDto(BaseModel):
     companyId: int
     reportingYear: int
     cycleType: str = "PRE_DMA_G0"
+    batchId: Optional[int] = None
     metricIds: List[str] = Field(..., min_length=1)
 
 
@@ -108,6 +112,7 @@ class OnboardingAssignmentPatchRequestDto(BaseModel):
     companyId: int
     reportingYear: int
     cycleType: str = "PRE_DMA_G0"
+    batchId: Optional[int] = None
     assigneeEmail: EmailStr
     dueDate: Optional[date] = None
     sendInviteYn: bool = True
@@ -184,6 +189,7 @@ class OnboardingApprovalRequestDto(BaseModel):
     reportingYear: int
     metricId: str
     cycleType: str = "PRE_DMA_G0"
+    batchId: Optional[int] = None
 
 
 class OnboardingApprovalDecisionRequestDto(OnboardingApprovalRequestDto):

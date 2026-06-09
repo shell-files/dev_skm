@@ -5,6 +5,7 @@ import "@styles/onboarding1.css";
 import { useAuth } from "@hooks/AuthContext.jsx";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 import ReportBasisSelectModal from "@components/UI/ReportBasisSelectModal.jsx";
+import ApprovalProjectSelectModal from "../mains/modal/ApprovalProjectSelectModal";
 import OnboardingModalShell from "./modal/OnboardingModalShell";
 import SubsidiaryRequestModal from "./modal/SubsidiaryRequestModal";
 import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
@@ -18,7 +19,8 @@ import {
   ONBOARDING_SCENARIOS,
   APPROVAL_SCENARIOS,
   ROLLUP_SCENARIOS,
-  PREVIEW_WORKFLOW
+  PREVIEW_WORKFLOW,
+  APPROVAL_PROJECT_PREVIEW_ROWS
 } from "@/dev/step12UiPreview/fixtures";
 import {
   calculateMetricStatus,
@@ -46,6 +48,8 @@ import {
   saveOnboardingMetric,
   setActiveBatchId,
   submitOnboardingApproval,
+  fetchApprovalProjects,
+  selectApprovalProject,
 } from "@stores/reportSlice";
 
 const normalizeViewerRole = (role) => String(role || "").trim().toUpperCase();
@@ -112,6 +116,7 @@ const flattenOnboardingItems = (metrics = []) =>
       subIssueName: metric.subIssueName,
       scopeSourceType: metric.scopeSourceType,
       approvalPolicyCode: metric.approvalPolicyCode,
+      approvalStatus: metric.approvalStatus,
       assignment: metric.assignment,
     }))
   );
@@ -152,6 +157,18 @@ const resolveRollupContext = (cycleType) => {
     rollupPurposeCode: "DMA_PRECHECK",
     metricScopeCode: "G0_02_FINANCIAL_BASIS",
   };
+};
+
+const formatApiDetail = (detail) => {
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => item?.msg || item?.message || JSON.stringify(item))
+      .join("\n");
+  }
+  if (detail && typeof detail === "object") {
+    return detail.message || JSON.stringify(detail);
+  }
+  return String(detail || "");
 };
 
 const mergeAssignmentIntoItems = (items = [], assignments = []) => {
@@ -564,6 +581,11 @@ const OnBoard = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { selectedCompany, user } = useAuth();
+
+  const [isApprovalProjectModalOpen, setIsApprovalProjectModalOpen] = useState(false);
+  const [filteredProjects, setFilteredProjects] = useState([]);
+  const approvalProjectsFromStore = useSelector((state) => state.report?.approval?.projects ?? []);
+
   const location = useLocation();
   const companyId = selectedCompany?.company_id ?? selectedCompany?.companyId;
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -573,6 +595,11 @@ const OnBoard = () => {
 
   const viewMode = searchParams.get("mode") === "ROLLUP_RESPONSE" ? "ROLLUP_RESPONSE" : "MY_PROJECT";
   const batchIdQuery = searchParams.get("batchId");
+  const rollupResponseBatchId = useMemo(() => {
+    if (viewMode !== "ROLLUP_RESPONSE") return undefined;
+    const parsed = Number(batchIdQuery);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+  }, [viewMode, batchIdQuery]);
 
   // Preview States
   const [previewRole, setPreviewRole] = useState("ESG 담당자");
@@ -656,12 +683,12 @@ const OnBoard = () => {
       items = items.filter((item) => item.selfAssignedYn === true);
     }
     
-    if (viewMode === "ROLLUP_RESPONSE" && batchIdQuery) {
+    if (viewMode === "ROLLUP_RESPONSE" && rollupResponseBatchId) {
       const actionableIds = selectedRequestDetail?.actionableInputMetricIds || [];
       items = items.filter((item) => actionableIds.includes(item.metricId));
     }
     return items;
-  }, [g0Items, viewMode, isEmployeeViewer, batchIdQuery, selectedRequestDetail]);
+  }, [g0Items, viewMode, isEmployeeViewer, rollupResponseBatchId, selectedRequestDetail]);
 
   const uniqueSubIssues = useMemo(() => {
     const issues = new Set();
@@ -700,6 +727,14 @@ const OnBoard = () => {
 
   const displayWorkflowError = STEP12_UI_FIXTURE_ENABLED ? null : workflowError;
   const displayG0Error = STEP12_UI_FIXTURE_ENABLED ? null : g0Error;
+  const isRollupResponseReadOnly = useMemo(() => {
+    const transferStatus = String(
+      selectedRequestDetail?.transferStatus ||
+      selectedRequestDetail?.sourceStatus?.transferStatus ||
+      ""
+    ).trim().toUpperCase();
+    return transferStatus === "SENT" || transferStatus === "RECEIVED";
+  }, [selectedRequestDetail]);
 
   const initializeOnboarding = useCallback(async () => {
     if (!companyId) {
@@ -713,11 +748,12 @@ const OnBoard = () => {
         setActiveSourceCycleId(null);
         await dispatch(fetchRollupRequests({ includeSentYn: true, allPurposesYn: true })).unwrap();
         
-        if (!batchIdQuery) {
+        if (!rollupResponseBatchId) {
           return;
         }
 
-        const batchId = parseInt(batchIdQuery, 10);
+        const batchId = rollupResponseBatchId;
+        dispatch(setActiveBatchId(batchId));
         await dispatch(fetchRollupRequestDetail({ batchId })).unwrap();
         const ensuredRes = await dispatch(ensureRollupResponseWorkspace({ batchId })).unwrap();
         
@@ -726,12 +762,12 @@ const OnBoard = () => {
 
         const metricId = searchParams.get("metricId");
         await dispatch(
-          fetchOnboardingMetrics({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE", metricId })
+          fetchOnboardingMetrics({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE", metricId, batchId })
         ).unwrap();
         
         if (canManageAssignments) {
           await dispatch(
-            fetchOnboardingAssignments({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE" })
+            fetchOnboardingAssignments({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE", batchId })
           ).unwrap();
         }
         return;
@@ -799,7 +835,7 @@ const OnBoard = () => {
     } catch (error) {
       console.error(error);
     }
-  }, [companyId, cycleTypeQuery, dispatch, reportingYear, location.search, viewMode]);
+  }, [companyId, cycleTypeQuery, dispatch, reportingYear, location.search, viewMode, rollupResponseBatchId, canManageAssignments]);
 
   useEffect(() => {
     dispatch(resetReportState());
@@ -809,6 +845,16 @@ const OnBoard = () => {
     initializeOnboarding,
     location.state?.workflowStartedAt,
   ]);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      initializeOnboarding();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [initializeOnboarding]);
 
   const profileStats = calculateProfileStats(filteredG0ItemsForUser);
   const basisLabel =
@@ -853,6 +899,7 @@ const OnBoard = () => {
         companyId,
         reportingYear: activeReportingYear,
         cycleType: activeCycleType,
+        ...(activeCycleType === "ROLLUP_RESPONSE" ? { batchId: rollupResponseBatchId } : {}),
         values: selectedItem.metrics
           .filter((item) => isEditableItem(item))
           .map((item) => {
@@ -874,7 +921,7 @@ const OnBoard = () => {
           }),
       };
 
-      await dispatch(saveOnboardingMetric({ metricId, payload })).unwrap();
+      await dispatch(saveOnboardingMetric({ metricId, payload, batchId: rollupResponseBatchId })).unwrap();
 
       if (status === "DRAFT") {
         showDefaultAlert("완료", "임시저장이 완료되었습니다.", "success");
@@ -886,10 +933,14 @@ const OnBoard = () => {
       try {
         await dispatch(
           submitOnboardingApproval({
-            companyId,
-            reportingYear: activeReportingYear,
-            metricId,
-            cycleType: activeCycleType,
+            payload: {
+              companyId,
+              reportingYear: activeReportingYear,
+              metricId,
+              cycleType: activeCycleType,
+              ...(activeCycleType === "ROLLUP_RESPONSE" ? { batchId: rollupResponseBatchId } : {}),
+            },
+            batchId: rollupResponseBatchId,
           })
         ).unwrap();
         showDefaultAlert("완료", "승인 요청이 완료되었습니다.", "success");
@@ -897,8 +948,13 @@ const OnBoard = () => {
         await initializeOnboarding();
       } catch (submitError) {
         console.error(submitError);
-        let detail =
-          submitError?.message || submitError?.detail || submitError?.error?.message || "";
+        let detail = formatApiDetail(
+          submitError?.detail ??
+          submitError?.error?.detail ??
+          submitError?.message ??
+          submitError?.error?.message ??
+          ""
+        );
           
         if (
           detail.includes("Metric assignment is required") ||
@@ -917,7 +973,13 @@ const OnBoard = () => {
       }
     } catch (error) {
       console.error(error);
-      let detail = error?.message || error?.detail || error?.error?.message || "";
+      let detail = formatApiDetail(
+        error?.detail ??
+        error?.error?.detail ??
+        error?.message ??
+        error?.error?.message ??
+        ""
+      );
       if (
         detail.includes("Metric assignment is required") ||
         detail.includes("Metric assignment must be assigned") ||
@@ -961,6 +1023,43 @@ const OnBoard = () => {
     setIsAssignmentModalOpen(true);
   };
 
+  const handleOpenApprovalProjectModal = useCallback(async () => {
+    if (companyId && !STEP12_UI_FIXTURE_ENABLED) {
+      try {
+        const res = await dispatch(fetchApprovalProjects({ companyId })).unwrap();
+        let projects = res?.data?.items || res?.items || [];
+        
+        if (isEmployeeRole(viewerRole) && !isAssignmentManagerRole(viewerRole)) {
+          const assignedProjects = [];
+          for (const proj of projects) {
+            try {
+              const metricsRes = await dispatch(fetchOnboardingMetrics({
+                companyId,
+                reportingYear: proj.reportingYear,
+                cycleType: "PRE_DMA_G0"
+              })).unwrap();
+              const metrics = metricsRes?.data?.metrics || metricsRes?.metrics || [];
+              if (metrics.length > 0) {
+                assignedProjects.push(proj);
+              }
+            } catch (e) {
+               // ignore
+            }
+          }
+          setFilteredProjects(assignedProjects);
+        } else {
+          setFilteredProjects(projects);
+        }
+      } catch (e) {
+        console.error(e);
+        setFilteredProjects([]);
+      }
+    } else {
+       setFilteredProjects(STEP12_UI_FIXTURE_ENABLED ? APPROVAL_PROJECT_PREVIEW_ROWS : approvalProjectsFromStore); 
+    }
+    setIsApprovalProjectModalOpen(true);
+  }, [companyId, dispatch, viewerRole, approvalProjectsFromStore]);
+
   const handleSubmitAssignment = async (payload) => {
     if (STEP12_UI_FIXTURE_ENABLED) {
       showDefaultAlert("안내", "프리뷰 모드에서는 담당자 지정 API를 호출하지 않습니다.", "info");
@@ -978,20 +1077,24 @@ const OnBoard = () => {
     try {
       const response = await dispatch(
         bulkAssignOnboardingMetrics({
-          companyId,
-          reportingYear: activeReportingYear,
-          cycleType: activeCycleType,
-          metricIds,
-          assigneeName: payload.assigneeName,
-          assigneeEmail: payload.assigneeEmail,
-          dueDate: payload.submissionDueDate || null,
-          sendInviteYn: true,
+          payload: {
+            companyId,
+            reportingYear: activeReportingYear,
+            cycleType: activeCycleType,
+            ...(activeCycleType === "ROLLUP_RESPONSE" ? { batchId: rollupResponseBatchId } : {}),
+            metricIds,
+            assigneeName: payload.assigneeName,
+            assigneeEmail: payload.assigneeEmail,
+            dueDate: payload.submissionDueDate || null,
+            sendInviteYn: true,
+          },
+          batchId: rollupResponseBatchId,
         })
       ).unwrap();
       const result = response?.data || response;
 
-      await dispatch(fetchOnboardingMetrics({ companyId, reportingYear: activeReportingYear, cycleType: activeCycleType })).unwrap();
-      await dispatch(fetchOnboardingAssignments({ companyId, reportingYear: activeReportingYear, cycleType: activeCycleType })).unwrap();
+      await dispatch(fetchOnboardingMetrics({ companyId, reportingYear: activeReportingYear, cycleType: activeCycleType, batchId: rollupResponseBatchId })).unwrap();
+      await dispatch(fetchOnboardingAssignments({ companyId, reportingYear: activeReportingYear, cycleType: activeCycleType, batchId: rollupResponseBatchId })).unwrap();
 
       setSelectedMetricIds([]);
       setAssignmentTargetIds([]);
@@ -1046,6 +1149,13 @@ const OnBoard = () => {
               </span>
             );
           })()}
+          <button 
+            type="button" 
+            style={{ padding: '6px 12px', fontSize: '14px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: 'pointer', color: '#374151', fontWeight: '500' }}
+            onClick={handleOpenApprovalProjectModal}
+          >
+            프로젝트 변경
+          </button>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
@@ -1060,8 +1170,25 @@ const OnBoard = () => {
               onCtaClick={handleCtaClick}
             />
           )}
-          {viewMode === "ROLLUP_RESPONSE" && batchIdQuery && (
-            <div className="ob1-cta-container">
+          {viewMode === "ROLLUP_RESPONSE" && rollupResponseBatchId && (
+            <div className="ob1-cta-container" style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className="ob1-btn-cta ob1-btn-secondary"
+                style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
+                onClick={() => {
+                  dispatch(selectApprovalProject({
+                    runId: workflow?.runId ?? null,
+                    reportingYear: activeReportingYear,
+                    cycleType: "ROLLUP_RESPONSE",
+                    batchId: rollupResponseBatchId,
+                    readOnlyYn: isRollupResponseReadOnly,
+                    currentStageLabel: "자회사 데이터 승인"
+                  }));
+                  navigate(`/managerData?cycleType=ROLLUP_RESPONSE&batchId=${rollupResponseBatchId}`, { state: { skipProjectModal: true } });
+                }}
+              >
+                데이터 승인
+              </button>
               <button
                 className="ob1-btn-cta"
                 onClick={() => setIsSubTransferModalOpen(true)}
@@ -1075,7 +1202,12 @@ const OnBoard = () => {
       </div>
       
       {viewMode === "ROLLUP_RESPONSE" && !batchIdQuery ? (
-        <RollupInboxPanel requests={requests} />
+        <RollupInboxPanel requests={requests} onRefresh={initializeOnboarding} />
+      ) : viewMode === "ROLLUP_RESPONSE" && !rollupResponseBatchId ? (
+        <div className="ob1-empty-state">
+          <p className="ob1-empty-title">받은 요청함의 Batch 정보가 없습니다.</p>
+          <p className="ob1-empty-desc">요청함에서 다시 진입해 주세요.</p>
+        </div>
       ) : (
       <div className="ob1-content-layout">
         <div className="ob1-sidebar-panel">
@@ -1209,6 +1341,17 @@ const OnBoard = () => {
         onClose={() => setIsBasisModalOpen(false)}
         companyId={companyId}
         reportingYear={reportingYear}
+      />
+
+      <ApprovalProjectSelectModal
+        isOpen={isApprovalProjectModalOpen}
+        projects={filteredProjects}
+        selectedRunId={workflow?.runId ?? null}
+        onSelectProject={(project) => {
+          setIsApprovalProjectModalOpen(false);
+          navigate(`/onb?reportingYear=${project.reportingYear}`);
+        }}
+        onClose={() => setIsApprovalProjectModalOpen(false)}
       />
 
       <UiPreviewPanel

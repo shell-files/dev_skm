@@ -1027,6 +1027,13 @@ def ensureRollupResponseWorkspace(batchId: int, userModel) -> RollupRequestDetai
             from src.utils.onboardingscoperepository import ensureRollupResponseWorkspaceTx
             ensureRollupResponseWorkspaceTx(cur, sourceCompanyId, reportingYear, batchId, actionableInputMetricIds, actorUserId)
         conn.commit()
+    except ValueError as e:
+        conn.rollback()
+        raise RollupError(
+            int(getattr(e, "statusCode", 422)),
+            "ROLLUP_RESPONSE_WORKSPACE_CONFLICT",
+            str(e),
+        )
     except Exception as e:
         conn.rollback()
         raise RollupError(500, "ROLLUP_RESPONSE_WORKSPACE_FAILED", f"Failed to ensure rollup response workspace: {str(e)}")

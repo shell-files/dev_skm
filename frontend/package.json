@@ -25,7 +25,7 @@
     "react-router": "^7.15.0",
     "recharts": "^3.8.1",
     "sweetalert2": "^11.26.24",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-latest/xlsx-latest.tgz"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

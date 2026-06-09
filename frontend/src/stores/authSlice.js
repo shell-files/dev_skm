@@ -27,6 +27,17 @@ export const checkUser = createAsyncThunk(
   }
 );
 
+export const loginUser = createAsyncThunk(
+  'auth/loginUser',
+  async (credentials, { rejectWithValue }) => {
+    try {
+      const response = await POST('/auth/login', credentials);
+      return response;
+    } catch (error) {
+      return rejectWithValue(error.response?.data);
+    }
+  }
+);
 
 export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
@@ -43,15 +54,18 @@ export const logoutUser = createAsyncThunk(
 const authSlice = createSlice({
   name: 'auth',
   initialState,
-  reducers: {updateUserName: (state, action) => {
+  reducers: {
+    updateUserName: (state, action) => {
       state.userName = action.payload;
+    },
+    updateCompanyName: (state, action) => {
+      state.selectedCompany = action.payload;
     }
   },
   extraReducers: (builder) => {  
     builder
       .addCase(checkUser.fulfilled, (state, action) => {
         const res = action.payload;
-        // console.log(res);
         if(res.status === true) {
           const data = res?.data || {};
           const storedCompanies = Array.isArray(data.companys)
@@ -61,7 +75,7 @@ const authSlice = createSlice({
           state.userName = data.userName || null;
           state.selectedCompany = data.selectedCompany || null;
           state.isAuthReady = true;
-          state.redirectUrl = getAuthRedirectUrl(storedCompanies.length > 0);
+          state.redirectUrl = "/dashboard";
         } else {
           localStorage.removeItem("companies");
           state.companies = [];
@@ -69,6 +83,25 @@ const authSlice = createSlice({
           state.userName = null;
           state.isAuthReady = false;
           state.redirectUrl = "/";
+        }
+        state.loading = false;
+      });
+    builder
+      .addCase(loginUser.fulfilled, (state, action) => {
+        const res = action.payload;
+        if(res.status === true) {
+          const storedCompanies = res.data.companies;
+          localStorage.setItem("companies", encodeJson(storedCompanies));
+          state.companies = storedCompanies;
+          state.userName = res.data.userName;
+          state.selectedCompany = res.data.selectedCompany;
+          state.isAuthReady = true;
+          state.redirectUrl = "/";
+        } else {
+          localStorage.removeItem("companies");
+          state.isAuthReady = false;
+          state.redirectUrl = "/";
+          showDefaultAlert("로그인 실패", "이메일 또는 비밀번호가 일치하지 않습니다.", "error");
         }
         state.loading = false;
       });
@@ -83,7 +116,6 @@ const authSlice = createSlice({
           state.userName = "";
           state.selectedCompany = null
           state.loading = false;
-          location.href = import.meta.env.VITE_API_URL_MAIN;
         } else {
           showDefaultAlert("로그아웃 실패", "접속 오류가 발생 했습니다.", "error");
         }
@@ -104,5 +136,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { updateUserName } = authSlice.actions;
+export const { updateUserName, updateCompanyName } = authSlice.actions;
 export default authSlice.reducer;

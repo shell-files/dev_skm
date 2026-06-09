@@ -31,6 +31,9 @@ onboardingAssignmentRouter = APIRouter(
 
 
 def statusForValueError(error: ValueError) -> int:
+    statusCode = getattr(error, "statusCode", None)
+    if statusCode:
+        return int(statusCode)
     detail = str(error)
     if detail.startswith(
         (
@@ -88,10 +91,11 @@ async def listAssignmentItemsRoute(
     companyId: int = Query(...),
     reportingYear: int = Query(...),
     cycleType: str = Query(default="PRE_DMA_G0"),
+    batchId: Optional[int] = Query(default=None),
     userModel=Depends(get_token),
 ):
     try:
-        return listAssignmentItems(companyId, reportingYear, cycleType, userModel)
+        return listAssignmentItems(companyId, reportingYear, cycleType, userModel, batchId=batchId)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
@@ -115,10 +119,11 @@ async def getAssignmentItemRoute(
     companyId: int = Query(...),
     reportingYear: int = Query(...),
     cycleType: str = Query(default="PRE_DMA_G0"),
+    batchId: Optional[int] = Query(default=None),
     userModel=Depends(get_token),
 ):
     try:
-        return getAssignmentItem(metricId, companyId, reportingYear, cycleType, userModel)
+        return getAssignmentItem(metricId, companyId, reportingYear, cycleType, userModel, batchId=batchId)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:

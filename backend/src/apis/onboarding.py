@@ -33,6 +33,7 @@ async def list_onboarding_metrics(
     reportingYear: int = Query(...),
     cycleType: str = Query(...),
     metricId: Optional[str] = Query(default=None),
+    batchId: Optional[int] = Query(default=None),
     userModel=Depends(get_token),
 ):
     try:
@@ -42,6 +43,7 @@ async def list_onboarding_metrics(
             reportingYear=reportingYear,
             cycleType=cycleType,
             metricId=metricId,
+            batchId=batchId,
             userModel=userModel,
         )
     except PermissionError as e:
@@ -86,6 +88,9 @@ def userId(userModel) -> Optional[int]:
 
 
 def statusForValueError(error: ValueError) -> int:
+    statusCode = getattr(error, "statusCode", None)
+    if statusCode:
+        return int(statusCode)
     err_str = str(error)
     if err_str.startswith(
         (

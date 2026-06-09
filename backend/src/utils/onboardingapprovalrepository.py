@@ -44,13 +44,14 @@ def listCycleApprovalInboxRows(
     status: Optional[str] = None,
     cycleType: Optional[str] = None,
     assignedOnlyYn: bool = True,
+    batchId: Optional[int] = None,
 ) -> list[dict]:
     normalizedCycleType = str(cycleType or CYCLE_TYPE_PRE_DMA_G0).strip().upper()
     if normalizedCycleType not in {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE, CYCLE_TYPE_ROLLUP_RESPONSE}:
         return []
 
     year = scopeRepo.resolveReportingYear(companyId, reportingYear)
-    cycle = scopeRepo.getCycle(companyId, year, normalizedCycleType)
+    cycle = scopeRepo.getCycle(companyId, year, normalizedCycleType, batchId=batchId)
     if not cycle or str(cycle.get("cycle_status") or "").strip().lower() != "active":
         return []
 
@@ -402,12 +403,13 @@ def buildApprovalSummary(
     reportingYear: int,
     metricId: str,
     cycleType: str = CYCLE_TYPE_PRE_DMA_G0,
+    batchId: Optional[int] = None,
 ) -> dict:
-    cycle = scopeRepo.getCycle(companyId, reportingYear, cycleType) or {}
+    cycle = scopeRepo.getCycle(companyId, reportingYear, cycleType, batchId=batchId) or {}
     cycleId = int(cycle["id"]) if cycle.get("id") is not None else None
     scopes = scopeRepo.listMetricScopes(cycleId, companyId, metricId) if cycleId is not None else []
     scope = scopes[0] if scopes else {}
-    requiredAtomicIds = inputRepo.listRequiredAtomicIds(metricId)
+    requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIds(metricId)
     requiredAtomicSet = set(requiredAtomicIds)
     inputs = inputRepo.listMetricInputs(companyId, reportingYear, metricId)
     facts = inputRepo.listMetricKpiFacts(companyId, reportingYear, metricId)

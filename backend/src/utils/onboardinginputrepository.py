@@ -362,7 +362,6 @@ def listRequiredAtomicIds(metricId: str) -> list[str]:
           AND onboarding_input_yn = 1
           AND active_yn = 1
           AND delete_yn = 0
-          AND UPPER(COALESCE(atomic_data_role, '')) NOT IN ('DERIVED', 'ROLLUP_READONLY')
         ORDER BY atomic_metric_id
         """,
         (metricId,),
@@ -370,6 +369,38 @@ def listRequiredAtomicIds(metricId: str) -> list[str]:
     return [row["atomic_metric_id"] for row in rows if row.get("atomic_metric_id")]
 
 def listRequiredAtomicIdsTx(cur, metricId: str) -> list[str]:
+    cur.execute(
+        """
+        SELECT atomic_metric_id
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE metric_id = ?
+          AND onboarding_input_yn = 1
+          AND active_yn = 1
+          AND delete_yn = 0
+        ORDER BY atomic_metric_id
+        """,
+        (metricId,),
+    )
+    rows = cur.fetchall() or []
+    return [row["atomic_metric_id"] for row in rows if row.get("atomic_metric_id")]
+
+def listRequiredApprovalAtomicIds(metricId: str) -> list[str]:
+    rows = findAll(
+        """
+        SELECT atomic_metric_id
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE metric_id = ?
+          AND onboarding_input_yn = 1
+          AND active_yn = 1
+          AND delete_yn = 0
+          AND UPPER(COALESCE(atomic_data_role, '')) NOT IN ('DERIVED', 'ROLLUP_READONLY')
+        ORDER BY atomic_metric_id
+        """,
+        (metricId,),
+    ) or []
+    return [row["atomic_metric_id"] for row in rows if row.get("atomic_metric_id")]
+
+def listRequiredApprovalAtomicIdsTx(cur, metricId: str) -> list[str]:
     cur.execute(
         """
         SELECT atomic_metric_id
@@ -682,6 +713,8 @@ __all__ = [
     "getMetricName",
     "listRequiredAtomicIds",
     "listRequiredAtomicIdsTx",
+    "listRequiredApprovalAtomicIds",
+    "listRequiredApprovalAtomicIdsTx",
     "selectInputRowsForUpdate",
     "validateCompleteRows",
     "checkAlreadyApprovedTx",

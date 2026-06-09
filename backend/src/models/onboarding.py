@@ -74,6 +74,7 @@ class OnboardingMetricValuesRequestDto(BaseModel):
     companyId: int
     reportingYear: int
     cycleType: str
+    batchId: Optional[int] = None
     values: List[OnboardingValueItemDto]
 
 
@@ -92,6 +93,7 @@ class OnboardingAssignmentBulkAssignRequestDto(BaseModel):
     companyId: int
     reportingYear: int
     cycleType: str = "PRE_DMA_G0"
+    batchId: Optional[int] = None
     metricIds: List[str] = Field(..., min_length=1)
     assigneeEmail: EmailStr
     dueDate: Optional[date] = None
@@ -102,6 +104,7 @@ class OnboardingAssignmentBulkUnassignRequestDto(BaseModel):
     companyId: int
     reportingYear: int
     cycleType: str = "PRE_DMA_G0"
+    batchId: Optional[int] = None
     metricIds: List[str] = Field(..., min_length=1)
 
 
@@ -109,6 +112,7 @@ class OnboardingAssignmentPatchRequestDto(BaseModel):
     companyId: int
     reportingYear: int
     cycleType: str = "PRE_DMA_G0"
+    batchId: Optional[int] = None
     assigneeEmail: EmailStr
     dueDate: Optional[date] = None
     sendInviteYn: bool = True

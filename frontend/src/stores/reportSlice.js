@@ -33,7 +33,16 @@ const toApiError = (res, fallbackMessage) => ({
 
 export const apiErrorMessage = (error, fallbackMessage = "요청 처리 중 오류가 발생했습니다.") => {
   if (typeof error === "string") return error;
-  return error?.message || error?.detail || error?.msg || fallbackMessage;
+  return error?.response?.data?.message ||
+    error?.response?.data?.detail ||
+    error?.error?.message ||
+    error?.error?.detail ||
+    error?.data?.message ||
+    error?.data?.detail ||
+    error?.message ||
+    error?.detail ||
+    error?.msg ||
+    fallbackMessage;
 };
 
 const ROLLUP_API_ROOT = "/api/v1/rollups";
@@ -629,7 +638,7 @@ export const sendRollupSource = createAsyncThunk(
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "자회사 데이터 전송 중 오류가 발생했습니다.",
+        message: apiErrorMessage(error, "자회사 데이터 전송 중 오류가 발생했습니다."),
       });
     }
   }

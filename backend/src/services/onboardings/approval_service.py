@@ -33,11 +33,16 @@ def resolveRequiredApprovalAtomicIdsTx(
 
         from src.utils import rolluprepository as rollupRepo
 
-        return rollupRepo.resolveExternalEntitySourceAtomicIdsByMetricTx(
+        atomicIds = rollupRepo.resolveExternalEntitySourceAtomicIdsByMetricTx(
             cur,
             int(batchId),
             metricId,
         )
+        if not atomicIds:
+            raise ValueError(
+                f"ROLLUP_RESPONSE_MISSING_SOURCE_ATOMIC_IDS: batchId={batchId}, metricId={metricId}"
+            )
+        return atomicIds
 
     return inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
 
@@ -208,11 +213,12 @@ def approveMetricApproval(
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             policy = str(scope.get("approval_policy_code") or APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
             promotedAtomicIds = []
+            actualCycleType = str(cycle.get("cycle_type") or cycleType).strip().upper()
             if policy in {
                 APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
                 APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
             }:
-                if cycleType == scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
+                if actualCycleType == scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
                     promotedAtomicIds = list(requiredAtomicIds)
                 else:
                     promotedAtomicIds = inputRepo.listPromotableInputAtomicIdsTx(cur, metricId)

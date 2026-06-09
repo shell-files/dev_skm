@@ -120,11 +120,21 @@ def listCycleApprovalInboxRows(
         }:
             completedAtomicIds = {
                 row.get("atomic_metric_id")
+                for row in metricInputRows
+                if row.get("atomic_metric_id") in requiredAtomicSet and inputRepo.hasMetricValue(row)
+            }
+            submittedAtomicIds = {
+                row.get("atomic_metric_id")
+                for row in metricInputRows
+                if row.get("atomic_metric_id") in requiredAtomicSet
+                and inputRepo.hasMetricValue(row)
+                and str(row.get("input_status") or "").strip().lower() in {"submitted", "reviewed", "approved"}
+            }
+            approvedAtomicIds = {
+                row.get("atomic_metric_id")
                 for row in metricFactRows
                 if row.get("atomic_metric_id") in requiredAtomicSet and inputRepo.hasMetricValue(row)
             }
-            submittedAtomicIds = set(completedAtomicIds)
-            approvedAtomicIds = set(completedAtomicIds)
         else:
             completedAtomicIds = {
                 row.get("atomic_metric_id")
@@ -169,18 +179,21 @@ def listCycleApprovalInboxRows(
             continue
 
         actionSupportedYn, disabledReason = resolveActionSupport(scope)
-        promotedAtomicIds = (
-            [
-                row["atomic_metric_id"]
-                for row in masterByMetric.get(metricId, [])
-                if isPromotableInputMasterRow(row)
-            ]
-            if approvalPolicyCode in {
-                scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
-                scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
-            }
-            else []
-        )
+        if normalizedCycleType == scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
+            promotedAtomicIds = list(requiredAtomicIds)
+        else:
+            promotedAtomicIds = (
+                [
+                    row["atomic_metric_id"]
+                    for row in masterByMetric.get(metricId, [])
+                    if isPromotableInputMasterRow(row)
+                ]
+                if approvalPolicyCode in {
+                    scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
+                    scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
+                }
+                else []
+            )
         promotedAtomicSet = set(promotedAtomicIds)
         approvedFactAtomicIds = {
             row.get("atomic_metric_id")
@@ -306,12 +319,27 @@ def listApprovalAtomicDetailRows(
     reportingYear: int,
     cycleId: int,
     metricId: str,
+    cycleType: str = CYCLE_TYPE_PRE_DMA_G0,
+    batchId: Optional[int] = None,
 ) -> list[dict]:
     scopes = scopeRepo.listMetricScopes(cycleId, companyId, metricId)
     if not scopes:
         return []
 
     masterRows = scopeRepo.listAtomicMaster([metricId])
+    
+    if str(cycleType or "").strip().upper() == scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
+        requiredAtomicIds = resolveRequiredApprovalAtomicIds(
+            cycleType=cycleType,
+            batchId=batchId,
+            metricId=metricId,
+        )
+        requiredAtomicSet = set(requiredAtomicIds)
+        masterRows = [
+            row
+            for row in masterRows
+            if row.get("atomic_metric_id") in requiredAtomicSet
+        ]
     inputRows = listApprovalInputRows(companyId, reportingYear, [metricId])
     factRows = listApprovalFactRows(companyId, reportingYear, [metricId])
     inputByAtomic = {row.get("atomic_metric_id"): row for row in inputRows}
@@ -443,14 +471,18 @@ def buildApprovalSummary(
     inputs = inputRepo.listMetricInputs(companyId, reportingYear, metricId)
     facts = inputRepo.listMetricKpiFacts(companyId, reportingYear, metricId)
     approvalPolicyCode = str(scope.get("approval_policy_code") or scopeRepo.APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
-    promotedAtomicIds = (
-        inputRepo.listPromotableInputAtomicIds(metricId)
-        if approvalPolicyCode in {
-            scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
-            scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
-        }
-        else []
-    )
+    normalizedCycleType = str(cycleType or "").strip().upper()
+    if normalizedCycleType == scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
+        promotedAtomicIds = list(requiredAtomicIds)
+    else:
+        promotedAtomicIds = (
+            inputRepo.listPromotableInputAtomicIds(metricId)
+            if approvalPolicyCode in {
+                scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
+                scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
+            }
+            else []
+        )
     promotedAtomicSet = set(promotedAtomicIds)
     assignment = {}
     if cycleId is not None:
@@ -478,11 +510,21 @@ def buildApprovalSummary(
     }:
         completedAtomicIds = {
             atomicId
+            for atomicId, row in inputByAtomic.items()
+            if atomicId in requiredAtomicSet and inputRepo.hasMetricValue(row)
+        }
+        submittedAtomicIds = {
+            atomicId
+            for atomicId, row in inputByAtomic.items()
+            if atomicId in requiredAtomicSet
+            and str(row.get("input_status") or "").lower() in {"submitted", "reviewed", "approved"}
+            and inputRepo.hasMetricValue(row)
+        }
+        approvedAtomicIds = {
+            atomicId
             for atomicId, row in factByAtomic.items()
             if atomicId in requiredAtomicSet and inputRepo.hasMetricValue(row)
         }
-        submittedAtomicIds = set(completedAtomicIds)
-        approvedAtomicIds = set(completedAtomicIds)
     else:
         completedAtomicIds = {
             atomicId

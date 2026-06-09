@@ -1,27 +1,114 @@
-from src.models.model import UserModel, EmailModel, ResponseModel
+from src.models.model import UserModel, EmailModel, ResponseModel, LoginModel
 from src.utils.auth import delete_cookie, get_domain
-from src.utils.rediscl import getCompanyRedis, delTokenRedis, getTokenRedis
+from src.utils.rediscl import getCompanyRedis, getTokenRedis, setTokenRedis
 from src.utils.settings import settings
 from src.utils.db import findOne, save, findAll
 from src.utils.kafkasv import sendToKafka
-from src.utils.tokenset import decryptFromJwe
+from src.utils.tokenset import decryptFromJwe, createUserTokens
 from src.utils.validatetok import validateToken
 from fastapi import Request, Response
 
+import json
 import string
 import random
 
+# --------------------------
+# 로그인 로직 처리 함수
+# --------------------------
+def loginProcess(response: Response, request: Request, loginModel: LoginModel):
+    """
+    1. 임시 비밀번호 redis에서 조회 (비밀번호 찾기 후 로그인 시도하는 경우)
+    2. DB에서 사용자 검증 및 사용자 정보 추출
+    3. access token 생성
+    4. refresh token DB 저장
+    5. accessToken redis 저장
+    """
+    try:
+        # 1. DB에서 사용자 검증 및 사용자 정보 추출
+        loginSql=f"""
+            SELECT
+                u.id,
+                aes_d(u.name, '{settings.maria_db_key}') AS name,
+                aes_d(u.email, '{settings.maria_db_key}') AS email,
+                JSON_ARRAYAGG(DISTINCT aes_d(r.`role`, '{settings.maria_db_key}')) AS role_json,
+                JSON_ARRAYAGG(DISTINCT aes_d(r.`name`, '{settings.maria_db_key}')) AS role_name_json
+            FROM `with`.`USER` AS u
+            INNER JOIN `with`.`USER_ROLE` AS ur
+               ON (u.id = ur.user_id)
+            INNER JOIN `skm`.`COMPANY` AS c
+               ON (c.id = ur.company_id)
+            INNER JOIN `with`.`ROLE` AS r
+               ON (r.id = ur.role_id)
+            WHERE 1 = 1
+            AND u.email = aes_e( ? , '{settings.maria_db_key}' )
+            AND u.password = aes_e( ? , '{settings.maria_db_key}' )
+            AND u.delete_yn = 0
+            """
+
+        loginParams = (loginModel.email, loginModel.password)
+        userResult = findOne(loginSql, loginParams)
+        if userResult is None:
+            return ResponseModel(False, "이메일 또는 비밀번호가 올바르지 않습니다.")
+
+        roles = json.loads(userResult["role_json"])
+        roleNames = json.loads(userResult["role_name_json"])
+
+        user = UserModel(
+            uuid="",
+            id=userResult["id"],
+            email=userResult["email"],
+            name=userResult["name"],
+            role=roles[0] if len(roles) > 0 else None,
+            role_name=roleNames[0] if len(roleNames) > 0 else None
+        )
+
+        companySql = f"""
+            SELECT
+              c.id AS company_id,
+              aes_d(c.company_name, '{settings.maria_db_key}') AS company_name,
+              aes_d(r.`role`, '{settings.maria_db_key}') AS role,
+              aes_d(r.`name`, '{settings.maria_db_key}') AS role_name
+            FROM `with`.`USER_ROLE` AS ur
+            INNER JOIN `skm`.`COMPANY` AS c
+              ON (c.id = ur.company_id)
+            INNER JOIN `with`.`ROLE` AS r
+              ON (r.id = ur.role_id)
+            WHERE 1 = 1
+            AND ur.user_id = ?
+            AND ur.role_id IN (2,3,4)
+            AND ur.delete_yn = 0
+        """
+        companyParams = (user.id, )
+        companyResult = findAll(companySql, companyParams)
+        selectedCompany = ""
+        if len(companyResult) == 1 :
+          selectedCompany = companyResult[0]
+
+        # 2. access token 생성
+        accessToken, refreshToken, tokenUuid = createUserTokens(user)
+
+        # 3. refresh token DB 저장
+        refreshTokenSql="""
+          INSERT INTO `with`.TOKEN (`user_id`,`refresh_token`,`uuid`)
+          VALUES (?,?,?)
+          """
+        tokenParams = (user.id, refreshToken, tokenUuid)
+        save(refreshTokenSql, tokenParams)
+
+        # 4. accessToken redis 저장
+        setTokenRedis(tokenUuid,accessToken)
+        max_age = (60 * 60 * 24 * settings.refresh_token_expire_days)
+        response.set_cookie(key=settings.cookie_key, value=tokenUuid, domain=get_domain(request),
+          httponly=True, samesite="lax",
+          # secure=True,
+          max_age=max_age)
+
+        return ResponseModel(True, "로그인에 성공했습니다.", {"companies": companyResult, "userName": user.name, "selectedCompany": selectedCompany})
+    except Exception as e:
+        return ResponseModel(False, f"로그인 처리 중 오류가 발생했습니다: {str(e)}")
+
 
 def checkUser(userModel: UserModel):
-    uuid = userModel.uuid
-    company = getCompanyRedis(uuid)
-    if (
-        not company
-        or company.get("status") is not True
-        or company.get("companyId") is None
-    ):
-        return ResponseModel(False, "회사를 선택해주세요.")
-
     userName = None
     selectedCompany = None
 
@@ -46,25 +133,27 @@ def checkUser(userModel: UserModel):
     """
     companyParams = (userModel.id, )
     companyResult = findAll(companySql, companyParams)
+    if len(companyResult) == 1 :
+      selectedCompany = companyResult[0]
+    else :
+      uuid = userModel.uuid
+      company = getCompanyRedis(uuid)
+      if company.get("status") is True:
+        for com in companyResult:
+           if int(com["company_id"]) == int(company["companyId"]):
+               selectedCompany = com
+               break
 
     userSql = f"""
-        SELECT aes_d(u.`name`, '{settings.maria_db_key}') AS `name`
-        FROM `with`.`USER` AS u
-        WHERE `u`.`email` = aes_e(?, '{settings.maria_db_key}')
+       SELECT aes_d(u.`name`, '{settings.maria_db_key}') AS `name`
+       FROM `with`.`USER` AS u
+       WHERE `u`.`email` = aes_e(?, '{settings.maria_db_key}')
     """
     userParams = (userModel.email, )
     userResult = findOne(userSql, userParams)
 
     if userResult is not None:
         userName = userResult.get("name")
-
-    for com in companyResult:
-        if int(com["company_id"]) == int(company["companyId"]):
-            selectedCompany = com
-            break
-
-    if selectedCompany is None:
-        return ResponseModel(False, "선택한 회사 정보를 찾을 수 없습니다.")
 
     return ResponseModel(True, "사용자 정보가 유효합니다.", {"user": userModel.email, "userName": userName, "companys": companyResult, "selectedCompany": selectedCompany})
 

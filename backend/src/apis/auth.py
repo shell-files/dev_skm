@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Response, Request
-from src.models.model import ResponseModel, logoutModel, pwdCheckModel
-from src.models.auth import checkUser, logoutProcess, pwdCheckProcess
+from src.models.model import ResponseModel, pwdCheckModel, LoginModel
+from src.models.auth import checkUser, logoutProcess, pwdCheckProcess, loginProcess
 from src.utils.auth import get_token
 
 
@@ -14,6 +14,15 @@ async def tokenCheck(userModel = Depends(get_token)):
     if userModel:
         return ResponseModel(True, "")
     return ResponseModel(False, "로그인이 필요합니다.")
+
+# --------------------------
+# 로그인 API
+# --------------------------
+@router.post("/login",
+        summary="로그인 api",
+        description="email/pwd 받아서 uuid 반환")
+def login(response: Response, request: Request, loginModel: LoginModel):
+    return loginProcess(response, request, loginModel)
 
 # 사용자 정보 불러오기 API
 @router.post("",

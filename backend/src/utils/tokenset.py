@@ -93,6 +93,23 @@ def generateRefreshAccessWithUuid(userClaims: UserModel):
     # JWE로 암호화하여 반환
     return encryptToJwe(payload)
 
+# --------------------------
+# 로그인 시 호출: JWE 액세스/리프레시 토큰 및 UUID 생성
+# --------------------------
+def createUserTokens(userClaims: UserModel):
+    """ 로그인 시 호출: JWE 액세스/리프레시 토큰 및 UUID 생성"""
+    # UUID 생성 
+    tokenUuid = str(uuid.uuid4().hex)
+
+    userClaims.uuid = tokenUuid
+
+    # 액세스 토큰 
+    accessToken = generateAccessWithUuid(userClaims)
+    
+    # 리프레시 토큰
+    refreshToken = generateRefreshAccessWithUuid(userClaims)
+    
+    return accessToken, refreshToken, tokenUuid
 
 # --------------------------
 # 토큰 재발급: 리프레시 토큰 검증 후 새로운 UUID와 액세스 토큰 생성

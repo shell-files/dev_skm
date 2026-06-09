@@ -5,9 +5,8 @@
 import { createContext, useState, useContext, useEffect, Component } from "react";
 import { GET, POST, PUT, PATCH, DELETE } from "@utils/Network";
 import { useNavigate } from "react-router";
-import { checkUser, updateUserName } from "@stores/authSlice";
+import { checkUser, logoutUser, loginUser, updateUserName, updateCompanyName } from "@stores/authSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { logoutUser } from "../stores/authSlice";
 import {showConfirmAlert} from "@components/UI/ServiceAlert"
 
 const AuthContext = createContext(null);
@@ -77,26 +76,34 @@ export const AuthProvider = ({ children }) => {
 	/**
    * [함수] login: 로그인 API 응답 데이터를 받아 전역 상태 및 localStorage에 저장
    */
-  const login = (data) => {
-		try {
-      console.log(data);
-    } catch (error) {
-      console.error("Login API failed:", error);
-    } finally {
-      
+  const login = async (data) => {
+    const resultAction = await dispatch(loginUser(data));
+    if(loginUser.fulfilled.match(resultAction)) {
+      const res = resultAction.payload;
+      if(res.status === true) {
+        const storedCompanies = res.data.companies;
+        if(storedCompanies.length === 1) {
+          ( async ()=> {
+            const res = await POST("/company", { companyId:  storedCompanies[0]?.company_id.toString()});
+            if (res.status === true) navigate("/");
+          })();
+        } else {
+          navigate("/companyselect");
+        }
+      }
     }
-	};
+  }
 
 	/**
    * [함수] logout: API 호출 후 전역 인증 상태 초기화 및 localStorage 전체 삭제
    */
   const logout = async () => {
-    try {
-      dispatch(logoutUser())
-    } catch (error) {
-      console.error("Logout API failed:", error);
-    } finally {
-      
+    const resultAction = await dispatch(logoutUser());
+    if(logoutUser.fulfilled.match(resultAction)) {
+      const res = resultAction.payload;
+      if(res.status === true) {
+        navigate("/");
+      }
     }
   };
 
@@ -109,7 +116,7 @@ export const AuthProvider = ({ children }) => {
       );
 
       if (isConfirmed) {
-        dispatch(logoutUser());
+        await logout();
       }
     };
     const toggleSidebarMobile = () => {

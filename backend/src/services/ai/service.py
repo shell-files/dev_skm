@@ -8,6 +8,7 @@ from src.utils.ai import (
     searchSrKnowledgeHybrid,
     compressSrContext,
     generateIssueReport,
+    createReportRun
     
 )
 
@@ -16,7 +17,16 @@ def generateReportProcess(req, token):
     factData = getFactData(req.companyId, req.year)
     
     reportOutput = []
+    run_success, run_id, created_at = createReportRun(
+        req.materialityRunId,
+        req.companyId,
+        req.year,
+        "gemma4:e4b",
+        "v1"
+    )
 
+    if not run_success:
+        raise Exception("RUN 생성 실패")
     for idx, template in enumerate(REPORT_TEMPLATES):
 
         issueInfo = ISSUE_MAP[idx + 1]
@@ -34,6 +44,8 @@ def generateReportProcess(req, token):
         compressedContext = compressSrContext(rows)
 
         report = generateIssueReport(
+            run_id=run_id,
+            created_at=created_at,
             companyId=req.companyId,
             reportingYear=req.year,
             subIssueId=issueInfo["subIssueId"],

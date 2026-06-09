@@ -3,5 +3,5 @@ from pydantic import BaseModel
 
 class AiReportRequestDto(BaseModel):
     companyId: int
-    runId: int
+    materialityRunId: int
     year: int

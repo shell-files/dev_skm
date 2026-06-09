@@ -65,9 +65,10 @@ def resolveReportingYear(companyId: int, reportingYear: Optional[int] = None) ->
     return int(row.get("reporting_year") or datetime.now().year)
 
 def getCycle(companyId: int, reportingYear: int, cycleType: str, batchId: Optional[int] = None) -> dict:
-    batchFilter = "AND parent_rollup_batch_id = ?" if batchId else ""
+    requireRollupResponseBatchId(cycleType, batchId)
+    batchFilter = "AND parent_rollup_batch_id = ?" if batchId is not None else ""
     params = [companyId, reportingYear, cycleType]
-    if batchId:
+    if batchId is not None:
         params.append(batchId)
     return findOne(
         f"""
@@ -1127,6 +1128,8 @@ __all__ = [
     "ensureRollupCycleTx",
     "resolveRollupMetricScopeRowsTx",
     "seedRollupMetricScopeTx",
+    "requireRollupResponseBatchId",
+    "requireRollupResponseBatchContext",
 ]
 
 def listMetricScopesTx(cur, cycleId: int, companyId: int, metricId: Optional[str] = None) -> list[dict]:
@@ -1349,6 +1352,16 @@ def ensureRollupResponseWorkspaceTx(
         cycleId = cur.lastrowid
     else:
         cycleId = cycle["id"]
+        existingBatchId = cycle.get("parent_rollup_batch_id")
+        if existingBatchId is not None and int(existingBatchId) != int(batchId):
+            err = ValueError(
+                "ROLLUP_RESPONSE_WORKSPACE_BATCH_CONFLICT: "
+                f"cycleId={cycleId}, "
+                f"existingBatchId={existingBatchId}, "
+                f"requestedBatchId={batchId}"
+            )
+            err.statusCode = 409
+            raise err
         cur.execute(
             """
             UPDATE ESG_ONBOARDING_CYCLE
@@ -1423,6 +1436,16 @@ def ensureRollupResponseWorkspaceTx(
                 actorUserId
             )
         )
+
+
+def requireRollupResponseBatchId(cycleType: str, batchId: Optional[int]) -> None:
+    if (
+        str(cycleType or "").strip().upper() == CYCLE_TYPE_ROLLUP_RESPONSE
+        and batchId is None
+    ):
+        err = ValueError("batchId is required for ROLLUP_RESPONSE")
+        err.statusCode = 409
+        raise err
 
 
 def requireRollupResponseBatchContext(cycle: dict, batchId: Optional[int]) -> None:

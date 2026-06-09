@@ -31,6 +31,7 @@ services:
       - ./backend/src:/workspace/src
       - ./backend/static:/workspace/static
       - backend_venv:/workspace/.venv
+      - uv_cache:/root/.cache/uv
       - ./backend/srfiles:/workspace/srfiles
       - skm_secrets:/workspace/secrets
       - backend_model_cache:/workspace/model_cache
@@ -103,3 +104,4 @@ volumes:
     external: true
   backend_venv:
   backend_model_cache:
+  uv_cache:

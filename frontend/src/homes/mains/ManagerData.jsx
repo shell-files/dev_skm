@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useSearchParams } from "react-router";
+import { useSearchParams, useLocation } from "react-router";
 import "@styles/Manager.css";
 import DataTab from "./DataTab.jsx";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
@@ -25,6 +25,7 @@ const PAGE_SIZE = 10;
 const SUPPORTED_APPROVAL_CYCLE_TYPES = [
   "PRE_DMA_G0",
   "POST_DMA_DISCLOSURE",
+  "ROLLUP_RESPONSE",
 ];
 
 const LEGACY_USER_FIXTURE_CATEGORY_MAP = {
@@ -152,6 +153,7 @@ const formatStageLabel = (label) => {
 const ManagerData = () => {
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const approvalItems = useSelector((state) => state.report?.approval?.items ?? []);
   const approvalLoading = useSelector((state) => state.report?.loading?.approvals ?? false);
   const approvalError = useSelector((state) => state.report?.error?.approvals ?? null);
@@ -305,6 +307,16 @@ const ManagerData = () => {
   );
 
   useEffect(() => {
+    if (location.state?.skipProjectModal && selectedApprovalProject) {
+      // Retain the injected project context, do not open modal
+      queueMicrotask(() => {
+        setInputs([]);
+        setSelectedIds([]);
+        setDataPage(1);
+      });
+      return;
+    }
+
     dispatch(clearApprovalProject());
     queueMicrotask(() => {
       setInputs([]);
@@ -329,7 +341,7 @@ const ManagerData = () => {
       .finally(() => {
         setIsApprovalProjectModalOpen(true);
       });
-  }, [companyId]);
+  }, [companyId, location.state?.skipProjectModal]);
 
   const fetchData = useCallback(async () => {
     if (USE_LEGACY_USER_FIXTURE) {

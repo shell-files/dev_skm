@@ -362,6 +362,7 @@ def listRequiredAtomicIds(metricId: str) -> list[str]:
           AND onboarding_input_yn = 1
           AND active_yn = 1
           AND delete_yn = 0
+          AND UPPER(COALESCE(atomic_data_role, '')) NOT IN ('DERIVED', 'ROLLUP_READONLY')
         ORDER BY atomic_metric_id
         """,
         (metricId,),
@@ -377,6 +378,7 @@ def listRequiredAtomicIdsTx(cur, metricId: str) -> list[str]:
           AND onboarding_input_yn = 1
           AND active_yn = 1
           AND delete_yn = 0
+          AND UPPER(COALESCE(atomic_data_role, '')) NOT IN ('DERIVED', 'ROLLUP_READONLY')
         ORDER BY atomic_metric_id
         """,
         (metricId,),

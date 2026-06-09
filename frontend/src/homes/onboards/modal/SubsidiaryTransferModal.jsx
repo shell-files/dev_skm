@@ -64,7 +64,7 @@ const SubsidiaryTransferModal = ({
           <div style={{ marginBottom: "16px", padding: "16px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", fontSize: "0.9rem" }}>
               <div>
-                <span style={{ color: "#64748b", display: "block", fontSize: "0.8rem" }}>요청 기관(지주사)</span>
+                <span style={{ color: "#64748b", display: "block", fontSize: "0.8rem" }}>요청 기업</span>
                 <strong style={{ color: "#1e293b" }}>{activeRequest.parentCompanyName || activeRequest.parentCompanyId}</strong>
               </div>
               <div>

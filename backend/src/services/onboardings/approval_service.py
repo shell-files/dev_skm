@@ -32,6 +32,7 @@ def submitMetricApproval(
     commentText: Optional[str] = None,
     reportBasisType: Optional[str] = None,
     sourceMaterialityRunId: Optional[int] = None,
+    batchId: Optional[int] = None,
 ) -> dict:
     conn = getConn()
     if not conn:
@@ -47,6 +48,12 @@ def submitMetricApproval(
                 sourceMaterialityRunId=sourceMaterialityRunId,
                 actorUserId=actorUserId,
             )
+            requireWritableCycleTx(cur, cycle, companyId)
+            if cycleType == "ROLLUP_RESPONSE":
+                if batchId is None:
+                    raise ValueError("batchId is required for ROLLUP_RESPONSE")
+                if cycle.get("parent_rollup_batch_id") is None or int(cycle["parent_rollup_batch_id"]) != int(batchId):
+                    raise ValueError("ROLLUP_RESPONSE batch context mismatch")
             scope = requireApprovalScopeTx(cur, cycle, companyId, metricId)
             requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
@@ -98,6 +105,7 @@ def reviewMetricApproval(
     metricId: str,
     actorUserId: Optional[int],
     commentText: Optional[str] = None,
+    batchId: Optional[int] = None,
 ) -> dict:
     conn = getConn()
     if not conn:
@@ -105,6 +113,12 @@ def reviewMetricApproval(
     try:
         with conn.cursor(dictionary=True) as cur:
             cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType)
+            requireWritableCycleTx(cur, cycle, companyId)
+            if cycleType == "ROLLUP_RESPONSE":
+                if batchId is None:
+                    raise ValueError("batchId is required for ROLLUP_RESPONSE")
+                if cycle.get("parent_rollup_batch_id") is None or int(cycle["parent_rollup_batch_id"]) != int(batchId):
+                    raise ValueError("ROLLUP_RESPONSE batch context mismatch")
             requireApprovalScopeTx(cur, cycle, companyId, metricId)
             requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
@@ -151,6 +165,7 @@ def approveMetricApproval(
     metricId: str,
     actorUserId: Optional[int],
     commentText: Optional[str] = None,
+    batchId: Optional[int] = None,
 ) -> dict:
     conn = getConn()
     if not conn:
@@ -158,6 +173,12 @@ def approveMetricApproval(
     try:
         with conn.cursor(dictionary=True) as cur:
             cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType)
+            requireWritableCycleTx(cur, cycle, companyId)
+            if cycleType == "ROLLUP_RESPONSE":
+                if batchId is None:
+                    raise ValueError("batchId is required for ROLLUP_RESPONSE")
+                if cycle.get("parent_rollup_batch_id") is None or int(cycle["parent_rollup_batch_id"]) != int(batchId):
+                    raise ValueError("ROLLUP_RESPONSE batch context mismatch")
             scope = requireApprovalScopeTx(cur, cycle, companyId, metricId)
             requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
@@ -249,6 +270,7 @@ def rejectMetricApproval(
     metricId: str,
     actorUserId: Optional[int],
     commentText: str,
+    batchId: Optional[int] = None,
 ) -> dict:
     conn = getConn()
     if not conn:
@@ -256,6 +278,12 @@ def rejectMetricApproval(
     try:
         with conn.cursor(dictionary=True) as cur:
             cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType)
+            requireWritableCycleTx(cur, cycle, companyId)
+            if cycleType == "ROLLUP_RESPONSE":
+                if batchId is None:
+                    raise ValueError("batchId is required for ROLLUP_RESPONSE")
+                if cycle.get("parent_rollup_batch_id") is None or int(cycle["parent_rollup_batch_id"]) != int(batchId):
+                    raise ValueError("ROLLUP_RESPONSE batch context mismatch")
             requireApprovalScopeTx(cur, cycle, companyId, metricId)
             requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
@@ -400,6 +428,29 @@ def setMetricInputStatusTx(
         tuple(params),
     )
 
+
+def requireWritableCycleTx(cur, cycle: dict, companyId: int) -> None:
+    if str(cycle.get("cycle_type") or "").strip().upper() != scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
+        return
+    batchId = cycle.get("parent_rollup_batch_id")
+    if batchId is None:
+        return
+    cur.execute(
+        """
+        SELECT transfer_status
+        FROM ESG_ROLLUP_BATCH_SOURCE
+        WHERE esg_rollup_batch_id = ?
+          AND source_company_id = ?
+          AND delete_yn = 0
+        LIMIT 1
+        """,
+        (int(batchId), companyId),
+    )
+    row = cur.fetchone()
+    if row and str(row.get("transfer_status") or "").lower() in {"sent", "received"}:
+        err = ValueError("ROLLUP_RESPONSE workspace is read-only after transfer.")
+        err.statusCode = 409
+        raise err
 
 def normalizeCycleType(cycleType: str) -> str:
     normalizedCycleType = str(cycleType or scopeRepo.CYCLE_TYPE_PRE_DMA_G0).strip().upper()

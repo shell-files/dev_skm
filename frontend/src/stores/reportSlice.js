@@ -264,8 +264,12 @@ export const fetchOnboardingMetrics = createAsyncThunk(
 
 export const saveOnboardingMetric = createAsyncThunk(
   "report/saveOnboardingMetric",
-  async ({ metricId, payload }, { rejectWithValue }) => {
+  async ({ metricId, payload }, { getState, rejectWithValue }) => {
     try {
+      const state = getState().report;
+      if (state.rollup.activeBatchId) {
+        payload.batchId = state.rollup.activeBatchId;
+      }
       const res = normalizeDirectDtoResponse(await PATCH(`/onboarding/${metricId}`, payload));
       return rejectIfFailed(res, rejectWithValue, "온보딩 지표 저장에 실패했습니다.");
     } catch (error) {
@@ -623,8 +627,12 @@ export const calculateRollupBatch = createAsyncThunk(
 
 export const submitOnboardingApproval = createAsyncThunk(
   "report/submitOnboardingApproval",
-  async (payload, { rejectWithValue }) => {
+  async (payload, { getState, rejectWithValue }) => {
     try {
+      const state = getState().report;
+      if (state.rollup.activeBatchId) {
+        payload.batchId = state.rollup.activeBatchId;
+      }
       const res = await POST(`${ONBOARDING_APPROVAL_API_ROOT}/submit`, payload);
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 요청에 실패했습니다.");
     } catch (error) {
@@ -639,8 +647,12 @@ export const submitOnboardingApproval = createAsyncThunk(
 
 export const reviewOnboardingApproval = createAsyncThunk(
   "report/reviewOnboardingApproval",
-  async (payload, { rejectWithValue }) => {
+  async (payload, { getState, rejectWithValue }) => {
     try {
+      const state = getState().report;
+      if (state.rollup.activeBatchId) {
+        payload.batchId = state.rollup.activeBatchId;
+      }
       const res = await POST(
         `${ONBOARDING_APPROVAL_API_ROOT}/review`,
         normalizeApprovalDecisionPayload(payload)
@@ -658,8 +670,12 @@ export const reviewOnboardingApproval = createAsyncThunk(
 
 export const approveOnboardingApproval = createAsyncThunk(
   "report/approveOnboardingApproval",
-  async (payload, { rejectWithValue }) => {
+  async (payload, { getState, rejectWithValue }) => {
     try {
+      const state = getState().report;
+      if (state.rollup.activeBatchId) {
+        payload.batchId = state.rollup.activeBatchId;
+      }
       const res = await POST(
         `${ONBOARDING_APPROVAL_API_ROOT}/approve`,
         normalizeApprovalDecisionPayload(payload)
@@ -677,8 +693,12 @@ export const approveOnboardingApproval = createAsyncThunk(
 
 export const rejectOnboardingApproval = createAsyncThunk(
   "report/rejectOnboardingApproval",
-  async (payload, { rejectWithValue }) => {
+  async (payload, { getState, rejectWithValue }) => {
     try {
+      const state = getState().report;
+      if (state.rollup.activeBatchId) {
+        payload.batchId = state.rollup.activeBatchId;
+      }
       const res = await POST(
         `${ONBOARDING_APPROVAL_API_ROOT}/reject`,
         normalizeApprovalDecisionPayload(payload)

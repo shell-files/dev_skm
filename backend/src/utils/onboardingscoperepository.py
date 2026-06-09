@@ -1002,7 +1002,7 @@ def insertCycle(
         ),
     )
 
-def listQuantInputAtomicIdsTx(cur, metricId: str) -> list[str]:
+def listPromotableInputAtomicIdsTx(cur, metricId: str) -> list[str]:
     cur.execute(
         """
         SELECT atomic_metric_id
@@ -1012,10 +1012,6 @@ def listQuantInputAtomicIdsTx(cur, metricId: str) -> list[str]:
           AND active_yn = 1
           AND delete_yn = 0
           AND UPPER(COALESCE(atomic_data_role, '')) = 'INPUT'
-          AND (
-              UPPER(COALESCE(data_value_type, '')) IN ('QUANT', 'NUMBER', 'NUMERIC')
-              OR data_value_type = '정량'
-          )
         ORDER BY atomic_metric_id
         """,
         (metricId,),
@@ -1047,10 +1043,10 @@ def checkConsolidatedCalculationSourceTx(cur, atomicMetricIds: list[str]) -> boo
 
 
 def resolveDefaultApprovalPolicyTx(cur, metricId: str) -> str:
-    quantAtomicIds = listQuantInputAtomicIdsTx(cur, metricId)
-    if not quantAtomicIds:
+    promotableAtomicIds = listPromotableInputAtomicIdsTx(cur, metricId)
+    if not promotableAtomicIds:
         return APPROVAL_POLICY_INPUT_APPROVAL_ONLY
-    if checkConsolidatedCalculationSourceTx(cur, quantAtomicIds):
+    if checkConsolidatedCalculationSourceTx(cur, promotableAtomicIds):
         return APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP
     return APPROVAL_POLICY_PROMOTE_TO_KPI_FACT
 
@@ -1114,7 +1110,7 @@ __all__ = [
     "listPreDmaG0MetricMasterTx",
     "normalizeCycleTx",
     "insertCycle",
-    "listQuantInputAtomicIdsTx",
+    "listPromotableInputAtomicIdsTx",
     "checkConsolidatedCalculationSourceTx",
     "resolveDefaultApprovalPolicyTx",
     "listMetricScopesTx",

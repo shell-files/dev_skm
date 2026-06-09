@@ -458,6 +458,7 @@ def requireWritableCycleTx(cur, cycle: dict, companyId: int, batchId: Optional[i
           AND source_company_id = ?
           AND delete_yn = 0
         LIMIT 1
+        FOR UPDATE
         """,
         (int(dbBatchId), companyId),
     )

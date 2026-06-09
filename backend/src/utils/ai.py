@@ -8,7 +8,7 @@ from langchain_core.output_parsers import StrOutputParser
 from sentence_transformers import SentenceTransformer
 from pgvector.psycopg import register_vector
 
-from src.utils.db import findAll
+from src.utils.db import findAll, save, addKey, saveMany
 from src.utils.settings import settings
 
 
@@ -59,7 +59,7 @@ sbertModel = SentenceTransformer(
 
 llm = ChatOllama(
     model="gemma4:e4b",
-    base_url=settings.ollama_url,
+    base_url=f"http://{settings.ollama_url}:11434",
     temperature=0.1,
     num_predict=2048,
     repeat_penalty=1.1
@@ -76,20 +76,118 @@ def validateReport(text):
     return text.strip()
 
 # ==================================================
+# DB 저장 핵심 함수
+# ==================================================
+
+def saveReportRun(
+    companyId,
+    reportingYear,
+    subIssueId,
+    sectionNo,
+    llmModel,
+    promptVersion,
+    templateSnapshot,
+    filledTemplate,
+    reportText
+):
+    sql = """
+        INSERT INTO ESG_REPORT_AI_RUN (
+            materiality_run_id,
+            company_id,
+            reporting_year,
+            sub_issue_id,
+            section_no,
+            template_snapshot,
+            filled_template,
+            report_content,
+            llm_model,
+            prompt_version
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    """
+
+    params = (
+        None,
+        companyId,
+        reportingYear,
+        subIssueId,
+        sectionNo,
+        templateSnapshot,
+        filledTemplate,
+        reportText,
+        llmModel,
+        promptVersion
+    )
+
+    success, run_id = addKey(sql, params)
+    return run_id
+
+def saveSection(runId, sectionNo, subIssueId, template, filledText, reportText):
+
+    sql = """
+        INSERT INTO ESG_REPORT_AI_SECTION (
+            ai_run_id,
+            section_no,
+            sub_issue_id,
+            template_snapshot,
+            filled_template,
+            report_text
+        )
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """
+
+    return addKey(sql, (
+        runId,
+        sectionNo,
+        subIssueId,
+        template,
+        filledText,
+        reportText
+    ))
+    
+def saveMetricTrace(sectionId, usedMetrics, factData):
+
+    sql = """
+        INSERT INTO ESG_REPORT_AI_METRIC_TRACE (
+            section_id,
+            atomic_metric_id,
+            metric_source_version,
+            value_numeric,
+            value_text,
+            unit
+        )
+        VALUES (%s, %s, %s, %s, %s, %s)
+    """
+
+    rows = []
+
+    for m in usedMetrics:
+        fact = factData.get(m)
+        if not fact:
+            continue
+
+        rows.append((sectionId, m, "v1", fact.get("value"), None, fact.get("unit")))
+
+    if rows:
+        saveMany(sql, rows)
+# ==================================================
 # KPI 조회
 # ==================================================
 
-def getFactData(companyId):
+def getFactData(companyId, reportingYear):
 
     sql = f"""
         SELECT f.atomic_metric_id, f.value_numeric, f.value_text, f.unit, aes_d(c.company_name, '{settings.maria_db_key}') AS company_name
         FROM ESG_KPI_FACT f 
         JOIN COMPANY c 
         ON f.company_id=c.id 
-        WHERE f.company_id = ? AND f.delete_yn=0
+        WHERE company_id = ? 
+        AND f.reporting_year = ?
+        AND c.delete_yn = 0
+        AND f.delete_yn = 0
     """
 
-    rows = findAll(sql, (companyId,))
+    rows = findAll(sql, (companyId, reportingYear,))
 
     dataMap = {}
     companyName = "A_GROUP"
@@ -106,69 +204,109 @@ def getFactData(companyId):
             "value": str(value or ""),
             "unit": str(row["unit"] or "")
         }
-
+        dataMap["COMPANY_NAME"] = {
+            "value": companyName,
+            "unit": ""
+        }
     rollupSql = """
         SELECT group_atomic_metric_id, value_numeric, value_text, unit 
         FROM ESG_GROUP_ROLLUP_RESULT 
-        WHERE parent_company_id = ? AND delete_yn=0
+        WHERE parent_company_id = ?
+        AND reporting_year = ?
+        AND delete_yn = 0
     """
 
     rollupRows = findAll(
         rollupSql,
-        (companyId,)
+        (companyId,reportingYear, )
     )
 
     for row in rollupRows:
         atomicId = row["group_atomic_metric_id"]
-        if atomicId not in dataMap:
+
+        if (
+            atomicId not in dataMap
+            or dataMap[atomicId]["value"] == ""
+        ):
             value = (
                 row["value_numeric"]
                 if row["value_numeric"] is not None
                 else row["value_text"]
             )
+
             dataMap[atomicId] = {
                 "value": str(value or ""),
                 "unit": str(row["unit"] or "")
             }
-    dataMap["COMPANY_NAME"] = {
-        "value": companyName,
-        "unit": ""
-    }
     return dataMap
 
 
 # ==================================================
 # 템플릿 치환
 # ==================================================
+def formatUnit(value, unit):
+    if value is None or value == "":
+        return "[데이터 미집계]"
+
+    # 1) 숫자 변환 가능 여부 판단
+    is_number = True
+    try:
+        num = float(value)
+    except:
+        is_number = False
+
+    # 2) unit 없는 경우 → 텍스트 유지 (중요)
+    if not unit:
+        return str(value).strip()
+
+    if not is_number:
+        return str(value).strip()
+
+    # 3) 숫자 + unit 처리
+    if unit == "%":
+        return f"{num:.2f}%"
+
+    if unit == "KRW":
+        return f"{num:,.0f} {unit}"
+
+    if unit in ["MWh", "tCO2eq"]:
+        return f"{num:,.2f} {unit}"
+
+    if unit in ["개", "개사", "건", "명"]:
+        return f"{num:,.0f} {unit}"
+
+    if unit == "시간":
+        return f"{num:,.1f} 시간"
+
+    if unit == "시간/명":
+        return f"{num:,.2f} 시간/명"
+
+    return f"{num} {unit}"
+
 
 def replaceTemplate(template, factData):
     usedMetrics = set()
+
     def replaceToken(match):
         key = match.group(1)
         usedMetrics.add(key)
+
         data = factData.get(key)
         if not data:
             return "[데이터 미집계]"
-        
+
         value = data.get("value", "")
         unit = data.get("unit", "")
-        
-        if value == "":
-            return "[데이터 미집계]"
-        try:
-            num = float(value)
-            formatted = f"{int(num):,}" if num.is_integer() else f"{num:,.2f}"
-            return f"{formatted} {unit}".strip()
-        except:
-            return f"{value} {unit}".strip()
+
+        return formatUnit(value, unit)
 
     companyName = factData.get("COMPANY_NAME", {}).get("value", "A_GROUP")
 
     filledText = re.sub(
-            r"\{(.*?)\}",
-            replaceToken,
-            template
-        ).replace("A_GROUP", companyName)
+        r"\{(.*?)\}",
+        replaceToken,
+        template
+    ).replace("A_GROUP", companyName)
 
     return filledText, list(usedMetrics)
 
@@ -249,8 +387,15 @@ def compressSrContext(rows):
 # ==================================================
 
 def generateIssueReport(
+    companyId,
+    reportingYear,
+    subIssueId,
+    sectionNo,
+    template,
     filledText,
-    compressedContext
+    compressedContext,
+    factData,
+    usedMetrics 
 ):
 
     systemInstruction = """
@@ -307,4 +452,42 @@ def generateIssueReport(
         "compressed_context": compressedContext
     })
 
-    return validateReport(result)
+    result = validateReport(result)
+    
+    # ==================================================
+    # 1. RUN 저장
+    # ==================================================
+    run_id   = saveReportRun(
+        companyId,
+        reportingYear,
+        subIssueId,
+        sectionNo,
+        "gemma4:e4b",
+        "v1",
+        template,
+        filledText,
+        result
+    )
+
+    # ==================================================
+    # 2. SECTION 저장
+    # ==================================================
+    section_id = saveSection(
+        run_id  ,
+        sectionNo,
+        subIssueId,
+        template,
+        filledText,
+        result
+    )
+
+    # ==================================================
+    # 3. METRIC TRACE 저장
+    # ==================================================
+    saveMetricTrace(
+        section_id,
+        usedMetrics,
+        factData
+    )
+
+    return {"report": result, "run_id": run_id  }

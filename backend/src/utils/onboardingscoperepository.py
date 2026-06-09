@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional
@@ -12,15 +12,18 @@ from src.utils.settings import settings
 CYCLE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
 CYCLE_TYPE_POST_DMA_DISCLOSURE = "POST_DMA_DISCLOSURE"
 CYCLE_TYPE_ROLLUP = "ROLLUP"
+CYCLE_TYPE_ROLLUP_RESPONSE = "ROLLUP_RESPONSE"
 
 METRIC_SCOPE_PRE_DMA_G0_PROFILE = "PRE_DMA_G0_PROFILE"
 METRIC_SCOPE_G0_02_FINANCIAL_BASIS = "G0_02_FINANCIAL_BASIS"
 METRIC_SCOPE_SELECTED_DISCLOSURE = "SELECTED_DISCLOSURE"
 METRIC_SCOPE_ROLLUP = "ROLLUP_SCOPE"
+METRIC_SCOPE_ROLLUP_RESPONSE = "ROLLUP_RESPONSE"
 
 SCOPE_SOURCE_TYPE_PRE_DMA_G0 = "PRE_DMA_G0"
 SCOPE_SOURCE_TYPE_MATERIAL_SUB_ISSUE = "MATERIAL_SUB_ISSUE"
 SCOPE_SOURCE_TYPE_ROLLUP = "ROLLUP"
+SCOPE_SOURCE_TYPE_ROLLUP_RESPONSE = "ROLLUP_RESPONSE"
 
 MAP_SCOPE_MVP_SELECTED = "MVP_SELECTED"
 
@@ -377,7 +380,7 @@ def cycleTypeFilter(cycleType: Optional[str]) -> str:
     if not cycleType:
         return ""
     normalizedCycleType = str(cycleType).strip().upper()
-    if normalizedCycleType not in {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE, CYCLE_TYPE_ROLLUP}:
+    if normalizedCycleType not in {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE, CYCLE_TYPE_ROLLUP, CYCLE_TYPE_ROLLUP_RESPONSE}:
         return "AND 1 = 0"
     return f"AND (c.cycle_type = '{normalizedCycleType}' OR c.id IS NULL)"
 
@@ -1011,7 +1014,7 @@ def listQuantInputAtomicIdsTx(cur, metricId: str) -> list[str]:
           AND UPPER(COALESCE(atomic_data_role, '')) = 'INPUT'
           AND (
               UPPER(COALESCE(data_value_type, '')) IN ('QUANT', 'NUMBER', 'NUMERIC')
-              OR data_value_type = '?뺣웾'
+              OR data_value_type = '정량'
           )
         ORDER BY atomic_metric_id
         """,
@@ -1055,13 +1058,16 @@ __all__ = [
     "CYCLE_TYPE_PRE_DMA_G0",
     "CYCLE_TYPE_POST_DMA_DISCLOSURE",
     "CYCLE_TYPE_ROLLUP",
+    "CYCLE_TYPE_ROLLUP_RESPONSE",
     "METRIC_SCOPE_PRE_DMA_G0_PROFILE",
     "METRIC_SCOPE_G0_02_FINANCIAL_BASIS",
     "METRIC_SCOPE_SELECTED_DISCLOSURE",
     "METRIC_SCOPE_ROLLUP",
+    "METRIC_SCOPE_ROLLUP_RESPONSE",
     "SCOPE_SOURCE_TYPE_PRE_DMA_G0",
     "SCOPE_SOURCE_TYPE_MATERIAL_SUB_ISSUE",
     "SCOPE_SOURCE_TYPE_ROLLUP",
+    "SCOPE_SOURCE_TYPE_ROLLUP_RESPONSE",
     "MAP_SCOPE_MVP_SELECTED",
     "APPROVAL_POLICY_INPUT_APPROVAL_ONLY",
     "APPROVAL_POLICY_PROMOTE_TO_KPI_FACT",
@@ -1070,6 +1076,7 @@ __all__ = [
     "APPROVAL_POLICY_NO_APPROVAL_REQUIRED",
     "METRIC_ID_G0_02",
     "SUPPORTED_CYCLE_TYPE",
+    "ensureRollupResponseWorkspaceTx",
     "resolveReportingYear",
     "getCycle",
     "listMetricScopes",
@@ -1258,4 +1265,155 @@ def seedRollupMetricScopeTx(cur, companyId: int, reportingYear: int, actorUserId
                 updated_at = CURRENT_TIMESTAMP
             """,
             (cycleId, companyId, metricId, displayIndex * 10, actorUserId)
+        )
+
+def ensureRollupResponseWorkspaceTx(
+    cur,
+    companyId: int,
+    reportingYear: int,
+    batchId: int,
+    actionableInputMetricIds: list[str],
+    actorUserId: Optional[int] = None,
+) -> None:
+    cur.execute(
+        """
+        SELECT source_cycle_id, rollup_purpose_code
+        FROM ESG_ROLLUP_BATCH 
+        WHERE id = ? AND delete_yn = 0
+        """,
+        (batchId,)
+    )
+    batch = cur.fetchone()
+    sourceCycleId = batch["source_cycle_id"] if batch else None
+    rollupPurposeCode = batch["rollup_purpose_code"] if batch else None
+
+    parentScopeByMetric = {}
+    if sourceCycleId:
+        cur.execute(
+            """
+            SELECT metric_id, scope_source_type, source_materiality_run_id, source_selected_sub_issue_id, source_sub_issue_code
+            FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE
+            WHERE esg_onboarding_cycle_id = ? AND delete_yn = 0 AND active_yn = 1
+            """,
+            (sourceCycleId,)
+        )
+        for row in cur.fetchall():
+            parentScopeByMetric[row["metric_id"]] = row
+
+    cur.execute(
+        """
+        SELECT *
+        FROM ESG_ONBOARDING_CYCLE
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND cycle_type = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (companyId, reportingYear, CYCLE_TYPE_ROLLUP_RESPONSE),
+    )
+    cycle = cur.fetchone()
+    if not cycle:
+        cur.execute(
+            """
+            INSERT INTO ESG_ONBOARDING_CYCLE (
+                company_id,
+                reporting_year,
+                cycle_name,
+                cycle_type,
+                report_basis_type,
+                required_before_dma_yn,
+                cycle_status,
+                metric_scope_code,
+                parent_rollup_batch_id,
+                created_by_user_id
+            ) VALUES (?, ?, ?, ?, 'ENTITY', 0, 'active', ?, ?, ?)
+            """,
+            (
+                companyId,
+                reportingYear,
+                f"Rollup Response {reportingYear}",
+                CYCLE_TYPE_ROLLUP_RESPONSE,
+                METRIC_SCOPE_ROLLUP_RESPONSE,
+                batchId,
+                actorUserId,
+            ),
+        )
+        cycleId = cur.lastrowid
+    else:
+        cycleId = cycle["id"]
+        cur.execute(
+            """
+            UPDATE ESG_ONBOARDING_CYCLE
+            SET parent_rollup_batch_id = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (batchId, cycleId)
+        )
+        cur.execute(
+            """
+            UPDATE ESG_ONBOARDING_CYCLE_METRIC_SCOPE
+            SET active_yn = 0, updated_at = CURRENT_TIMESTAMP
+            WHERE esg_onboarding_cycle_id = ?
+            """,
+            (cycleId,)
+        )
+
+    for displayIndex, metricId in enumerate(actionableInputMetricIds, start=1):
+        approvalPolicy = resolveDefaultApprovalPolicyTx(cur, metricId)
+        parentScope = parentScopeByMetric.get(metricId) or {}
+        
+        if rollupPurposeCode == "DMA_PRECHECK" and metricId == "G0-02":
+            scopeSourceType = SCOPE_SOURCE_TYPE_PRE_DMA_G0
+        else:
+            scopeSourceType = parentScope.get("scope_source_type") or SCOPE_SOURCE_TYPE_ROLLUP_RESPONSE
+
+        cur.execute(
+            """
+            INSERT INTO ESG_ONBOARDING_CYCLE_METRIC_SCOPE (
+                esg_onboarding_cycle_id,
+                company_id,
+                metric_id,
+                scope_source_type,
+                source_materiality_run_id,
+                source_selected_sub_issue_id,
+                source_sub_issue_code,
+                required_yn,
+                input_required_yn,
+                approval_required_yn,
+                approval_policy_code,
+                rollup_readonly_yn,
+                display_order,
+                active_yn,
+                created_by_user_id,
+                delete_yn
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?, 0, ?, 1, ?, 0)
+            ON DUPLICATE KEY UPDATE
+                scope_source_type = VALUES(scope_source_type),
+                source_materiality_run_id = VALUES(source_materiality_run_id),
+                source_selected_sub_issue_id = VALUES(source_selected_sub_issue_id),
+                source_sub_issue_code = VALUES(source_sub_issue_code),
+                required_yn = VALUES(required_yn),
+                input_required_yn = VALUES(input_required_yn),
+                approval_required_yn = VALUES(approval_required_yn),
+                approval_policy_code = VALUES(approval_policy_code),
+                rollup_readonly_yn = VALUES(rollup_readonly_yn),
+                display_order = VALUES(display_order),
+                active_yn = VALUES(active_yn),
+                updated_at = CURRENT_TIMESTAMP
+
+            """,
+            (
+                cycleId, 
+                companyId, 
+                metricId, 
+                scopeSourceType,
+                parentScope.get("source_materiality_run_id"),
+                parentScope.get("source_selected_sub_issue_id"),
+                parentScope.get("source_sub_issue_code"),
+                approvalPolicy,
+                displayIndex * 10,
+                actorUserId
+            )
         )

@@ -1,4 +1,4 @@
-﻿import json
+import json
 from decimal import Decimal
 from typing import Any, Optional
 from src.utils.db import findAll, findOne
@@ -193,15 +193,16 @@ def findActiveInputWorkspace(companyId: int, reportingYear: int, requestedMetric
         WHERE c.company_id = ?
           AND c.reporting_year = ?
           AND c.cycle_status = 'active'
-          AND c.cycle_type IN ('POST_DMA_DISCLOSURE', 'PRE_DMA_G0')
+          AND c.cycle_type IN ('ROLLUP_RESPONSE', 'POST_DMA_DISCLOSURE', 'PRE_DMA_G0')
           AND c.delete_yn = 0
         GROUP BY c.id, c.cycle_type, c.reporting_year
         HAVING matchedMetricCount = ?
         ORDER BY
             CASE c.cycle_type
-                WHEN 'POST_DMA_DISCLOSURE' THEN 1
-                WHEN 'PRE_DMA_G0' THEN 2
-                ELSE 3
+                WHEN 'ROLLUP_RESPONSE' THEN 1
+                WHEN 'POST_DMA_DISCLOSURE' THEN 2
+                WHEN 'PRE_DMA_G0' THEN 3
+                ELSE 4
             END,
             c.id DESC
         LIMIT 1

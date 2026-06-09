@@ -188,7 +188,7 @@ const RollupSummaryPanel = ({
     btnText = "자회사 데이터 요청하기";
     btnClass = "primary";
     btnDisabled = false;
-    btnAction = onSendSource || onCtaClick;
+    btnAction = onCtaClick;
   } else if (nextAction === "WAIT_ROLLUP") {
     if (isCalculating) {
       btnText = "계산 중...";

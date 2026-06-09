@@ -6,23 +6,17 @@ from src.utils.db import findAll, findOne, getConn
 from src.utils.onboardingscoperepository import METRIC_ID_G0_02
 
 
-def listValueRows(companyId: int, reportingYear: int, metricIds: list[str]) -> list[dict]:
+def listValueRows(
+    companyId: int,
+    reportingYear: int,
+    metricIds: list[str],
+    includeGroupRollupResultYn: bool = True,
+) -> list[dict]:
     if not metricIds:
         return []
     placeholders = ", ".join(["?"] * len(metricIds))
-    params = (
-        companyId,
-        reportingYear,
-        *metricIds,
-        companyId,
-        reportingYear,
-        *metricIds,
-        companyId,
-        reportingYear,
-        *metricIds,
-    )
-    return findAll(
-        f"""
+    
+    baseQuery = f"""
         SELECT
             'onboarding_input' AS source_table,
             iv.metric_id,
@@ -55,26 +49,43 @@ def listValueRows(companyId: int, reportingYear: int, metricIds: list[str]) -> l
           AND kf.metric_id IN ({placeholders})
           AND LOWER(COALESCE(kf.approval_status, '')) = 'approved'
           AND kf.delete_yn = 0
+    """
+    
+    params = [
+        companyId,
+        reportingYear,
+        *metricIds,
+        companyId,
+        reportingYear,
+        *metricIds,
+    ]
+    
+    if includeGroupRollupResultYn:
+        baseQuery += f"""
+            UNION ALL
 
-        UNION ALL
-
-        SELECT
-            'group_rollup_result' AS source_table,
-            gr.group_metric_id AS metric_id,
-            gr.group_atomic_metric_id AS atomic_metric_id,
-            gr.value_text,
-            gr.value_numeric,
-            gr.unit,
-            'approved' AS input_status,
-            gr.updated_at
-        FROM ESG_GROUP_ROLLUP_RESULT gr
-        WHERE gr.parent_company_id = ?
-          AND gr.reporting_year = ?
-          AND gr.group_metric_id IN ({placeholders})
-          AND gr.delete_yn = 0
-        """,
-        params,
-    ) or []
+            SELECT
+                'group_rollup_result' AS source_table,
+                gr.group_metric_id AS metric_id,
+                gr.group_atomic_metric_id AS atomic_metric_id,
+                gr.value_text,
+                gr.value_numeric,
+                gr.unit,
+                'approved' AS input_status,
+                gr.updated_at
+            FROM ESG_GROUP_ROLLUP_RESULT gr
+            WHERE gr.parent_company_id = ?
+              AND gr.reporting_year = ?
+              AND gr.group_metric_id IN ({placeholders})
+              AND gr.delete_yn = 0
+        """
+        params.extend([
+            companyId,
+            reportingYear,
+            *metricIds,
+        ])
+        
+    return findAll(baseQuery, tuple(params)) or []
 
 def resolveAssignmentId(cycleId: int, companyId: int, metricId: str) -> Optional[int]:
     row = findOne(

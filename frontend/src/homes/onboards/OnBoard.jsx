@@ -883,6 +883,28 @@ const OnBoard = () => {
     }
   };
 
+  const handleOpenTransferModal = async () => {
+    if (!rollupResponseBatchId) return;
+
+    try {
+      await dispatch(
+        fetchRollupRequestDetail({
+          batchId: rollupResponseBatchId,
+        })
+      ).unwrap();
+
+      setIsSubTransferModalOpen(true);
+    } catch (error) {
+      showDefaultAlert(
+        "오류",
+        error?.message ||
+          "전송 가능 상태를 확인하지 못했습니다.",
+        "error"
+      );
+    }
+  };
+
+
   const handleSaveAndSubmit = async (values, files, status) => {
     if (!selectedItem || !companyId || isNoRunWorkflow(workflow)) return;
     if (isRollupResponseReadOnly) {
@@ -1212,7 +1234,7 @@ const OnBoard = () => {
               </button>
               <button
                 className="ob1-btn-cta"
-                onClick={() => setIsSubTransferModalOpen(true)}
+                onClick={handleOpenTransferModal}
                 disabled={loadingWorkflow || isRollupResponseReadOnly}
               >
                 데이터 전송
@@ -1274,7 +1296,7 @@ const OnBoard = () => {
                     onCalculated={() => initializeOnboarding()}
                     rollupPurposeCode={activeRollupContext.rollupPurposeCode}
                     metricScopeCode={activeRollupContext.metricScopeCode}
-                    onSendSource={() => setIsSubTransferModalOpen(true)}
+                    onSendSource={handleOpenTransferModal}
                   />
 
                 </>

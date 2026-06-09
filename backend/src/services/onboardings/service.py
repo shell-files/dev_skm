@@ -970,7 +970,14 @@ def getApprovalDetail(
     scopes = repo.listMetricScopes(int(cycle["id"]), companyId, metricId)
     if not scopes:
         raise ValueError("Metric is not in active cycle scope")
-    atomicRows = repo.listApprovalAtomicDetailRows(companyId, reportingYear, int(cycle["id"]), metricId)
+    atomicRows = repo.listApprovalAtomicDetailRows(
+        companyId, 
+        reportingYear, 
+        int(cycle["id"]), 
+        metricId,
+        cycleType=cycleType,
+        batchId=batchId,
+    )
     return OnboardingApprovalDetailResponseDto(
         data=detailDto(summary, atomicRows, userModel)
     )

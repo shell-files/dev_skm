@@ -39,6 +39,8 @@ import {
   fetchActiveRollupBatch,
   fetchRollupBatchStatus,
   fetchRollupBatchSources,
+  fetchRollupRequestDetail,
+  ensureRollupResponseWorkspace,
   initializePostDmaDisclosureScope,
   resetReportState,
   saveOnboardingMetric,
@@ -589,6 +591,8 @@ const OnBoard = () => {
   const rawAssignments = useSelector((state) => state.report.onboarding.assignments);
   const activeBatchId = useSelector((state) => state.report.rollup.activeBatchId);
   const requests = useSelector((state) => state.report.rollup.requests);
+  const selectedRequestDetail = useSelector((state) => state.report.rollup.selectedRequestDetail);
+  const activeReportingYear = viewMode === "ROLLUP_RESPONSE" ? (selectedRequestDetail?.reportingYear || reportingYear) : reportingYear;
   const loadingWorkflow = useSelector((state) => state.report.loading.workflow);
   const loadingG0 = useSelector((state) => state.report.loading.onboarding);
   const assigningMetrics = useSelector((state) => state.report.loading.assignMetrics);
@@ -636,19 +640,21 @@ const OnBoard = () => {
   const filteredG0ItemsForUser = useMemo(() => {
     let items = g0Items;
     if (viewMode === "ROLLUP_RESPONSE" && isEmployeeViewer) {
-      items = g0Items.filter((item) => item.assignmentStatus === "ASSIGNED" || item.assignmentStatus === "assigned" || item.selfAssignedYn === true);
+      const currentUserId = user?.id ?? user?.user_id ?? user?.userId;
+      items = g0Items.filter((item) => {
+        const isSelfAssigned = item.assigneeUserId != null && currentUserId != null && Number(item.assigneeUserId) === Number(currentUserId);
+        return item.assignmentStatus === "ASSIGNED" || item.assignmentStatus === "assigned" || isSelfAssigned;
+      });
     }
     
     if (viewMode === "ROLLUP_RESPONSE" && requests && requests.length > 0 && batchIdQuery) {
-      const batchId = parseInt(batchIdQuery, 10);
-      const activeReq = requests.find(r => r.batchId === batchId) || {};
-      const actionableIds = activeReq.actionableInputMetricIds || [];
+      const actionableIds = selectedRequestDetail?.actionableInputMetricIds || [];
       if (actionableIds.length > 0) {
         items = items.filter((item) => actionableIds.includes(item.metricId));
       }
     }
     return items;
-  }, [g0Items, viewMode, isEmployeeViewer, requests, batchIdQuery]);
+  }, [g0Items, viewMode, isEmployeeViewer, requests, batchIdQuery, user, selectedRequestDetail]);
 
   const uniqueSubIssues = useMemo(() => {
     const issues = new Set();
@@ -659,6 +665,12 @@ const OnBoard = () => {
     });
     return Array.from(issues);
   }, [filteredG0ItemsForUser]);
+
+  useEffect(() => {
+    if (selectedSubIssue && !uniqueSubIssues.includes(selectedSubIssue)) {
+      setSelectedSubIssue("");
+    }
+  }, [uniqueSubIssues, selectedSubIssue]);
 
   const activeSubIssue = selectedSubIssue || (uniqueSubIssues.length > 0 ? uniqueSubIssues[0] : "");
 
@@ -1179,17 +1191,9 @@ const OnBoard = () => {
       <SubsidiaryTransferModal
         isOpen={isSubTransferModalOpen}
         onClose={() => setIsSubTransferModalOpen(false)}
-        reportingYear={reportingYear}
+        reportingYear={activeReportingYear}
         onTransferred={async () => {
           await initializeOnboarding();
-        }}
-        onNavigateToInput={({ url, viewMode: newViewMode }) => {
-          setIsSubTransferModalOpen(false);
-          if (newViewMode) {
-            setViewMode(newViewMode);
-          } else if (url) {
-            navigate(url);
-          }
         }}
       />
 

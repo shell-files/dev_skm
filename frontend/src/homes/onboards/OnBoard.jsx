@@ -159,6 +159,18 @@ const resolveRollupContext = (cycleType) => {
   };
 };
 
+const formatApiDetail = (detail) => {
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => item?.msg || item?.message || JSON.stringify(item))
+      .join("\n");
+  }
+  if (detail && typeof detail === "object") {
+    return detail.message || JSON.stringify(detail);
+  }
+  return String(detail || "");
+};
+
 const mergeAssignmentIntoItems = (items = [], assignments = []) => {
   const assignmentByMetric = new Map((assignments || []).map((item) => [item.metricId, item]));
   return items.map((item) => {
@@ -583,6 +595,11 @@ const OnBoard = () => {
 
   const viewMode = searchParams.get("mode") === "ROLLUP_RESPONSE" ? "ROLLUP_RESPONSE" : "MY_PROJECT";
   const batchIdQuery = searchParams.get("batchId");
+  const rollupResponseBatchId = useMemo(() => {
+    if (viewMode !== "ROLLUP_RESPONSE") return undefined;
+    const parsed = Number(batchIdQuery);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+  }, [viewMode, batchIdQuery]);
 
   // Preview States
   const [previewRole, setPreviewRole] = useState("ESG 담당자");
@@ -666,12 +683,12 @@ const OnBoard = () => {
       items = items.filter((item) => item.selfAssignedYn === true);
     }
     
-    if (viewMode === "ROLLUP_RESPONSE" && batchIdQuery) {
+    if (viewMode === "ROLLUP_RESPONSE" && rollupResponseBatchId) {
       const actionableIds = selectedRequestDetail?.actionableInputMetricIds || [];
       items = items.filter((item) => actionableIds.includes(item.metricId));
     }
     return items;
-  }, [g0Items, viewMode, isEmployeeViewer, batchIdQuery, selectedRequestDetail]);
+  }, [g0Items, viewMode, isEmployeeViewer, rollupResponseBatchId, selectedRequestDetail]);
 
   const uniqueSubIssues = useMemo(() => {
     const issues = new Set();
@@ -723,11 +740,12 @@ const OnBoard = () => {
         setActiveSourceCycleId(null);
         await dispatch(fetchRollupRequests({ includeSentYn: true, allPurposesYn: true })).unwrap();
         
-        if (!batchIdQuery) {
+        if (!rollupResponseBatchId) {
           return;
         }
 
-        const batchId = parseInt(batchIdQuery, 10);
+        const batchId = rollupResponseBatchId;
+        dispatch(setActiveBatchId(batchId));
         await dispatch(fetchRollupRequestDetail({ batchId })).unwrap();
         const ensuredRes = await dispatch(ensureRollupResponseWorkspace({ batchId })).unwrap();
         
@@ -736,12 +754,12 @@ const OnBoard = () => {
 
         const metricId = searchParams.get("metricId");
         await dispatch(
-          fetchOnboardingMetrics({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE", metricId })
+          fetchOnboardingMetrics({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE", metricId, batchId })
         ).unwrap();
         
         if (canManageAssignments) {
           await dispatch(
-            fetchOnboardingAssignments({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE" })
+            fetchOnboardingAssignments({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE", batchId })
           ).unwrap();
         }
         return;
@@ -809,7 +827,7 @@ const OnBoard = () => {
     } catch (error) {
       console.error(error);
     }
-  }, [companyId, cycleTypeQuery, dispatch, reportingYear, location.search, viewMode]);
+  }, [companyId, cycleTypeQuery, dispatch, reportingYear, location.search, viewMode, rollupResponseBatchId, canManageAssignments]);
 
   useEffect(() => {
     dispatch(resetReportState());
@@ -873,6 +891,7 @@ const OnBoard = () => {
         companyId,
         reportingYear: activeReportingYear,
         cycleType: activeCycleType,
+        ...(activeCycleType === "ROLLUP_RESPONSE" ? { batchId: rollupResponseBatchId } : {}),
         values: selectedItem.metrics
           .filter((item) => isEditableItem(item))
           .map((item) => {
@@ -894,7 +913,7 @@ const OnBoard = () => {
           }),
       };
 
-      await dispatch(saveOnboardingMetric({ metricId, payload })).unwrap();
+      await dispatch(saveOnboardingMetric({ metricId, payload, batchId: rollupResponseBatchId })).unwrap();
 
       if (status === "DRAFT") {
         showDefaultAlert("완료", "임시저장이 완료되었습니다.", "success");
@@ -906,10 +925,14 @@ const OnBoard = () => {
       try {
         await dispatch(
           submitOnboardingApproval({
-            companyId,
-            reportingYear: activeReportingYear,
-            metricId,
-            cycleType: activeCycleType,
+            payload: {
+              companyId,
+              reportingYear: activeReportingYear,
+              metricId,
+              cycleType: activeCycleType,
+              ...(activeCycleType === "ROLLUP_RESPONSE" ? { batchId: rollupResponseBatchId } : {}),
+            },
+            batchId: rollupResponseBatchId,
           })
         ).unwrap();
         showDefaultAlert("완료", "승인 요청이 완료되었습니다.", "success");
@@ -917,8 +940,13 @@ const OnBoard = () => {
         await initializeOnboarding();
       } catch (submitError) {
         console.error(submitError);
-        let detail =
-          submitError?.message || submitError?.detail || submitError?.error?.message || "";
+        let detail = formatApiDetail(
+          submitError?.detail ??
+          submitError?.error?.detail ??
+          submitError?.message ??
+          submitError?.error?.message ??
+          ""
+        );
           
         if (
           detail.includes("Metric assignment is required") ||
@@ -937,7 +965,13 @@ const OnBoard = () => {
       }
     } catch (error) {
       console.error(error);
-      let detail = error?.message || error?.detail || error?.error?.message || "";
+      let detail = formatApiDetail(
+        error?.detail ??
+        error?.error?.detail ??
+        error?.message ??
+        error?.error?.message ??
+        ""
+      );
       if (
         detail.includes("Metric assignment is required") ||
         detail.includes("Metric assignment must be assigned") ||
@@ -1035,20 +1069,24 @@ const OnBoard = () => {
     try {
       const response = await dispatch(
         bulkAssignOnboardingMetrics({
-          companyId,
-          reportingYear: activeReportingYear,
-          cycleType: activeCycleType,
-          metricIds,
-          assigneeName: payload.assigneeName,
-          assigneeEmail: payload.assigneeEmail,
-          dueDate: payload.submissionDueDate || null,
-          sendInviteYn: true,
+          payload: {
+            companyId,
+            reportingYear: activeReportingYear,
+            cycleType: activeCycleType,
+            ...(activeCycleType === "ROLLUP_RESPONSE" ? { batchId: rollupResponseBatchId } : {}),
+            metricIds,
+            assigneeName: payload.assigneeName,
+            assigneeEmail: payload.assigneeEmail,
+            dueDate: payload.submissionDueDate || null,
+            sendInviteYn: true,
+          },
+          batchId: rollupResponseBatchId,
         })
       ).unwrap();
       const result = response?.data || response;
 
-      await dispatch(fetchOnboardingMetrics({ companyId, reportingYear: activeReportingYear, cycleType: activeCycleType })).unwrap();
-      await dispatch(fetchOnboardingAssignments({ companyId, reportingYear: activeReportingYear, cycleType: activeCycleType })).unwrap();
+      await dispatch(fetchOnboardingMetrics({ companyId, reportingYear: activeReportingYear, cycleType: activeCycleType, batchId: rollupResponseBatchId })).unwrap();
+      await dispatch(fetchOnboardingAssignments({ companyId, reportingYear: activeReportingYear, cycleType: activeCycleType, batchId: rollupResponseBatchId })).unwrap();
 
       setSelectedMetricIds([]);
       setAssignmentTargetIds([]);
@@ -1124,7 +1162,7 @@ const OnBoard = () => {
               onCtaClick={handleCtaClick}
             />
           )}
-          {viewMode === "ROLLUP_RESPONSE" && batchIdQuery && (
+          {viewMode === "ROLLUP_RESPONSE" && rollupResponseBatchId && (
             <div className="ob1-cta-container" style={{ display: 'flex', gap: '8px' }}>
               <button
                 className="ob1-btn-cta ob1-btn-secondary"
@@ -1156,6 +1194,11 @@ const OnBoard = () => {
       
       {viewMode === "ROLLUP_RESPONSE" && !batchIdQuery ? (
         <RollupInboxPanel requests={requests} onRefresh={initializeOnboarding} />
+      ) : viewMode === "ROLLUP_RESPONSE" && !rollupResponseBatchId ? (
+        <div className="ob1-empty-state">
+          <p className="ob1-empty-title">받은 요청함의 Batch 정보가 없습니다.</p>
+          <p className="ob1-empty-desc">요청함에서 다시 진입해 주세요.</p>
+        </div>
       ) : (
       <div className="ob1-content-layout">
         <div className="ob1-sidebar-panel">

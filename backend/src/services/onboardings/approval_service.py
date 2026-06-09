@@ -56,7 +56,13 @@ def submitMetricApproval(
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             if checkRowsAllStatus(rows, requiredAtomicIds, STATE_SUBMITTED):
                 conn.commit()
-                return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
+                return buildMetricApprovalSummary(
+                    companyId,
+                    reportingYear,
+                    metricId,
+                    cycle.get("cycle_type") or cycleType,
+                    batchId=batchId,
+                )
             if checkRowsAnyStatus(rows, requiredAtomicIds, {STATE_REVIEWED, STATE_APPROVED}):
                 raise ValueError(f"Cannot resubmit {metricId} from reviewed or approved status")
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_DRAFT, STATE_REJECTED, STATE_SUBMITTED})
@@ -85,7 +91,13 @@ def submitMetricApproval(
                 commentText=commentText,
             )
         conn.commit()
-        return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
+        return buildMetricApprovalSummary(
+            companyId,
+            reportingYear,
+            metricId,
+            cycle.get("cycle_type") or cycleType,
+            batchId=batchId,
+        )
     except Exception:
         conn.rollback()
         raise
@@ -140,7 +152,13 @@ def reviewMetricApproval(
                 commentText=commentText,
             )
         conn.commit()
-        return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
+        return buildMetricApprovalSummary(
+            companyId,
+            reportingYear,
+            metricId,
+            cycle.get("cycle_type") or cycleType,
+            batchId=batchId,
+        )
     except Exception:
         conn.rollback()
         raise
@@ -194,7 +212,13 @@ def approveMetricApproval(
                 expectedPromotedAtomicIds=promotedAtomicIds,
             ):
                 conn.commit()
-                return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
+                return buildMetricApprovalSummary(
+                    companyId,
+                    reportingYear,
+                    metricId,
+                    cycle.get("cycle_type") or cycleType,
+                    batchId=batchId,
+                )
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED, STATE_REVIEWED})
             calculationSummary = None
             if requireKpiFactYn:
@@ -240,6 +264,7 @@ def approveMetricApproval(
             companyId, reportingYear, metricId,
             cycle.get("cycle_type") or cycleType,
             calculationSummary=calculationSummary,
+            batchId=batchId,
         )
     except Exception:
         conn.rollback()
@@ -295,7 +320,13 @@ def rejectMetricApproval(
                 commentText=commentText,
             )
         conn.commit()
-        return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
+        return buildMetricApprovalSummary(
+            companyId,
+            reportingYear,
+            metricId,
+            cycle.get("cycle_type") or cycleType,
+            batchId=batchId,
+        )
     except Exception:
         conn.rollback()
         raise
@@ -422,7 +453,7 @@ def requireWritableCycleTx(cur, cycle: dict, companyId: int, batchId: Optional[i
     cur.execute(
         """
         SELECT transfer_status
-        FROM ESG_ROLLUP_BATCH_SOURCE
+        FROM ESG_ROLLUP_SOURCE_STATUS
         WHERE esg_rollup_batch_id = ?
           AND source_company_id = ?
           AND delete_yn = 0

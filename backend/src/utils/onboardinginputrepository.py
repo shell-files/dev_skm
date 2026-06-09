@@ -513,7 +513,10 @@ def checkAlreadyApprovedTx(
           AND k.metric_id = ?
           AND k.atomic_metric_id IN ({placeholders})
           AND LOWER(COALESCE(k.approval_status, '')) = 'approved'
-          AND k.value_numeric IS NOT NULL
+          AND (
+              k.value_numeric IS NOT NULL
+              OR TRIM(COALESCE(k.value_text, '')) <> ''
+          )
           AND k.delete_yn = 0
         """,
         (companyId, reportingYear, metricId, *promotedAtomicIds),
@@ -662,7 +665,7 @@ def listPromotableInputAtomicRowsTx(cur, metricId: str) -> list[dict]:
           AND onboarding_input_yn = 1
           AND active_yn = 1
           AND delete_yn = 0
-          AND UPPER(COALESCE(atomic_data_role, '')) = 'INPUT'
+          AND UPPER(COALESCE(atomic_data_role, '')) NOT IN ('DERIVED', 'ROLLUP_READONLY')
         ORDER BY atomic_metric_id
         """,
         (metricId,),
@@ -683,7 +686,7 @@ def listPromotableInputAtomicIds(metricId: str) -> list[str]:
           AND onboarding_input_yn = 1
           AND active_yn = 1
           AND delete_yn = 0
-          AND UPPER(COALESCE(atomic_data_role, '')) = 'INPUT'
+          AND UPPER(COALESCE(atomic_data_role, '')) NOT IN ('DERIVED', 'ROLLUP_READONLY')
         ORDER BY atomic_metric_id
         """,
         (metricId,),

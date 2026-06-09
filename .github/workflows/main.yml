@@ -68,5 +68,11 @@ jobs:
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
           GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
           APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
+          PG_DB_HOST: ${{ secrets.PG_DB_HOST }}
+          PG_DB_PORT: ${{ secrets.PG_DB_PORT }}
+          PG_DB_DATABASE: ${{ secrets.PG_DB_DATABASE }}
+          PG_DB_USER: ${{ secrets.PG_DB_USER }}
+          PG_DB_PASSWORD: ${{ secrets.PG_DB_PASSWORD }}
+          OLLAMA_URL: ${{ secrets.OLLAMA_URL }}
         working-directory: .
         run: docker compose up -d

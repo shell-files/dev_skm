@@ -108,6 +108,10 @@ def listRequests(
               'canceled',
               'archived'
           )
+          AND (
+              b.rollup_purpose_code <> 'DMA_PRECHECK'
+              OR b.id IN (SELECT required_rollup_batch_id FROM ESG_MATERIALITY_RUN WHERE delete_yn = 0)
+          )
         ORDER BY s.updated_at DESC, s.id DESC
     """.format(purposeFilter=purposeFilter, scopeFilter=scopeFilter, requestFilter=requestFilter, transferFilter=transferFilter)
     return findAll(sql, tuple(params)) or []

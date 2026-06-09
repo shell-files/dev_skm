@@ -226,6 +226,39 @@ def approveMetricApproval(
                     cycle.get("cycle_type") or cycleType,
                     batchId=batchId,
                 )
+            if checkRowsAllStatus(rows, requiredAtomicIds, STATE_APPROVED):
+                calculationSummary = None
+                if requireKpiFactYn:
+                    quantAtomicIds = set(promotedAtomicIds)
+                    changedAtomicIds = []
+                    for row in rows:
+                        if row.get("atomic_metric_id") in quantAtomicIds:
+                            inputRepo.upsertKpiFact(cur, row, actorUserId)
+                            changedAtomicIds.append(row.get("atomic_metric_id"))
+                    if changedAtomicIds:
+                        calculationSummary = calculateAffectedEntityFactsTx(
+                            cur,
+                            companyId=companyId,
+                            reportingYear=reportingYear,
+                            changedAtomicMetricIds=changedAtomicIds,
+                            actorUserId=actorUserId,
+                        )
+                syncRollupSourceReadinessIfNeededTx(
+                    cur,
+                    cycle=cycle,
+                    companyId=companyId,
+                    reportingYear=reportingYear,
+                    batchId=batchId,
+                )
+                conn.commit()
+                return buildMetricApprovalSummary(
+                    companyId,
+                    reportingYear,
+                    metricId,
+                    cycle.get("cycle_type") or cycleType,
+                    calculationSummary=calculationSummary,
+                    batchId=batchId,
+                )
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED, STATE_REVIEWED})
             calculationSummary = None
             if requireKpiFactYn:

@@ -31,6 +31,11 @@ const toApiError = (res, fallbackMessage) => ({
   error: res?.error || null,
 });
 
+export const apiErrorMessage = (error, fallbackMessage = "요청 처리 중 오류가 발생했습니다.") => {
+  if (typeof error === "string") return error;
+  return error?.message || error?.detail || error?.msg || fallbackMessage;
+};
+
 const ROLLUP_API_ROOT = "/api/v1/rollups";
 const ONBOARDING_APPROVAL_API_ROOT = "/api/v1/onboarding-approvals";
 const REPORT_WORKFLOW_API_ROOT = "/api/v1/report-workflow";
@@ -310,12 +315,9 @@ export const saveOnboardingMetric = createAsyncThunk(
       return rejectIfFailed(res, rejectWithValue, "온보딩 지표 저장에 실패했습니다.");
     } catch (error) {
       console.error(error);
-      if (error?.message) {
-        return rejectWithValue({ status: false, message: error.message });
-      }
       return rejectWithValue({
         status: false,
-        message: "온보딩 지표 저장 중 오류가 발생했습니다.",
+        message: apiErrorMessage(error, "온보딩 지표 저장 중 오류가 발생했습니다."),
       });
     }
   }
@@ -674,12 +676,9 @@ export const submitOnboardingApproval = createAsyncThunk(
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 요청에 실패했습니다.");
     } catch (error) {
       console.error(error);
-      if (error?.message) {
-        return rejectWithValue({ status: false, message: error.message });
-      }
       return rejectWithValue({
         status: false,
-        message: "온보딩 승인 요청 중 오류가 발생했습니다.",
+        message: apiErrorMessage(error, "온보딩 승인 요청 중 오류가 발생했습니다."),
       });
     }
   }
@@ -697,12 +696,9 @@ export const reviewOnboardingApproval = createAsyncThunk(
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 검토에 실패했습니다.");
     } catch (error) {
       console.error(error);
-      if (error?.message) {
-        return rejectWithValue({ status: false, message: error.message });
-      }
       return rejectWithValue({
         status: false,
-        message: "온보딩 승인 검토 중 오류가 발생했습니다.",
+        message: apiErrorMessage(error, "온보딩 승인 검토 중 오류가 발생했습니다."),
       });
     }
   }
@@ -720,12 +716,9 @@ export const approveOnboardingApproval = createAsyncThunk(
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 처리에 실패했습니다.");
     } catch (error) {
       console.error(error);
-      if (error?.message) {
-        return rejectWithValue({ status: false, message: error.message });
-      }
       return rejectWithValue({
         status: false,
-        message: "온보딩 승인 처리 중 오류가 발생했습니다.",
+        message: apiErrorMessage(error, "온보딩 승인 처리 중 오류가 발생했습니다."),
       });
     }
   }
@@ -743,12 +736,9 @@ export const rejectOnboardingApproval = createAsyncThunk(
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 반려에 실패했습니다.");
     } catch (error) {
       console.error(error);
-      if (error?.message) {
-        return rejectWithValue({ status: false, message: error.message });
-      }
       return rejectWithValue({
         status: false,
-        message: "온보딩 승인 반려 중 오류가 발생했습니다.",
+        message: apiErrorMessage(error, "온보딩 승인 반려 중 오류가 발생했습니다."),
       });
     }
   }

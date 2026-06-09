@@ -1,4 +1,4 @@
-﻿import json
+import json
 from typing import Optional
 from src.utils.db import findAll, findOne
 from src.utils.calculationengine import normalizeSource, topologicalSortRules
@@ -382,6 +382,52 @@ def resolveExternalEntitySourceAtomicIdsTx(cur, batchId: int) -> list[str]:
 
 def resolveExternalEntitySourceAtomicIds(batchId: int) -> list[str]:
     return resolveExternalEntitySourceAtomicIdsFromScopes(listScope(batchId))
+
+def resolveExternalEntitySourceAtomicIdsByMetricTx(
+    cur,
+    batchId: int,
+    metricId: str,
+) -> list[str]:
+    requiredAtomicIds = resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
+
+    if not requiredAtomicIds:
+        return []
+
+    placeholders = ", ".join(["?"] * len(requiredAtomicIds))
+
+    cur.execute(
+        f"""
+        SELECT atomic_metric_id
+        FROM ESG_ATOMIC_METRIC_MASTER
+        WHERE metric_id = ?
+          AND atomic_metric_id IN ({placeholders})
+          AND onboarding_input_yn = 1
+          AND active_yn = 1
+          AND delete_yn = 0
+          AND UPPER(COALESCE(atomic_data_role, ''))
+              NOT IN ('DERIVED', 'ROLLUP_READONLY')
+        ORDER BY atomic_metric_id
+        """,
+        (metricId, *requiredAtomicIds),
+    )
+
+    return [
+        row["atomic_metric_id"]
+        for row in cur.fetchall() or []
+        if row.get("atomic_metric_id")
+    ]
+
+def resolveExternalEntitySourceAtomicIdsByMetric(
+    batchId: int,
+    metricId: str,
+) -> list[str]:
+    from src.utils.db import getConn
+    conn = getConn()
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            return resolveExternalEntitySourceAtomicIdsByMetricTx(cur, batchId, metricId)
+    finally:
+        conn.close()
 
 def resolveRequiredSourceAtomicIdsTx(cur, batchId: int) -> list[str]:
     return resolveExternalEntitySourceAtomicIdsTx(cur, batchId)

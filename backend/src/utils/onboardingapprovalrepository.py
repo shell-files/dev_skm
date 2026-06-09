@@ -15,6 +15,24 @@ APPROVAL_POLICY_ROLLUP_READONLY = scopeRepo.APPROVAL_POLICY_ROLLUP_READONLY
 APPROVAL_POLICY_NO_APPROVAL_REQUIRED = scopeRepo.APPROVAL_POLICY_NO_APPROVAL_REQUIRED
 METRIC_ID_G0_02 = scopeRepo.METRIC_ID_G0_02
 
+def resolveRequiredApprovalAtomicIds(
+    *,
+    cycleType: str,
+    batchId: Optional[int],
+    metricId: str,
+) -> list[str]:
+    if str(cycleType or "").strip().upper() == scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
+        if batchId is None:
+            raise ValueError("batchId is required for ROLLUP_RESPONSE")
+
+        from src.utils import rolluprepository as rollupRepo
+
+        return rollupRepo.resolveExternalEntitySourceAtomicIdsByMetric(
+            int(batchId),
+            metricId,
+        )
+
+    return inputRepo.listRequiredApprovalAtomicIds(metricId)
 
 def getLatestHistory(companyId: int, reportingYear: int, metricId: str, cycleId: Optional[int] = None) -> dict:
     params = [companyId, reportingYear, metricId]
@@ -88,47 +106,55 @@ def listCycleApprovalInboxRows(
         if assignedOnlyYn and not assignment and not metricInputRows and not latestHistory:
             continue
 
-        requiredAtomicIds = [
-            row["atomic_metric_id"]
-            for row in masterByMetric.get(metricId, [])
-            if (
-                row.get("atomic_metric_id") 
-                and inputRepo.truthy(row.get("onboarding_input_yn"))
-                and inputRepo.truthy(row.get("active_yn", 1))
-                and not inputRepo.truthy(row.get("delete_yn", 0))
-                and str(row.get("atomic_data_role") or "").strip().upper() not in {"DERIVED", "ROLLUP_READONLY"}
-            )
-        ]
+        requiredAtomicIds = resolveRequiredApprovalAtomicIds(
+            cycleType=normalizedCycleType,
+            batchId=batchId,
+            metricId=metricId,
+        )
         requiredAtomicSet = set(requiredAtomicIds)
-        completedAtomicIds = {
-            row.get("atomic_metric_id")
-            for row in metricInputRows
-            if row.get("atomic_metric_id") in requiredAtomicSet and inputRepo.hasMetricValue(row)
-        }
-        completedAtomicIds.update(
-            row.get("atomic_metric_id")
-            for row in metricFactRows
-            if row.get("atomic_metric_id") in requiredAtomicSet and inputRepo.hasMetricValue(row)
-        )
-        submittedAtomicIds = {
-            row.get("atomic_metric_id")
-            for row in metricInputRows
-            if row.get("atomic_metric_id") in requiredAtomicSet
-            and inputRepo.hasMetricValue(row)
-            and str(row.get("input_status") or "").strip().lower() in {"submitted", "reviewed", "approved"}
-        }
-        approvedAtomicIds = {
-            row.get("atomic_metric_id")
-            for row in metricFactRows
-            if row.get("atomic_metric_id") in requiredAtomicSet and inputRepo.hasMetricValue(row)
-        }
-        approvedAtomicIds.update(
-            row.get("atomic_metric_id")
-            for row in metricInputRows
-            if row.get("atomic_metric_id") in requiredAtomicSet
-            and inputRepo.hasMetricValue(row)
-            and str(row.get("input_status") or "").strip().lower() == "approved"
-        )
+        approvalPolicyCode = str(scope.get("approval_policy_code") or scopeRepo.APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
+
+        if approvalPolicyCode in {
+            scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
+            scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
+        }:
+            completedAtomicIds = {
+                row.get("atomic_metric_id")
+                for row in metricFactRows
+                if row.get("atomic_metric_id") in requiredAtomicSet and inputRepo.hasMetricValue(row)
+            }
+            submittedAtomicIds = set(completedAtomicIds)
+            approvedAtomicIds = set(completedAtomicIds)
+        else:
+            completedAtomicIds = {
+                row.get("atomic_metric_id")
+                for row in metricInputRows
+                if row.get("atomic_metric_id") in requiredAtomicSet and inputRepo.hasMetricValue(row)
+            }
+            completedAtomicIds.update(
+                row.get("atomic_metric_id")
+                for row in metricFactRows
+                if row.get("atomic_metric_id") in requiredAtomicSet and inputRepo.hasMetricValue(row)
+            )
+            submittedAtomicIds = {
+                row.get("atomic_metric_id")
+                for row in metricInputRows
+                if row.get("atomic_metric_id") in requiredAtomicSet
+                and inputRepo.hasMetricValue(row)
+                and str(row.get("input_status") or "").strip().lower() in {"submitted", "reviewed", "approved"}
+            }
+            approvedAtomicIds = {
+                row.get("atomic_metric_id")
+                for row in metricFactRows
+                if row.get("atomic_metric_id") in requiredAtomicSet and inputRepo.hasMetricValue(row)
+            }
+            approvedAtomicIds.update(
+                row.get("atomic_metric_id")
+                for row in metricInputRows
+                if row.get("atomic_metric_id") in requiredAtomicSet
+                and inputRepo.hasMetricValue(row)
+                and str(row.get("input_status") or "").strip().lower() == "approved"
+            )
 
         approvalStatus = resolveCycleApprovalStatus(
             requiredAtomicCount=len(requiredAtomicSet),
@@ -143,7 +169,6 @@ def listCycleApprovalInboxRows(
             continue
 
         actionSupportedYn, disabledReason = resolveActionSupport(scope)
-        approvalPolicyCode = str(scope.get("approval_policy_code") or scopeRepo.APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
         promotedAtomicIds = (
             [
                 row["atomic_metric_id"]
@@ -188,7 +213,7 @@ def listCycleApprovalInboxRows(
                 ],
                 "approvalPolicyCode": approvalPolicyCode,
                 "rollupReadonlyYn": inputRepo.truthy(scope.get("rollup_readonly_yn")),
-                "promotedAtomicCount": len(promotedAtomicSet),
+                "promotedQuantAtomicCount": len(promotedAtomicSet),
                 "approvedPromotedFactCount": len(approvedFactAtomicIds.intersection(promotedAtomicSet)),
                 "submittedAt": inputRepo.formatDatetime(inputRepo.submittedAt(metricInputRows, latestHistory)),
                 "approvedAt": inputRepo.formatDatetime(inputRepo.approvedAt(metricInputRows, metricFactRows, latestHistory)),
@@ -409,7 +434,11 @@ def buildApprovalSummary(
     cycleId = int(cycle["id"]) if cycle.get("id") is not None else None
     scopes = scopeRepo.listMetricScopes(cycleId, companyId, metricId) if cycleId is not None else []
     scope = scopes[0] if scopes else {}
-    requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIds(metricId)
+    requiredAtomicIds = resolveRequiredApprovalAtomicIds(
+        cycleType=cycleType,
+        batchId=batchId,
+        metricId=metricId,
+    )
     requiredAtomicSet = set(requiredAtomicIds)
     inputs = inputRepo.listMetricInputs(companyId, reportingYear, metricId)
     facts = inputRepo.listMetricKpiFacts(companyId, reportingYear, metricId)
@@ -442,25 +471,38 @@ def buildApprovalSummary(
     approvedFactAtomicIds = {row["atomic_metric_id"] for row in facts}
     approvedAtomicIds = set(approvedFactAtomicIds)
     inputByAtomic = {row["atomic_metric_id"]: row for row in inputs}
-    completedAtomicIds = {
-        atomicId
-        for atomicId, row in inputByAtomic.items()
-        if atomicId in requiredAtomicSet and inputRepo.hasMetricValue(row)
-    }
-    submittedAtomicIds = {
-        atomicId
-        for atomicId, row in inputByAtomic.items()
-        if atomicId in requiredAtomicSet
-        and str(row.get("input_status") or "").lower() in {"submitted", "reviewed", "approved"}
-        and inputRepo.hasMetricValue(row)
-    }
-    approvedAtomicIds.update(
-        atomicId
-        for atomicId, row in inputByAtomic.items()
-        if atomicId in requiredAtomicSet
-        and str(row.get("input_status") or "").lower() == "approved"
-        and inputRepo.hasMetricValue(row)
-    )
+    factByAtomic = {row["atomic_metric_id"]: row for row in facts}
+    if approvalPolicyCode in {
+        scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
+        scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
+    }:
+        completedAtomicIds = {
+            atomicId
+            for atomicId, row in factByAtomic.items()
+            if atomicId in requiredAtomicSet and inputRepo.hasMetricValue(row)
+        }
+        submittedAtomicIds = set(completedAtomicIds)
+        approvedAtomicIds = set(completedAtomicIds)
+    else:
+        completedAtomicIds = {
+            atomicId
+            for atomicId, row in inputByAtomic.items()
+            if atomicId in requiredAtomicSet and inputRepo.hasMetricValue(row)
+        }
+        submittedAtomicIds = {
+            atomicId
+            for atomicId, row in inputByAtomic.items()
+            if atomicId in requiredAtomicSet
+            and str(row.get("input_status") or "").lower() in {"submitted", "reviewed", "approved"}
+            and inputRepo.hasMetricValue(row)
+        }
+        approvedAtomicIds.update(
+            atomicId
+            for atomicId, row in inputByAtomic.items()
+            if atomicId in requiredAtomicSet
+            and str(row.get("input_status") or "").lower() == "approved"
+            and inputRepo.hasMetricValue(row)
+        )
     missingAtomicIds = [
         atomicId
         for atomicId in requiredAtomicIds
@@ -489,7 +531,7 @@ def buildApprovalSummary(
         ),
         "approvalPolicyCode": approvalPolicyCode,
         "rollupReadonlyYn": inputRepo.truthy(scope.get("rollup_readonly_yn")),
-        "promotedAtomicCount": len(promotedAtomicSet),
+        "promotedQuantAtomicCount": len(promotedAtomicSet),
         "approvedPromotedFactCount": len(approvedFactAtomicIds.intersection(promotedAtomicSet)),
         "inputUserId": inputRepo.firstNonNull([row.get("input_user_id") for row in inputs]),
         "assigneeUserId": assignment.get("assignee_user_id"),
@@ -614,4 +656,5 @@ __all__ = [
     "submitG002Approval",
     "approveG002Approval",
     "rejectG002Approval",
+    "resolveRequiredApprovalAtomicIds",
 ]

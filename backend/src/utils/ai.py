@@ -1,16 +1,14 @@
 import re
 import json
 import psycopg
-
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from sentence_transformers import SentenceTransformer
 from pgvector.psycopg import register_vector
-
 from src.utils.db import findAll, save, addKey, saveMany
 from src.utils.settings import settings
-
+from datetime import datetime,timedelta
 
 # ==================================================
 # 상수
@@ -75,68 +73,56 @@ def validateReport(text):
     text = re.sub(r'[\U00010000-\U0010ffff]', '', text, flags=re.UNICODE)
     return text.strip()
 
+def getValue(data):
+    if not data:
+        return None
+    return data.get("value")
+
 # ==================================================
 # DB 저장 핵심 함수
 # ==================================================
 
-def saveReportRun(
-    companyId,
-    reportingYear,
-    subIssueId,
-    sectionNo,
-    llmModel,
-    promptVersion,
-    templateSnapshot,
-    filledTemplate,
-    reportText
-):
+def createReportRun(materialityRunId, companyId, reportingYear, llmModel, promptVersion):
+    run_created_at = datetime.now() + timedelta(hours=9)
+
     sql = """
         INSERT INTO ESG_REPORT_AI_RUN (
             materiality_run_id,
             company_id,
             reporting_year,
-            sub_issue_id,
-            section_no,
-            template_snapshot,
-            filled_template,
-            report_content,
             llm_model,
-            prompt_version
+            prompt_version,
+            created_at
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (?, ?, ?, ?, ?, ?)
     """
 
-    params = (
-        None,
+    success, run_id = addKey(sql, (
+        materialityRunId,
         companyId,
         reportingYear,
-        subIssueId,
-        sectionNo,
-        templateSnapshot,
-        filledTemplate,
-        reportText,
         llmModel,
-        promptVersion
-    )
+        promptVersion,
+        run_created_at
+    ))
 
-    success, run_id = addKey(sql, params)
-    return run_id
+    return success, run_id, run_created_at
 
 def saveSection(runId, sectionNo, subIssueId, template, filledText, reportText):
 
     sql = """
         INSERT INTO ESG_REPORT_AI_SECTION (
-            ai_run_id,
-            section_no,
-            sub_issue_id,
-            template_snapshot,
-            filled_template,
-            report_text
-        )
-        VALUES (%s, %s, %s, %s, %s, %s)
+        ai_run_id,
+        section_no,
+        sub_issue_id,
+        template_snapshot,
+        filled_template,
+        report_text
+    )
+    VALUES (?, ?, ?, ?, ?, ?)
     """
 
-    return addKey(sql, (
+    success, section_id = addKey(sql, (
         runId,
         sectionNo,
         subIssueId,
@@ -144,6 +130,9 @@ def saveSection(runId, sectionNo, subIssueId, template, filledText, reportText):
         filledText,
         reportText
     ))
+
+    return success, section_id
+
     
 def saveMetricTrace(sectionId, usedMetrics, factData):
 
@@ -156,113 +145,133 @@ def saveMetricTrace(sectionId, usedMetrics, factData):
             value_text,
             unit
         )
-        VALUES (%s, %s, %s, %s, %s, %s)
+        VALUES (?, ?, ?, ?, ?, ?)
     """
 
     rows = []
+    
 
     for m in usedMetrics:
         fact = factData.get(m)
         if not fact:
             continue
 
-        rows.append((sectionId, m, "v1", fact.get("value"), None, fact.get("unit")))
+        value = fact.get("value")
+        unit = fact.get("unit")
+
+        if value is None:
+            continue
+
+        try:
+            num = float(str(value).replace(",", "").replace("%", "").strip())
+            is_number = True
+        except:
+            is_number = False
+
+        if is_number:
+            rows.append((sectionId, m, "v1", num, None, unit))
+        else:
+            rows.append((sectionId, m, "v1", None, str(value), unit))
 
     if rows:
         saveMany(sql, rows)
 # ==================================================
 # KPI 조회
 # ==================================================
+def normalizeValue(num, text):
+    if text is not None and str(text).strip() != "":
+        return str(text)
+    if num is not None and str(num).strip() != "":
+        return str(num)
+    return None
 
+    
 def getFactData(companyId, reportingYear):
 
     sql = f"""
-        SELECT f.atomic_metric_id, f.value_numeric, f.value_text, f.unit, aes_d(c.company_name, '{settings.maria_db_key}') AS company_name
+        SELECT f.atomic_metric_id,
+               f.value_numeric,
+               f.value_text,
+               f.unit,
+               aes_d(c.`company_name`, '{settings.maria_db_key}') AS company_name
         FROM ESG_KPI_FACT f 
         JOIN COMPANY c 
-        ON f.company_id=c.id 
-        WHERE company_id = ? 
-        AND f.reporting_year = ?
-        AND c.delete_yn = 0
-        AND f.delete_yn = 0
+          ON f.company_id = c.id 
+        WHERE f.company_id = ?
+          AND f.reporting_year = ?
+          AND c.delete_yn = 0
+          AND f.delete_yn = 0
     """
 
-    rows = findAll(sql, (companyId, reportingYear,))
+    rows = findAll(sql, (companyId, reportingYear))
 
     dataMap = {}
     companyName = "A_GROUP"
 
+    # FACT
     for row in rows:
         if row["company_name"]:
             companyName = row["company_name"]
-        value = (
-            row["value_numeric"]
-            if row["value_numeric"] is not None
-            else row["value_text"]
-        )
+
+        value = normalizeValue(row["value_numeric"], row["value_text"])
+
         dataMap[row["atomic_metric_id"]] = {
-            "value": str(value or ""),
-            "unit": str(row["unit"] or "")
+            "value": str(value),
+            "unit": row["unit"] or ""
         }
-        dataMap["COMPANY_NAME"] = {
-            "value": companyName,
-            "unit": ""
-        }
+
+    dataMap["COMPANY_NAME"] = {"value": companyName, "unit": ""}
+
+    # ROLLUP fallback
     rollupSql = """
-        SELECT group_atomic_metric_id, value_numeric, value_text, unit 
+        SELECT group_atomic_metric_id,
+               value_numeric,
+               value_text,
+               unit 
         FROM ESG_GROUP_ROLLUP_RESULT 
         WHERE parent_company_id = ?
-        AND reporting_year = ?
-        AND delete_yn = 0
+          AND reporting_year = ?
+          AND delete_yn = 0
     """
-
-    rollupRows = findAll(
-        rollupSql,
-        (companyId,reportingYear, )
-    )
+    
+    rollupRows = findAll(rollupSql, (companyId, reportingYear))
 
     for row in rollupRows:
+        
         atomicId = row["group_atomic_metric_id"]
 
-        if (
-            atomicId not in dataMap
-            or dataMap[atomicId]["value"] == ""
-        ):
-            value = (
-                row["value_numeric"]
-                if row["value_numeric"] is not None
-                else row["value_text"]
-            )
+        if atomicId in dataMap and dataMap[atomicId]["value"] != "":
+            continue
 
-            dataMap[atomicId] = {
-                "value": str(value or ""),
-                "unit": str(row["unit"] or "")
-            }
+        value = normalizeValue(row["value_numeric"], row["value_text"])
+
+        dataMap[atomicId] = {
+            "value": str(value),
+            "unit": row["unit"] or ""
+        }
+
     return dataMap
-
-
 # ==================================================
-# 템플릿 치환
+# 포맷
 # ==================================================
+
 def formatUnit(value, unit):
-    if value is None or value == "":
+    
+    if not value:
         return "[데이터 미집계]"
 
-    # 1) 숫자 변환 가능 여부 판단
-    is_number = True
     try:
-        num = float(value)
+        num = float(str(value).replace(",", "").replace("%", ""))
+        is_number = True
     except:
         is_number = False
 
-    # 2) unit 없는 경우 → 텍스트 유지 (중요)
     if not unit:
         return str(value).strip()
 
     if not is_number:
         return str(value).strip()
 
-    # 3) 숫자 + unit 처리
     if unit == "%":
         return f"{num:.2f}%"
 
@@ -276,15 +285,20 @@ def formatUnit(value, unit):
         return f"{num:,.0f} {unit}"
 
     if unit == "시간":
-        return f"{num:,.1f} 시간"
+        return f"{num:.1f} 시간"
 
     if unit == "시간/명":
-        return f"{num:,.2f} 시간/명"
+        return f"{num:.2f} 시간/명"
 
     return f"{num} {unit}"
 
 
+# ==================================================
+# 템플릿 치환
+# ==================================================
+
 def replaceTemplate(template, factData):
+
     usedMetrics = set()
 
     def replaceToken(match):
@@ -295,21 +309,17 @@ def replaceTemplate(template, factData):
         if not data:
             return "[데이터 미집계]"
 
-        value = data.get("value", "")
+        value = data.get("value")
         unit = data.get("unit", "")
-
+        print("KEY CHECK:", key, data)
         return formatUnit(value, unit)
 
-    companyName = factData.get("COMPANY_NAME", {}).get("value", "A_GROUP")
+    companyName = getValue(factData.get("COMPANY_NAME")) or "A_GROUP"
 
-    filledText = re.sub(
-        r"\{(.*?)\}",
-        replaceToken,
-        template
-    ).replace("A_GROUP", companyName)
+    filledText = re.sub(r"\{(.*?)\}", replaceToken, template)
+    filledText = filledText.replace("A_GROUP", companyName)
 
     return filledText, list(usedMetrics)
-
 
 # ==================================================
 # SR 검색
@@ -387,16 +397,18 @@ def compressSrContext(rows):
 # ==================================================
 
 def generateIssueReport(
-    companyId,
-    reportingYear,
-    subIssueId,
-    sectionNo,
-    template,
-    filledText,
-    compressedContext,
-    factData,
-    usedMetrics 
-):
+        run_id,
+        created_at,
+        companyId,
+        reportingYear,
+        subIssueId,
+        sectionNo,
+        template,
+        filledText,
+        compressedContext,
+        factData,
+        usedMetrics
+    ):
 
     systemInstruction = """
         당신은 전문 ESG 보고서 작성 컨설턴트입니다.
@@ -453,27 +465,12 @@ def generateIssueReport(
     })
 
     result = validateReport(result)
-    
-    # ==================================================
-    # 1. RUN 저장
-    # ==================================================
-    run_id   = saveReportRun(
-        companyId,
-        reportingYear,
-        subIssueId,
-        sectionNo,
-        "gemma4:e4b",
-        "v1",
-        template,
-        filledText,
-        result
-    )
 
     # ==================================================
-    # 2. SECTION 저장
+    # SECTION 저장
     # ==================================================
-    section_id = saveSection(
-        run_id  ,
+    success, section_id = saveSection(
+        run_id,
         sectionNo,
         subIssueId,
         template,
@@ -481,8 +478,11 @@ def generateIssueReport(
         result
     )
 
+    if not success:
+        raise Exception("SECTION insert 실패")
+
     # ==================================================
-    # 3. METRIC TRACE 저장
+    #  METRIC TRACE 저장
     # ==================================================
     saveMetricTrace(
         section_id,
@@ -491,3 +491,4 @@ def generateIssueReport(
     )
 
     return {"report": result, "run_id": run_id  }
+

@@ -391,9 +391,10 @@ def cycleTypeFilter(cycleType: Optional[str]) -> str:
     return f"AND (c.cycle_type = '{normalizedCycleType}' OR c.id IS NULL)"
 
 def resolveCycle(cur, companyId: int, reportingYear: int, cycleType: str = CYCLE_TYPE_PRE_DMA_G0, batchId: Optional[int] = None) -> dict:
-    batchFilter = "AND parent_rollup_batch_id = ?" if batchId else ""
+    requireRollupResponseBatchId(cycleType, batchId)
+    batchFilter = "AND parent_rollup_batch_id = ?" if batchId is not None else ""
     params = [companyId, reportingYear, cycleType]
-    if batchId:
+    if batchId is not None:
         params.append(batchId)
     cur.execute(
         f"""
@@ -1450,13 +1451,9 @@ def requireRollupResponseBatchId(cycleType: str, batchId: Optional[int]) -> None
 
 def requireRollupResponseBatchContext(cycle: dict, batchId: Optional[int]) -> None:
     cycleType = str(cycle.get("cycle_type") or "").strip().upper()
+    requireRollupResponseBatchId(cycleType, batchId)
     if cycleType != CYCLE_TYPE_ROLLUP_RESPONSE:
         return
-    
-    if batchId is None:
-        err = ValueError("batchId is required for ROLLUP_RESPONSE")
-        err.statusCode = 409
-        raise err
 
     if (
         cycle.get("parent_rollup_batch_id") is None

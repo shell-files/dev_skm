@@ -7,14 +7,14 @@ from src.utils.ai import (
     replaceTemplate,
     searchSrKnowledgeHybrid,
     compressSrContext,
-    generateIssueReport
+    generateIssueReport,
+    
 )
 
 
 def generateReportProcess(req, token):
-
-    factData = getFactData(req.companyId)
-
+    factData = getFactData(req.companyId, req.year)
+    
     reportOutput = []
 
     for idx, template in enumerate(REPORT_TEMPLATES):
@@ -34,8 +34,15 @@ def generateReportProcess(req, token):
         compressedContext = compressSrContext(rows)
 
         report = generateIssueReport(
-            filledText,
-            compressedContext
+            companyId=req.companyId,
+            reportingYear=req.year,
+            subIssueId=issueInfo["subIssueId"],
+            sectionNo=idx + 1,
+            template=template,
+            filledText=filledText,
+            compressedContext=compressedContext,
+            factData=factData,
+            usedMetrics=usedMetrics
         )
 
         reportOutput.append({

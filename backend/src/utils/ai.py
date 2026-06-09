@@ -150,11 +150,6 @@ def saveMetricTrace(sectionId, usedMetrics, factData):
 
     rows = []
     
-    def safe_float(v):
-        try:
-            return float(str(v).replace(",", "").replace("%", "").strip())
-        except:
-            return None
 
     for m in usedMetrics:
         fact = factData.get(m)
@@ -164,16 +159,19 @@ def saveMetricTrace(sectionId, usedMetrics, factData):
         value = fact.get("value")
         unit = fact.get("unit")
 
-        num = safe_float(value)
+        if value is None:
+            continue
 
-        rows.append((
-            sectionId,
-            m,
-            "v1",
-            num,                      # numeric (있으면)
-            str(value) if value is not None else None,   # text 항상 보존
-            unit
-        ))
+        try:
+            num = float(str(value).replace(",", "").replace("%", "").strip())
+            is_number = True
+        except:
+            is_number = False
+
+        if is_number:
+            rows.append((sectionId, m, "v1", num, None, unit))
+        else:
+            rows.append((sectionId, m, "v1", None, str(value), unit))
 
     if rows:
         saveMany(sql, rows)

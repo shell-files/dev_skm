@@ -192,6 +192,34 @@ def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseD
     if existingBatch:
         return RollupBatchResponseDto(data=buildBatchStatus(existingBatch, rollupRepository.listSourceCompanyIds(int(existingBatch["id"]))))
 
+    conflicts = rollupRepository.listConflictingActiveSourceRequests(
+        selectedCompanyIds,
+        reportingYear,
+        purposeCode,
+        metricScopeCode,
+    )
+    if conflicts:
+        raise RollupError(
+            409,
+            "ROLLUP_RESPONSE_ACTIVE_REQUEST_EXISTS",
+            "An active unsent rollup request already exists for one or more subsidiaries.",
+            {
+                "sourceCompanyIds": sorted({
+                    int(row["sourceCompanyId"])
+                    for row in conflicts
+                    if row.get("sourceCompanyId") is not None
+                }),
+                "existingBatchIds": sorted({
+                    int(row["existingBatchId"])
+                    for row in conflicts
+                    if row.get("existingBatchId") is not None
+                }),
+                "reportingYear": reportingYear,
+                "rollupPurposeCode": purposeCode,
+                "metricScopeCode": metricScopeCode,
+            },
+        )
+
     conn = rollupRepository.getConn()
     try:
         with conn.cursor(dictionary=True) as cur:
@@ -619,26 +647,41 @@ def sendSource(batchId: int, userModel) -> RollupSourceSendResponseDto:
     if int(source["source_company_id"]) == int(source["parent_company_id"]):
         raise RollupError(409, "ROLLUP_PARENT_SEND_NOT_ALLOWED", "Parent company data is included automatically.")
 
-    if str(source.get("transfer_status") or "").lower() in {"sent", "received"}:
-        return RollupSourceSendResponseDto(data=buildSourceSendStatus(source))
-
-    # Determine readiness
-    requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIds(batchId)
-    readiness = rollupRepository.buildSourceReadiness(batchId, [sourceCompanyId], int(source["reporting_year"]))
-
-    if not readiness["readyYn"]:
-        raise RollupError(
-            409,
-            "SOURCE_NOT_READY",
-            "Approved KPI facts are required before transfer.",
-            {"missingAtomicMetricIds": readiness["missingAtomicMetricIds"]},
-        )
-
+    sendStatus = None
     conn = rollupRepository.getConn()
     try:
         with conn.cursor(dictionary=True) as cur:
-            rollupRepository.updateSourceSentTx(cur, batchId, sourceCompanyId, len(requiredAtomicIds))
+            lockedSource = rollupRepository.lockSourceStatusTx(cur, batchId, sourceCompanyId)
+            if not lockedSource:
+                raise RollupError(404, "ROLLUP_SOURCE_REQUEST_NOT_FOUND", "Rollup source transfer request was not found.")
+            if str(lockedSource.get("transfer_status") or "").lower() in {"sent", "received"}:
+                sendStatus = buildSourceSendStatus(lockedSource)
+            else:
+                readiness = rollupRepository.syncSourceReadinessTx(
+                    cur,
+                    batchId,
+                    sourceCompanyId,
+                    int(lockedSource["reporting_year"]),
+                )
+                if not readiness["readyYn"]:
+                    raise RollupError(
+                        409,
+                        "SOURCE_NOT_READY",
+                        "Approved KPI facts are required before transfer.",
+                        {"missingAtomicMetricIds": readiness["missingAtomicMetricIds"]},
+                    )
+                rollupRepository.updateSourceSentTx(
+                    cur,
+                    batchId,
+                    sourceCompanyId,
+                    int(readiness.get("requiredAtomicCount") or 0),
+                )
         conn.commit()
+        if sendStatus is not None:
+            return RollupSourceSendResponseDto(data=sendStatus)
+    except RollupError:
+        conn.rollback()
+        raise
     except Exception as e:
         conn.rollback()
         raise RollupError(500, "ROLLUP_SOURCE_SEND_FAILED", "Failed to update rollup source transfer status.")

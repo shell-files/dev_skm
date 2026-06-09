@@ -12,16 +12,6 @@ import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
 import RollupSummaryPanel from "./RollupSummaryPanel";
 import RollupInboxPanel from "./RollupInboxPanel";
 import MetricAssignmentModal from "./modal/MetricAssignmentModal";
-import UiPreviewPanel from "@/dev/step12UiPreview/UiPreviewPanel";
-import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
-import {
-  mergeOnboardingFixtureRows,
-  ONBOARDING_SCENARIOS,
-  APPROVAL_SCENARIOS,
-  ROLLUP_SCENARIOS,
-  PREVIEW_WORKFLOW,
-  APPROVAL_PROJECT_PREVIEW_ROWS
-} from "@/dev/step12UiPreview/fixtures";
 import {
   calculateMetricStatus,
   calculateProfileStats,
@@ -329,6 +319,7 @@ const OnboardingMetricTable = ({
   viewerRole,
   canManageAssignments,
   isConsultantViewer,
+  readOnlyYn = false,
 }) => {
   if (g0Error) {
     return (
@@ -377,7 +368,7 @@ const OnboardingMetricTable = ({
           <col style={{ width: "8%" }} />
         </colgroup>
         <thead className={selectedMetricIds.length > 0 && canManageAssignments ? "ob1-thead-selected" : ""}>
-          {selectedMetricIds.length > 0 && canManageAssignments ? (
+          {selectedMetricIds.length > 0 && canManageAssignments && !readOnlyYn ? (
             <tr style={{ backgroundColor: "#e0e7ff" }}>
               <th style={{ width: "44px" }}>
                 <input
@@ -385,6 +376,7 @@ const OnboardingMetricTable = ({
                   className="ob1-checkbox"
                   checked={isAllSelected}
                   onChange={() => onToggleSelectAll(groupedItems.map(i => i.metricId))}
+                  disabled={readOnlyYn}
                 />
               </th>
               <th colSpan="7">
@@ -397,6 +389,7 @@ const OnboardingMetricTable = ({
                       type="button"
                       className="ob1-btn-batch-assign-header"
                       onClick={onBulkAssignRequested}
+                      disabled={readOnlyYn}
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
                       담당자 일괄 지정
@@ -405,6 +398,7 @@ const OnboardingMetricTable = ({
                       type="button"
                       className="ob1-btn-batch-cancel-header"
                       onClick={() => onToggleSelectAll([])}
+                      disabled={readOnlyYn}
                     >
                       ✕ 일괄 선택 해제
                     </button>
@@ -422,6 +416,7 @@ const OnboardingMetricTable = ({
                     aria-label="전체 선택"
                     checked={isAllSelected}
                     onChange={() => onToggleSelectAll(groupedItems.map(i => i.metricId))}
+                    disabled={readOnlyYn}
                   />
                 </th>
               )}
@@ -500,6 +495,7 @@ const OnboardingMetricTable = ({
                       aria-label={`${item.metricId} 선택`}
                       checked={isSelected}
                       onChange={() => onSelectMetric(item.metricId)}
+                      disabled={readOnlyYn}
                     />
                   </td>
                 )}
@@ -553,6 +549,7 @@ const OnboardingMetricTable = ({
                           type="button" 
                           className="ob1-btn-input" 
                           onClick={() => {
+                            if (readOnlyYn) return;
                             if (isEsgManager && isAssignedToOther) {
                               if (!window.confirm("이 지표는 다른 담당자에게 할당되어 있습니다. 그래도 수정하시겠습니까?")) {
                                 return;
@@ -560,7 +557,7 @@ const OnboardingMetricTable = ({
                             }
                             onOpenMetric(item, subMetrics);
                           }}
-                          disabled={!isEsgManager && (!isAssigned || !isSelfAssigned)}
+                          disabled={readOnlyYn || (!isEsgManager && (!isAssigned || !isSelfAssigned))}
                         >
                           입력
                         </button>
@@ -601,13 +598,7 @@ const OnBoard = () => {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
   }, [viewMode, batchIdQuery]);
 
-  // Preview States
-  const [previewRole, setPreviewRole] = useState("ESG 담당자");
-  const [previewOnboardingScenario, setPreviewOnboardingScenario] = useState(ONBOARDING_SCENARIOS.UNASSIGNED);
-  const [previewApprovalScenario, setPreviewApprovalScenario] = useState(APPROVAL_SCENARIOS.NO_CONSULTANT);
-  const [previewRollupScenario, setPreviewRollupScenario] = useState(ROLLUP_SCENARIOS.PARENT_PENDING);
-
-  const rawViewerRole = STEP12_UI_FIXTURE_ENABLED ? previewRole : (selectedCompany?.role ?? selectedCompany?.role_name ?? user?.role ?? user?.role_name ?? "guest");
+  const rawViewerRole = selectedCompany?.role ?? selectedCompany?.role_name ?? user?.role ?? user?.role_name ?? "guest";
   const viewerRole = rawViewerRole;
   const canManageAssignments = isAssignmentManagerRole(viewerRole);
   const canManageRollup = isAssignmentManagerRole(viewerRole);
@@ -626,7 +617,7 @@ const OnBoard = () => {
   const workflowErrorPayload = useSelector((state) => state.report.error.workflow);
   const g0ErrorPayload = useSelector((state) => state.report.error.onboarding);
 
-  const displayWorkflow = STEP12_UI_FIXTURE_ENABLED ? PREVIEW_WORKFLOW : workflow;
+  const displayWorkflow = workflow;
   const activeCycleType = useMemo(
     () => {
       if (viewMode === "ROLLUP_RESPONSE") return "ROLLUP_RESPONSE";
@@ -666,12 +657,8 @@ const OnBoard = () => {
         Number(item.assigneeUserId) === Number(currentUserId),
     }));
 
-    if (STEP12_UI_FIXTURE_ENABLED) {
-      return mergeOnboardingFixtureRows(flattened, previewOnboardingScenario);
-    }
-
     return flattened;
-  }, [rawMetrics, rawAssignments, previewOnboardingScenario, currentUserId]);
+  }, [rawMetrics, rawAssignments, currentUserId]);
 
 
 
@@ -725,8 +712,8 @@ const OnBoard = () => {
   const workflowError = workflowErrorPayload?.message || null;
   const g0Error = g0ErrorPayload?.message || null;
 
-  const displayWorkflowError = STEP12_UI_FIXTURE_ENABLED ? null : workflowError;
-  const displayG0Error = STEP12_UI_FIXTURE_ENABLED ? null : g0Error;
+  const displayWorkflowError = workflowError;
+  const displayG0Error = g0Error;
   const isRollupResponseReadOnly = useMemo(() => {
     const transferStatus = String(
       selectedRequestDetail?.transferStatus ||
@@ -754,11 +741,21 @@ const OnBoard = () => {
 
         const batchId = rollupResponseBatchId;
         dispatch(setActiveBatchId(batchId));
-        await dispatch(fetchRollupRequestDetail({ batchId })).unwrap();
-        const ensuredRes = await dispatch(ensureRollupResponseWorkspace({ batchId })).unwrap();
-        
-        const ensured = ensuredRes?.data || ensuredRes;
-        const responseYear = ensured?.reportingYear || reportingYear;
+        const detailRes = await dispatch(fetchRollupRequestDetail({ batchId })).unwrap();
+        const detail = detailRes?.data || detailRes;
+        const transferStatus = String(
+          detail?.transferStatus ||
+          detail?.sourceStatus?.transferStatus ||
+          ""
+        ).trim().toUpperCase();
+        const readOnlyYn = transferStatus === "SENT" || transferStatus === "RECEIVED";
+        let responseYear = detail?.reportingYear || reportingYear;
+
+        if (!readOnlyYn) {
+          const ensuredRes = await dispatch(ensureRollupResponseWorkspace({ batchId })).unwrap();
+          const ensured = ensuredRes?.data || ensuredRes;
+          responseYear = ensured?.reportingYear || responseYear;
+        }
 
         const metricId = searchParams.get("metricId");
         await dispatch(
@@ -886,8 +883,34 @@ const OnBoard = () => {
     }
   };
 
+  const handleOpenTransferModal = async () => {
+    if (!rollupResponseBatchId) return;
+
+    try {
+      await dispatch(
+        fetchRollupRequestDetail({
+          batchId: rollupResponseBatchId,
+        })
+      ).unwrap();
+
+      setIsSubTransferModalOpen(true);
+    } catch (error) {
+      showDefaultAlert(
+        "오류",
+        error?.message ||
+          "전송 가능 상태를 확인하지 못했습니다.",
+        "error"
+      );
+    }
+  };
+
+
   const handleSaveAndSubmit = async (values, files, status) => {
     if (!selectedItem || !companyId || isNoRunWorkflow(workflow)) return;
+    if (isRollupResponseReadOnly) {
+      showDefaultAlert("알림", "전송 완료된 요청은 읽기 전용입니다.", "info");
+      return;
+    }
 
     try {
       const metricId = selectedItem.parent?.metricId || selectedItem.metrics?.[0]?.metricId;
@@ -994,12 +1017,14 @@ const OnBoard = () => {
 
   // Callbacks for Phase UI-1 & UI-2
   const handleSelectMetric = (metricId) => {
+    if (isRollupResponseReadOnly) return;
     setSelectedMetricIds(prev =>
       prev.includes(metricId) ? prev.filter(id => id !== metricId) : [...prev, metricId]
     );
   };
 
   const handleToggleSelectAll = (allMetricIds) => {
+    if (isRollupResponseReadOnly) return;
     if (selectedMetricIds.length === allMetricIds.length) {
       setSelectedMetricIds([]);
     } else {
@@ -1008,6 +1033,10 @@ const OnBoard = () => {
   };
 
   const handleBulkAssignRequested = () => {
+    if (isRollupResponseReadOnly) {
+      showDefaultAlert("알림", "전송 완료된 요청은 읽기 전용입니다.", "info");
+      return;
+    }
     if (selectedMetricIds.length === 0) {
       showDefaultAlert("안내", "담당자를 지정할 지표를 먼저 선택해주세요.", "info");
       return;
@@ -1018,13 +1047,17 @@ const OnBoard = () => {
   };
 
   const handleRowAssignRequested = (metricId) => {
+    if (isRollupResponseReadOnly) {
+      showDefaultAlert("알림", "전송 완료된 요청은 읽기 전용입니다.", "info");
+      return;
+    }
     setAssignmentMode('single');
     setAssignmentTargetIds([metricId]);
     setIsAssignmentModalOpen(true);
   };
 
   const handleOpenApprovalProjectModal = useCallback(async () => {
-    if (companyId && !STEP12_UI_FIXTURE_ENABLED) {
+    if (companyId) {
       try {
         const res = await dispatch(fetchApprovalProjects({ companyId })).unwrap();
         let projects = res?.data?.items || res?.items || [];
@@ -1055,16 +1088,14 @@ const OnBoard = () => {
         setFilteredProjects([]);
       }
     } else {
-       setFilteredProjects(STEP12_UI_FIXTURE_ENABLED ? APPROVAL_PROJECT_PREVIEW_ROWS : approvalProjectsFromStore); 
+       setFilteredProjects(approvalProjectsFromStore);
     }
     setIsApprovalProjectModalOpen(true);
   }, [companyId, dispatch, viewerRole, approvalProjectsFromStore]);
 
   const handleSubmitAssignment = async (payload) => {
-    if (STEP12_UI_FIXTURE_ENABLED) {
-      showDefaultAlert("안내", "프리뷰 모드에서는 담당자 지정 API를 호출하지 않습니다.", "info");
-      setIsAssignmentModalOpen(false);
-      setSelectedMetricIds([]);
+    if (isRollupResponseReadOnly) {
+      showDefaultAlert("알림", "전송 완료된 요청은 읽기 전용입니다.", "info");
       return;
     }
 
@@ -1113,7 +1144,7 @@ const OnBoard = () => {
     }
   };
 
-  if (!STEP12_UI_FIXTURE_ENABLED && loadingWorkflow && !workflow) {
+  if (loadingWorkflow && !workflow) {
     return (
       <div id="ob1-page">
         <div className="ob1-state-container">
@@ -1149,6 +1180,11 @@ const OnBoard = () => {
               </span>
             );
           })()}
+          {viewMode === "ROLLUP_RESPONSE" && isRollupResponseReadOnly && (
+            <span className="ob1-status-pill" style={{ fontSize: '14px', padding: '6px 12px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>
+              Read-only history
+            </span>
+          )}
           <button 
             type="button" 
             style={{ padding: '6px 12px', fontSize: '14px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: 'pointer', color: '#374151', fontWeight: '500' }}
@@ -1174,8 +1210,15 @@ const OnBoard = () => {
             <div className="ob1-cta-container" style={{ display: 'flex', gap: '8px' }}>
               <button
                 className="ob1-btn-cta ob1-btn-secondary"
-                style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1' }}
+                style={{
+                  background: '#f1f5f9',
+                  color: '#334155',
+                  border: '1px solid #cbd5e1',
+                  ...(isRollupResponseReadOnly ? { opacity: 0.5, cursor: 'not-allowed' } : {}),
+                }}
+                disabled={isRollupResponseReadOnly}
                 onClick={() => {
+                  if (isRollupResponseReadOnly) return;
                   dispatch(selectApprovalProject({
                     runId: workflow?.runId ?? null,
                     reportingYear: activeReportingYear,
@@ -1191,8 +1234,8 @@ const OnBoard = () => {
               </button>
               <button
                 className="ob1-btn-cta"
-                onClick={() => setIsSubTransferModalOpen(true)}
-                disabled={loadingWorkflow}
+                onClick={handleOpenTransferModal}
+                disabled={loadingWorkflow || isRollupResponseReadOnly}
               >
                 데이터 전송
               </button>
@@ -1253,8 +1296,7 @@ const OnBoard = () => {
                     onCalculated={() => initializeOnboarding()}
                     rollupPurposeCode={activeRollupContext.rollupPurposeCode}
                     metricScopeCode={activeRollupContext.metricScopeCode}
-                    rollupScenario={previewRollupScenario}
-                    onSendSource={() => setIsSubTransferModalOpen(true)}
+                    onSendSource={handleOpenTransferModal}
                   />
 
                 </>
@@ -1263,7 +1305,7 @@ const OnBoard = () => {
               <OnboardingMetricTable
                 g0Error={displayG0Error}
                 g0Items={filteredG0Items}
-                loadingG0={STEP12_UI_FIXTURE_ENABLED ? false : loadingG0}
+                loadingG0={loadingG0}
                 selectedMetricIds={selectedMetricIds}
                 onSelectMetric={handleSelectMetric}
                 onToggleSelectAll={handleToggleSelectAll}
@@ -1280,6 +1322,7 @@ const OnBoard = () => {
                 canManageAssignments={canManageAssignments}
                 isEmployeeViewer={isEmployeeViewer}
                 isConsultantViewer={isConsultantViewer}
+                readOnlyYn={isRollupResponseReadOnly}
               />
             </>
           )}
@@ -1296,6 +1339,7 @@ const OnBoard = () => {
         viewerRole={viewerRole}
         canManageAssignments={canManageAssignments}
         isConsultantViewer={isConsultantViewer}
+        readOnlyYn={isRollupResponseReadOnly}
         onOpenAssignment={() => handleRowAssignRequested(selectedItem?.parent?.metricId)}
       />
 
@@ -1305,7 +1349,7 @@ const OnBoard = () => {
         isOpen={isAssignmentModalOpen}
         mode={assignmentMode}
         selectedMetricIds={assignmentTargetIds}
-        isSubmitting={!STEP12_UI_FIXTURE_ENABLED && assigningMetrics}
+        isSubmitting={assigningMetrics}
         onClose={() => setIsAssignmentModalOpen(false)}
         onSubmitAssignment={handleSubmitAssignment}
       />
@@ -1354,16 +1398,6 @@ const OnBoard = () => {
         onClose={() => setIsApprovalProjectModalOpen(false)}
       />
 
-      <UiPreviewPanel
-        role={previewRole}
-        onboardingScenario={previewOnboardingScenario}
-        approvalScenario={previewApprovalScenario}
-        rollupScenario={previewRollupScenario}
-        onRoleChange={setPreviewRole}
-        onOnboardingScenarioChange={setPreviewOnboardingScenario}
-        onApprovalScenarioChange={setPreviewApprovalScenario}
-        onRollupScenarioChange={setPreviewRollupScenario}
-      />
     </div>
   );
 };

@@ -146,7 +146,16 @@ def upsertMetricValueGroups(groups: list[dict]) -> int:
         savedCount = 0
         with conn.cursor(dictionary=True) as cur:
             for group in groups:
-                savedCount += upsertMetricInputValuesTx(cur, **group)
+                savedCount += upsertMetricInputValuesTx(
+                    cur,
+                    cycleId=group["cycleId"],
+                    companyId=group["companyId"],
+                    reportingYear=group["reportingYear"],
+                    metricId=group["metricId"],
+                    assignmentId=group.get("assignmentId"),
+                    values=group["values"],
+                    userId=group.get("userId"),
+                )
         conn.commit()
         return savedCount
     except Exception:
@@ -504,7 +513,10 @@ def checkAlreadyApprovedTx(
           AND k.metric_id = ?
           AND k.atomic_metric_id IN ({placeholders})
           AND LOWER(COALESCE(k.approval_status, '')) = 'approved'
-          AND k.value_numeric IS NOT NULL
+          AND (
+              k.value_numeric IS NOT NULL
+              OR TRIM(COALESCE(k.value_text, '')) <> ''
+          )
           AND k.delete_yn = 0
         """,
         (companyId, reportingYear, metricId, *promotedAtomicIds),

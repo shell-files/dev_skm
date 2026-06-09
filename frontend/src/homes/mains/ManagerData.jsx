@@ -6,8 +6,6 @@ import DataTab from "./DataTab.jsx";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
 import { useAuth } from "@hooks/AuthContext";
 import ApprovalProjectSelectModal from "./modal/ApprovalProjectSelectModal";
-import { APPROVAL_PROJECT_PREVIEW_ROWS } from "@/dev/step12UiPreview/fixtures";
-import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
 import {
   DEFAULT_REPORTING_YEAR,
   clearApprovalProject,
@@ -21,59 +19,11 @@ import {
   reviewOnboardingApproval,
 } from "@stores/reportSlice";
 
-const USE_LEGACY_USER_FIXTURE = STEP12_UI_FIXTURE_ENABLED;
 const PAGE_SIZE = 10;
 const SUPPORTED_APPROVAL_CYCLE_TYPES = [
   "PRE_DMA_G0",
   "POST_DMA_DISCLOSURE",
   "ROLLUP_RESPONSE",
-];
-
-const LEGACY_USER_FIXTURE_CATEGORY_MAP = {
-  general: ["General", "Business model", "Report basis", "Management"],
-  environmental: ["Climate", "Energy", "Water", "Pollution"],
-  social: ["Labor", "Safety", "Human Rights", "Community"],
-  governance: ["Governance", "Risk", "Compliance", "Ethics"],
-};
-
-const ALL_LEGACY_GROUPS = [
-  ...LEGACY_USER_FIXTURE_CATEGORY_MAP.general,
-  ...LEGACY_USER_FIXTURE_CATEGORY_MAP.environmental,
-  ...LEGACY_USER_FIXTURE_CATEGORY_MAP.social,
-  ...LEGACY_USER_FIXTURE_CATEGORY_MAP.governance,
-];
-
-const mockUsers = [
-  {
-    id: 1,
-    name: "Consultant",
-    email: "consultant@skm.com",
-    company: "SKM",
-    role: "CONSULTANT",
-    deleteYn: "N",
-    relations: { consultant: true, employee: false },
-    groups: ALL_LEGACY_GROUPS,
-  },
-  {
-    id: 2,
-    name: "Assignee",
-    email: "assignee@skm.com",
-    company: "SKM",
-    role: "ASSIGNEE",
-    deleteYn: "N",
-    relations: { consultant: false, employee: true },
-    groups: ["Water", "Pollution"],
-  },
-  {
-    id: 3,
-    name: "Manager",
-    email: "manager@skm.com",
-    company: "SKM",
-    role: "ESG_MANAGER",
-    deleteYn: "N",
-    relations: { consultant: false, employee: true },
-    groups: ALL_LEGACY_GROUPS,
-  },
 ];
 
 const safeArray = (value) => (Array.isArray(value) ? value : []);
@@ -192,10 +142,8 @@ const ManagerData = () => {
   const [activeTab] = useState("data");
   const [activeService] = useState("disclosure");
   const [isApprovalProjectModalOpen, setIsApprovalProjectModalOpen] = useState(
-    STEP12_UI_FIXTURE_ENABLED
+    false
   );
-  const [inputs, setInputs] = useState([]);
-  const [users, setUsers] = useState([]);
   const [activeSubCategory, setActiveSubCategory] = useState("all");
   const [selectedIds, setSelectedIds] = useState([]);
   const [rejectReason, setRejectReason] = useState("");
@@ -236,9 +184,7 @@ const ManagerData = () => {
 
   const userRole = selectedCompany?.role ?? user?.role ?? "guest";
 
-  const approvalProjects = STEP12_UI_FIXTURE_ENABLED
-    ? APPROVAL_PROJECT_PREVIEW_ROWS
-    : approvalProjectsFromStore;
+  const approvalProjects = approvalProjectsFromStore;
 
   const isRollupResponseApproval = approvalCycleType === "ROLLUP_RESPONSE";
   const approvalBatchId = isRollupResponseApproval
@@ -260,18 +206,19 @@ const ManagerData = () => {
     effectiveApprovalProject?.reportingYear ?? reportingYear;
 
   const selectedProjectReadOnlyYn = Boolean(effectiveApprovalProject?.readOnlyYn);
+  const hasValidRollupApprovalContext =
+    !isRollupResponseApproval ||
+    (
+      Number.isInteger(approvalBatchId) &&
+      approvalBatchId > 0 &&
+      selectedProjectMatchesRollupBatch &&
+      Boolean(effectiveApprovalProject)
+    );
+  const hasValidApprovalContext = isRollupResponseApproval
+    ? hasValidRollupApprovalContext
+    : Boolean(effectiveApprovalProject);
 
-  const hasConsultant = useMemo(
-    () =>
-      safeArray(users).some((entry) => {
-        const roleText = String(entry.role || "").toUpperCase();
-        return (
-          entry.company === selectedCompanyName &&
-          (roleText.includes("CONSULTANT") || entry.relations?.consultant)
-        );
-      }),
-    [users, selectedCompanyName]
-  );
+  const hasConsultant = false;
 
   const fallbackApprovalProject = {
     runId: null,
@@ -342,7 +289,6 @@ const ManagerData = () => {
     if (location.state?.skipProjectModal && selectedApprovalProject) {
       // Retain the injected project context, do not open modal
       queueMicrotask(() => {
-        setInputs([]);
         setSelectedIds([]);
         setDataPage(1);
       });
@@ -351,19 +297,11 @@ const ManagerData = () => {
 
     dispatch(clearApprovalProject());
     queueMicrotask(() => {
-      setInputs([]);
       setSelectedIds([]);
       setDataPage(1);
     });
 
     if (!companyId) return;
-
-    if (STEP12_UI_FIXTURE_ENABLED) {
-      queueMicrotask(() => {
-        setIsApprovalProjectModalOpen(true);
-      });
-      return;
-    }
 
     dispatch(fetchApprovalProjects({ companyId }))
       .unwrap()
@@ -415,29 +353,12 @@ const ManagerData = () => {
   }, [cycleTypeQuery, dispatch, reportingYear, rollupResponseBatchId]);
 
   const fetchData = useCallback(async () => {
-    if (USE_LEGACY_USER_FIXTURE) {
-      setUsers(mockUsers);
-    }
-
-    if (
-      !companyId ||
-      (
-        isRollupResponseApproval
-          ? !approvalBatchId || !selectedProjectMatchesRollupBatch
-          : !effectiveApprovalProject
-      )
-    ) {
-      setInputs([]);
-      return;
-    }
-
-    if (STEP12_UI_FIXTURE_ENABLED) {
-      setInputs([]);
+    if (!companyId || !hasValidApprovalContext) {
       return;
     }
 
     try {
-      const response = await dispatch(
+      await dispatch(
         fetchApprovalItems({
           companyId,
           reportingYear: approvalReportingYear,
@@ -446,11 +367,8 @@ const ManagerData = () => {
           batchId: approvalBatchId,
         })
       ).unwrap();
-      const items = safeArray(response?.data?.items ?? response?.items);
-      setInputs(items.map(mapApprovalItemToInput));
     } catch (error) {
       console.error("Approval inbox fetch failed:", error);
-      setInputs([]);
     }
   }, [
     approvalCycleType,
@@ -458,9 +376,7 @@ const ManagerData = () => {
     approvalReportingYear,
     companyId,
     dispatch,
-    effectiveApprovalProject,
-    isRollupResponseApproval,
-    selectedProjectMatchesRollupBatch,
+    hasValidApprovalContext,
   ]);
 
   useEffect(() => {
@@ -469,12 +385,10 @@ const ManagerData = () => {
     });
   }, [fetchData]);
 
-  useEffect(() => {
-    if (STEP12_UI_FIXTURE_ENABLED) return;
-    queueMicrotask(() => {
-      setInputs(safeArray(approvalItems).map(mapApprovalItemToInput));
-    });
-  }, [approvalItems]);
+  const inputs = useMemo(() => {
+    if (!hasValidApprovalContext) return [];
+    return safeArray(approvalItems).map(mapApprovalItemToInput);
+  }, [approvalItems, hasValidApprovalContext]);
 
   const kpi = useMemo(
     () =>
@@ -513,6 +427,14 @@ const ManagerData = () => {
 
   const dispatchApprovalMutation = useCallback(
     async (metricId, status, commentText = "") => {
+      if (isRollupResponseApproval && !approvalBatchId) {
+        showDefaultAlert(
+          "오류",
+          "ROLLUP_RESPONSE Batch 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
+          "error"
+        );
+        return false;
+      }
       const payload = buildApprovalPayload(metricId, commentText);
       if (status === "REVIEWED") {
         return dispatch(reviewOnboardingApproval({ payload, batchId: approvalBatchId })).unwrap();
@@ -525,7 +447,7 @@ const ManagerData = () => {
       }
       throw new Error(`Unsupported approval action: ${status}`);
     },
-    [approvalBatchId, buildApprovalPayload, dispatch]
+    [approvalBatchId, buildApprovalPayload, dispatch, isRollupResponseApproval]
   );
 
   const handleFetchApprovalDetail = useCallback(
@@ -549,6 +471,14 @@ const ManagerData = () => {
       showDefaultAlert("알림", "완료된 프로젝트는 읽기 전용입니다.", "info");
       return false;
     }
+    if (isRollupResponseApproval && !approvalBatchId) {
+      showDefaultAlert(
+        "오류",
+        "ROLLUP_RESPONSE Batch 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
+        "error"
+      );
+      return false;
+    }
 
     const normalizedStatus = normalizeStatus(status);
     if (normalizedStatus === "REJECTED" && !commentText?.trim()) {
@@ -562,7 +492,8 @@ const ManagerData = () => {
     if (!ok) return false;
 
     try {
-      await dispatchApprovalMutation(id, normalizedStatus, commentText);
+      const mutationResult = await dispatchApprovalMutation(id, normalizedStatus, commentText);
+      if (mutationResult === false) return false;
       await fetchData();
       showDefaultAlert("완료", "승인 작업이 처리되었습니다.", "success");
       return true;
@@ -580,6 +511,14 @@ const ManagerData = () => {
   const handleBulkAction = async (status, commentText = "") => {
     if (selectedProjectReadOnlyYn) {
       showDefaultAlert("알림", "완료된 프로젝트는 읽기 전용입니다.", "info");
+      return false;
+    }
+    if (isRollupResponseApproval && !approvalBatchId) {
+      showDefaultAlert(
+        "오류",
+        "ROLLUP_RESPONSE Batch 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
+        "error"
+      );
       return false;
     }
     if (!selectedIds.length) return false;
@@ -740,32 +679,39 @@ const ManagerData = () => {
 
         {activeTab === "data" && (
           <div className="manager-data-tab-container">
-            <DataTab
-              activeService={activeService}
-              isLoading={isLoading}
-              activeDataCategory={activeDataCategory}
-              activeSubCategory={activeSubCategory}
-              selectedIds={selectedIds}
-              setSelectedIds={setSelectedIds}
-              pagedInputs={inputs}
-              totalDataPages={totalDataPages}
-              dataPage={dataPage}
-              userRole={userRole}
-              hasConsultant={hasConsultant}
-              statusFilter={statusFilter}
-              readOnlyYn={selectedProjectReadOnlyYn}
-              handleMainCategoryChange={handleMainCategoryChange}
-              setActiveSubCategory={setActiveSubCategory}
-              handleBulkAction={handleBulkAction}
-              fetchData={fetchData}
-              setDataPage={setDataPage}
-              handleAction={handleAction}
-              actionLoading={approvalMutationLoading}
-              approvalDetail={approvalDetail}
-              approvalDetailLoading={approvalDetailLoading}
-              approvalDetailError={approvalDetailError}
-              fetchApprovalDetail={handleFetchApprovalDetail}
-            />
+            {!hasValidRollupApprovalContext ? (
+              <div className="ob1-empty-state">
+                <p className="ob1-empty-title">ROLLUP_RESPONSE Batch 정보가 없습니다.</p>
+                <p className="ob1-empty-desc">받은 요청함에서 다시 진입해 주세요.</p>
+              </div>
+            ) : (
+              <DataTab
+                activeService={activeService}
+                isLoading={isLoading}
+                activeDataCategory={activeDataCategory}
+                activeSubCategory={activeSubCategory}
+                selectedIds={selectedIds}
+                setSelectedIds={setSelectedIds}
+                pagedInputs={inputs}
+                totalDataPages={totalDataPages}
+                dataPage={dataPage}
+                userRole={userRole}
+                hasConsultant={hasConsultant}
+                statusFilter={statusFilter}
+                readOnlyYn={selectedProjectReadOnlyYn}
+                handleMainCategoryChange={handleMainCategoryChange}
+                setActiveSubCategory={setActiveSubCategory}
+                handleBulkAction={handleBulkAction}
+                fetchData={fetchData}
+                setDataPage={setDataPage}
+                handleAction={handleAction}
+                actionLoading={approvalMutationLoading}
+                approvalDetail={approvalDetail}
+                approvalDetailLoading={approvalDetailLoading}
+                approvalDetailError={approvalDetailError}
+                fetchApprovalDetail={handleFetchApprovalDetail}
+              />
+            )}
           </div>
         )}
 

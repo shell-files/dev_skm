@@ -216,6 +216,56 @@ def findActiveInputWorkspace(companyId: int, reportingYear: int, requestedMetric
 def listSourceCompanyIds(batchId: int) -> list[int]:
     return [int(row["source_company_id"]) for row in listSources(batchId)]
 
+def listConflictingActiveSourceRequests(
+    sourceCompanyIds: list[int],
+    reportingYear: int,
+    rollupPurposeCode: str,
+    metricScopeCode: str,
+) -> list[dict]:
+    cleanedCompanyIds = [
+        int(companyId)
+        for companyId in sourceCompanyIds or []
+        if companyId is not None
+    ]
+    if not cleanedCompanyIds:
+        return []
+    placeholders = ", ".join(["?"] * len(cleanedCompanyIds))
+    return findAll(
+        f"""
+        SELECT
+            s.source_company_id AS sourceCompanyId,
+            s.esg_rollup_batch_id AS existingBatchId,
+            s.reporting_year AS reportingYear,
+            s.rollup_purpose_code AS rollupPurposeCode,
+            s.metric_scope_code AS metricScopeCode,
+            s.transfer_status AS transferStatus
+        FROM ESG_ROLLUP_SOURCE_STATUS s
+        JOIN ESG_ROLLUP_BATCH b
+          ON b.id = s.esg_rollup_batch_id
+         AND b.delete_yn = 0
+        WHERE s.source_company_id IN ({placeholders})
+          AND s.source_company_id <> s.parent_company_id
+          AND s.reporting_year = ?
+          AND s.rollup_purpose_code = ?
+          AND s.metric_scope_code = ?
+          AND s.delete_yn = 0
+          AND LOWER(COALESCE(s.transfer_status, '')) NOT IN ('sent', 'received')
+          AND LOWER(COALESCE(b.batch_status, '')) NOT IN (
+              'deleted',
+              'cancelled',
+              'canceled',
+              'archived'
+          )
+        ORDER BY s.source_company_id, s.esg_rollup_batch_id
+        """,
+        (
+            *cleanedCompanyIds,
+            reportingYear,
+            rollupPurposeCode,
+            metricScopeCode,
+        ),
+    ) or []
+
 def buildBatchCode(companyId: int, reportingYear: int, rollupPurposeCode: str) -> str:
     from datetime import datetime, timezone
     ts = datetime.now(timezone.utc).strftime("%y%m%d%H%M")
@@ -350,6 +400,78 @@ def updateSourceSentTx(cur, batchId: int, sourceCompanyId: int, requiredAtomicCo
         """,
         (requiredAtomicCount, batchId, sourceCompanyId),
     )
+
+def lockSourceStatusTx(cur, batchId: int, sourceCompanyId: int) -> dict:
+    cur.execute(
+        """
+        SELECT *
+        FROM ESG_ROLLUP_SOURCE_STATUS
+        WHERE esg_rollup_batch_id = ?
+          AND source_company_id = ?
+          AND delete_yn = 0
+        LIMIT 1
+        FOR UPDATE
+        """,
+        (batchId, sourceCompanyId),
+    )
+    return cur.fetchone() or {}
+
+def syncSourceReadinessTx(
+    cur,
+    batchId: int,
+    sourceCompanyId: int,
+    reportingYear: int,
+) -> dict:
+    from src.utils.rollupscoperepository import buildSourceReadinessTx
+
+    readiness = buildSourceReadinessTx(cur, batchId, [sourceCompanyId], reportingYear)
+    requiredAtomicCount = int(readiness.get("requiredAtomicCount") or 0)
+    missingAtomicIds = readiness.get("missingByCompany", {}).get(
+        str(sourceCompanyId),
+        readiness.get("missingAtomicMetricIds") or [],
+    )
+    approvedAtomicCount = max(requiredAtomicCount - len(missingAtomicIds), 0)
+    readyYn = requiredAtomicCount > 0 and not missingAtomicIds
+
+    if readyYn:
+        inputStatus = "approved"
+        approvalStatus = "approved"
+    elif approvedAtomicCount > 0:
+        inputStatus = "submitted"
+        approvalStatus = "submitted"
+    else:
+        inputStatus = "not_started"
+        approvalStatus = "pending"
+
+    cur.execute(
+        """
+        UPDATE ESG_ROLLUP_SOURCE_STATUS
+        SET input_status = ?,
+            approval_status = ?,
+            required_atomic_count = ?,
+            approved_atomic_count = ?,
+            missing_atomic_metric_ids_json = ?,
+            approved_at = CASE
+                WHEN ? = 1 THEN COALESCE(approved_at, CURRENT_TIMESTAMP)
+                ELSE NULL
+            END,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE esg_rollup_batch_id = ?
+          AND source_company_id = ?
+          AND delete_yn = 0
+        """,
+        (
+            inputStatus,
+            approvalStatus,
+            requiredAtomicCount,
+            approvedAtomicCount,
+            json.dumps(missingAtomicIds) if missingAtomicIds else None,
+            1 if readyYn else 0,
+            batchId,
+            sourceCompanyId,
+        ),
+    )
+    return readiness
 
 def updateSourceStatusTx(cur, batchId: int, requiredAtomicCount: int) -> None:
     cur.execute(

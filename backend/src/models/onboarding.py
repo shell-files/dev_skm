@@ -59,7 +59,8 @@ class OnboardingMetricsResponseDto(BaseModel):
     items: List[OnboardingMetricItemDto] = Field(default_factory=list)
     message: str = "OK"
     implementationStatus: str = "READY"
-
+    status: bool = True
+    message: Optional[str] = None
 
 class OnboardingValueItemDto(BaseModel):
     atomicMetricId: str

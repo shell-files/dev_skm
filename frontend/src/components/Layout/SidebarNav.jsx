@@ -2,13 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useAuth } from '@hooks/AuthContext.jsx';
 import ReportBasisSelectModal from "@components/UI/ReportBasisSelectModal.jsx";
-import { DEFAULT_REPORTING_YEAR } from "@stores/reportSlice";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
+import { decodeJson } from "@utils/Base64";
+import { DEFAULT_REPORTING_YEAR } from "@stores/reportSlice";
 
 const Sidebarnav = ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { selectedCompany, selectCompany, handleLogout, goHome, goMyPage, openAlarmCenter } = useAuth();
+    const { selectedCompany, selectCompany, handleLogout, goHome, goMyPage, openAlarmCenter, companies } = useAuth();
     const companyId =
         selectedCompany?.company_id ??
         selectedCompany?.companyId;
@@ -21,21 +22,20 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
     const isDept = role === "부서담당자" || role === "부서 담당자" || role === "EMPLOYEE" || role === "ASSIGNEE";
 
     // 메뉴 접근 권한
-    const showReportProj = isESG || isSysAdmin || isConsultant;
+    const showReportProj = isESG || isSysAdmin;
     const showOnboarding = isESG || isSysAdmin || isDept;
     const showDataApproval = isESG || isSysAdmin || isConsultant;
     const showPersonnel = isESG || isSysAdmin;
 
     // 아코디언 상태 관리
     const [expanded, setExpanded] = useState({
-        onboarding: false,
         service: true,
         admin: false,
         settings: false
     });
 
     const [filteredCompanies, setFilteredCompanies] = useState([]);
-    const [companies, setCompanies] = useState([]);
+    // const [companies, setCompanies] = useState([]);
     const [companie, setCompanie] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
 
@@ -104,21 +104,6 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
     };
 
     useEffect(() => {
-        const allCompanie = localStorage.getItem("companies");
-        const parsedCompanies = allCompanie ? JSON.parse(allCompanie) : [];
-        const arr = [
-            { "company_id": 0, "company_name": "선택하세요" },
-            ...parsedCompanies
-        ];
-        setCompanies(arr);
-        setFilteredCompanies(arr);
-        return () => {
-            window.removeEventListener('pointermove', handlePointerMove);
-            window.removeEventListener('pointerup', handlePointerUp);
-        };
-    }, []);
-
-    useEffect(() => {
         const timer = setTimeout(() => {
             handleScroll();
         }, 350);
@@ -171,10 +156,8 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
     const handleGoHome = () => { goHome(); if(window.innerWidth <= 800) setIsOpen(false); };
 
     return (
-        <aside
-            className={`sidebar ${isOpen ? "open" : "closed"}`}
-            id="globalSidebar"
-        >
+        <aside className={`sidebar ${isOpen ? "open" : "closed"}`} id="globalSidebar">
+
             <div className="nav-scroll-wrapper">
                 <div className="nav-scroll-area" ref={scrollRef}>
                     <div className="nav-group">
@@ -195,41 +178,8 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
                     {showOnboarding && (
                         <div className="nav-group">
-                            <div
-                                className="nav-item"
-                                onClick={() => toggleAccordion("onboarding")}
-                            >
-                                <div className="nav-accordion-header">
-                                    <span>데이터 입력</span>
-                                    <svg className={`nav-arrow ${expanded.onboarding ? "expanded" : ""}`} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M9 5l7 7-7 7"></path>
-                                    </svg>
-                                </div>
-                            </div>
-
-                            <div className={`nav-accordion-content ${expanded.onboarding ? "expanded" : ""}`}>
-                                <div className="inner-wrapper">
-                                    <div className="nav-item sub-item" onClick={() => {
-                                        if (!companyId) {
-                                            showDefaultAlert("오류", "회사를 먼저 선택해주세요", "error");
-                                            return;
-                                        }
-                                        handleReportNav();
-                                        if(window.innerWidth <= 800) setIsOpen(false);
-                                    }}>
-                                        내 프로젝트
-                                    </div>
-                                    <div className="nav-item sub-item" onClick={() => {
-                                        if (!companyId) {
-                                            showDefaultAlert("오류", "회사를 먼저 선택해주세요", "error");
-                                            return;
-                                        }
-                                        navigate("/onb?mode=ROLLUP_RESPONSE");
-                                        if(window.innerWidth <= 800) setIsOpen(false);
-                                    }}>
-                                        데이터 요청 목록
-                                    </div>
-                                </div>
+                            <div className="nav-item" onClick={handleReportNav}>
+                                <span>데이터 입력</span>
                             </div>
                         </div>
                     )}
@@ -278,16 +228,14 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                 </div>
             </div>
 
-            <div className="sidebar-footer">
-                <div className="search-container">
-                    <input type="text" className="company-search" id="companySearchInput" placeholder="회사 검색..." />
-                </div>
-                <select className="company-select" id="sidebarCompanySelect">
-                    <option value="SKM">SKM</option>
-                    <option value="HG">HG</option>
-                    <option value="TV">TV</option>
-                </select>
-            </div>
+            {
+              companies.length > 1 && 
+              <div className="sidebar-footer">
+                  <div className="search-container">
+                      <button type="button" className="company-search" onClick={()=>navigate('/companyselect')}>회사 선택</button>
+                  </div>
+              </div>
+            }
 
             <ReportBasisSelectModal 
                 isOpen={isBasisModalOpen} 
@@ -295,6 +243,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                 companyId={companyId}
                 reportingYear={selectedCompany?.reportingYear || DEFAULT_REPORTING_YEAR}
             />
+
         </aside>
     );
 }

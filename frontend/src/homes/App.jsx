@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Routes, Route } from "react-router";
+import { Routes, Route, Navigate, Outlet } from "react-router";
 import '@styles/App.css'
 import "@styles/mains.css";
 import NotFound from '@errors/NotFound.jsx';
@@ -15,16 +15,13 @@ import ManagerData from '@mains/ManagerData.jsx';
 import Dashboard from './Dashboard.jsx';
 import Headernav from '@components/Layout/HeaderNav.jsx'
 import Sidebarnav from '@components/Layout/SidebarNav.jsx'
-
-
-
-const Main = () => {
-  return (
-    <h1>MAIN</h1>
-  )
-}
+import Login from "@logins/Login";
+import SignUp from "@logins/SignUp";
+import CompanySelect from "@logins/CompanySelect";
+import { useAuth } from '@hooks/AuthContext.jsx';
 
 const App = () => {
+  const { isAuthReady, isLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(()=>{
     if (typeof window !== "undefined") {
       return window.innerWidth > 800;
@@ -43,8 +40,20 @@ const App = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  if (isLoading) return <></>;
+
+  if(!isAuthReady) {
+    return (
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        {/* <Route path="*" element={<NotFound />} /> */}
+      </Routes>
+    )
+  }
+
 	return (
-		<div id="main_page">
+    <div id="main_page">
       {/* 1. 상단 전역 헤더 배치 */}
       <Headernav
         isSidebarOpen={isSidebarOpen}
@@ -75,7 +84,7 @@ const App = () => {
         <main className="ob-body" style={{ flex: 1, width: '100%' }}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/company/:id" element={<Main />} />
+            <Route path="/companyselect" element={<CompanySelect />} />
             <Route path="/onb" element={<Onboarding />} />
             <Route path="/benchmk" element={<Benchmarking />} />
             <Route path="/result" element={<Result />} />
@@ -83,7 +92,6 @@ const App = () => {
             <Route path="/draft" element={<Draft />} />
             <Route path="/survey" element={<Survey />} />
             <Route path="/onboard" element={<Onboarding />} />
-            {/* <Route path="/dashboard" element={<Dashboard />} /> */}
             <Route path="/mypage" element={<Mypage />} />
             <Route path="/manager" element={<Manager />} />
             <Route path="/managerData" element={<ManagerData />} />

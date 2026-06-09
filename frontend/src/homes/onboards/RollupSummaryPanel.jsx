@@ -9,8 +9,6 @@ import {
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 import "@styles/onboarding1.css";
 import "@styles/onboardingModal.css";
-import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
-import { getFixtureRollupStatus } from "@/dev/step12UiPreview/fixtures";
 
 const purposeLabel = (code) => {
   const value = String(code || "").toUpperCase();
@@ -49,7 +47,6 @@ const numberOrZero = (value) => Number(value || 0);
 const RollupSummaryPanel = ({
   batchId,
   onCalculated,
-  rollupScenario,
   rollupPurposeCode = "DMA_PRECHECK",
   metricScopeCode = "G0_02_FINANCIAL_BASIS",
   onCalculate,
@@ -69,15 +66,10 @@ const RollupSummaryPanel = ({
   const [calculating, setCalculating] = useState(false);
   const [error, setError] = useState(null);
 
-  const statusInfo = useMemo(() => {
-    if (STEP12_UI_FIXTURE_ENABLED && getFixtureRollupStatus(rollupScenario)) {
-      return getFixtureRollupStatus(rollupScenario);
-    }
-    return reduxStatusInfo;
-  }, [reduxStatusInfo, rollupScenario]);
+  const statusInfo = useMemo(() => reduxStatusInfo, [reduxStatusInfo]);
 
   const fetchRollupState = useCallback(async () => {
-    if (!batchId || STEP12_UI_FIXTURE_ENABLED) return;
+    if (!batchId) return;
     setError(null);
     try {
       await Promise.all([
@@ -100,9 +92,9 @@ const RollupSummaryPanel = ({
     };
   }, [fetchRollupState]);
 
-  if (!batchId && !STEP12_UI_FIXTURE_ENABLED && workflow?.nextAction !== "REQUEST_ROLLUP") return null;
+  if (!batchId && workflow?.nextAction !== "REQUEST_ROLLUP") return null;
 
-  if (batchId && (loadingStatus || loadingSources) && !statusInfo && !STEP12_UI_FIXTURE_ENABLED) {
+  if (batchId && (loadingStatus || loadingSources) && !statusInfo) {
     return (
       <div className="ob1-rollup-panel ob1-rollup-panel-v2">
         <div className="ob1-table-loading" style={{ padding: "16px", display: "flex", gap: "8px", alignItems: "center" }}>
@@ -114,7 +106,7 @@ const RollupSummaryPanel = ({
   }
 
   const activeError = error || statusError?.message || sourceError?.message;
-  if (activeError && !STEP12_UI_FIXTURE_ENABLED) {
+  if (activeError) {
     return (
       <div className="ob1-rollup-panel ob1-rollup-panel-v2">
         <div className="ob1-inline-error">
@@ -128,7 +120,7 @@ const RollupSummaryPanel = ({
     );
   }
 
-  if (batchId && !statusInfo && !STEP12_UI_FIXTURE_ENABLED) return null;
+  if (batchId && !statusInfo) return null;
 
   const requestedCount = numberOrZero(statusInfo?.requestedCount);
   const sentCount = numberOrZero(statusInfo?.sentCount);
@@ -159,15 +151,11 @@ const RollupSummaryPanel = ({
 
     setCalculating(true);
     try {
-      if (!STEP12_UI_FIXTURE_ENABLED) {
-        await dispatch(calculateRollupBatch({ batchId })).unwrap();
-        await Promise.all([
-          dispatch(fetchRollupBatchStatus({ batchId })).unwrap(),
-          dispatch(fetchRollupBatchSources({ batchId })).unwrap(),
-        ]);
-      } else {
-        await new Promise((resolve) => setTimeout(resolve, 600));
-      }
+      await dispatch(calculateRollupBatch({ batchId })).unwrap();
+      await Promise.all([
+        dispatch(fetchRollupBatchStatus({ batchId })).unwrap(),
+        dispatch(fetchRollupBatchSources({ batchId })).unwrap(),
+      ]);
       showDefaultAlert("성공", "데이터 취합이 완료되었습니다.", "success");
       onCalculated?.();
     } catch (err) {

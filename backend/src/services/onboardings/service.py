@@ -192,6 +192,7 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
         return 0
     from src.utils.db import getConn
     from src.utils import onboardinginputrepository as inputRepo
+    from src.utils import rolluprepository as rollupRepo
     conn = getConn()
     if not conn:
         raise RuntimeError("DB connection failed")
@@ -236,7 +237,16 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                     oldByAtomic[atomicId] = cur.fetchone()
 
                 # Save
-                savedCount += inputRepo.upsertMetricInputValuesTx(cur, **group)
+                savedCount += inputRepo.upsertMetricInputValuesTx(
+                    cur,
+                    cycleId=cycleId,
+                    companyId=companyId,
+                    reportingYear=reportingYear,
+                    metricId=metricId,
+                    assignmentId=group.get("assignmentId"),
+                    values=values,
+                    userId=group.get("userId"),
+                )
 
                 # Detect changed atomics
                 changedAtomicIds = []
@@ -253,6 +263,13 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                         companyId=companyId,
                         reportingYear=reportingYear,
                         changedAtomicMetricIds=changedAtomicIds,
+                    )
+                if group.get("batchId") is not None:
+                    rollupRepo.syncSourceReadinessTx(
+                        cur,
+                        batchId=int(group["batchId"]),
+                        sourceCompanyId=companyId,
+                        reportingYear=reportingYear,
                     )
         conn.commit()
         return savedCount
@@ -345,7 +362,15 @@ def validateMetricValues(
 
 
 def saveMetricValueGroups(groups: list[dict]) -> int:
-    return repo.upsertMetricValueGroups([group["group"] if "group" in group else group for group in groups])
+    sanitizedGroups = []
+    for item in groups:
+        group = item["group"] if "group" in item else item
+        sanitizedGroups.append({
+            key: value
+            for key, value in group.items()
+            if key != "batchId"
+        })
+    return repo.upsertMetricValueGroups(sanitizedGroups)
 
 
 def requireCycle(companyId: int, reportingYear: int, cycleType: str, batchId: Optional[int] = None) -> dict:

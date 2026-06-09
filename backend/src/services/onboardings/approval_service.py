@@ -211,6 +211,13 @@ def approveMetricApproval(
                 requiredAtomicIds,
                 expectedPromotedAtomicIds=promotedAtomicIds,
             ):
+                syncRollupSourceReadinessIfNeededTx(
+                    cur,
+                    cycle=cycle,
+                    companyId=companyId,
+                    reportingYear=reportingYear,
+                    batchId=batchId,
+                )
                 conn.commit()
                 return buildMetricApprovalSummary(
                     companyId,
@@ -258,6 +265,13 @@ def approveMetricApproval(
                 actorUserId=actorUserId,
                 assigneeUserId=assignment.get("assignee_user_id") if assignment else None,
                 commentText=commentText,
+            )
+            syncRollupSourceReadinessIfNeededTx(
+                cur,
+                cycle=cycle,
+                companyId=companyId,
+                reportingYear=reportingYear,
+                batchId=batchId,
             )
         conn.commit()
         return buildMetricApprovalSummary(
@@ -467,6 +481,29 @@ def requireWritableCycleTx(cur, cycle: dict, companyId: int, batchId: Optional[i
         err = ValueError("ROLLUP_RESPONSE workspace is read-only after transfer.")
         err.statusCode = 409
         raise err
+
+def syncRollupSourceReadinessIfNeededTx(
+    cur,
+    *,
+    cycle: dict,
+    companyId: int,
+    reportingYear: int,
+    batchId: Optional[int] = None,
+) -> None:
+    if (
+        str(cycle.get("cycle_type") or "").strip().upper()
+        != scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE
+        or batchId is None
+    ):
+        return
+    from src.utils import rolluprepository as rollupRepo
+
+    rollupRepo.syncSourceReadinessTx(
+        cur,
+        batchId=int(batchId),
+        sourceCompanyId=companyId,
+        reportingYear=reportingYear,
+    )
 
 def normalizeCycleType(cycleType: str) -> str:
     normalizedCycleType = str(cycleType or scopeRepo.CYCLE_TYPE_PRE_DMA_G0).strip().upper()

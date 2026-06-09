@@ -2,7 +2,7 @@
 from typing import Optional
 from src.utils.db import findAll, findOne
 from src.utils.calculationengine import normalizeSource, topologicalSortRules
-from src.utils.calculationrepository import listApprovedEntityFacts
+from src.utils.calculationrepository import listApprovedEntityFacts, listApprovedEntityFactsTx
 
 def listEffectiveSourceCompanies(parentCompanyId: int, reportingYear: int, rollupPurposeCode: str) -> list[dict]:
     # strict DB-driven relation. self relation check is done by caller if needed
@@ -412,6 +412,12 @@ def normalizeFact(row: dict) -> dict:
         "approvalStatus": row.get("approvalStatus") or row.get("approval_status"),
     }
 
+def listApprovedFactsByCompanyTx(cur, companyIds: list[int], reportingYear: int, atomicMetricIds: list[str]) -> list[dict]:
+    if not companyIds or not atomicMetricIds:
+        return []
+    rows = listApprovedEntityFactsTx(cur, companyIds, reportingYear, atomicMetricIds)
+    return [normalizeFact(r) for r in rows]
+
 def listApprovedFactsByCompany(companyIds: list[int], reportingYear: int, atomicMetricIds: list[str]) -> list[dict]:
     if not companyIds or not atomicMetricIds:
         return []
@@ -424,8 +430,11 @@ def listPriorYearApprovedFactsByCompany(companyIds: list[int], reportingYear: in
     rows = listApprovedEntityFacts(companyIds, reportingYear - 1, atomicMetricIds)
     return [normalizeFact(r) for r in rows]
 
-def buildSourceReadiness(batchId: int, sourceCompanyIds: list[int], reportingYear: int) -> dict:
-    requiredAtomicIds = resolveExternalEntitySourceAtomicIds(batchId)
+def buildSourceReadinessFromFacts(
+    requiredAtomicIds: list[str],
+    sourceCompanyIds: list[int],
+    facts: list[dict],
+) -> dict:
     requiredFactCount = len(requiredAtomicIds) * len(sourceCompanyIds)
     if not requiredAtomicIds or not sourceCompanyIds:
         return {
@@ -443,7 +452,6 @@ def buildSourceReadiness(batchId: int, sourceCompanyIds: list[int], reportingYea
             "readyYn": False
         }
 
-    facts = listApprovedFactsByCompany(sourceCompanyIds, reportingYear, requiredAtomicIds)
     approvedKeys = set()
     for f in facts:
         approvedKeys.add((f["companyId"], f["atomicMetricId"]))
@@ -475,3 +483,13 @@ def buildSourceReadiness(batchId: int, sourceCompanyIds: list[int], reportingYea
         "readySourceCompanyCount": readySourceCompanyCount,
         "readyYn": len(allMissing) == 0
     }
+
+def buildSourceReadinessTx(cur, batchId: int, sourceCompanyIds: list[int], reportingYear: int) -> dict:
+    requiredAtomicIds = resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
+    facts = listApprovedFactsByCompanyTx(cur, sourceCompanyIds, reportingYear, requiredAtomicIds)
+    return buildSourceReadinessFromFacts(requiredAtomicIds, sourceCompanyIds, facts)
+
+def buildSourceReadiness(batchId: int, sourceCompanyIds: list[int], reportingYear: int) -> dict:
+    requiredAtomicIds = resolveExternalEntitySourceAtomicIds(batchId)
+    facts = listApprovedFactsByCompany(sourceCompanyIds, reportingYear, requiredAtomicIds)
+    return buildSourceReadinessFromFacts(requiredAtomicIds, sourceCompanyIds, facts)

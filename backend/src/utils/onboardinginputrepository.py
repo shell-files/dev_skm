@@ -146,7 +146,16 @@ def upsertMetricValueGroups(groups: list[dict]) -> int:
         savedCount = 0
         with conn.cursor(dictionary=True) as cur:
             for group in groups:
-                savedCount += upsertMetricInputValuesTx(cur, **group)
+                savedCount += upsertMetricInputValuesTx(
+                    cur,
+                    cycleId=group["cycleId"],
+                    companyId=group["companyId"],
+                    reportingYear=group["reportingYear"],
+                    metricId=group["metricId"],
+                    assignmentId=group.get("assignmentId"),
+                    values=group["values"],
+                    userId=group.get("userId"),
+                )
         conn.commit()
         return savedCount
     except Exception:

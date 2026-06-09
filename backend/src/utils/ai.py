@@ -148,35 +148,65 @@ def getFactData(companyId, reportingYear):
 # ==================================================
 # 템플릿 치환
 # ==================================================
+def formatUnit(value, unit):
+    if value is None or value == "":
+        return "[데이터 미집계]"
+
+    # 1. unit 없는 경우: 완전 문자열 처리
+    if not unit:
+        return str(value).strip()
+
+    # 2. 숫자 변환 시도 (unit 있는 경우만)
+    try:
+        num = float(value)
+    except:
+        return str(value).strip()
+
+    # 3. unit별 포맷
+    if unit == "%":
+        return f"{num:.2f}%"
+
+    if unit == "KRW":
+        return f"{num:,.0f} {unit}"
+
+    if unit in ["MWh", "tCO2eq"]:
+        return f"{num:,.2f} {unit}"
+
+    if unit in ["개", "개사", "건", "명"]:
+        return f"{num:,.0f} {unit}"
+
+    if unit == "시간":
+        return f"{num:,.1f} 시간"
+
+    if unit == "시간/명":
+        return f"{num:,.2f} 시간/명"
+
+    return f"{num} {unit}"
+
 
 def replaceTemplate(template, factData):
     usedMetrics = set()
+
     def replaceToken(match):
         key = match.group(1)
         usedMetrics.add(key)
+
         data = factData.get(key)
         if not data:
             return "[데이터 미집계]"
-        
+
         value = data.get("value", "")
         unit = data.get("unit", "")
-        
-        if value == "":
-            return "[데이터 미집계]"
-        try:
-            num = float(value)
-            formatted = f"{int(num):,}" if num.is_integer() else f"{num:,.2f}"
-            return f"{formatted} {unit}".strip()
-        except:
-            return f"{value} {unit}".strip()
+
+        return formatUnit(value, unit)
 
     companyName = factData.get("COMPANY_NAME", {}).get("value", "A_GROUP")
 
     filledText = re.sub(
-            r"\{(.*?)\}",
-            replaceToken,
-            template
-        ).replace("A_GROUP", companyName)
+        r"\{(.*?)\}",
+        replaceToken,
+        template
+    ).replace("A_GROUP", companyName)
 
     return filledText, list(usedMetrics)
 

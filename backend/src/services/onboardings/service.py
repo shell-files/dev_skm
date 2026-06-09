@@ -76,10 +76,14 @@ def listMetrics(
     reportingYear: Optional[int],
     cycleType: str,
     metricId: Optional[str] = None,
+    batchId: Optional[int] = None,
     userModel=None,
 ) -> OnboardingMetricsResponseDto:
     year = repo.resolveReportingYear(companyId, reportingYear)
-    cycle = requireCycle(companyId, year, cycleType)
+    if cycleType == repo.CYCLE_TYPE_ROLLUP_RESPONSE and batchId:
+        cycle = requireCycle(companyId, year, cycleType, batchId=batchId)
+    else:
+        cycle = requireCycle(companyId, year, cycleType)
     allScopes = repo.listMetricScopes(int(cycle["id"]), companyId)
     if not allScopes:
         raise ValueError(scopeNotReadyMessage(cycle.get("cycle_type") or cycleType))
@@ -97,7 +101,7 @@ def listMetrics(
         )
     if metricId:
         scopes = [row for row in allScopes if row.get("metric_id") == metricId]
-        scopes = listVisibleMetricScopesForUser(scopes, assignmentRows, userModel)
+        scopes, status, message = listVisibleMetricScopesForUser(scopes, assignmentRows, userModel)
         if not scopes:
             raise ValueError(f"Unsupported metricId for cycle scope: {metricId}")
     metricIds = [row["metric_id"] for row in scopes]
@@ -111,6 +115,16 @@ def listMetrics(
     )
     assignmentByMetric = {row["metric_id"]: buildAssignment(row) for row in assignmentRows}
     atomicRowsByMetric = groupBy(masterRows, "metric_id")
+
+    from src.utils.onboardingapprovalrepository import listCycleApprovalInboxRows
+    approvalSummaries = listCycleApprovalInboxRows(
+        companyId=companyId,
+        reportingYear=year,
+        cycleType=actualCycleType,
+        assignedOnlyYn=False,
+        batchId=batchId,
+    )
+    approvalByMetric = {row["metricId"]: row.get("approvalStatus") for row in approvalSummaries}
 
     items = []
     for scope in scopes:
@@ -133,6 +147,7 @@ def listMetrics(
                 inputRequiredYn=bool(scope.get("input_required_yn")),
                 approvalRequiredYn=bool(scope.get("approval_required_yn")),
                 approvalPolicyCode=scope.get("approval_policy_code") or "INPUT_APPROVAL_ONLY",
+                approvalStatus=approvalByMetric.get(scopedMetricId),
                 rollupReadonlyYn=bool(scope.get("rollup_readonly_yn")),
                 displayOrder=int(scope.get("display_order") or 0),
                 assignment=assignmentByMetric.get(scopedMetricId),
@@ -188,6 +203,17 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                 reportingYear = group["reportingYear"]
                 metricId = group["metricId"]
                 values = group["values"]
+                cycleId = group["cycleId"]
+                
+                # Check cycle writeability for ROLLUP_RESPONSE
+                cur.execute(
+                    "SELECT cycle_type, parent_rollup_batch_id FROM ESG_ONBOARDING_CYCLE WHERE id = ?",
+                    (cycleId,),
+                )
+                cycleRow = cur.fetchone()
+                if cycleRow:
+                    from src.services.onboardings.approval_service import requireWritableCycleTx
+                    requireWritableCycleTx(cur, cycleRow, companyId, batchId=group.get("batchId"))
 
                 # Collect old values for change detection
                 oldByAtomic = {}
@@ -266,7 +292,7 @@ def validateMetricValues(
     userId: Optional[int] = None,
     userModel=None,
 ) -> dict:
-    cycle = requireCycle(request.companyId, request.reportingYear, request.cycleType)
+    cycle = requireCycle(request.companyId, request.reportingYear, request.cycleType, batchId=request.batchId)
     checkMetricInputPermission(
         cycle=cycle,
         companyId=request.companyId,
@@ -278,6 +304,7 @@ def validateMetricValues(
         reportingYear=request.reportingYear,
         cycleType=request.cycleType,
         metricId=metricId,
+        batchId=request.batchId,
         userModel=userModel,
     )
     metric = metrics.items[0]
@@ -312,6 +339,7 @@ def validateMetricValues(
             "assignmentId": assignmentId,
             "values": cleanedValues,
             "userId": userId,
+            "batchId": request.batchId,
         },
     }
 
@@ -320,13 +348,12 @@ def saveMetricValueGroups(groups: list[dict]) -> int:
     return repo.upsertMetricValueGroups([group["group"] if "group" in group else group for group in groups])
 
 
-def requireCycle(companyId: int, reportingYear: int, cycleType: str) -> dict:
-    normalizedCycleType = str(cycleType or "").strip().upper()
-    if normalizedCycleType not in SUPPORTED_INPUT_CYCLE_TYPES:
-        raise ValueError("Only PRE_DMA_G0, POST_DMA_DISCLOSURE, or ROLLUP_RESPONSE cycleType is supported")
-    cycle = repo.getCycle(companyId, reportingYear, normalizedCycleType)
-    if not cycle or str(cycle.get("cycle_status") or "").strip().lower() != "active":
-        raise ValueError(cycleNotReadyMessage(normalizedCycleType))
+def requireCycle(companyId: int, reportingYear: int, cycleType: str, batchId: Optional[int] = None) -> dict:
+    cycle = repo.getCycle(companyId, reportingYear, cycleType, batchId=batchId)
+    if not cycle:
+        raise ValueError(scopeNotReadyMessage(cycleType))
+    if str(cycle.get("cycle_status") or "").strip().lower() != "active":
+        raise ValueError(scopeNotReadyMessage(cycleType))
     return cycle
 
 
@@ -560,7 +587,7 @@ def bulkAssign(request: OnboardingAssignmentBulkAssignRequestDto, userModel) -> 
     checkScope(request.companyId, userModel)
     checkManager(userModel)
     normalizedCycleType = checkAssignmentCycleType(request.cycleType)
-    cycle = requireCycle(request.companyId, request.reportingYear, normalizedCycleType)
+    cycle = requireCycle(request.companyId, request.reportingYear, normalizedCycleType, batchId=getattr(request, "batchId", None))
     metricIds = repo.validateCycleMetricIds(int(cycle["id"]), request.companyId, request.metricIds)
     result = assignmentRepo.bulkAssignMetrics(
         companyId=request.companyId,
@@ -594,11 +621,12 @@ def listAssignmentItems(
     reportingYear: int,
     cycleType: str,
     userModel,
+    batchId: Optional[int] = None,
 ) -> OnboardingAssignmentListResponseDto:
     checkScope(companyId, userModel)
     checkManager(userModel)
     normalizedCycleType = checkAssignmentCycleType(cycleType)
-    cycle = requireCycle(companyId, reportingYear, normalizedCycleType)
+    cycle = requireCycle(companyId, reportingYear, normalizedCycleType, batchId=batchId)
     items = [OnboardingAssignmentItemDto(**item) for item in assignmentRepo.listAssignments(companyId, reportingYear, cycle)]
     return OnboardingAssignmentListResponseDto(
         companyId=companyId,
@@ -615,11 +643,12 @@ def getAssignmentItem(
     reportingYear: int,
     cycleType: str,
     userModel,
+    batchId: Optional[int] = None,
 ) -> OnboardingAssignmentDetailResponseDto:
     checkScope(companyId, userModel)
     checkManager(userModel)
     normalizedCycleType = checkAssignmentCycleType(cycleType)
-    cycle = requireCycle(companyId, reportingYear, normalizedCycleType)
+    cycle = requireCycle(companyId, reportingYear, normalizedCycleType, batchId=batchId)
     metricIds = repo.validateCycleMetricIds(int(cycle["id"]), companyId, [metricId])
     response = OnboardingAssignmentListResponseDto(
         companyId=companyId,
@@ -645,6 +674,7 @@ def patchAssignment(metricId: str, request: OnboardingAssignmentPatchRequestDto,
         companyId=request.companyId,
         reportingYear=request.reportingYear,
         cycleType=request.cycleType,
+        batchId=getattr(request, "batchId", None),
         metricIds=[metricId],
         assigneeEmail=request.assigneeEmail,
         dueDate=request.dueDate,
@@ -657,7 +687,7 @@ def bulkUnassign(request: OnboardingAssignmentBulkUnassignRequestDto, userModel)
     checkScope(request.companyId, userModel)
     checkManager(userModel)
     normalizedCycleType = checkAssignmentCycleType(request.cycleType)
-    cycle = requireCycle(request.companyId, request.reportingYear, normalizedCycleType)
+    cycle = requireCycle(request.companyId, request.reportingYear, normalizedCycleType, batchId=getattr(request, "batchId", None))
     metricIds = repo.validateCycleMetricIds(int(cycle["id"]), request.companyId, request.metricIds)
     result = assignmentRepo.bulkUnassignMetrics(
         companyId=request.companyId,
@@ -705,7 +735,7 @@ def checkManager(userModel) -> None:
     raise PermissionError("Only ESG담당자 or 관리자 can manage onboarding assignments")
 
 
-def listVisibleMetricScopesForUser(scopes: list[dict], assignmentRows: list[dict], userModel) -> list[dict]:
+def listVisibleMetricScopesForUser(scopes: list[dict], assignmentRows: list[dict], userModel) -> tuple[list[dict], bool, str]:
     if userModel is None or isAssignmentManager(userModel):
         return scopes, True, ""
     if isConsultant(userModel):
@@ -785,7 +815,7 @@ def isReviewer(userModel) -> bool:
 
 def submitApproval(request: OnboardingApprovalRequestDto, userModel) -> OnboardingApprovalActionResponseDto:
     checkScope(request.companyId, userModel)
-    cycle = requireCycle(request.companyId, request.reportingYear, request.cycleType)
+    cycle = requireCycle(request.companyId, request.reportingYear, request.cycleType, batchId=getattr(request, "batchId", None))
     checkMetricInputPermission(
         cycle=cycle,
         companyId=request.companyId,
@@ -799,6 +829,7 @@ def submitApproval(request: OnboardingApprovalRequestDto, userModel) -> Onboardi
         metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
         commentText=getattr(request, "commentText", None),
+        batchId=getattr(request, "batchId", None),
     )
     return actionResponse(summary, "Submitted")
 
@@ -813,6 +844,7 @@ def reviewApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
         metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
         commentText=getattr(request, "commentText", None),
+        batchId=getattr(request, "batchId", None),
     )
     return actionResponse(summary, "Reviewed")
 
@@ -827,6 +859,7 @@ def approveApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
         metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
         commentText=getattr(request, "commentText", None),
+        batchId=getattr(request, "batchId", None),
     )
     return actionResponse(summary, "Approved")
 
@@ -844,6 +877,7 @@ def rejectApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
         metricId=request.metricId,
         actorUserId=getActorUserId(userModel),
         commentText=commentText,
+        batchId=getattr(request, "batchId", None),
     )
     return actionResponse(summary, "Rejected")
 
@@ -855,6 +889,7 @@ def listApprovals(
     cycleType: Optional[str],
     assignedOnlyYn: bool,
     userModel,
+    batchId: Optional[int] = None,
 ) -> OnboardingApprovalListResponseDto:
     checkScope(companyId, userModel)
     rows = repo.listCycleApprovalInboxRows(
@@ -863,6 +898,7 @@ def listApprovals(
         status=status,
         cycleType=cycleType,
         assignedOnlyYn=assignedOnlyYn,
+        batchId=batchId,
     )
     if isEmployee(userModel):
         rows = [row for row in rows if checkMetricStatusPermission(row, userModel)]
@@ -878,9 +914,10 @@ def getApprovalStatus(
     metricId: str,
     userModel,
     cycleType: str = CYCLE_TYPE_PRE_DMA_G0,
+    batchId: Optional[int] = None,
 ) -> OnboardingApprovalStatusResponseDto:
     checkScope(companyId, userModel)
-    summary = approvalService.buildMetricApprovalSummary(companyId, reportingYear, metricId, cycleType)
+    summary = approvalService.buildMetricApprovalSummary(companyId, reportingYear, metricId, cycleType, batchId=batchId)
     if not checkMetricStatusPermission(summary, userModel):
         raise PermissionError("Only approvers, reviewers, or the assigned employee can view approval status")
     return OnboardingApprovalStatusResponseDto(data=statusDto(summary, userModel))
@@ -892,10 +929,11 @@ def getApprovalDetail(
     metricId: str,
     cycleType: str,
     userModel,
+    batchId: Optional[int] = None,
 ) -> OnboardingApprovalDetailResponseDto:
     checkScope(companyId, userModel)
-    cycle = requireCycle(companyId, reportingYear, cycleType)
-    summary = approvalService.buildMetricApprovalSummary(companyId, reportingYear, metricId, cycleType)
+    cycle = requireCycle(companyId, reportingYear, cycleType, batchId=batchId)
+    summary = approvalService.buildMetricApprovalSummary(companyId, reportingYear, metricId, cycleType, batchId=batchId)
     if not checkMetricStatusPermission(summary, userModel):
         raise PermissionError("Only approvers, reviewers, or the assigned employee can view approval status")
     scopes = repo.listMetricScopes(int(cycle["id"]), companyId, metricId)

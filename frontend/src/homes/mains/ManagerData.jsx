@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useSearchParams } from "react-router";
+import { useSearchParams, useLocation } from "react-router";
 import "@styles/Manager.css";
 import DataTab from "./DataTab.jsx";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
@@ -14,6 +14,7 @@ import {
   fetchApprovalItems,
   fetchOnboardingApprovalDetail,
   fetchApprovalProjects,
+  fetchRollupRequestDetail,
   approveOnboardingApproval,
   selectApprovalProject,
   rejectOnboardingApproval,
@@ -25,6 +26,7 @@ const PAGE_SIZE = 10;
 const SUPPORTED_APPROVAL_CYCLE_TYPES = [
   "PRE_DMA_G0",
   "POST_DMA_DISCLOSURE",
+  "ROLLUP_RESPONSE",
 ];
 
 const LEGACY_USER_FIXTURE_CATEGORY_MAP = {
@@ -152,6 +154,7 @@ const formatStageLabel = (label) => {
 const ManagerData = () => {
   const dispatch = useDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const approvalItems = useSelector((state) => state.report?.approval?.items ?? []);
   const approvalLoading = useSelector((state) => state.report?.loading?.approvals ?? false);
   const approvalError = useSelector((state) => state.report?.error?.approvals ?? null);
@@ -213,6 +216,11 @@ const ManagerData = () => {
   const cycleTypeQuery = String(searchParams.get("cycleType") || "")
     .trim()
     .toUpperCase();
+  const batchIdQuery = searchParams.get("batchId");
+  const rollupResponseBatchId = useMemo(() => {
+    const parsed = Number(batchIdQuery);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+  }, [batchIdQuery]);
   const [approvalCycleType, setApprovalCycleType] = useState(
     SUPPORTED_APPROVAL_CYCLE_TYPES.includes(cycleTypeQuery)
       ? cycleTypeQuery
@@ -232,10 +240,26 @@ const ManagerData = () => {
     ? APPROVAL_PROJECT_PREVIEW_ROWS
     : approvalProjectsFromStore;
 
-  const approvalReportingYear =
-    selectedApprovalProject?.reportingYear ?? reportingYear;
+  const isRollupResponseApproval = approvalCycleType === "ROLLUP_RESPONSE";
+  const approvalBatchId = isRollupResponseApproval
+    ? rollupResponseBatchId
+    : undefined;
+  const selectedProjectBatchId = Number(selectedApprovalProject?.batchId);
+  const selectedProjectMatchesRollupBatch =
+    !isRollupResponseApproval ||
+    (
+      rollupResponseBatchId !== undefined &&
+      Number.isInteger(selectedProjectBatchId) &&
+      selectedProjectBatchId === rollupResponseBatchId
+    );
+  const effectiveApprovalProject = selectedProjectMatchesRollupBatch
+    ? selectedApprovalProject
+    : null;
 
-  const selectedProjectReadOnlyYn = Boolean(selectedApprovalProject?.readOnlyYn);
+  const approvalReportingYear =
+    effectiveApprovalProject?.reportingYear ?? reportingYear;
+
+  const selectedProjectReadOnlyYn = Boolean(effectiveApprovalProject?.readOnlyYn);
 
   const hasConsultant = useMemo(
     () =>
@@ -261,7 +285,7 @@ const ManagerData = () => {
   };
 
   const displayApprovalProject =
-    selectedApprovalProject ?? fallbackApprovalProject;
+    effectiveApprovalProject ?? fallbackApprovalProject;
 
   useEffect(() => {
     if (
@@ -305,6 +329,26 @@ const ManagerData = () => {
   );
 
   useEffect(() => {
+    if (cycleTypeQuery === "ROLLUP_RESPONSE" && rollupResponseBatchId) {
+      queueMicrotask(() => {
+        setInputs([]);
+        setSelectedIds([]);
+        setDataPage(1);
+        setIsApprovalProjectModalOpen(false);
+      });
+      return;
+    }
+
+    if (location.state?.skipProjectModal && selectedApprovalProject) {
+      // Retain the injected project context, do not open modal
+      queueMicrotask(() => {
+        setInputs([]);
+        setSelectedIds([]);
+        setDataPage(1);
+      });
+      return;
+    }
+
     dispatch(clearApprovalProject());
     queueMicrotask(() => {
       setInputs([]);
@@ -329,14 +373,60 @@ const ManagerData = () => {
       .finally(() => {
         setIsApprovalProjectModalOpen(true);
       });
-  }, [companyId]);
+  }, [companyId, cycleTypeQuery, location.state?.skipProjectModal, rollupResponseBatchId]);
+
+  useEffect(() => {
+    if (cycleTypeQuery !== "ROLLUP_RESPONSE" || !rollupResponseBatchId) return;
+
+    let cancelled = false;
+    const restoreRollupApprovalContext = async () => {
+      try {
+        const response = await dispatch(
+          fetchRollupRequestDetail({ batchId: rollupResponseBatchId })
+        ).unwrap();
+        if (cancelled) return;
+
+        const detail = response?.data || response;
+        const transferStatus = String(
+          detail?.transferStatus ||
+          detail?.sourceStatus?.transferStatus ||
+          ""
+        ).trim().toUpperCase();
+
+        dispatch(
+          selectApprovalProject({
+            runId: null,
+            reportingYear: detail?.reportingYear ?? reportingYear,
+            cycleType: "ROLLUP_RESPONSE",
+            batchId: rollupResponseBatchId,
+            readOnlyYn: transferStatus === "SENT" || transferStatus === "RECEIVED",
+            currentStageLabel: "자회사 데이터 승인",
+          })
+        );
+      } catch (error) {
+        console.error("ROLLUP_RESPONSE approval context restore failed:", error);
+      }
+    };
+
+    restoreRollupApprovalContext();
+    return () => {
+      cancelled = true;
+    };
+  }, [cycleTypeQuery, dispatch, reportingYear, rollupResponseBatchId]);
 
   const fetchData = useCallback(async () => {
     if (USE_LEGACY_USER_FIXTURE) {
       setUsers(mockUsers);
     }
 
-    if (!companyId || !selectedApprovalProject) {
+    if (
+      !companyId ||
+      (
+        isRollupResponseApproval
+          ? !approvalBatchId || !selectedProjectMatchesRollupBatch
+          : !effectiveApprovalProject
+      )
+    ) {
       setInputs([]);
       return;
     }
@@ -353,6 +443,7 @@ const ManagerData = () => {
           reportingYear: approvalReportingYear,
           cycleType: approvalCycleType,
           assignedOnlyYn: true,
+          batchId: approvalBatchId,
         })
       ).unwrap();
       const items = safeArray(response?.data?.items ?? response?.items);
@@ -363,10 +454,13 @@ const ManagerData = () => {
     }
   }, [
     approvalCycleType,
+    approvalBatchId,
     approvalReportingYear,
     companyId,
     dispatch,
-    selectedApprovalProject,
+    effectiveApprovalProject,
+    isRollupResponseApproval,
+    selectedProjectMatchesRollupBatch,
   ]);
 
   useEffect(() => {
@@ -411,26 +505,27 @@ const ManagerData = () => {
       reportingYear: approvalReportingYear,
       cycleType: approvalCycleType,
       metricId,
+      ...(approvalCycleType === "ROLLUP_RESPONSE" ? { batchId: approvalBatchId } : {}),
       ...(commentText?.trim() ? { commentText: commentText.trim() } : {}),
     }),
-    [approvalCycleType, approvalReportingYear, companyId]
+    [approvalBatchId, approvalCycleType, approvalReportingYear, companyId]
   );
 
   const dispatchApprovalMutation = useCallback(
     async (metricId, status, commentText = "") => {
       const payload = buildApprovalPayload(metricId, commentText);
       if (status === "REVIEWED") {
-        return dispatch(reviewOnboardingApproval(payload)).unwrap();
+        return dispatch(reviewOnboardingApproval({ payload, batchId: approvalBatchId })).unwrap();
       }
       if (status === "APPROVED") {
-        return dispatch(approveOnboardingApproval(payload)).unwrap();
+        return dispatch(approveOnboardingApproval({ payload, batchId: approvalBatchId })).unwrap();
       }
       if (status === "REJECTED") {
-        return dispatch(rejectOnboardingApproval(payload)).unwrap();
+        return dispatch(rejectOnboardingApproval({ payload, batchId: approvalBatchId })).unwrap();
       }
       throw new Error(`Unsupported approval action: ${status}`);
     },
-    [buildApprovalPayload, dispatch]
+    [approvalBatchId, buildApprovalPayload, dispatch]
   );
 
   const handleFetchApprovalDetail = useCallback(
@@ -441,11 +536,12 @@ const ManagerData = () => {
           reportingYear: approvalReportingYear,
           metricId,
           cycleType: approvalCycleType,
+          batchId: approvalBatchId,
         })
       ).unwrap();
       return response?.data || response;
     },
-    [approvalCycleType, approvalReportingYear, companyId, dispatch]
+    [approvalBatchId, approvalCycleType, approvalReportingYear, companyId, dispatch]
   );
 
   const handleAction = async (id, status, commentText = "") => {
@@ -566,7 +662,7 @@ const ManagerData = () => {
               <select
                 value={approvalCycleType}
                 onChange={handleApprovalCycleTypeChange}
-                disabled={isLoading || approvalMutationLoading}
+                disabled={isLoading || approvalMutationLoading || isRollupResponseApproval}
                 style={{
                   height: "34px",
                   border: "1px solid #d1d5db",
@@ -577,6 +673,7 @@ const ManagerData = () => {
               >
                 <option value="PRE_DMA_G0">경영일반 데이터</option>
                 <option value="POST_DMA_DISCLOSURE">중대성 이슈 데이터</option>
+                <option value="ROLLUP_RESPONSE">자회사 요청 대응 데이터</option>
               </select>
             </label>
             {displayApprovalProject.readOnlyYn && (
@@ -585,13 +682,20 @@ const ManagerData = () => {
             <button
               type="button"
               className="approval-project-change-btn"
-              disabled={approvalProjectsLoading || approvalProjects.length === 0}
+              disabled={approvalProjectsLoading || approvalProjects.length === 0 || isRollupResponseApproval}
+              aria-disabled={isRollupResponseApproval}
               title={
+                isRollupResponseApproval
+                  ? "ROLLUP_RESPONSE approval context is fixed by batch."
+                  :
                 approvalProjects.length === 0
                   ? "No report projects are available."
                   : ""
               }
-              onClick={() => setIsApprovalProjectModalOpen(true)}
+              onClick={() => {
+                if (isRollupResponseApproval) return;
+                setIsApprovalProjectModalOpen(true);
+              }}
             >
               프로젝트 변경
             </button>
@@ -718,7 +822,7 @@ const ManagerData = () => {
         <ApprovalProjectSelectModal
           isOpen={isApprovalProjectModalOpen}
           projects={approvalProjects}
-          selectedRunId={selectedApprovalProject?.runId ?? null}
+          selectedRunId={effectiveApprovalProject?.runId ?? null}
           onSelectProject={handleSelectApprovalProject}
           onClose={() => setIsApprovalProjectModalOpen(false)}
         />

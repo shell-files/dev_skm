@@ -29,6 +29,12 @@ onboardingApprovalRouter = APIRouter(
     tags=["onboarding-approvals"],
 )
 
+def statusForValueError(error: ValueError) -> int:
+    statusCode = getattr(error, "statusCode", None)
+    if statusCode:
+        return int(statusCode)
+    return 409
+
 
 @router.post(
     "/submit",
@@ -49,7 +55,7 @@ async def submitApprovalRoute(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -73,7 +79,7 @@ async def reviewApprovalRoute(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -94,12 +100,15 @@ async def listApprovalsRoute(
     status: Optional[str] = Query(default=None),
     cycleType: Optional[str] = Query(default=None),
     assignedOnlyYn: bool = Query(default=True),
+    batchId: Optional[int] = Query(default=None),
     userModel=Depends(get_token),
 ):
     try:
-        return listApprovals(companyId, reportingYear, status, cycleType, assignedOnlyYn, userModel)
+        return listApprovals(companyId, reportingYear, status, cycleType, assignedOnlyYn, userModel, batchId=batchId)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -119,14 +128,15 @@ async def getApprovalDetailRoute(
     reportingYear: int = Query(...),
     metricId: str = Query(...),
     cycleType: str = Query(default="PRE_DMA_G0"),
+    batchId: Optional[int] = Query(default=None),
     userModel=Depends(get_token),
 ):
     try:
-        return getApprovalDetail(companyId, reportingYear, metricId, cycleType, userModel)
+        return getApprovalDetail(companyId, reportingYear, metricId, cycleType, userModel, batchId=batchId)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -146,14 +156,15 @@ async def getApprovalStatusRoute(
     reportingYear: int = Query(...),
     metricId: str = Query(default="G0-02"),
     cycleType: str = Query(default="PRE_DMA_G0"),
+    batchId: Optional[int] = Query(default=None),
     userModel=Depends(get_token),
 ):
     try:
-        return getApprovalStatus(companyId, reportingYear, metricId, userModel, cycleType)
+        return getApprovalStatus(companyId, reportingYear, metricId, userModel, cycleType, batchId=batchId)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -177,7 +188,7 @@ async def approveApprovalRoute(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -201,7 +212,7 @@ async def rejectApprovalRoute(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except ValueError as e:
-        raise HTTPException(status_code=409, detail=str(e))
+        raise HTTPException(status_code=statusForValueError(e), detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

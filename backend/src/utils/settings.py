@@ -69,8 +69,19 @@ class Settings(BaseSettings):
   surveyTemplate: str = "secrets/surveyTemplate.json"
   GOOGLE_PROJECT_ID: str | None = None
   APPS_SCRIPT_URL: str
-
-
+  # --------------------------
+  # PostgreSQL
+  # --------------------------
+  pg_db_host: str
+  pg_db_port: int
+  pg_db_database: str
+  pg_db_user: str
+  pg_db_password: str
+  # --------------------------
+  # Ollama
+  # --------------------------
+  ollama_url: str
+  
   model_config = SettingsConfigDict(
     env_file=".env",
     env_file_encoding="utf-8",

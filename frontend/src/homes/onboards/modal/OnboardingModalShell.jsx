@@ -23,6 +23,7 @@ export default function OnboardingModalShell({
   onSubmitRequest,
   canManageAssignments,
   isConsultantViewer,
+  readOnlyYn = false,
 }) {
   const [atomicValues, setAtomicValues] = useState({});
   const [atomicFiles, setAtomicFiles] = useState({});
@@ -84,10 +85,12 @@ export default function OnboardingModalShell({
 
   /* ─── Input handlers ─── */
   const handleInputChange = (atomicMetricId, value) => {
+    if (readOnlyYn) return;
     setAtomicValues((prev) => ({ ...prev, [atomicMetricId]: value }));
   };
 
   const handleFileChange = (atomicMetricId, file) => {
+    if (readOnlyYn) return;
     setAtomicFiles((prev) => ({ ...prev, [atomicMetricId]: file }));
   };
 
@@ -105,7 +108,7 @@ export default function OnboardingModalShell({
     return false;
   });
 
-  const saveDisabled = editableMetrics.length === 0 || hasInvalidYearRange;
+  const saveDisabled = readOnlyYn || editableMetrics.length === 0 || hasInvalidYearRange;
 
   const handleSaveDraft = () => {
     if (saveDisabled) return;
@@ -113,6 +116,7 @@ export default function OnboardingModalShell({
   };
 
   const handleSubmit = () => {
+    if (saveDisabled) return;
     onSubmitRequest ? onSubmitRequest(atomicValues, atomicFiles) : onSaveAndSubmit?.(atomicValues, atomicFiles, 'SUBMITTED');
   };
 
@@ -141,7 +145,7 @@ export default function OnboardingModalShell({
     const inputMode = resolveG0InputMode(sub);
     const value = atomicValues[id] || '';
 
-    if (isConsultantViewer) {
+    if (readOnlyYn || isConsultantViewer) {
       return renderReadOnlyValue({ ...sub, valueText: value }, null);
     }
 
@@ -288,7 +292,12 @@ export default function OnboardingModalShell({
     return (
       <div className="ob-side-card ob-assignment-card">
         <h4>담당자</h4>
-        {isConsultantViewer ? (
+        {readOnlyYn ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+            <span style={{ fontWeight: 600, color: '#1e293b' }}>{assigneeName || '-'}</span>
+            <span className="ob-assignment-card-status">Read-only history</span>
+          </div>
+        ) : isConsultantViewer ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
             <span style={{ fontWeight: 600, color: '#1e293b' }}>{assigneeName || '미지정'}</span>
             <span className="ob-assignment-card-status">읽기 전용 검토 화면</span>
@@ -327,7 +336,7 @@ export default function OnboardingModalShell({
           )}
         </div>
 
-        {canManageAssignments && (
+        {canManageAssignments && !readOnlyYn && (
           <button 
             type="button" 
             className="ob-assignment-card-btn"
@@ -615,7 +624,7 @@ export default function OnboardingModalShell({
 
   /* ─── Render: Footer ─── */
   const renderFooterActions = () => {
-    if (isConsultantViewer) {
+    if (readOnlyYn || isConsultantViewer) {
       return (
         <div className="ob-modal-footer">
           <button type="button" className="ob-btn ob-btn-secondary" onClick={onClose}>
@@ -673,7 +682,7 @@ export default function OnboardingModalShell({
         </div>
 
         {renderFooterActions()}
-        {editingTextId && (() => {
+        {!readOnlyYn && editingTextId && (() => {
           const editingSub = subMetrics.find(sub => getAtomicId(sub) === editingTextId);
           const title = editingSub?.atomicName || editingSub?.metricName || '상세 입력';
           return (

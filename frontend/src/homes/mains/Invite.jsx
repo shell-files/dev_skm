@@ -6,25 +6,25 @@ import "@styles/invite.css";
 
 const USE_DUMMY_API = false;
 
-const FIXTURE_ACTIVE_CONSULTANTS = [
+const STATIC_ACTIVE_CONSULTANTS = [
   { id: 1, name: '이채훈', email: 'chaehoon@skm.com', approvedDate: '2026-01-15', connectionStatus: '활동 중' },
   { id: 2, name: '이나라', email: 'nara@tv.com', approvedDate: '2026-02-20', connectionStatus: '활동 중' },
   { id: 3, name: '최윤우', email: 'yunu@hg.com', approvedDate: '2026-03-10', connectionStatus: '활동 중' },
 ];
 
-const FIXTURE_SUBSIDIARIES = [
+const STATIC_SUBSIDIARIES = [
   { id: 1, companyName: '그린테크', companyCode: 'GT-001', relationStatus: '연결됨', connectedDate: '2026-03-20' },
   { id: 2, companyName: 'SK에너지', companyCode: 'SKE-002', relationStatus: '연결됨', connectedDate: '2026-04-01' },
 ];
 
-const FIXTURE_INVITATION_HISTORY = [
+const STATIC_INVITATION_HISTORY = [
   { id: 1, type: 'CONSULTANT', email: 'consult1@naver.com', status: '승인완료', sentDate: '2026-05-01' },
   { id: 2, type: 'SUBSIDIARY_RELATION', email: 'partner@greentec.com', status: '대기중', sentDate: '2026-05-15' },
   { id: 3, type: 'CONSULTANT', email: 'expert@esg.co.kr', status: '만료', sentDate: '2026-04-20' },
   { id: 4, type: 'EMPLOYEE', email: 'dept_manager@skm.com', status: '승인완료', sentDate: '2026-05-25' },
 ];
 
-const FIXTURE_RELATION_REQUESTS = [
+const STATIC_RELATION_REQUESTS = [
   { id: 1, direction: 'RECEIVED', companyName: '에코솔루션', requestDate: '2026-05-20', desiredRelation: '자회사', status: '승인대기' },
   { id: 2, direction: 'SENT', companyName: '그린파워', requestDate: '2026-05-18', desiredRelation: '자회사', status: '승인대기' },
 ];
@@ -160,7 +160,7 @@ const Invite = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {FIXTURE_SUBSIDIARIES.map(item => (
+                    {STATIC_SUBSIDIARIES.map(item => (
                       <tr key={item.id}>
                         <td>{item.companyName}</td>
                         <td><span style={{ fontSize: '12px', color: '#64748b' }}>{item.companyCode}</span></td>
@@ -214,7 +214,7 @@ const Invite = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {FIXTURE_ACTIVE_CONSULTANTS.map(item => (
+                    {STATIC_ACTIVE_CONSULTANTS.map(item => (
                       <tr key={item.id}>
                         <td><strong>{item.name}</strong></td>
                         <td>{item.email}</td>
@@ -248,7 +248,7 @@ const Invite = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {paginate(FIXTURE_INVITATION_HISTORY, historyPage).map((item) => (
+                  {paginate(STATIC_INVITATION_HISTORY, historyPage).map((item) => (
                     <tr key={item.id}>
                       <td><span style={{ fontSize: '11px', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px' }}>{item.type}</span></td>
                       <td>{item.email}</td>
@@ -266,8 +266,8 @@ const Invite = () => {
             </div>
             <div className="pagination-wrapper">
               <button disabled={historyPage === 1} onClick={() => setHistoryPage(historyPage - 1)}>이전</button>
-              <span>{historyPage} / {totalPages(FIXTURE_INVITATION_HISTORY)}</span>
-              <button disabled={historyPage === totalPages(FIXTURE_INVITATION_HISTORY)} onClick={() => setHistoryPage(historyPage + 1)}>다음</button>
+              <span>{historyPage} / {totalPages(STATIC_INVITATION_HISTORY)}</span>
+              <button disabled={historyPage === totalPages(STATIC_INVITATION_HISTORY)} onClick={() => setHistoryPage(historyPage + 1)}>다음</button>
             </div>
           </div>
 
@@ -286,8 +286,8 @@ const Invite = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {FIXTURE_RELATION_REQUESTS.length > 0 ? (
-                    paginate(FIXTURE_RELATION_REQUESTS, approvalPage).map((item) => (
+                  {STATIC_RELATION_REQUESTS.length > 0 ? (
+                    paginate(STATIC_RELATION_REQUESTS, approvalPage).map((item) => (
                       <tr key={item.id}>
                         <td>
                           <span style={{
@@ -329,8 +329,8 @@ const Invite = () => {
             </div>
             <div className="pagination-wrapper">
               <button disabled={approvalPage === 1} onClick={() => setApprovalPage(approvalPage - 1)}>이전</button>
-              <span>{approvalPage} / {totalPages(FIXTURE_RELATION_REQUESTS)}</span>
-              <button disabled={approvalPage === totalPages(FIXTURE_RELATION_REQUESTS)} onClick={() => setApprovalPage(approvalPage + 1)}>다음</button>
+              <span>{approvalPage} / {totalPages(STATIC_RELATION_REQUESTS)}</span>
+              <button disabled={approvalPage === totalPages(STATIC_RELATION_REQUESTS)} onClick={() => setApprovalPage(approvalPage + 1)}>다음</button>
             </div>
           </div>
         </div>

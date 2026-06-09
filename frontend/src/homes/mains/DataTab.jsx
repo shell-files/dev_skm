@@ -1,15 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import TabButton from "@components/UI/TabButton";
 import BatchActionBar from "@components/UI/BatchActionBar";
-import UiPreviewPanel from "@/dev/step12UiPreview/UiPreviewPanel";
 import ApprovalDetailModal from "./modal/ApprovalDetailModal";
-import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
-import {
-  APPROVAL_SCENARIOS,
-  mergeApprovalFixtureRows,
-  ONBOARDING_SCENARIOS,
-  ROLLUP_SCENARIOS,
-} from "@/dev/step12UiPreview/fixtures";
 import "@styles/Manager.css";
 import "@styles/TabButton.css";
 
@@ -64,7 +56,7 @@ const normalizeReviewStatus = (item = {}) => {
 };
 
 const isActionSupported = (item = {}, readOnlyYn = false) =>
-  !readOnlyYn && (STEP12_UI_FIXTURE_ENABLED || item.actionSupportedYn !== false);
+  !readOnlyYn && item.actionSupportedYn !== false;
 
 const actionDisabledTitle = (item = {}, readOnlyYn = false) =>
   readOnlyYn
@@ -105,16 +97,6 @@ const DataTab = ({
   approvalDetailError = null,
   fetchApprovalDetail,
 }) => {
-  const [previewRole, setPreviewRole] = useState("ESG_MANAGER");
-  const [previewOnboardingScenario, setPreviewOnboardingScenario] = useState(
-    ONBOARDING_SCENARIOS.UNASSIGNED
-  );
-  const [previewApprovalScenario, setPreviewApprovalScenario] = useState(
-    APPROVAL_SCENARIOS.NO_CONSULTANT
-  );
-  const [previewRollupScenario, setPreviewRollupScenario] = useState(
-    ROLLUP_SCENARIOS.PARENT_PENDING
-  );
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedItemForDetail, setSelectedItemForDetail] = useState(null);
   const [isBulkRejectModalOpen, setIsBulkRejectModalOpen] = useState(false);
@@ -123,10 +105,7 @@ const DataTab = ({
 
   const sourceInputs = useMemo(() => safeArray(pagedInputs), [pagedInputs]);
 
-  const displayInputs = useMemo(() => {
-    if (!STEP12_UI_FIXTURE_ENABLED) return sourceInputs;
-    return mergeApprovalFixtureRows(sourceInputs, previewApprovalScenario);
-  }, [sourceInputs, previewApprovalScenario]);
+  const displayInputs = sourceInputs;
 
   const availableDomains = useMemo(
     () =>
@@ -224,16 +203,12 @@ const DataTab = ({
     }
   }, [dataPage, totalDataPages, setDataPage]);
 
-  const effectiveViewerRole = STEP12_UI_FIXTURE_ENABLED
-    ? previewRole
-    : userRole ?? "guest";
+  const effectiveViewerRole = userRole ?? "guest";
   const isConsultant =
     String(effectiveViewerRole).toUpperCase().includes("CONSULTANT") ||
     String(effectiveViewerRole).includes("consultant");
 
-  const effectiveHasConsultant = STEP12_UI_FIXTURE_ENABLED
-    ? previewApprovalScenario !== APPROVAL_SCENARIOS.NO_CONSULTANT
-    : hasConsultant;
+  const effectiveHasConsultant = hasConsultant;
 
   const selectedRows = useMemo(
     () => displayInputs.filter((item) => selectedIds.includes(item.id)),
@@ -671,16 +646,6 @@ const DataTab = ({
         </div>
       )}
 
-      <UiPreviewPanel
-        role={previewRole}
-        onboardingScenario={previewOnboardingScenario}
-        approvalScenario={previewApprovalScenario}
-        rollupScenario={previewRollupScenario}
-        onRoleChange={setPreviewRole}
-        onOnboardingScenarioChange={setPreviewOnboardingScenario}
-        onApprovalScenarioChange={setPreviewApprovalScenario}
-        onRollupScenarioChange={setPreviewRollupScenario}
-      />
     </section>
   );
 };

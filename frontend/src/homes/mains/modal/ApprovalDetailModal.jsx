@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { STEP12_UI_FIXTURE_ENABLED } from "@/dev/step12UiPreview/config";
 
-const FIXTURE_ATOMIC_ITEMS = [
+/*
   { atomicMetricId: "E1-1-a", atomicMetricName: "Scope 1 온실가스 직접 배출량", value: "12,450", unit: "tCO₂e", inputType: "MANUAL_NUMBER", evidenceCount: 2, inputStatus: "COMPLETED" },
   { atomicMetricId: "E1-1-b", atomicMetricName: "Scope 2 온실가스 간접 배출량", value: "8,320", unit: "tCO₂e", inputType: "MANUAL_NUMBER", evidenceCount: 1, inputStatus: "COMPLETED" },
   { atomicMetricId: "E1-1-c", atomicMetricName: "배출 산정 기준", value: "GHG Protocol", unit: "-", inputType: "SELECT", evidenceCount: 0, inputStatus: "COMPLETED" },
   { atomicMetricId: "E1-1-d", atomicMetricName: "검증 여부", value: "", unit: "-", inputType: "MANUAL_TEXT", evidenceCount: 0, inputStatus: "NOT_STARTED" },
-];
+*/
 
 const inputTypeLabel = (type) => {
   const t = String(type || "").toUpperCase();
@@ -52,14 +51,13 @@ export default function ApprovalDetailModal({
     String(viewerRole || "").toUpperCase().includes("CONSULTANT");
   const isReviewed = metricItem.reviewStatus === "REVIEWED";
   const canApprove = isConsultant ? false : !hasConsultant || isReviewed;
-  const rejectDisabled = readOnlyYn || actionLoading || !commentText.trim();
-  const approveDisabled = readOnlyYn || actionLoading || !canApprove;
+  const detailUnavailable = loading || Boolean(error);
+  const rejectDisabled = readOnlyYn || detailUnavailable || actionLoading || !commentText.trim();
+  const approveDisabled = readOnlyYn || detailUnavailable || actionLoading || !canApprove;
   const metricId = metricItem.metricId || metricItem.id;
   const isApproveMode = modalActionMode === "approve";
 
-  const atomicItems =
-    metricItem.atomicItems ??
-    (STEP12_UI_FIXTURE_ENABLED ? FIXTURE_ATOMIC_ITEMS : []);
+  const atomicItems = metricItem.atomicItems ?? [];
   const totalEvidenceCount = atomicItems.reduce((sum, item) => sum + (item.evidenceCount || 0), 0);
 
   const handleApproveClick = async () => {
@@ -71,7 +69,7 @@ export default function ApprovalDetailModal({
   };
 
   const handleReviewClick = async () => {
-    if (readOnlyYn || actionLoading) return;
+    if (readOnlyYn || detailUnavailable || actionLoading) return;
     await onReview?.({
       metricId,
       commentText: commentText.trim(),
@@ -213,7 +211,7 @@ export default function ApprovalDetailModal({
               style={textareaStyle}
               placeholder="검토 의견 또는 반려 사유를 입력하세요."
               value={commentText}
-              disabled={readOnlyYn || actionLoading}
+              disabled={readOnlyYn || detailUnavailable || actionLoading}
               onChange={(event) => setCommentText(event.target.value)}
             />
           </div>
@@ -251,12 +249,18 @@ export default function ApprovalDetailModal({
               className="ob-btn ob-btn-primary"
               style={{
                 ...primaryButtonStyle,
-                cursor: readOnlyYn || actionLoading ? "not-allowed" : "pointer",
-                opacity: readOnlyYn || actionLoading ? 0.5 : 1,
+                cursor: readOnlyYn || detailUnavailable || actionLoading ? "not-allowed" : "pointer",
+                opacity: readOnlyYn || detailUnavailable || actionLoading ? 0.5 : 1,
               }}
               onClick={handleReviewClick}
-              disabled={readOnlyYn || actionLoading}
-              title={readOnlyYn ? "Completed projects are read-only." : ""}
+              disabled={readOnlyYn || detailUnavailable || actionLoading}
+              title={
+                readOnlyYn
+                  ? "Completed projects are read-only."
+                  : detailUnavailable
+                    ? "Approval detail must load successfully first."
+                    : ""
+              }
             >
               검토 완료
             </button>

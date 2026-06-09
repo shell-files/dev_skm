@@ -8,13 +8,9 @@ from src.services.ai.service import generateReportProcess
 router = APIRouter()
 
 
-@router.post(
-    "",
+@router.post("",
     summary="ESG 보고서 생성",
     description="ESG 보고서 자동 생성"
 )
-async def generateReport(
-    req: AiReportRequestDto,
-    token=Depends(get_token)
-):
+async def generateReport(req: AiReportRequestDto,token=Depends(get_token)):
     return generateReportProcess(req, token)

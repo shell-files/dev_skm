@@ -13,7 +13,7 @@ from src.utils.ai import (
 
 
 def generateReportProcess(req, token):
-    factData = getFactData(req.companyId, req.reportingYear)
+    factData = getFactData(req.companyId, req.year)
     
     reportOutput = []
 

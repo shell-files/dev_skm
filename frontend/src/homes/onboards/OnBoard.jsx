@@ -727,6 +727,14 @@ const OnBoard = () => {
 
   const displayWorkflowError = STEP12_UI_FIXTURE_ENABLED ? null : workflowError;
   const displayG0Error = STEP12_UI_FIXTURE_ENABLED ? null : g0Error;
+  const isRollupResponseReadOnly = useMemo(() => {
+    const transferStatus = String(
+      selectedRequestDetail?.transferStatus ||
+      selectedRequestDetail?.sourceStatus?.transferStatus ||
+      ""
+    ).trim().toUpperCase();
+    return transferStatus === "SENT" || transferStatus === "RECEIVED";
+  }, [selectedRequestDetail]);
 
   const initializeOnboarding = useCallback(async () => {
     if (!companyId) {
@@ -1172,10 +1180,11 @@ const OnBoard = () => {
                     runId: workflow?.runId ?? null,
                     reportingYear: activeReportingYear,
                     cycleType: "ROLLUP_RESPONSE",
-                    readOnlyYn: false,
+                    batchId: rollupResponseBatchId,
+                    readOnlyYn: isRollupResponseReadOnly,
                     currentStageLabel: "자회사 데이터 승인"
                   }));
-                  navigate(`/managerData?cycleType=ROLLUP_RESPONSE`, { state: { skipProjectModal: true } });
+                  navigate(`/managerData?cycleType=ROLLUP_RESPONSE&batchId=${rollupResponseBatchId}`, { state: { skipProjectModal: true } });
                 }}
               >
                 데이터 승인

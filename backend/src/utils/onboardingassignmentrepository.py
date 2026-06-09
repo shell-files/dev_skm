@@ -87,6 +87,7 @@ def bulkAssignMetrics(
 
     try:
         with conn.cursor(dictionary=True) as cur:
+            requireWritableAssignmentCycleTx(cur, cycle, companyId)
             oldInviteIds = listAssignmentInviteIdsTx(cur, cycleId, companyId, metricIds)
             if assigneeUserId is None:
                 roleId = resolveRoleIdTx(cur, SUPPORTED_TARGET_ROLE)
@@ -343,6 +344,7 @@ def bulkUnassignMetrics(companyId: int, reportingYear: int, cycle: dict, metricI
     revokedInviteIds = []
     try:
         with conn.cursor(dictionary=True) as cur:
+            requireWritableAssignmentCycleTx(cur, cycle, companyId)
             placeholders = ", ".join(["?"] * len(metricIds))
             cur.execute(
                 f"""
@@ -391,6 +393,17 @@ def bulkUnassignMetrics(companyId: int, reportingYear: int, cycle: dict, metricI
         "unassignedCount": unassignedCount,
         "revokedInviteIds": revokedInviteIds,
     }
+
+
+def requireWritableAssignmentCycleTx(cur, cycle: dict, companyId: int) -> None:
+    from src.services.onboardings import approval_service
+
+    approval_service.requireWritableCycleTx(
+        cur,
+        cycle,
+        companyId,
+        batchId=cycle.get("parent_rollup_batch_id"),
+    )
 
 
 def revokeOrphanInviteTx(cur, inviteId: int) -> bool:

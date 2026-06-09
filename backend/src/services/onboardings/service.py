@@ -588,7 +588,6 @@ def bulkAssign(request: OnboardingAssignmentBulkAssignRequestDto, userModel) -> 
     checkManager(userModel)
     normalizedCycleType = checkAssignmentCycleType(request.cycleType)
     cycle = requireCycle(request.companyId, request.reportingYear, normalizedCycleType, batchId=getattr(request, "batchId", None))
-    requireAssignmentWritableCycle(cycle, request.companyId, getattr(request, "batchId", None))
     metricIds = repo.validateCycleMetricIds(int(cycle["id"]), request.companyId, request.metricIds)
     result = assignmentRepo.bulkAssignMetrics(
         companyId=request.companyId,
@@ -689,7 +688,6 @@ def bulkUnassign(request: OnboardingAssignmentBulkUnassignRequestDto, userModel)
     checkManager(userModel)
     normalizedCycleType = checkAssignmentCycleType(request.cycleType)
     cycle = requireCycle(request.companyId, request.reportingYear, normalizedCycleType, batchId=getattr(request, "batchId", None))
-    requireAssignmentWritableCycle(cycle, request.companyId, getattr(request, "batchId", None))
     metricIds = repo.validateCycleMetricIds(int(cycle["id"]), request.companyId, request.metricIds)
     result = assignmentRepo.bulkUnassignMetrics(
         companyId=request.companyId,
@@ -710,21 +708,6 @@ def publishMailEvent(mailEvent: Optional[dict]) -> tuple[bool, Optional[str]]:
         return True, None
     except Exception as e:
         return False, f"Mail queue failed: {type(e).__name__}"
-
-
-def requireAssignmentWritableCycle(cycle: dict, companyId: int, batchId: Optional[int]) -> None:
-    if str(cycle.get("cycle_type") or "").strip().upper() != CYCLE_TYPE_ROLLUP_RESPONSE:
-        return
-    from src.utils.db import getConn
-
-    conn = getConn()
-    if not conn:
-        raise RuntimeError("DB connection failed")
-    try:
-        with conn.cursor(dictionary=True) as cur:
-            approvalService.requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
-    finally:
-        conn.close()
 
 
 def requirePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:

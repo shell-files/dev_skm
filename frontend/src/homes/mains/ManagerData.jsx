@@ -215,6 +215,11 @@ const ManagerData = () => {
   const cycleTypeQuery = String(searchParams.get("cycleType") || "")
     .trim()
     .toUpperCase();
+  const batchIdQuery = searchParams.get("batchId");
+  const rollupResponseBatchId = useMemo(() => {
+    const parsed = Number(batchIdQuery);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+  }, [batchIdQuery]);
   const [approvalCycleType, setApprovalCycleType] = useState(
     SUPPORTED_APPROVAL_CYCLE_TYPES.includes(cycleTypeQuery)
       ? cycleTypeQuery
@@ -238,6 +243,11 @@ const ManagerData = () => {
     selectedApprovalProject?.reportingYear ?? reportingYear;
 
   const selectedProjectReadOnlyYn = Boolean(selectedApprovalProject?.readOnlyYn);
+  const approvalBatchId =
+    approvalCycleType === "ROLLUP_RESPONSE"
+      ? selectedApprovalProject?.batchId ?? rollupResponseBatchId
+      : undefined;
+  const isRollupResponseApproval = approvalCycleType === "ROLLUP_RESPONSE";
 
   const hasConsultant = useMemo(
     () =>
@@ -365,6 +375,7 @@ const ManagerData = () => {
           reportingYear: approvalReportingYear,
           cycleType: approvalCycleType,
           assignedOnlyYn: true,
+          batchId: approvalBatchId,
         })
       ).unwrap();
       const items = safeArray(response?.data?.items ?? response?.items);
@@ -375,6 +386,7 @@ const ManagerData = () => {
     }
   }, [
     approvalCycleType,
+    approvalBatchId,
     approvalReportingYear,
     companyId,
     dispatch,
@@ -423,26 +435,27 @@ const ManagerData = () => {
       reportingYear: approvalReportingYear,
       cycleType: approvalCycleType,
       metricId,
+      ...(approvalCycleType === "ROLLUP_RESPONSE" ? { batchId: approvalBatchId } : {}),
       ...(commentText?.trim() ? { commentText: commentText.trim() } : {}),
     }),
-    [approvalCycleType, approvalReportingYear, companyId]
+    [approvalBatchId, approvalCycleType, approvalReportingYear, companyId]
   );
 
   const dispatchApprovalMutation = useCallback(
     async (metricId, status, commentText = "") => {
       const payload = buildApprovalPayload(metricId, commentText);
       if (status === "REVIEWED") {
-        return dispatch(reviewOnboardingApproval(payload)).unwrap();
+        return dispatch(reviewOnboardingApproval({ payload, batchId: approvalBatchId })).unwrap();
       }
       if (status === "APPROVED") {
-        return dispatch(approveOnboardingApproval(payload)).unwrap();
+        return dispatch(approveOnboardingApproval({ payload, batchId: approvalBatchId })).unwrap();
       }
       if (status === "REJECTED") {
-        return dispatch(rejectOnboardingApproval(payload)).unwrap();
+        return dispatch(rejectOnboardingApproval({ payload, batchId: approvalBatchId })).unwrap();
       }
       throw new Error(`Unsupported approval action: ${status}`);
     },
-    [buildApprovalPayload, dispatch]
+    [approvalBatchId, buildApprovalPayload, dispatch]
   );
 
   const handleFetchApprovalDetail = useCallback(
@@ -453,11 +466,12 @@ const ManagerData = () => {
           reportingYear: approvalReportingYear,
           metricId,
           cycleType: approvalCycleType,
+          batchId: approvalBatchId,
         })
       ).unwrap();
       return response?.data || response;
     },
-    [approvalCycleType, approvalReportingYear, companyId, dispatch]
+    [approvalBatchId, approvalCycleType, approvalReportingYear, companyId, dispatch]
   );
 
   const handleAction = async (id, status, commentText = "") => {
@@ -578,7 +592,7 @@ const ManagerData = () => {
               <select
                 value={approvalCycleType}
                 onChange={handleApprovalCycleTypeChange}
-                disabled={isLoading || approvalMutationLoading}
+                disabled={isLoading || approvalMutationLoading || isRollupResponseApproval}
                 style={{
                   height: "34px",
                   border: "1px solid #d1d5db",
@@ -597,13 +611,20 @@ const ManagerData = () => {
             <button
               type="button"
               className="approval-project-change-btn"
-              disabled={approvalProjectsLoading || approvalProjects.length === 0}
+              disabled={approvalProjectsLoading || approvalProjects.length === 0 || isRollupResponseApproval}
+              aria-disabled={isRollupResponseApproval}
               title={
+                isRollupResponseApproval
+                  ? "ROLLUP_RESPONSE approval context is fixed by batch."
+                  :
                 approvalProjects.length === 0
                   ? "No report projects are available."
                   : ""
               }
-              onClick={() => setIsApprovalProjectModalOpen(true)}
+              onClick={() => {
+                if (isRollupResponseApproval) return;
+                setIsApprovalProjectModalOpen(true);
+              }}
             >
               프로젝트 변경
             </button>

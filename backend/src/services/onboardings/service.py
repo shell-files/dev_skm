@@ -97,7 +97,7 @@ def listMetrics(
         )
     if metricId:
         scopes = [row for row in allScopes if row.get("metric_id") == metricId]
-        scopes = listVisibleMetricScopesForUser(scopes, assignmentRows, userModel)
+        scopes, status, message = listVisibleMetricScopesForUser(scopes, assignmentRows, userModel)
         if not scopes:
             raise ValueError(f"Unsupported metricId for cycle scope: {metricId}")
     metricIds = [row["metric_id"] for row in scopes]
@@ -705,7 +705,7 @@ def checkManager(userModel) -> None:
     raise PermissionError("Only ESG담당자 or 관리자 can manage onboarding assignments")
 
 
-def listVisibleMetricScopesForUser(scopes: list[dict], assignmentRows: list[dict], userModel) -> list[dict]:
+def listVisibleMetricScopesForUser(scopes: list[dict], assignmentRows: list[dict], userModel) -> tuple[list[dict], bool, str]:
     if userModel is None or isAssignmentManager(userModel):
         return scopes, True, ""
     if isConsultant(userModel):

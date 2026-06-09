@@ -136,11 +136,11 @@ def listCycleApprovalInboxRows(
 
         actionSupportedYn, disabledReason = resolveActionSupport(scope)
         approvalPolicyCode = str(scope.get("approval_policy_code") or scopeRepo.APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
-        promotedQuantAtomicIds = (
+        promotedAtomicIds = (
             [
                 row["atomic_metric_id"]
                 for row in masterByMetric.get(metricId, [])
-                if isQuantInputMasterRow(row)
+                if isPromotableInputMasterRow(row)
             ]
             if approvalPolicyCode in {
                 scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
@@ -148,7 +148,7 @@ def listCycleApprovalInboxRows(
             }
             else []
         )
-        promotedQuantAtomicSet = set(promotedQuantAtomicIds)
+        promotedAtomicSet = set(promotedAtomicIds)
         approvedFactAtomicIds = {
             row.get("atomic_metric_id")
             for row in metricFactRows
@@ -180,8 +180,8 @@ def listCycleApprovalInboxRows(
                 ],
                 "approvalPolicyCode": approvalPolicyCode,
                 "rollupReadonlyYn": inputRepo.truthy(scope.get("rollup_readonly_yn")),
-                "promotedQuantAtomicCount": len(promotedQuantAtomicSet),
-                "approvedPromotedFactCount": len(approvedFactAtomicIds.intersection(promotedQuantAtomicSet)),
+                "promotedAtomicCount": len(promotedAtomicSet),
+                "approvedPromotedFactCount": len(approvedFactAtomicIds.intersection(promotedAtomicSet)),
                 "submittedAt": inputRepo.formatDatetime(inputRepo.submittedAt(metricInputRows, latestHistory)),
                 "approvedAt": inputRepo.formatDatetime(inputRepo.approvedAt(metricInputRows, metricFactRows, latestHistory)),
                 "commentText": latestHistory.get("comment_text"),
@@ -193,16 +193,11 @@ def listCycleApprovalInboxRows(
     return items
 
 
-def isQuantInputMasterRow(row: dict) -> bool:
-    dataValueType = str(row.get("data_value_type") or "").strip().upper()
+def isPromotableInputMasterRow(row: dict) -> bool:
     atomicRole = str(row.get("atomic_data_role") or "").strip().upper()
     return (
         inputRepo.truthy(row.get("onboarding_input_yn"))
         and atomicRole == "INPUT"
-        and (
-            dataValueType in {"QUANT", "NUMBER", "NUMERIC"}
-            or row.get("data_value_type") == "정량"
-        )
     )
 
 
@@ -405,15 +400,15 @@ def buildApprovalSummary(
     inputs = inputRepo.listMetricInputs(companyId, reportingYear, metricId)
     facts = inputRepo.listMetricKpiFacts(companyId, reportingYear, metricId)
     approvalPolicyCode = str(scope.get("approval_policy_code") or scopeRepo.APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
-    promotedQuantAtomicIds = (
-        inputRepo.listQuantInputAtomicIds(metricId)
+    promotedAtomicIds = (
+        inputRepo.listPromotableInputAtomicIds(metricId)
         if approvalPolicyCode in {
             scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
             scopeRepo.APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
         }
         else []
     )
-    promotedQuantAtomicSet = set(promotedQuantAtomicIds)
+    promotedAtomicSet = set(promotedAtomicIds)
     assignment = {}
     if cycleId is not None:
         assignment = findOne(
@@ -472,8 +467,8 @@ def buildApprovalSummary(
         "approvalStatus": inputRepo.resolveApprovalStatus(inputs, facts, requiredAtomicIds),
         "approvalPolicyCode": approvalPolicyCode,
         "rollupReadonlyYn": inputRepo.truthy(scope.get("rollup_readonly_yn")),
-        "promotedQuantAtomicCount": len(promotedQuantAtomicSet),
-        "approvedPromotedFactCount": len(approvedFactAtomicIds.intersection(promotedQuantAtomicSet)),
+        "promotedAtomicCount": len(promotedAtomicSet),
+        "approvedPromotedFactCount": len(approvedFactAtomicIds.intersection(promotedAtomicSet)),
         "inputUserId": inputRepo.firstNonNull([row.get("input_user_id") for row in inputs]),
         "assigneeUserId": assignment.get("assignee_user_id"),
         "cycleId": cycleId,

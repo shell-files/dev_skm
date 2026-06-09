@@ -163,20 +163,20 @@ def approveMetricApproval(
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             policy = str(scope.get("approval_policy_code") or APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
-            promotedQuantAtomicIds = (
-                inputRepo.listQuantInputAtomicIdsTx(cur, metricId)
+            promotedAtomicIds = (
+                inputRepo.listPromotableInputAtomicIdsTx(cur, metricId)
                 if policy in {
                     APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
                     APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
                 }
                 else []
             )
-            requireKpiFactYn = bool(promotedQuantAtomicIds)
+            requireKpiFactYn = bool(promotedAtomicIds)
             if policy in {
                 APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
                 APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
-            } and not promotedQuantAtomicIds:
-                raise ValueError(f"No quantitative INPUT atomic metrics are available for KPI promotion: {metricId}")
+            } and not promotedAtomicIds:
+                raise ValueError(f"No INPUT atomic metrics are available for KPI promotion: {metricId}")
             if inputRepo.checkAlreadyApprovedTx(
                 cur,
                 rows,
@@ -184,14 +184,14 @@ def approveMetricApproval(
                 reportingYear,
                 metricId,
                 requiredAtomicIds,
-                expectedPromotedAtomicIds=promotedQuantAtomicIds,
+                expectedPromotedAtomicIds=promotedAtomicIds,
             ):
                 conn.commit()
                 return buildMetricApprovalSummary(companyId, reportingYear, metricId, cycle.get("cycle_type") or cycleType)
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED, STATE_REVIEWED})
             calculationSummary = None
             if requireKpiFactYn:
-                quantAtomicIds = set(promotedQuantAtomicIds)
+                quantAtomicIds = set(promotedAtomicIds)
                 changedAtomicIds = []
                 for row in rows:
                     if row.get("atomic_metric_id") in quantAtomicIds:

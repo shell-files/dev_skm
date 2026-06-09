@@ -611,7 +611,7 @@ def normalizeIssueDomain(value: Optional[str]) -> Optional[str]:
         return "general"
     return None
 
-def listQuantInputAtomicRowsTx(cur, metricId: str) -> list[dict]:
+def listPromotableInputAtomicRowsTx(cur, metricId: str) -> list[dict]:
     cur.execute(
         """
         SELECT atomic_metric_id, data_value_type, atomic_data_role
@@ -621,10 +621,6 @@ def listQuantInputAtomicRowsTx(cur, metricId: str) -> list[dict]:
           AND active_yn = 1
           AND delete_yn = 0
           AND UPPER(COALESCE(atomic_data_role, '')) = 'INPUT'
-          AND (
-              UPPER(COALESCE(data_value_type, '')) IN ('QUANT', 'NUMBER', 'NUMERIC')
-              OR data_value_type = '정량'
-          )
         ORDER BY atomic_metric_id
         """,
         (metricId,),
@@ -632,11 +628,11 @@ def listQuantInputAtomicRowsTx(cur, metricId: str) -> list[dict]:
     return cur.fetchall() or []
 
 
-def listQuantInputAtomicIdsTx(cur, metricId: str) -> list[str]:
-    return [row["atomic_metric_id"] for row in listQuantInputAtomicRowsTx(cur, metricId) if row.get("atomic_metric_id")]
+def listPromotableInputAtomicIdsTx(cur, metricId: str) -> list[str]:
+    return [row["atomic_metric_id"] for row in listPromotableInputAtomicRowsTx(cur, metricId) if row.get("atomic_metric_id")]
 
 
-def listQuantInputAtomicIds(metricId: str) -> list[str]:
+def listPromotableInputAtomicIds(metricId: str) -> list[str]:
     rows = findAll(
         """
         SELECT atomic_metric_id
@@ -646,10 +642,6 @@ def listQuantInputAtomicIds(metricId: str) -> list[str]:
           AND active_yn = 1
           AND delete_yn = 0
           AND UPPER(COALESCE(atomic_data_role, '')) = 'INPUT'
-          AND (
-              UPPER(COALESCE(data_value_type, '')) IN ('QUANT', 'NUMBER', 'NUMERIC')
-              OR data_value_type = '정량'
-          )
         ORDER BY atomic_metric_id
         """,
         (metricId,),
@@ -701,8 +693,8 @@ __all__ = [
     "truthy",
     "groupRows",
     "normalizeIssueDomain",
-    "listQuantInputAtomicRowsTx",
-    "listQuantInputAtomicIdsTx",
-    "listQuantInputAtomicIds",
+    "listPromotableInputAtomicRowsTx",
+    "listPromotableInputAtomicIdsTx",
+    "listPromotableInputAtomicIds",
     "resolveAssignment",
 ]

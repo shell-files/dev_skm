@@ -87,8 +87,9 @@ def getFactData(companyId, reportingYear):
         JOIN COMPANY c 
         ON f.company_id=c.id 
         WHERE company_id = ? 
-        AND reporting_year = ?
-        AND delete_yn = 0
+        AND f.reporting_year = ?
+        AND c.delete_yn = 0
+        AND f.delete_yn = 0
     """
 
     rows = findAll(sql, (companyId, reportingYear,))
@@ -152,17 +153,21 @@ def formatUnit(value, unit):
     if value is None or value == "":
         return "[데이터 미집계]"
 
-    # 1. unit 없는 경우: 완전 문자열 처리
-    if not unit:
-        return str(value).strip()
-
-    # 2. 숫자 변환 시도 (unit 있는 경우만)
+    # 1) 숫자 변환 가능 여부 판단
+    is_number = True
     try:
         num = float(value)
     except:
+        is_number = False
+
+    # 2) unit 없는 경우 → 텍스트 유지 (중요)
+    if not unit:
         return str(value).strip()
 
-    # 3. unit별 포맷
+    if not is_number:
+        return str(value).strip()
+
+    # 3) 숫자 + unit 처리
     if unit == "%":
         return f"{num:.2f}%"
 

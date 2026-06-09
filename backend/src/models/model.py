@@ -26,6 +26,11 @@ class UserModel(BaseModel):
 class EmailModel(BaseModel):
    email: EmailStr = Field(..., description="비밀번호 찾기에 사용되는 이메일 모델")
 
+class LoginModel(BaseModel):
+  """ auth.py post 로그인 모델 """
+  email: EmailStr = Field(..., description="로그인에서 사용되는 이메일 모델")
+  password: str = Field(..., description="로그인에서 사용하는 pwd 모델")
+
 # Company 정보 모델
 class SignUpModel(BaseModel):
   """user.py 회원가입 통합 요청 모델"""

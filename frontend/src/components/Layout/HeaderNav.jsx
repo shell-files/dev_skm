@@ -8,10 +8,7 @@ import logo from "@assets/images/logos/SKMlogo.png";
 const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
     const navigate = useNavigate();
     const { user, userName, selectedCompany, companies, isAuthReady, logout, handleLogout, toggleSidebarMobile, goHome, goMyPage } = useAuth();
-    // const { toggleAlarm, unreadCount } = useAlarm();
-
-    // if (isAuthReady) console.log(userName, selectedCompany, companies);
-    
+    // const { toggleAlarm, unreadCount } = useAlarm();    
     return (
         <header className="header">
             <div className="header-left-group">
@@ -21,7 +18,7 @@ const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
             </div>
             <div className="header-right-group">
                 <div className="user-link" onClick={goMyPage}>
-                    {userName} <span id="current-company-badge">({selectedCompany?.company_name})</span>
+                    {userName} <span id="current-company-badge">{selectedCompany?.company_name}</span>
                 </div>
                 <button className="header-action" onClick={handleLogout}>로그아웃</button>
             </div>

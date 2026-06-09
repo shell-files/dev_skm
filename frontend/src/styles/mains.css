@@ -452,6 +452,7 @@ body {
     left: 260px;
     border-left: none;
     border-radius: 0 25px 25px 0;
+    z-index: 1;
 }
 
 #main_page .sidebar-edge-toggle.closed {

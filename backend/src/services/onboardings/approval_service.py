@@ -21,6 +21,30 @@ APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP = scopeRepo.APPROVAL_POLICY_PROMO
 APPROVAL_POLICY_ROLLUP_READONLY = scopeRepo.APPROVAL_POLICY_ROLLUP_READONLY
 APPROVAL_POLICY_NO_APPROVAL_REQUIRED = scopeRepo.APPROVAL_POLICY_NO_APPROVAL_REQUIRED
 
+def resolveRequiredApprovalAtomicIdsTx(
+    cur,
+    cycleType: str,
+    batchId: Optional[int],
+    metricId: str,
+) -> list[str]:
+    if str(cycleType or "").strip().upper() == scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
+        if batchId is None:
+            raise ValueError("batchId is required for ROLLUP_RESPONSE")
+
+        from src.utils import rolluprepository as rollupRepo
+
+        atomicIds = rollupRepo.resolveExternalEntitySourceAtomicIdsByMetricTx(
+            cur,
+            int(batchId),
+            metricId,
+        )
+        if not atomicIds:
+            raise ValueError(
+                f"ROLLUP_RESPONSE_MISSING_SOURCE_ATOMIC_IDS: batchId={batchId}, metricId={metricId}"
+            )
+        return atomicIds
+
+    return inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
 
 def submitMetricApproval(
     *,
@@ -51,7 +75,7 @@ def submitMetricApproval(
             )
             requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             scope = requireApprovalScopeTx(cur, cycle, companyId, metricId)
-            requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
+            requiredAtomicIds = resolveRequiredApprovalAtomicIdsTx(cur, cycleType, batchId, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             if checkRowsAllStatus(rows, requiredAtomicIds, STATE_SUBMITTED):
@@ -123,7 +147,7 @@ def reviewMetricApproval(
             cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType, batchId=batchId)
             requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             requireApprovalScopeTx(cur, cycle, companyId, metricId)
-            requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
+            requiredAtomicIds = resolveRequiredApprovalAtomicIdsTx(cur, cycleType, batchId, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED})
@@ -184,18 +208,20 @@ def approveMetricApproval(
             cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType, batchId=batchId)
             requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             scope = requireApprovalScopeTx(cur, cycle, companyId, metricId)
-            requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
+            requiredAtomicIds = resolveRequiredApprovalAtomicIdsTx(cur, cycleType, batchId, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             policy = str(scope.get("approval_policy_code") or APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
-            promotedAtomicIds = (
-                inputRepo.listPromotableInputAtomicIdsTx(cur, metricId)
-                if policy in {
-                    APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
-                    APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
-                }
-                else []
-            )
+            promotedAtomicIds = []
+            actualCycleType = str(cycle.get("cycle_type") or cycleType).strip().upper()
+            if policy in {
+                APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
+                APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP,
+            }:
+                if actualCycleType == scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
+                    promotedAtomicIds = list(requiredAtomicIds)
+                else:
+                    promotedAtomicIds = inputRepo.listPromotableInputAtomicIdsTx(cur, metricId)
             requireKpiFactYn = bool(promotedAtomicIds)
             if policy in {
                 APPROVAL_POLICY_PROMOTE_TO_KPI_FACT,
@@ -211,12 +237,52 @@ def approveMetricApproval(
                 requiredAtomicIds,
                 expectedPromotedAtomicIds=promotedAtomicIds,
             ):
+                syncRollupSourceReadinessIfNeededTx(
+                    cur,
+                    cycle=cycle,
+                    companyId=companyId,
+                    reportingYear=reportingYear,
+                    batchId=batchId,
+                )
                 conn.commit()
                 return buildMetricApprovalSummary(
                     companyId,
                     reportingYear,
                     metricId,
                     cycle.get("cycle_type") or cycleType,
+                    batchId=batchId,
+                )
+            if checkRowsAllStatus(rows, requiredAtomicIds, STATE_APPROVED):
+                calculationSummary = None
+                if requireKpiFactYn:
+                    quantAtomicIds = set(promotedAtomicIds)
+                    changedAtomicIds = []
+                    for row in rows:
+                        if row.get("atomic_metric_id") in quantAtomicIds:
+                            inputRepo.upsertKpiFact(cur, row, actorUserId)
+                            changedAtomicIds.append(row.get("atomic_metric_id"))
+                    if changedAtomicIds:
+                        calculationSummary = calculateAffectedEntityFactsTx(
+                            cur,
+                            companyId=companyId,
+                            reportingYear=reportingYear,
+                            changedAtomicMetricIds=changedAtomicIds,
+                            actorUserId=actorUserId,
+                        )
+                syncRollupSourceReadinessIfNeededTx(
+                    cur,
+                    cycle=cycle,
+                    companyId=companyId,
+                    reportingYear=reportingYear,
+                    batchId=batchId,
+                )
+                conn.commit()
+                return buildMetricApprovalSummary(
+                    companyId,
+                    reportingYear,
+                    metricId,
+                    cycle.get("cycle_type") or cycleType,
+                    calculationSummary=calculationSummary,
                     batchId=batchId,
                 )
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED, STATE_REVIEWED})
@@ -259,6 +325,13 @@ def approveMetricApproval(
                 assigneeUserId=assignment.get("assignee_user_id") if assignment else None,
                 commentText=commentText,
             )
+            syncRollupSourceReadinessIfNeededTx(
+                cur,
+                cycle=cycle,
+                companyId=companyId,
+                reportingYear=reportingYear,
+                batchId=batchId,
+            )
         conn.commit()
         return buildMetricApprovalSummary(
             companyId, reportingYear, metricId,
@@ -291,7 +364,7 @@ def rejectMetricApproval(
             cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType, batchId=batchId)
             requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             requireApprovalScopeTx(cur, cycle, companyId, metricId)
-            requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
+            requiredAtomicIds = resolveRequiredApprovalAtomicIdsTx(cur, cycleType, batchId, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED, STATE_REVIEWED})
@@ -467,6 +540,29 @@ def requireWritableCycleTx(cur, cycle: dict, companyId: int, batchId: Optional[i
         err = ValueError("ROLLUP_RESPONSE workspace is read-only after transfer.")
         err.statusCode = 409
         raise err
+
+def syncRollupSourceReadinessIfNeededTx(
+    cur,
+    *,
+    cycle: dict,
+    companyId: int,
+    reportingYear: int,
+    batchId: Optional[int] = None,
+) -> None:
+    if (
+        str(cycle.get("cycle_type") or "").strip().upper()
+        != scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE
+        or batchId is None
+    ):
+        return
+    from src.utils import rolluprepository as rollupRepo
+
+    rollupRepo.syncSourceReadinessTx(
+        cur,
+        batchId=int(batchId),
+        sourceCompanyId=companyId,
+        reportingYear=reportingYear,
+    )
 
 def normalizeCycleType(cycleType: str) -> str:
     normalizedCycleType = str(cycleType or scopeRepo.CYCLE_TYPE_PRE_DMA_G0).strip().upper()

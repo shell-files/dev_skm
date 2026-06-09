@@ -31,6 +31,20 @@ const toApiError = (res, fallbackMessage) => ({
   error: res?.error || null,
 });
 
+export const apiErrorMessage = (error, fallbackMessage = "요청 처리 중 오류가 발생했습니다.") => {
+  if (typeof error === "string") return error;
+  return error?.response?.data?.message ||
+    error?.response?.data?.detail ||
+    error?.error?.message ||
+    error?.error?.detail ||
+    error?.data?.message ||
+    error?.data?.detail ||
+    error?.message ||
+    error?.detail ||
+    error?.msg ||
+    fallbackMessage;
+};
+
 const ROLLUP_API_ROOT = "/api/v1/rollups";
 const ONBOARDING_APPROVAL_API_ROOT = "/api/v1/onboarding-approvals";
 const REPORT_WORKFLOW_API_ROOT = "/api/v1/report-workflow";
@@ -68,6 +82,27 @@ const attachExplicitBatchContext = (payload = {}, batchId) => {
   return normalized;
 };
 
+const approvalContextKeyOf = ({
+  companyId,
+  reportingYear = DEFAULT_REPORTING_YEAR,
+  cycleType = "PRE_DMA_G0",
+  status = "",
+  assignedOnlyYn = true,
+  batchId,
+} = {}) => {
+  const normalizedCycleType = String(cycleType || "").trim().toUpperCase();
+  const normalizedBatchId =
+    normalizedCycleType === "ROLLUP_RESPONSE" ? Number(batchId) || "" : "";
+  return [
+    companyId ?? "",
+    reportingYear ?? "",
+    normalizedCycleType,
+    normalizedBatchId,
+    status ?? "",
+    assignedOnlyYn === false ? "0" : "1",
+  ].join("|");
+};
+
 const itemsOf = (payload) => {
   const data = dataOf(payload);
   if (Array.isArray(data?.items)) return data.items;
@@ -91,6 +126,7 @@ const initialState = {
     projects: [],
     selectedProject: null,
     items: [],
+    itemsContextKey: null,
     selectedItemDetail: null,
     lastMutationResult: null,
     lastMutationError: null,
@@ -290,7 +326,7 @@ export const saveOnboardingMetric = createAsyncThunk(
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "온보딩 지표 저장 중 오류가 발생했습니다.",
+        message: apiErrorMessage(error, "온보딩 지표 저장 중 오류가 발생했습니다."),
       });
     }
   }
@@ -602,7 +638,7 @@ export const sendRollupSource = createAsyncThunk(
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "자회사 데이터 전송 중 오류가 발생했습니다.",
+        message: apiErrorMessage(error, "자회사 데이터 전송 중 오류가 발생했습니다."),
       });
     }
   }
@@ -651,7 +687,7 @@ export const submitOnboardingApproval = createAsyncThunk(
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "온보딩 승인 요청 중 오류가 발생했습니다.",
+        message: apiErrorMessage(error, "온보딩 승인 요청 중 오류가 발생했습니다."),
       });
     }
   }
@@ -671,7 +707,7 @@ export const reviewOnboardingApproval = createAsyncThunk(
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "온보딩 승인 검토 중 오류가 발생했습니다.",
+        message: apiErrorMessage(error, "온보딩 승인 검토 중 오류가 발생했습니다."),
       });
     }
   }
@@ -691,7 +727,7 @@ export const approveOnboardingApproval = createAsyncThunk(
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "온보딩 승인 처리 중 오류가 발생했습니다.",
+        message: apiErrorMessage(error, "온보딩 승인 처리 중 오류가 발생했습니다."),
       });
     }
   }
@@ -711,7 +747,7 @@ export const rejectOnboardingApproval = createAsyncThunk(
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "온보딩 승인 반려 중 오류가 발생했습니다.",
+        message: apiErrorMessage(error, "온보딩 승인 반려 중 오류가 발생했습니다."),
       });
     }
   }
@@ -764,13 +800,17 @@ const reportSlice = createSlice({
     selectApprovalProject: (state, action) => {
       state.approval.selectedProject = action.payload ?? null;
       state.approval.items = [];
+      state.approval.itemsContextKey = null;
       state.approval.selectedItemDetail = null;
+      state.loading.approvals = false;
     },
 
     clearApprovalProject: (state) => {
       state.approval.selectedProject = null;
       state.approval.items = [];
+      state.approval.itemsContextKey = null;
       state.approval.selectedItemDetail = null;
+      state.loading.approvals = false;
     },
 
     clearApprovalDetail: (state) => {
@@ -875,13 +915,24 @@ const reportSlice = createSlice({
       });
 
     builder
-      .addCase(fetchApprovalItems.pending, (state) => setPending(state, "approvals"))
+      .addCase(fetchApprovalItems.pending, (state, action) => {
+        setPending(state, "approvals");
+        state.approval.itemsContextKey = approvalContextKeyOf(action.meta.arg);
+        state.approval.items = [];
+        state.approval.selectedItemDetail = null;
+      })
       .addCase(fetchApprovalItems.fulfilled, (state, action) => {
+        if (state.approval.itemsContextKey !== approvalContextKeyOf(action.meta.arg)) {
+          return;
+        }
         state.loading.approvals = false;
         state.error.approvals = null;
         state.approval.items = itemsOf(action.payload);
       })
       .addCase(fetchApprovalItems.rejected, (state, action) => {
+        if (state.approval.itemsContextKey !== approvalContextKeyOf(action.meta.arg)) {
+          return;
+        }
         setRejected(state, "approvals", action);
         state.approval.items = [];
       });

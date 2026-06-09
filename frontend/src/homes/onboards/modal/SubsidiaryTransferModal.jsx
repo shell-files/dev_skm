@@ -55,7 +55,7 @@ const SubsidiaryTransferModal = ({
       <div className="ob1-modal-content" style={{ width: "500px", maxWidth: "90vw" }}>
         <div className="ob1-modal-header">
           <h2 className="ob1-modal-title">데이터 전송 확인</h2>
-          <button className="ob1-modal-close" onClick={onClose} aria-label="닫기">
+          <button className="ob1-btn-close" onClick={onClose} aria-label="닫기">
             ×
           </button>
         </div>

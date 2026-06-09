@@ -1380,8 +1380,15 @@ def ensureRollupResponseWorkspaceTx(
             (cycleId,)
         )
 
+    from src.utils.rollupscoperepository import resolveExternalEntitySourceAtomicIdsByMetricTx
     for displayIndex, metricId in enumerate(actionableInputMetricIds, start=1):
-        approvalPolicy = resolveDefaultApprovalPolicyTx(cur, metricId)
+        sourceAtomicIds = resolveExternalEntitySourceAtomicIdsByMetricTx(cur, batchId, metricId)
+        if not sourceAtomicIds:
+            raise ValueError(
+                "ROLLUP_RESPONSE_MISSING_SOURCE_ATOMIC_IDS: "
+                f"batchId={batchId}, metricId={metricId}"
+            )
+        approvalPolicy = APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP
         parentScope = parentScopeByMetric.get(metricId) or {}
         
         if rollupPurposeCode == "DMA_PRECHECK" and metricId == "G0-02":

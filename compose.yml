@@ -33,6 +33,7 @@ services:
       - backend_venv:/workspace/.venv
       - ./backend/srfiles:/workspace/srfiles
       - skm_secrets:/workspace/secrets
+      - backend_model_cache:/workspace/model_cache
       
     environment:
       - HOST_IP=${HOST_IP}
@@ -64,6 +65,12 @@ services:
       - GEMINI_MODEL=${GEMINI_MODEL}
       - APPS_SCRIPT_URL=${APPS_SCRIPT_URL}
       - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID}
+      - PG_DB_HOST=${PG_DB_HOST}
+      - PG_DB_PORT=${PG_DB_PORT}
+      - PG_DB_DATABASE=${PG_DB_DATABASE}
+      - PG_DB_USER=${PG_DB_USER}
+      - PG_DB_PASSWORD=${PG_DB_PASSWORD}
+      - OLLAMA_URL=${OLLAMA_URL}
       
     command: ["uv", "run", "fastapi", "run"]
 
@@ -95,4 +102,4 @@ volumes:
   skm_secrets:
     external: true
   backend_venv:
-  
+  backend_model_cache:

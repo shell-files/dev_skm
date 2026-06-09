@@ -102,6 +102,20 @@ const SubsidiaryTransferModal = ({
             </div>
           </div>
 
+          <div style={{ marginBottom: "16px", padding: "16px", background: "#f8fafc", borderRadius: "8px", border: "1px solid #e2e8f0", maxHeight: "200px", overflowY: "auto" }}>
+            <span style={{ color: "#64748b", display: "block", fontSize: "0.85rem", fontWeight: "600", marginBottom: "8px" }}>전송 대상 지표</span>
+            <ul style={{ margin: 0, paddingLeft: "0", listStyle: "none", display: "flex", flexDirection: "column", gap: "6px", fontSize: "0.85rem" }}>
+              {(activeRequest.items || [])
+                .filter(item => (activeRequest.requestedMetricIds || []).includes(item.metricId))
+                .map(item => (
+                  <li key={item.metricId} style={{ display: "flex", gap: "12px", color: "#334155" }}>
+                    <span style={{ width: "60px", color: "#64748b", fontWeight: "500" }}>{item.metricId}</span>
+                    <span>{item.metricName}</span>
+                  </li>
+              ))}
+            </ul>
+          </div>
+
           <div style={{ marginTop: "24px", padding: "16px", background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: "8px", fontSize: "0.85rem", color: "#9a3412" }}>
             <ul style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>
               <li><strong>현재 회사의 독립 기준 원천값만 전송합니다.</strong></li>

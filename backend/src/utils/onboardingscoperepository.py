@@ -1277,7 +1277,7 @@ def ensureRollupResponseWorkspaceTx(
 ) -> None:
     cur.execute(
         """
-        SELECT source_cycle_id 
+        SELECT source_cycle_id, rollup_purpose_code
         FROM ESG_ROLLUP_BATCH 
         WHERE id = ? AND delete_yn = 0
         """,
@@ -1285,6 +1285,7 @@ def ensureRollupResponseWorkspaceTx(
     )
     batch = cur.fetchone()
     sourceCycleId = batch["source_cycle_id"] if batch else None
+    rollupPurposeCode = batch["rollup_purpose_code"] if batch else None
 
     parentScopeByMetric = {}
     if sourceCycleId:
@@ -1363,6 +1364,11 @@ def ensureRollupResponseWorkspaceTx(
         approvalPolicy = resolveDefaultApprovalPolicyTx(cur, metricId)
         parentScope = parentScopeByMetric.get(metricId) or {}
         
+        if rollupPurposeCode == "DMA_PRECHECK" and metricId == "G0-02":
+            scopeSourceType = SCOPE_SOURCE_TYPE_PRE_DMA_G0
+        else:
+            scopeSourceType = parentScope.get("scope_source_type") or SCOPE_SOURCE_TYPE_ROLLUP_RESPONSE
+
         cur.execute(
             """
             INSERT INTO ESG_ONBOARDING_CYCLE_METRIC_SCOPE (
@@ -1402,7 +1408,7 @@ def ensureRollupResponseWorkspaceTx(
                 cycleId, 
                 companyId, 
                 metricId, 
-                parentScope.get("scope_source_type") or SCOPE_SOURCE_TYPE_ROLLUP_RESPONSE,
+                scopeSourceType,
                 parentScope.get("source_materiality_run_id"),
                 parentScope.get("source_selected_sub_issue_id"),
                 parentScope.get("source_sub_issue_code"),

@@ -33,6 +33,7 @@ services:
       - backend_venv:/workspace/.venv
       - ./backend/srfiles:/workspace/srfiles
       - skm_secrets:/workspace/secrets
+      - backend_model_cache:/workspace/model_cache
       
     environment:
       - HOST_IP=${HOST_IP}
@@ -101,4 +102,4 @@ volumes:
   skm_secrets:
     external: true
   backend_venv:
-  
+  backend_model_cache:

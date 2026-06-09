@@ -47,15 +47,11 @@ def submitMetricApproval(
                 reportBasisType=reportBasisType,
                 sourceMaterialityRunId=sourceMaterialityRunId,
                 actorUserId=actorUserId,
+                batchId=batchId,
             )
-            requireWritableCycleTx(cur, cycle, companyId)
-            if cycleType == "ROLLUP_RESPONSE":
-                if batchId is None:
-                    raise ValueError("batchId is required for ROLLUP_RESPONSE")
-                if cycle.get("parent_rollup_batch_id") is None or int(cycle["parent_rollup_batch_id"]) != int(batchId):
-                    raise ValueError("ROLLUP_RESPONSE batch context mismatch")
+            requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             scope = requireApprovalScopeTx(cur, cycle, companyId, metricId)
-            requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
+            requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             if checkRowsAllStatus(rows, requiredAtomicIds, STATE_SUBMITTED):
@@ -112,15 +108,10 @@ def reviewMetricApproval(
         raise RuntimeError("DB connection failed")
     try:
         with conn.cursor(dictionary=True) as cur:
-            cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType)
-            requireWritableCycleTx(cur, cycle, companyId)
-            if cycleType == "ROLLUP_RESPONSE":
-                if batchId is None:
-                    raise ValueError("batchId is required for ROLLUP_RESPONSE")
-                if cycle.get("parent_rollup_batch_id") is None or int(cycle["parent_rollup_batch_id"]) != int(batchId):
-                    raise ValueError("ROLLUP_RESPONSE batch context mismatch")
+            cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType, batchId=batchId)
+            requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             requireApprovalScopeTx(cur, cycle, companyId, metricId)
-            requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
+            requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED})
@@ -172,15 +163,10 @@ def approveMetricApproval(
         raise RuntimeError("DB connection failed")
     try:
         with conn.cursor(dictionary=True) as cur:
-            cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType)
-            requireWritableCycleTx(cur, cycle, companyId)
-            if cycleType == "ROLLUP_RESPONSE":
-                if batchId is None:
-                    raise ValueError("batchId is required for ROLLUP_RESPONSE")
-                if cycle.get("parent_rollup_batch_id") is None or int(cycle["parent_rollup_batch_id"]) != int(batchId):
-                    raise ValueError("ROLLUP_RESPONSE batch context mismatch")
+            cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType, batchId=batchId)
+            requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             scope = requireApprovalScopeTx(cur, cycle, companyId, metricId)
-            requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
+            requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             policy = str(scope.get("approval_policy_code") or APPROVAL_POLICY_INPUT_APPROVAL_ONLY).strip().upper()
@@ -277,15 +263,10 @@ def rejectMetricApproval(
         raise RuntimeError("DB connection failed")
     try:
         with conn.cursor(dictionary=True) as cur:
-            cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType)
-            requireWritableCycleTx(cur, cycle, companyId)
-            if cycleType == "ROLLUP_RESPONSE":
-                if batchId is None:
-                    raise ValueError("batchId is required for ROLLUP_RESPONSE")
-                if cycle.get("parent_rollup_batch_id") is None or int(cycle["parent_rollup_batch_id"]) != int(batchId):
-                    raise ValueError("ROLLUP_RESPONSE batch context mismatch")
+            cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType, batchId=batchId)
+            requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             requireApprovalScopeTx(cur, cycle, companyId, metricId)
-            requiredAtomicIds = inputRepo.listRequiredAtomicIdsTx(cur, metricId)
+            requiredAtomicIds = inputRepo.listRequiredApprovalAtomicIdsTx(cur, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
             rows = inputRepo.selectInputRowsForUpdate(cur, companyId, reportingYear, metricId, requiredAtomicIds)
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED, STATE_REVIEWED})
@@ -328,8 +309,9 @@ def buildMetricApprovalSummary(
     metricId: str,
     cycleType: str = scopeRepo.CYCLE_TYPE_PRE_DMA_G0,
     calculationSummary: dict = None,
+    batchId: Optional[int] = None,
 ) -> dict:
-    summary = approvalRepo.buildApprovalSummary(companyId, reportingYear, metricId, cycleType)
+    summary = approvalRepo.buildApprovalSummary(companyId, reportingYear, metricId, cycleType, batchId=batchId)
     if calculationSummary:
         summary["calculationReadyYn"] = calculationSummary.get("calculationReadyYn")
         summary["affectedRuleCount"] = calculationSummary.get("affectedRuleCount", 0)
@@ -348,6 +330,7 @@ def resolveActiveCycleTx(
     reportBasisType: Optional[str],
     sourceMaterialityRunId: Optional[int],
     actorUserId: Optional[int],
+    batchId: Optional[int] = None,
 ) -> dict:
     normalizedCycleType = normalizeCycleType(cycleType)
     if normalizedCycleType == scopeRepo.CYCLE_TYPE_PRE_DMA_G0:
@@ -359,12 +342,12 @@ def resolveActiveCycleTx(
             sourceMaterialityRunId,
             actorUserId,
         )
-    return resolveExistingActiveCycleTx(cur, companyId, reportingYear, normalizedCycleType)
+    return resolveExistingActiveCycleTx(cur, companyId, reportingYear, normalizedCycleType, batchId=batchId)
 
 
-def resolveExistingActiveCycleTx(cur, companyId: int, reportingYear: int, cycleType: str) -> dict:
+def resolveExistingActiveCycleTx(cur, companyId: int, reportingYear: int, cycleType: str, batchId: Optional[int] = None) -> dict:
     normalizedCycleType = normalizeCycleType(cycleType)
-    cycle = scopeRepo.resolveCycle(cur, companyId, reportingYear, normalizedCycleType)
+    cycle = scopeRepo.resolveCycle(cur, companyId, reportingYear, normalizedCycleType, batchId=batchId)
     if not cycle:
         raise ValueError(f"{normalizedCycleType} cycle was not found")
     if str(cycle.get("cycle_status") or "").strip().lower() != "active":
@@ -429,11 +412,12 @@ def setMetricInputStatusTx(
     )
 
 
-def requireWritableCycleTx(cur, cycle: dict, companyId: int) -> None:
+def requireWritableCycleTx(cur, cycle: dict, companyId: int, batchId: Optional[int] = None) -> None:
+    scopeRepo.requireRollupResponseBatchContext(cycle, batchId)
     if str(cycle.get("cycle_type") or "").strip().upper() != scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
         return
-    batchId = cycle.get("parent_rollup_batch_id")
-    if batchId is None:
+    dbBatchId = cycle.get("parent_rollup_batch_id")
+    if dbBatchId is None:
         return
     cur.execute(
         """
@@ -444,7 +428,7 @@ def requireWritableCycleTx(cur, cycle: dict, companyId: int) -> None:
           AND delete_yn = 0
         LIMIT 1
         """,
-        (int(batchId), companyId),
+        (int(dbBatchId), companyId),
     )
     row = cur.fetchone()
     if row and str(row.get("transfer_status") or "").lower() in {"sent", "received"}:

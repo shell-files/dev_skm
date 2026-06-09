@@ -25,7 +25,7 @@ class TestRollupResponseApproval(unittest.TestCase):
         mock_cur.fetchone.return_value = {"transfer_status": "sent"}
         
         with self.assertRaises(ValueError) as ctx:
-            approval_service.requireWritableCycleTx(mock_cur, self.mock_cycle, 6)
+            approval_service.requireWritableCycleTx(mock_cur, self.mock_cycle, 6, batchId=100)
             
         self.assertIn("read-only", str(ctx.exception))
         
@@ -35,7 +35,7 @@ class TestRollupResponseApproval(unittest.TestCase):
         
         # Should not raise
         try:
-            approval_service.requireWritableCycleTx(mock_cur, self.mock_cycle, 6)
+            approval_service.requireWritableCycleTx(mock_cur, self.mock_cycle, 6, batchId=100)
         except ValueError:
             self.fail("requireWritableCycleTx raised ValueError unexpectedly")
 

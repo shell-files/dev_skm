@@ -64,19 +64,24 @@ def resolveReportingYear(companyId: int, reportingYear: Optional[int] = None) ->
     ) or {}
     return int(row.get("reporting_year") or datetime.now().year)
 
-def getCycle(companyId: int, reportingYear: int, cycleType: str) -> dict:
+def getCycle(companyId: int, reportingYear: int, cycleType: str, batchId: Optional[int] = None) -> dict:
+    batchFilter = "AND parent_rollup_batch_id = ?" if batchId else ""
+    params = [companyId, reportingYear, cycleType]
+    if batchId:
+        params.append(batchId)
     return findOne(
-        """
+        f"""
         SELECT *
         FROM ESG_ONBOARDING_CYCLE
         WHERE company_id = ?
           AND reporting_year = ?
           AND cycle_type = ?
+          {batchFilter}
           AND delete_yn = 0
         ORDER BY id DESC
         LIMIT 1
         """,
-        (companyId, reportingYear, cycleType),
+        tuple(params),
     ) or {}
 
 def listMetricScopes(cycleId: int, companyId: int, metricId: Optional[str] = None) -> list[dict]:
@@ -384,19 +389,24 @@ def cycleTypeFilter(cycleType: Optional[str]) -> str:
         return "AND 1 = 0"
     return f"AND (c.cycle_type = '{normalizedCycleType}' OR c.id IS NULL)"
 
-def resolveCycle(cur, companyId: int, reportingYear: int, cycleType: str = CYCLE_TYPE_PRE_DMA_G0) -> dict:
+def resolveCycle(cur, companyId: int, reportingYear: int, cycleType: str = CYCLE_TYPE_PRE_DMA_G0, batchId: Optional[int] = None) -> dict:
+    batchFilter = "AND parent_rollup_batch_id = ?" if batchId else ""
+    params = [companyId, reportingYear, cycleType]
+    if batchId:
+        params.append(batchId)
     cur.execute(
-        """
+        f"""
         SELECT *
         FROM ESG_ONBOARDING_CYCLE
         WHERE company_id = ?
           AND reporting_year = ?
           AND cycle_type = ?
+          {batchFilter}
           AND delete_yn = 0
         ORDER BY id DESC
         LIMIT 1
         """,
-        (companyId, reportingYear, cycleType),
+        tuple(params),
     )
     return cur.fetchone() or {}
 
@@ -1413,3 +1423,23 @@ def ensureRollupResponseWorkspaceTx(
                 actorUserId
             )
         )
+
+
+def requireRollupResponseBatchContext(cycle: dict, batchId: Optional[int]) -> None:
+    cycleType = str(cycle.get("cycle_type") or "").strip().upper()
+    if cycleType != CYCLE_TYPE_ROLLUP_RESPONSE:
+        return
+    
+    if batchId is None:
+        err = ValueError("batchId is required for ROLLUP_RESPONSE")
+        err.statusCode = 409
+        raise err
+
+    if (
+        cycle.get("parent_rollup_batch_id") is None
+        or int(cycle["parent_rollup_batch_id"]) != int(batchId)
+    ):
+        err = ValueError("ROLLUP_RESPONSE batch context mismatch")
+        err.statusCode = 409
+        raise err
+

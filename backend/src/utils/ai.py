@@ -59,7 +59,7 @@ sbertModel = SentenceTransformer(
 
 llm = ChatOllama(
     model="gemma4:e4b",
-    base_url=settings.ollama_url,
+    base_url=f"http://{settings.ollama_url}:11434",
     temperature=0.1,
     num_predict=2048,
     repeat_penalty=1.1
@@ -120,20 +120,21 @@ def getFactData(companyId):
 
     for row in rollupRows:
         atomicId = row["group_atomic_metric_id"]
-        if atomicId not in dataMap:
+
+        if (
+            atomicId not in dataMap
+            or dataMap[atomicId]["value"] == ""
+        ):
             value = (
                 row["value_numeric"]
                 if row["value_numeric"] is not None
                 else row["value_text"]
             )
+
             dataMap[atomicId] = {
                 "value": str(value or ""),
                 "unit": str(row["unit"] or "")
             }
-    dataMap["COMPANY_NAME"] = {
-        "value": companyName,
-        "unit": ""
-    }
     return dataMap
 
 

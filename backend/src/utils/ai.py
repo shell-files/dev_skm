@@ -79,17 +79,19 @@ def validateReport(text):
 # KPI 조회
 # ==================================================
 
-def getFactData(companyId):
+def getFactData(companyId, reportingYear):
 
     sql = f"""
         SELECT f.atomic_metric_id, f.value_numeric, f.value_text, f.unit, aes_d(c.company_name, '{settings.maria_db_key}') AS company_name
         FROM ESG_KPI_FACT f 
         JOIN COMPANY c 
         ON f.company_id=c.id 
-        WHERE f.company_id = ? AND f.delete_yn=0
+        WHERE company_id = ? 
+        AND reporting_year = ?
+        AND delete_yn = 0
     """
 
-    rows = findAll(sql, (companyId,))
+    rows = findAll(sql, (companyId, reportingYear,))
 
     dataMap = {}
     companyName = "A_GROUP"
@@ -106,16 +108,21 @@ def getFactData(companyId):
             "value": str(value or ""),
             "unit": str(row["unit"] or "")
         }
-
+        dataMap["COMPANY_NAME"] = {
+            "value": companyName,
+            "unit": ""
+        }
     rollupSql = """
         SELECT group_atomic_metric_id, value_numeric, value_text, unit 
         FROM ESG_GROUP_ROLLUP_RESULT 
-        WHERE parent_company_id = ? AND delete_yn=0
+        WHERE parent_company_id = ?
+        AND reporting_year = ?
+        AND delete_yn = 0
     """
 
     rollupRows = findAll(
         rollupSql,
-        (companyId,)
+        (companyId,reportingYear, )
     )
 
     for row in rollupRows:

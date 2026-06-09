@@ -7,14 +7,14 @@ from src.utils.ai import (
     replaceTemplate,
     searchSrKnowledgeHybrid,
     compressSrContext,
-    generateIssueReport
+    generateIssueReport,
+    
 )
 
 
 def generateReportProcess(req, token):
-
-    factData = getFactData(req.companyId)
-
+    factData = getFactData(req.companyId, req.reportingYear)
+    
     reportOutput = []
 
     for idx, template in enumerate(REPORT_TEMPLATES):

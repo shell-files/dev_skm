@@ -90,37 +90,28 @@ def saveReportRun(
     filledTemplate,
     reportText
 ):
+
     sql = """
         INSERT INTO ESG_REPORT_AI_RUN (
             materiality_run_id,
             company_id,
             reporting_year,
-            sub_issue_id,
-            section_no,
-            template_snapshot,
-            filled_template,
-            report_content,
             llm_model,
             prompt_version
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    """
-
+        VALUES (?, ?, ?, ?, ?)
+        """
     params = (
         None,
         companyId,
         reportingYear,
-        subIssueId,
-        sectionNo,
-        templateSnapshot,
-        filledTemplate,
-        reportText,
         llmModel,
         promptVersion
     )
 
     success, run_id = addKey(sql, params)
-    return run_id
+
+    return success, run_id
 
 def saveSection(runId, sectionNo, subIssueId, template, filledText, reportText):
 
@@ -133,10 +124,10 @@ def saveSection(runId, sectionNo, subIssueId, template, filledText, reportText):
             filled_template,
             report_text
         )
-        VALUES (%s, %s, %s, %s, %s, %s)
+        VALUES (?, ?, ?, ?, ?, ?)
     """
 
-    return addKey(sql, (
+    success, section_id = addKey(sql, (
         runId,
         sectionNo,
         subIssueId,
@@ -144,6 +135,9 @@ def saveSection(runId, sectionNo, subIssueId, template, filledText, reportText):
         filledText,
         reportText
     ))
+
+    return success, section_id
+
     
 def saveMetricTrace(sectionId, usedMetrics, factData):
 
@@ -156,7 +150,7 @@ def saveMetricTrace(sectionId, usedMetrics, factData):
             value_text,
             unit
         )
-        VALUES (%s, %s, %s, %s, %s, %s)
+        VALUES (?, ?, ?, ?, ?, ?)
     """
 
     rows = []
@@ -457,7 +451,7 @@ def generateIssueReport(
     # ==================================================
     # 1. RUN 저장
     # ==================================================
-    run_id   = saveReportRun(
+    success, run_id = saveReportRun(
         companyId,
         reportingYear,
         subIssueId,
@@ -469,11 +463,13 @@ def generateIssueReport(
         result
     )
 
+    if not success:
+        raise Exception("RUN insert 실패")
     # ==================================================
     # 2. SECTION 저장
     # ==================================================
-    section_id = saveSection(
-        run_id  ,
+    success, section_id = saveSection(
+        run_id,
         sectionNo,
         subIssueId,
         template,
@@ -481,6 +477,8 @@ def generateIssueReport(
         result
     )
 
+    if not success:
+        raise Exception("SECTION insert 실패")
     # ==================================================
     # 3. METRIC TRACE 저장
     # ==================================================

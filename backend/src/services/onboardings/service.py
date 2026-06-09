@@ -84,7 +84,17 @@ def listMetrics(
     if not allScopes:
         raise ValueError(scopeNotReadyMessage(cycle.get("cycle_type") or cycleType))
     assignmentRows = assignmentRepo.listAssignmentRows(int(cycle["id"]), companyId)
-    scopes = listVisibleMetricScopesForUser(allScopes, assignmentRows, userModel)
+    scopes, status, message = listVisibleMetricScopesForUser(allScopes, assignmentRows, userModel)
+    if status == False:
+        return OnboardingMetricsResponseDto(
+            companyId=companyId,
+            reportingYear=year,
+            cycleId=0,
+            cycleType="",
+            items=[],
+            status=status,
+            message=message
+        )
     if metricId:
         scopes = [row for row in allScopes if row.get("metric_id") == metricId]
         scopes = listVisibleMetricScopesForUser(scopes, assignmentRows, userModel)
@@ -697,11 +707,13 @@ def checkManager(userModel) -> None:
 
 def listVisibleMetricScopesForUser(scopes: list[dict], assignmentRows: list[dict], userModel) -> list[dict]:
     if userModel is None or isAssignmentManager(userModel):
-        return scopes
+        return scopes, True, ""
     if isConsultant(userModel):
-        raise PermissionError("Consultants cannot access onboarding input metrics")
+        return [], False, "Consultants cannot access onboarding input metrics"
+        # raise PermissionError("Consultants cannot access onboarding input metrics")
     if not isEmployee(userModel):
-        raise PermissionError("Only assigned users can access onboarding input metrics")
+        # raise PermissionError("Only assigned users can access onboarding input metrics")
+        return [], False, "Only assigned users can access onboarding input metrics"
     actorUserId = getActorUserId(userModel)
     assignedMetricIds = {
         row.get("metric_id")
@@ -711,7 +723,7 @@ def listVisibleMetricScopesForUser(scopes: list[dict], assignmentRows: list[dict
         and int(row.get("assignee_user_id")) == int(actorUserId)
         and str(row.get("assignment_status") or "").strip().lower() == assignmentRepo.ASSIGNMENT_STATUS_ASSIGNED
     }
-    return [scope for scope in scopes if scope.get("metric_id") in assignedMetricIds]
+    return [scope for scope in scopes if scope.get("metric_id") in assignedMetricIds], True, ""
 
 
 def checkMetricInputPermission(*, cycle: dict, companyId: int, metricId: str, userModel) -> None:

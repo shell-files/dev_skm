@@ -329,7 +329,7 @@ const ManagerData = () => {
       .finally(() => {
         setIsApprovalProjectModalOpen(true);
       });
-  }, [companyId, dispatch]);
+  }, [companyId]);
 
   const fetchData = useCallback(async () => {
     if (USE_LEGACY_USER_FIXTURE) {

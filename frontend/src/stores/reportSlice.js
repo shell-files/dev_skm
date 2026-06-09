@@ -42,7 +42,7 @@ const rejectIfFailed = (res, rejectWithValue, fallbackMessage) => {
   return res;
 };
 
-const dataOf = (payload) => payload?.data ?? payload;
+const dataOf = (payload) => payload?.data ?? payload ?? null;
 
 const normalizeApprovalDecisionPayload = (payload = {}) => {
   const normalized = { ...payload };

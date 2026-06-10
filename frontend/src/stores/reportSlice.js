@@ -147,7 +147,7 @@ const initialState = {
     data: null,
   },
   currentRunId: null,
-  currentYear: new Date().getFullYear(),
+  currentYear: localStorage.getItem("currentYear"),
   generateReportStatus: { loading: false, data: null, error: null },
   reportData: null,
   loading: {
@@ -808,6 +808,11 @@ const reportSlice = createSlice({
   name: "report",
   initialState,
   reducers: {
+    setCurruntYear: (state, action) => {
+      localStorage.setItem("currentYear", action.payload);
+      state.currentYear = action.payload ?? null;
+    },
+
     setActiveBatchId: (state, action) => {
       state.rollup.activeBatchId = action.payload ?? null;
     },
@@ -1197,6 +1202,8 @@ export const {
   resetReportState,
   selectApprovalProject,
   setActiveBatchId,
+  setCurruntYear,
+  setReportParams,
 } = reportSlice.actions;
 
 export default reportSlice.reducer;

@@ -8,41 +8,36 @@ import { toClimateTargetMetrics } from "./adapter";
 import { metricFields } from "./metricFields";
 
 const climateTarget = {
-  id: "climate-target",          // 고유 식별자 (편집 상태 key, DOM id 등에 사용)
-  label: "기후목표·전환계획",      // 목차/탭에 표시될 이름
-  subLabel: "기후변화 대응",       // 상위 분류
+  id: "climate-target",          // 서브이슈 코드 or id (ESG_SUB_ISSUE_MASTRE)
+  label: "기후목표·전환계획",      // 서브이슈 이름_kr
+  subLabel: "기후변화 대응",       // 이슈 그룹 이름
   exportName: "climate-target",  // PDF 파일명 (climate-target.pdf)
 
-  adapter: toClimateTargetMetrics, // metric rows → metrics Map
-  metricFields,                    // 이 서브이슈의 편집 필드
+  adapter: toClimateTargetMetrics, // metric rows → metrics Map  차트 변경? 
+
+  metricFields,                    
+  // ESG_SUB_ISSUE_ATOMIC_MAP atomic_metric_id,  
+  // ESG_SUB_ISSUE_MASTRE join 해서 서브이슈 네임 
 
   // 이 서브이슈가 가진 페이지들 (A안 시각화 / B안 표)
   pages: [
     {
-      key: "climate-a",
-      tabLabel: "기후변화 대응 · 시각화",
-      tocTag: "시각화",
+      key: "climate-a", //그래프 
+      tabLabel: "asd", //climateTarget.subLabel, 이런 느낌
       Component: ClimateTargetPageA,
       props: {
-        pageTitle: '기후목표 및 <span class="ac">전환계획</span>',
-        pageTitleEn: "Climate Target & Transition Plan",
-        sectionLabel: "전략 · CLIMATE TARGET",
-        ghost: "STRATEGY",
-        pageNumber: 42,
-        sourceNote: "Narrative Template v1.0 · Auto-generated",
+        pageTitle: 'label', //label
+        pageTitleEn: "Climate Target & Transition Plan", //서브이슈마스터 서브이슈 영어 이름
+        sourceNote: "SKM SR Template v1.0 · Auto-generated", // 고정 상수 예정
       },
     },
     {
-      key: "climate-b",
+      key: "climate-b", //표
       tabLabel: "기후변화 대응 · 표",
-      tocTag: "데이터 표",
       Component: ClimateTargetPageB,
       props: {
         pageTitle: '기후목표 및 <span class="ac">전환계획</span>',
         pageTitleEn: "Climate Target & Transition Plan",
-        sectionLabel: "데이터 · CLIMATE TARGET",
-        ghost: "DATA",
-        pageNumber: 43,
         sourceNote: "Narrative Template v1.0 · Auto-generated",
       },
     },

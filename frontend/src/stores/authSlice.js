@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, isPending, isRejected } from '@reduxjs/toolkit';
 import { GET, POST, PUT, PATCH, DELETE } from "@utils/Network";
 import { encodeJson, safeJsonParse } from "@utils/Base64";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
@@ -51,6 +51,8 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
+const authAsyncActions = [checkUser, loginUser, logoutUser];
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -64,10 +66,6 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {  
     builder
-      .addCase(checkUser.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
       .addCase(checkUser.fulfilled, (state, action) => {
         const res = action.payload;
         if(res.status === true) {
@@ -90,16 +88,6 @@ const authSlice = createSlice({
         }
         state.loading = false;
       })
-      .addCase(checkUser.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      });
-
-    builder
-      .addCase(loginUser.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
       .addCase(loginUser.fulfilled, (state, action) => {
         const res = action.payload;
         if(res.status === true) {
@@ -118,16 +106,6 @@ const authSlice = createSlice({
         }
         state.loading = false;
       })
-      .addCase(loginUser.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      });
-
-    builder
-      .addCase(logoutUser.pending, (state) => {
-        state.loading = true;
-        state.error = null;
-      })
       .addCase(logoutUser.fulfilled, (state, action) => {
         const res = action.payload;
         if(res.status === true) {
@@ -142,11 +120,23 @@ const authSlice = createSlice({
           showDefaultAlert("로그아웃 실패", "접속 오류가 발생 했습니다.", "error");
         }
         state.loading = false;
-      })
-      .addCase(logoutUser.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
       });
+
+    builder
+      .addMatcher(
+        isPending(...authAsyncActions), 
+        (state) => {
+          state.loading = true;
+          state.error = null;
+        }
+      )
+      .addMatcher(
+        isRejected(...authAsyncActions), 
+        (state, action) => {
+          state.loading = false;
+          state.error = action.payload || action.error.message || '알 수 없는 에러가 발생했습니다.';
+        }
+      );
   },
 });
 

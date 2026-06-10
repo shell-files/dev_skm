@@ -152,9 +152,9 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
         setIsBasisModalOpen(true);
     };
 
-    const goManagerdata = () => { navigate("/managerData"); if(window.innerWidth <= 800) setIsOpen(false); };
-    const goManager = () => { navigate("/manager"); if(window.innerWidth <= 800) setIsOpen(false); };
-    const handleGoHome = () => { goHome(); if(window.innerWidth <= 800) setIsOpen(false); };
+    const goManagerdata = () => { navigate("/managerData"); if (window.innerWidth <= 800) setIsOpen(false); };
+    const goManager = () => { navigate("/manager"); if (window.innerWidth <= 800) setIsOpen(false); };
+    const handleGoHome = () => { goHome(); if (window.innerWidth <= 800) setIsOpen(false); };
 
     return (
         <aside className={`sidebar ${isOpen ? "open" : "closed"}`} id="globalSidebar">
@@ -166,7 +166,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                             <span>대시보드</span>
                         </div>
                     </div>
-                    
+
                     {showReportProj && (
                         <div className="nav-group">
                             <div className="nav-item" onClick={handleReportNav}>
@@ -199,7 +199,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                                             return;
                                         }
                                         handleReportNav();
-                                        if(window.innerWidth <= 800) setIsOpen(false);
+                                        if (window.innerWidth <= 800) setIsOpen(false);
                                     }}>
                                         내 프로젝트
                                     </div>
@@ -209,7 +209,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                                             return;
                                         }
                                         navigate("/onb?mode=ROLLUP_RESPONSE");
-                                        if(window.innerWidth <= 800) setIsOpen(false);
+                                        if (window.innerWidth <= 800) setIsOpen(false);
                                     }}>
                                         데이터 요청 목록
                                     </div>
@@ -253,7 +253,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
 
                         <div className={`nav-accordion-content ${expanded.settings ? "expanded" : ""}`}>
                             <div className="inner-wrapper">
-                                <div className="nav-item sub-item" onClick={() => { goMyPage(); if(window.innerWidth <= 800) setIsOpen(false); }}>
+                                <div className="nav-item sub-item" onClick={() => { goMyPage(); if (window.innerWidth <= 800) setIsOpen(false); }}>
                                     내 계정 설정
                                 </div>
                             </div>
@@ -263,12 +263,12 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
             </div>
 
             {
-              companies.length > 1 && 
-              <div className="sidebar-footer">
-                  <div className="search-container">
-                      <button type="button" className="company-search" onClick={()=>navigate('/companyselect')}>회사 선택</button>
-                  </div>
-              </div>
+                companies.length > 1 &&
+                <div className="sidebar-footer">
+                    <div className="search-container">
+                        <button type="button" className="company-search" onClick={() => navigate('/companyselect')}>회사 선택</button>
+                    </div>
+                </div>
             }
 
             <ReportBasisSelectModal 

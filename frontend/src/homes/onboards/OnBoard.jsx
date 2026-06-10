@@ -266,7 +266,7 @@ const OnboardingWorkflowCta = ({
         <div className="ob1-empty-state">
           <p className="ob1-empty-title">보고서 발행 기준 선택이 필요합니다.</p>
           <p className="ob1-empty-desc">
-          보고서 워크플로우를 생성해 주세요.
+            보고서 워크플로우를 생성해 주세요.
           </p>
           <button type="button" className="ob1-btn-cta" onClick={onBasisModalOpen}>
             보고서 발행 기준 선택
@@ -545,9 +545,9 @@ const OnboardingMetricTable = ({
                       <button type="button" className="ob1-btn-input" onClick={() => onOpenMetric(item, subMetrics)}>상세 보기</button>
                     ) : (
                       <>
-                        <button 
-                          type="button" 
-                          className="ob1-btn-input" 
+                        <button
+                          type="button"
+                          className="ob1-btn-input"
                           onClick={() => {
                             if (readOnlyYn) return;
                             if (isEsgManager && isAssignedToOther) {
@@ -651,14 +651,17 @@ const OnBoard = () => {
       rawAssignments
     ).map((item) => ({
       ...item,
-      selfAssignedYn:
-        item.assigneeUserId != null &&
-        currentUserId != null &&
-        Number(item.assigneeUserId) === Number(currentUserId),
+      selfAssignedYn: isEmployeeViewer
+        ? true
+        : (
+            item.assigneeUserId != null &&
+            currentUserId != null &&
+            Number(item.assigneeUserId) === Number(currentUserId)
+          ),
     }));
 
     return flattened;
-  }, [rawMetrics, rawAssignments, currentUserId]);
+  }, [rawMetrics, rawAssignments, currentUserId, isEmployeeViewer]);
 
 
 
@@ -669,7 +672,7 @@ const OnBoard = () => {
     if (viewMode === "ROLLUP_RESPONSE" && isEmployeeViewer) {
       items = items.filter((item) => item.selfAssignedYn === true);
     }
-    
+
     if (viewMode === "ROLLUP_RESPONSE" && rollupResponseBatchId) {
       const actionableIds = selectedRequestDetail?.actionableInputMetricIds || [];
       items = items.filter((item) => actionableIds.includes(item.metricId));
@@ -734,7 +737,7 @@ const OnBoard = () => {
       if (viewMode === "ROLLUP_RESPONSE") {
         setActiveSourceCycleId(null);
         await dispatch(fetchRollupRequests({ includeSentYn: true, allPurposesYn: true })).unwrap();
-        
+
         if (!rollupResponseBatchId) {
           return;
         }
@@ -761,7 +764,7 @@ const OnBoard = () => {
         await dispatch(
           fetchOnboardingMetrics({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE", metricId, batchId })
         ).unwrap();
-        
+
         if (canManageAssignments) {
           await dispatch(
             fetchOnboardingAssignments({ companyId, reportingYear: responseYear, cycleType: "ROLLUP_RESPONSE", batchId })
@@ -820,7 +823,7 @@ const OnBoard = () => {
       }
 
       const metricId = searchParams.get("metricId");
-      
+
       await dispatch(
         fetchOnboardingMetrics({ companyId, reportingYear, cycleType: nextCycleType, metricId })
       ).unwrap();
@@ -898,7 +901,7 @@ const OnBoard = () => {
       showDefaultAlert(
         "오류",
         error?.message ||
-          "전송 가능 상태를 확인하지 못했습니다.",
+        "전송 가능 상태를 확인하지 못했습니다.",
         "error"
       );
     }
@@ -978,7 +981,7 @@ const OnBoard = () => {
           submitError?.error?.message ??
           ""
         );
-          
+
         if (
           detail.includes("Metric assignment is required") ||
           detail.includes("Metric assignment must be assigned") ||
@@ -986,7 +989,7 @@ const OnBoard = () => {
         ) {
           detail = "이 지표의 입력 담당자로 지정되지 않았습니다. 담당자 지정 상태를 확인해 주세요.";
         }
-        
+
         showDefaultAlert(
           "오류",
           `입력값은 저장되었지만 승인 요청에 실패했습니다.${detail ? `\n${detail}` : ""}`,
@@ -1061,7 +1064,7 @@ const OnBoard = () => {
       try {
         const res = await dispatch(fetchApprovalProjects({ companyId })).unwrap();
         let projects = res?.data?.items || res?.items || [];
-        
+
         if (isEmployeeRole(viewerRole) && !isAssignmentManagerRole(viewerRole)) {
           const assignedProjects = [];
           for (const proj of projects) {
@@ -1071,12 +1074,12 @@ const OnBoard = () => {
                 reportingYear: proj.reportingYear,
                 cycleType: "PRE_DMA_G0"
               })).unwrap();
-              const metrics = metricsRes?.data?.metrics || metricsRes?.metrics || [];
+              const metrics = metricsRes?.data?.items ?? metricsRes?.items ?? [];
               if (metrics.length > 0) {
                 assignedProjects.push(proj);
               }
             } catch (e) {
-               // ignore
+              // ignore
             }
           }
           setFilteredProjects(assignedProjects);
@@ -1088,7 +1091,7 @@ const OnBoard = () => {
         setFilteredProjects([]);
       }
     } else {
-       setFilteredProjects(approvalProjectsFromStore);
+      setFilteredProjects(approvalProjectsFromStore);
     }
     setIsApprovalProjectModalOpen(true);
   }, [companyId, dispatch, viewerRole, approvalProjectsFromStore]);
@@ -1157,16 +1160,16 @@ const OnBoard = () => {
 
   return (
     <div id="ob1-page">
-      <div className="ob1-header-card" style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between', 
-        background: '#ffffff', 
-        border: '1px solid #e2e8f0', 
-        borderRadius: '8px', 
-        padding: '16px 24px', 
-        marginBottom: '24px', 
-        boxShadow: '0 1px 2px rgba(0,0,0,0.02)' 
+      <div className="ob1-header-card" style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        background: '#ffffff',
+        border: '1px solid #e2e8f0',
+        borderRadius: '8px',
+        padding: '16px 24px',
+        marginBottom: '24px',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <h1 className="ob1-title" style={{ margin: 0, fontSize: '1.25rem' }}>온보딩 [{viewMode === "ROLLUP_RESPONSE" ? "요청 대응" : basisLabel}]</h1>
@@ -1185,8 +1188,8 @@ const OnBoard = () => {
               Read-only history
             </span>
           )}
-          <button 
-            type="button" 
+          <button
+            type="button"
             style={{ padding: '6px 12px', fontSize: '14px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: 'pointer', color: '#374151', fontWeight: '500' }}
             onClick={handleOpenApprovalProjectModal}
           >
@@ -1243,7 +1246,7 @@ const OnBoard = () => {
           )}
         </div>
       </div>
-      
+
       {viewMode === "ROLLUP_RESPONSE" && !batchIdQuery ? (
         <RollupInboxPanel requests={requests} onRefresh={initializeOnboarding} />
       ) : viewMode === "ROLLUP_RESPONSE" && !rollupResponseBatchId ? (
@@ -1252,82 +1255,82 @@ const OnBoard = () => {
           <p className="ob1-empty-desc">요청함에서 다시 진입해 주세요.</p>
         </div>
       ) : (
-      <div className="ob1-content-layout">
-        <div className="ob1-sidebar-panel">
-          <div className="ob1-sidebar-title">SUB-ISSUE</div>
-          <ul className="ob1-sidebar-menu">
-            {uniqueSubIssues.map((issue) => (
-              <li
-                key={issue}
-                className={`ob1-sidebar-menu-item ${selectedSubIssue === issue ? "active" : ""}`}
-                onClick={() => setSelectedSubIssue(issue)}
-              >
-                {issue}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <div className="ob1-content-layout">
+          <div className="ob1-sidebar-panel">
+            <div className="ob1-sidebar-title">SUB-ISSUE</div>
+            <ul className="ob1-sidebar-menu">
+              {uniqueSubIssues.map((issue) => (
+                <li
+                  key={issue}
+                  className={`ob1-sidebar-menu-item ${selectedSubIssue === issue ? "active" : ""}`}
+                  onClick={() => setSelectedSubIssue(issue)}
+                >
+                  {issue}
+                </li>
+              ))}
+            </ul>
+          </div>
 
-        <div className="ob1-main-area">
-          {displayWorkflowError && (
-            <div className="ob1-inline-error">
-              <span className="ob1-error-icon">!</span>
-              <span>{displayWorkflowError}</span>
-            </div>
-          )}
+          <div className="ob1-main-area">
+            {displayWorkflowError && (
+              <div className="ob1-inline-error">
+                <span className="ob1-error-icon">!</span>
+                <span>{displayWorkflowError}</span>
+              </div>
+            )}
 
-          {isNoRunWorkflow(displayWorkflow) ? (
-            <OnboardingWorkflowCta
-              variant="noRun"
-              loadingWorkflow={loadingWorkflow}
-              workflow={displayWorkflow}
-              isNoRunWorkflow={isNoRunWorkflow}
-              onBasisModalOpen={() => setIsBasisModalOpen(true)}
-              onCtaClick={handleCtaClick}
-            />
-          ) : (
-            <>
-              {canManageRollup && viewMode === "MY_PROJECT" && (
-                <>
-                  <RollupSummaryPanel
-                    batchId={activeBatchId}
-                    workflow={displayWorkflow}
-                    onCtaClick={handleCtaClick}
-                    onCalculated={() => initializeOnboarding()}
-                    rollupPurposeCode={activeRollupContext.rollupPurposeCode}
-                    metricScopeCode={activeRollupContext.metricScopeCode}
-                    onSendSource={handleOpenTransferModal}
-                  />
-
-                </>
-              )}
-
-              <OnboardingMetricTable
-                g0Error={displayG0Error}
-                g0Items={filteredG0Items}
-                loadingG0={loadingG0}
-                selectedMetricIds={selectedMetricIds}
-                onSelectMetric={handleSelectMetric}
-                onToggleSelectAll={handleToggleSelectAll}
-                onBulkAssignRequested={handleBulkAssignRequested}
-                onOpenMetric={(item, subMetrics) => {
-                  setSelectedItem({
-                    parent: item,
-                    metrics: subMetrics,
-                  });
-                  setIsModalOpen(true);
-                }}
-                onRetry={initializeOnboarding}
-                viewerRole={viewerRole}
-                canManageAssignments={canManageAssignments}
-                isEmployeeViewer={isEmployeeViewer}
-                isConsultantViewer={isConsultantViewer}
-                readOnlyYn={isRollupResponseReadOnly}
+            {isNoRunWorkflow(displayWorkflow) ? (
+              <OnboardingWorkflowCta
+                variant="noRun"
+                loadingWorkflow={loadingWorkflow}
+                workflow={displayWorkflow}
+                isNoRunWorkflow={isNoRunWorkflow}
+                onBasisModalOpen={() => setIsBasisModalOpen(true)}
+                onCtaClick={handleCtaClick}
               />
-            </>
-          )}
+            ) : (
+              <>
+                {canManageRollup && viewMode === "MY_PROJECT" && (
+                  <>
+                    <RollupSummaryPanel
+                      batchId={activeBatchId}
+                      workflow={displayWorkflow}
+                      onCtaClick={handleCtaClick}
+                      onCalculated={() => initializeOnboarding()}
+                      rollupPurposeCode={activeRollupContext.rollupPurposeCode}
+                      metricScopeCode={activeRollupContext.metricScopeCode}
+                      onSendSource={handleOpenTransferModal}
+                    />
+
+                  </>
+                )}
+
+                <OnboardingMetricTable
+                  g0Error={displayG0Error}
+                  g0Items={filteredG0Items}
+                  loadingG0={loadingG0}
+                  selectedMetricIds={selectedMetricIds}
+                  onSelectMetric={handleSelectMetric}
+                  onToggleSelectAll={handleToggleSelectAll}
+                  onBulkAssignRequested={handleBulkAssignRequested}
+                  onOpenMetric={(item, subMetrics) => {
+                    setSelectedItem({
+                      parent: item,
+                      metrics: subMetrics,
+                    });
+                    setIsModalOpen(true);
+                  }}
+                  onRetry={initializeOnboarding}
+                  viewerRole={viewerRole}
+                  canManageAssignments={canManageAssignments}
+                  isEmployeeViewer={isEmployeeViewer}
+                  isConsultantViewer={isConsultantViewer}
+                  readOnlyYn={isRollupResponseReadOnly}
+                />
+              </>
+            )}
+          </div>
         </div>
-      </div>
       )}
 
       <OnboardingModalShell

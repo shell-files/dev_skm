@@ -25,7 +25,10 @@ const safeJsonParse = (value, fallback) => {
 export const AuthProvider = ({ children }) => {
 	// [변수] user: 현재 로그인한 사용자 정보
 	const [user, setUser] = useState(null);
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+
+  // 모달 모달
+  const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
 
   const dispatch = useDispatch();
 
@@ -146,7 +149,9 @@ export const AuthProvider = ({ children }) => {
 	const authContextValue = {login, goMyPage, goHome, 
     userName, selectedCompany, 
     companies, isAuthReady, isLoading,
-    updateName, logoutUser,handleLogout};
+    updateName, logoutUser,handleLogout,
+    isBasisModalOpen, setIsBasisModalOpen
+  };
  
 	return (
 		<AuthContext.Provider value={authContextValue}>

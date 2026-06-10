@@ -51,26 +51,6 @@ const CONSOLIDATED_STEPS = [
   { img: stepReportImg, label: "AI 보고서 발행" },
 ];
 
-const buildWorkflowResumePath = ({
-  nextAction,
-  runId,
-  reportingYear,
-}) => {
-  const params = new URLSearchParams({
-    reportingYear: String(reportingYear),
-  });
-
-  if (runId) {
-    params.set("runId", String(runId));
-  }
-
-  if (nextAction === "START_DMA") {
-    return `/benchmk?${params.toString()}`;
-  }
-
-  return `/onb?${params.toString()}`;
-};
-
 const ReportBasisSelectModal = ({
   // isOpen,
   // onClose,
@@ -183,22 +163,6 @@ const ReportBasisSelectModal = ({
           setLoading(false);
           return;
         }
-
-        const workflow = res?.data || {};
-
-        onClose?.();
-        navigate(
-          buildWorkflowResumePath({
-            nextAction: workflow?.nextAction,
-            runId: workflow?.runId ?? currentRunId,
-            reportingYear: selectedYear,
-          }),
-          {
-            replace: true,
-            state: { workflowStartedAt: Date.now() },
-          }
-        );
-        return;
       } catch (err) {
         console.error("[ReportBasisSelectModal] resumeWorkflow error:", err);
         setError("기존 프로젝트 재개 중 오류가 발생했습니다.");

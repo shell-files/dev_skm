@@ -9,7 +9,7 @@ import { DEFAULT_REPORTING_YEAR } from "@stores/reportSlice";
 const Sidebarnav = ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { selectedCompany, selectCompany, handleLogout, goHome, goMyPage, openAlarmCenter, companies } = useAuth();
+    const { selectedCompany, selectCompany, handleLogout, goHome, goMyPage, openAlarmCenter, companies, setIsBasisModalOpen } = useAuth();
     const companyId =
         selectedCompany?.company_id ??
         selectedCompany?.companyId;
@@ -141,7 +141,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
         }
     }
 
-    const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
+    // const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
 
     const handleReportNav = () => {
         if (!companyId) {
@@ -272,8 +272,8 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
             }
 
             <ReportBasisSelectModal 
-                isOpen={isBasisModalOpen} 
-                onClose={() => setIsBasisModalOpen(false)} 
+                // isOpen={isBasisModalOpen} 
+                // onClose={() => setIsBasisModalOpen(false)} 
                 companyId={companyId}
                 reportingYear={selectedCompany?.reportingYear || DEFAULT_REPORTING_YEAR}
             />

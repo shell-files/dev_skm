@@ -7,6 +7,9 @@ import React from "react";
 import { num } from "./srHelpers";
 import "@styles/sr-page.css";
 
+
+
+// 상수 사용 OR DB 만들어서 도메인 메핑 후 각 들고 오기
 export const DEFAULT_NAV = [
   { key: "letter", label: "Letter to Stakeholders" },
   { key: "overview", label: "Corporate Overview" },
@@ -15,7 +18,7 @@ export const DEFAULT_NAV = [
   { key: "gov", label: "Governance" },
   { key: "appendix", label: "Appendix" },
 ];
-
+// 상수 사용 OR DB 만들어서 도메인 메핑 후 각 들고 오기
 export const DEFAULT_SUBNAV = [
   { label: "환경경영" },
   { label: "기후변화 대응", active: true },
@@ -24,13 +27,12 @@ export const DEFAULT_SUBNAV = [
   { label: "자원 사용 및 순환 경제" },
 ];
 
+
+
 export function SRChrome({
   navItems = DEFAULT_NAV,
   subNavItems = DEFAULT_SUBNAV,
-  pageNumber = 42,
-  sectionLabel = "전략 · CLIMATE TARGET",
-  ghost = "STRATEGY",
-  pageTitle,
+  pageTitle, 
   pageTitleEn,
   footnotes = [],
   sourceNote,
@@ -56,7 +58,6 @@ export function SRChrome({
             >{n.label}</div>
           ))}
         </div>
-        <div className="sr-pg">{pageNumber}</div>
       </div>
 
       <div className="sr-subnav">
@@ -74,10 +75,8 @@ export function SRChrome({
       <div className="sr-rule" />
 
       <div className="sr-body">
-        <div className="sr-ghost">{ghost}</div>
         <div className="sr-head">
           <div>
-            <div className="sr-eyebrow">{sectionLabel}</div>
             <div className="sr-title" dangerouslySetInnerHTML={{ __html: pageTitle }} />
             {pageTitleEn && <div className="sr-title-en">{pageTitleEn}</div>}
           </div>

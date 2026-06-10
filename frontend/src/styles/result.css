@@ -64,7 +64,11 @@
   border-bottom: 1px solid #f1f5f9;
   color: #334155;
 }
-
+.shortcut-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none; /* 클릭 이벤트를 원천 차단 */
+}
 
 .result-table-td.issue-name,
 .result-table th.issue-name {

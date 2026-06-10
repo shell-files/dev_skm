@@ -1,5 +1,6 @@
+from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional, Literal, Dict
+from typing import Any, List, Optional, Literal, Dict
 
 # --- v8.2 DMA Pydantic Schemas ---
 
@@ -152,9 +153,218 @@ class StageScore(BaseModel):
 
 class FinalMaterialityScore(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    
+
     subIssueCode: str = Field(..., alias="sub_issue_code")
     finalImpactScore: Optional[float] = Field(None, alias="final_impact_score")
     finalFinancialScore: Optional[float] = Field(None, alias="final_financial_score")
     finalScore: Optional[float] = Field(None, alias="final_score")
     coverage: dict
+
+
+# =====================================================================================
+# DMA v1.3 MVP Slim Canonical Engine — DTO / Enum (PARALLEL ADDITION)
+# =====================================================================================
+# These types are added IN PARALLEL to the legacy v8.2 schemas above. Nothing above is
+# modified or removed. The v1.3 canonical path is opt-in and not wired into any service,
+# API, or DB in Phase A.
+#
+# Hard rules enforced by these types:
+#  - AI emits FACTS ONLY. Score fields are forbidden in ExtractedFactsV13 (extra="forbid").
+#  - Missing required factor -> axis UNOBSERVED (never 0 substitution).
+#  - Screening signal != canonical impact/financial score != final DMA rank.
+# =====================================================================================
+
+
+class TriState(str, Enum):
+    """Three-valued logic for AI-extracted boolean-ish facts (no implicit False)."""
+
+    TRUE = "TRUE"
+    FALSE = "FALSE"
+    UNKNOWN = "UNKNOWN"
+
+
+class FactorStatusV13(str, Enum):
+    """Per-factor / per-axis observation status."""
+
+    AUTO_CONFIRMED = "AUTO_CONFIRMED"
+    PRESET_FALLBACK = "PRESET_FALLBACK"
+    UNOBSERVED = "UNOBSERVED"
+    REJECTED = "REJECTED"
+    CONFLICTED = "CONFLICTED"
+
+
+class DecisionSourceV13(str, Enum):
+    """Where a factor decision came from (rule engine vs preset vs rejection)."""
+
+    RULE_AUTO = "RULE_AUTO"
+    PRESET_FALLBACK = "PRESET_FALLBACK"
+    UNOBSERVED = "UNOBSERVED"
+    REJECTED = "REJECTED"
+    CONFLICTED = "CONFLICTED"
+
+
+class ScorePurposeV13(str, Enum):
+    """The purpose of a computed score. Screening is NOT a canonical IRO score."""
+
+    CANONICAL_IRO = "CANONICAL_IRO"
+    PRESURVEY_SCREENING = "PRESURVEY_SCREENING"
+    STAKEHOLDER_OVERLAY = "STAKEHOLDER_OVERLAY"
+    LEGACY_STAGE_SCORE = "LEGACY_STAGE_SCORE"
+
+
+class EvidenceSpanV13(BaseModel):
+    """A single piece of supporting evidence for a fact/score. Read-only provenance."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    textSpan: str = Field(..., alias="text_span")
+    sourceType: Optional[str] = Field(None, alias="source_type")
+    sourceTitle: Optional[str] = Field(None, alias="source_title")
+    sourceUrl: Optional[str] = Field(None, alias="source_url")
+    sourcePageNo: Optional[int] = Field(None, alias="source_page_no")
+    publishedAt: Optional[str] = Field(None, alias="published_at")
+    teCrawlingId: Optional[int] = Field(None, alias="te_crawling_id")
+
+
+class ExtractedFactsV13(BaseModel):
+    """
+    AI-extracted facts only. NO score fields are permitted here.
+
+    ``extra="forbid"`` means any forbidden field (e.g. proposedScore, scale,
+    magnitude, sameEventGroupId) raises pydantic ValidationError on construction.
+    Only ``eventGroupCandidateId`` (a candidate, not a confirmed dedup decision)
+    is allowed among grouping fields.
+    """
+
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+
+    subIssueCode: Optional[str] = Field(None, alias="sub_issue_code")
+    eventType: Optional[str] = Field(None, alias="event_type")
+    impactDirection: Optional[Literal["positive", "negative"]] = Field(None, alias="impact_direction")
+    financialIroType: Optional[Literal["risk", "opportunity"]] = Field(None, alias="financial_iro_type")
+    actualYn: Optional[TriState] = Field(None, alias="actual_yn")
+    officialConfirmedYn: Optional[TriState] = Field(None, alias="official_confirmed_yn")
+    explicitImmediateActionYn: Optional[TriState] = Field(None, alias="explicit_immediate_action_yn")
+    explicitNoUrgencyYn: Optional[TriState] = Field(None, alias="explicit_no_urgency_yn")
+    affectedCount: Optional[int] = Field(None, alias="affected_count")
+    financialAmount: Optional[float] = Field(None, alias="financial_amount")
+    ratioValue: Optional[float] = Field(None, alias="ratio_value")
+    probabilityValue: Optional[float] = Field(None, alias="probability_value")
+    eventDate: Optional[str] = Field(None, alias="event_date")
+    effectiveDate: Optional[str] = Field(None, alias="effective_date")
+    deadlineDate: Optional[str] = Field(None, alias="deadline_date")
+    sourceType: Optional[str] = Field(None, alias="source_type")
+    classificationConfidence: Optional[float] = Field(None, alias="classification_confidence")
+    eventGroupCandidateId: Optional[str] = Field(None, alias="event_group_candidate_id")
+    evidenceSpans: List[EvidenceSpanV13] = Field(default_factory=list, alias="evidence_spans")
+    rawMetadata: Dict[str, Any] = Field(default_factory=dict, alias="raw_metadata")
+
+
+class FactorTraceV13(BaseModel):
+    """Explainability trace for a single scoring factor within an axis."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    factorName: str = Field(..., alias="factor_name")
+    observedValue: Optional[float] = Field(None, alias="observed_value")
+    status: FactorStatusV13
+    decisionSource: DecisionSourceV13 = Field(..., alias="decision_source")
+    baseWeight: Optional[float] = Field(None, alias="base_weight")
+    effectiveWeight: Optional[float] = Field(None, alias="effective_weight")
+    contribution: Optional[float] = Field(None, alias="contribution")
+    note: Optional[str] = None
+
+
+class AxisScoreTraceV13(BaseModel):
+    """
+    Canonical axis (impact|financial) result + full reweight trace.
+
+    ``score`` is None iff ``status == UNOBSERVED`` (a required factor was missing).
+    ``score`` is always on the 0..5 canonical scale otherwise.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    axis: Literal["impact", "financial"]
+    polarity: str  # negative|positive (impact) / risk|opportunity (financial)
+    score: Optional[float] = None
+    status: FactorStatusV13
+    scorePurpose: ScorePurposeV13 = Field(ScorePurposeV13.CANONICAL_IRO, alias="score_purpose")
+    requiredFactors: List[str] = Field(default_factory=list, alias="required_factors")
+    optionalFactors: List[str] = Field(default_factory=list, alias="optional_factors")
+    observedFactors: List[str] = Field(default_factory=list, alias="observed_factors")
+    missingRequired: List[str] = Field(default_factory=list, alias="missing_required")
+    missingOptional: List[str] = Field(default_factory=list, alias="missing_optional")
+    reweightApplied: bool = Field(False, alias="reweight_applied")
+    offsettingAllowed: bool = Field(False, alias="offsetting_allowed")
+    factorTraces: List[FactorTraceV13] = Field(default_factory=list, alias="factor_traces")
+    ruleVersion: Optional[str] = Field(None, alias="rule_version")
+
+
+class ScreeningTraceV13(BaseModel):
+    """Pre-survey screening signal trace (benchmark / regulation / KCGS / KIS)."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    channel: str
+    scorePurpose: ScorePurposeV13 = Field(ScorePurposeV13.PRESURVEY_SCREENING, alias="score_purpose")
+    impactSignal: Optional[float] = Field(None, alias="impact_signal")
+    financialSignal: Optional[float] = Field(None, alias="financial_signal")
+    status: str
+    capability: Optional[str] = None
+    rawInputs: Dict[str, Any] = Field(default_factory=dict, alias="raw_inputs")
+
+
+class AggregationTraceV13(BaseModel):
+    """Sub-issue axis aggregation trace. MAX over sources; offsetting forbidden."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    subIssueCode: str = Field(..., alias="sub_issue_code")
+    impactMethod: str = Field("MAX", alias="impact_method")
+    financialMethod: str = Field("MAX", alias="financial_method")
+    offsettingAllowed: bool = Field(False, alias="offsetting_allowed")
+    impactScore: Optional[float] = Field(None, alias="impact_score")
+    financialScore: Optional[float] = Field(None, alias="financial_score")
+    impactSourceCount: int = Field(0, alias="impact_source_count")
+    financialSourceCount: int = Field(0, alias="financial_source_count")
+
+
+class LegacyCompatibilityV13(BaseModel):
+    """
+    Records how the v1.3 payload coexists with legacy data. The v1.3 path never
+    migrates, reuses, or overwrites legacy scores.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    legacyScoringPayloadPresentYn: bool = Field(False, alias="legacy_scoring_payload_present_yn")
+    legacyMigratedYn: bool = Field(False, alias="legacy_migrated_yn")
+    legacyScoreReusedYn: bool = Field(False, alias="legacy_score_reused_yn")
+    legacyUpdatedYn: bool = Field(False, alias="legacy_updated_yn")
+    legacyRuleVersion: Optional[str] = Field(None, alias="legacy_rule_version")
+
+
+class ScoringPayloadV13(BaseModel):
+    """
+    The v1.3 canonical payload persisted (in Phase B/C) inside the existing
+    ``ESG_DMA_SIGNAL_DETAIL.scoring_payload_json`` column. No new table/column.
+    """
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    factorPayloadSchemaVersion: str = Field("1.3", alias="factor_payload_schema_version")
+    ruleVersion: str = Field(..., alias="rule_version")
+    configHash: Optional[str] = Field(None, alias="config_hash")
+    scorePurpose: ScorePurposeV13 = Field(..., alias="score_purpose")
+    sourceChannel: Optional[str] = Field(None, alias="source_channel")
+    subIssueCode: Optional[str] = Field(None, alias="sub_issue_code")
+    extractedFacts: Optional[ExtractedFactsV13] = Field(None, alias="extracted_facts")
+    factorTrace: List[FactorTraceV13] = Field(default_factory=list, alias="factor_trace")
+    axisScores: List[AxisScoreTraceV13] = Field(default_factory=list, alias="axis_scores")
+    screeningTrace: List[ScreeningTraceV13] = Field(default_factory=list, alias="screening_trace")
+    aggregationTrace: Optional[AggregationTraceV13] = Field(None, alias="aggregation_trace")
+    legacyCompatibility: LegacyCompatibilityV13 = Field(
+        default_factory=LegacyCompatibilityV13, alias="legacy_compatibility"
+    )
+    evaluatedAt: Optional[str] = Field(None, alias="evaluated_at")

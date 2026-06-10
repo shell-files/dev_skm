@@ -2,6 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import Observing from "@assets/icons/result_page/observe.png";
 import Chain from "@assets/icons/result_page/valuechain.png";
+import { showConfirmAlert } from "@components/UI/ServiceAlert";
+import { useDispatch, useSelector } from "react-redux";
+import { generateReport } from "@stores/reportSlice";
+import { useAuth } from '@hooks/AuthContext.jsx';
 
 import "@styles/result.css";
 import "@styles/benchmarking.css";
@@ -502,6 +506,8 @@ const ImportanceBadge = ({ value }) => {
 };
 
 const Result = () => {
+  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const activeIndex = 3;
 
@@ -540,7 +546,37 @@ const Result = () => {
       particleRef.current.appendChild(p);
     }
   };
+  const { selectedCompany } = useAuth();
+  const companyId = selectedCompany.company_id;
+  const runId = useSelector((state) => state.report.workflow.current?.runId);
+  const year = useSelector((state) => state.report.currentYear);
+  const handleGenerateReport = async () => {
+    console.log(companyId, runId, year)
+    if (!companyId || !runId || !year) {
+      await showConfirmAlert("경고", "회사 또는 프로젝트 선택 정보가 없습니다.", "warning");
+      return;
+    }
 
+    setLoading(true);
+    try {
+      await dispatch(generateReport({
+        companyId,
+        materialityRunId: runId,
+        year,
+      })).unwrap();
+      navigate("/draft");
+    } catch (error) {
+      const errorMessage = error?.message || "보고서를 생성하는 중 오류가 발생했습니다.";
+      await showConfirmAlert(
+        "보고서 생성 실패",
+        errorMessage,
+        "error"
+      );
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const moveStep = (index) => {
     if (index === activeIndex) return;
@@ -1007,13 +1043,16 @@ const Result = () => {
                         icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
                       },
                     ].map((item) => (
-                      <div key={item.title} className="shortcut-card" onClick={() => navigate(item.path)}>
+                      <div
+                        key={item.title}
+                        className="shortcut-card"
+                        onClick={item.path === "/draft" ? handleGenerateReport : () => navigate(item.path)}
+                      >
                         <div className="shortcut-icon" style={{ background: item.bg }}>{item.icon}</div>
                         <div className="shortcut-text">
                           <div className="shortcut-title">{item.title}</div>
                           <div className="shortcut-desc">{item.desc}</div>
                         </div>
-
                       </div>
                     ))}
                   </div>

@@ -586,9 +586,13 @@ const OnBoard = () => {
   const location = useLocation();
   const companyId = selectedCompany?.company_id ?? selectedCompany?.companyId;
   const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-  const reportingYearQuery = searchParams.get("reportingYear");
+  // const reportingYearQuery = searchParams.get("reportingYear");
+  const reportingYearQuery = useSelector((state) => state.report.currentYear);
   const cycleTypeQuery = searchParams.get("cycleType");
-  const reportingYear = reportingYearQuery ? parseInt(reportingYearQuery, 10) : DEFAULT_REPORTING_YEAR;
+  const reportingYear = reportingYearQuery ? parseInt(reportingYearQuery, 10) : null;
+  useEffect(()=> {
+    console.log(reportingYearQuery);
+  },[cycleTypeQuery]);
 
   const viewMode = searchParams.get("mode") === "ROLLUP_RESPONSE" ? "ROLLUP_RESPONSE" : "MY_PROJECT";
   const batchIdQuery = searchParams.get("batchId");
@@ -770,6 +774,8 @@ const OnBoard = () => {
         return;
       }
 
+      if(reportingYear === null) return;
+
       const workflowRes = await dispatch(
         fetchCurrentWorkflow({ companyId, reportingYear })
       ).unwrap();
@@ -832,7 +838,7 @@ const OnBoard = () => {
     } catch (error) {
       console.error(error);
     }
-  }, [companyId, cycleTypeQuery, dispatch, reportingYear, location.search, viewMode, rollupResponseBatchId, canManageAssignments]);
+  }, [companyId, cycleTypeQuery, reportingYear, location.search, viewMode, rollupResponseBatchId, canManageAssignments]);
 
   useEffect(() => {
     dispatch(resetReportState());

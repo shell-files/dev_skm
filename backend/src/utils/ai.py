@@ -114,7 +114,7 @@ def saveSection(runId, sectionNo, subIssueId, template, filledText, reportText):
         INSERT INTO ESG_REPORT_AI_SECTION (
         ai_run_id,
         section_no,
-        sub_issue_id,
+        sub_issue_code,
         template_snapshot,
         filled_template,
         report_text

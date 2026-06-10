@@ -178,6 +178,8 @@ const Draft = () => {
     if (!reportData) {
       // navigate('/result');
       console.log("데이터 없음")
+      console.log(selectedCompany.company_id, year)
+      return;
     }
   }, [reportData]);
   // 저장된 편집값 불러오기: API 우선, 실패 시 localStorage 폴백
@@ -185,6 +187,7 @@ const Draft = () => {
     const load = async () => {
       if (companyId && year) {
         const json = await GET("/draft/load", { companyId, year });
+        // console.log(json)
         if (json?.success && json?.data) {
           if (json.data.metrics) setEditMetricsByPage(json.data.metrics);
           if (json.data.narrative) setEditNarrativeByPage(json.data.narrative);
@@ -217,8 +220,8 @@ const Draft = () => {
     subIssues.forEach(si => {
       GET("/draft/section", { companyId, year, subIssueId: si.id })
         .then(d => {
-          if (d?.success && d.data?.report_text) {
-            setAiSections(prev => ({ ...prev, [si.id]: d.data.report_text }));
+          if (d?.success && d.data?.reportText) {
+            setAiSections(prev => ({ ...prev, [si.id]: d.data.reportText }));
           }
         });
     });

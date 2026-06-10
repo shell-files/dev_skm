@@ -4,9 +4,8 @@ import "@styles/draft.css";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import pptxgen from "pptxgenjs";
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
-import * as XLSX from "xlsx";
 import { useSelector, useDispatch } from "react-redux";
+import { GET, POST } from "@utils/Network";
 
 // ── SR 템플릿 통합 (서브이슈 레지스트리 소비) ──
 // 새 서브이슈는 srTemplates/subIssues/<name>/ 폴더 + registry.js 한 줄로 추가됨.
@@ -146,6 +145,8 @@ const Draft = () => {
   const [trackId, setTrackId] = useState(null); // 근거 추적 패널: 선택된 metric_id
   const [trackCtx, setTrackCtx] = useState(null); // { pageLabel, area, clicked, value }
   const [savedAt, setSavedAt] = useState(null); // 마지막 저장 시각
+  const [metricRows, setMetricRows] = useState([]); // DB에서 로드한 지표 rows
+  const [aiSections, setAiSections] = useState({}); // { subIssueId → AI 생성 본문 }
 
   // ── 상태 정의 ──
   const [isEditing, setIsEditing] = useState(false); // 본문 수정 모드 상태
@@ -155,19 +156,22 @@ const Draft = () => {
   const navigate = useNavigate();
 
   // ── SR 템플릿 데이터 연결 (페이지별 웹 편집 → 미리보기/PDF 동일 반영) ──
-  // 실제 API/state 가 생기면 actualMetricRows 로 연결. 현재는 빈 배열 + 페이지별 편집값.
-  const actualMetricRows = []; // ← 실제 source 연결 시 교체 (더미 금지)
+  const actualMetricRows = metricRows; // API에서 로드한 지표 rows
 
   // 특정 페이지의 metrics Map / 본문 (페이지 키별 편집값 + 소속 서브이슈 adapter)
   const buildPageMetrics = (pageObj) =>
     buildMetricsFromEdits(pageObj.adapter, editMetricsByPage[pageObj.key], actualMetricRows);
-  const buildPageNarrative = (key) => {
+  const buildPageNarrative = (key, subIssueId) => {
     const t = (editNarrativeByPage[key] || "").trim();
-    return t ? t : null; // 비어 있으면 템플릿이 지표값으로 자동 조합
+    if (t) return t;
+    return (subIssueId && aiSections[subIssueId]) || null;
   };
 
   const STORAGE_KEY = "draft-sr-edits-v1";
-  const { reportData } = useSelector(state => state.report);
+  const { reportData, currentYear } = useSelector(state => state.report);
+  const selectedCompany = useSelector(state => state.auth.selectedCompany);
+  const companyId = selectedCompany?.company_id;
+  const year = currentYear;
 
 
   useEffect(() => {
@@ -176,28 +180,61 @@ const Draft = () => {
       console.log("데이터 없음")
     }
   }, [reportData]);
-  // 저장된 편집값 불러오기 (최초 마운트 시)
+  // 저장된 편집값 불러오기: API 우선, 실패 시 localStorage 폴백
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (parsed.metrics) setEditMetricsByPage(parsed.metrics);
-      if (parsed.narrative) setEditNarrativeByPage(parsed.narrative);
-      if (parsed.savedAt) setSavedAt(parsed.savedAt);
-    } catch (e) {
-      console.warn("저장된 편집값 로드 실패:", e);
-    }
-  }, []);
+    const load = async () => {
+      if (companyId && year) {
+        const json = await GET("/draft/load", { companyId, year });
+        if (json?.success && json?.data) {
+          if (json.data.metrics) setEditMetricsByPage(json.data.metrics);
+          if (json.data.narrative) setEditNarrativeByPage(json.data.narrative);
+          if (json.data.savedAt) setSavedAt(json.data.savedAt);
+          return;
+        }
+      }
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed.metrics) setEditMetricsByPage(parsed.metrics);
+        if (parsed.narrative) setEditNarrativeByPage(parsed.narrative);
+        if (parsed.savedAt) setSavedAt(parsed.savedAt);
+      } catch (e) { console.warn("저장된 편집값 로드 실패:", e); }
+    };
+    load();
+  }, [companyId, year]);
 
-  // 저장: 현재 편집값을 영속화. (백엔드 미연동 → localStorage. 실제 API는 TODO 지점에 연결)
-  const handleSaveEdits = () => {
+  // 지표 데이터 로드 (DB → adapter → MetricsMap)
+  useEffect(() => {
+    if (!companyId || !year) return;
+    GET("/draft/metrics", { companyId, year })
+      .then(d => { if (d?.success) setMetricRows(d.data || []); });
+  }, [companyId, year]);
+
+  // AI 생성 본문 로드 (서브이슈별)
+  useEffect(() => {
+    if (!companyId || !year) return;
+    subIssues.forEach(si => {
+      GET("/draft/section", { companyId, year, subIssueId: si.id })
+        .then(d => {
+          if (d?.success && d.data?.report_text) {
+            setAiSections(prev => ({ ...prev, [si.id]: d.data.report_text }));
+          }
+        });
+    });
+  }, [companyId, year]);
+
+  // 저장: API 우선, 실패 시 localStorage 폴백
+  const handleSaveEdits = async () => {
     const now = new Date().toISOString();
     const payload = { metrics: editMetricsByPage, narrative: editNarrativeByPage, savedAt: now };
+    if (companyId && year) {
+      const json = await POST("/draft/save", { companyId, year, ...payload });
+      if (json?.success) { setSavedAt(json.savedAt || now); return; }
+    }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       setSavedAt(now);
-      // TODO(R2): 여기서 실제 저장 API 호출 (예: await api.saveReportDraft(payload))
     } catch (e) {
       console.warn("편집값 저장 실패:", e);
       alert("저장에 실패했습니다. 브라우저 저장 권한을 확인해 주세요.");
@@ -676,7 +713,7 @@ const Draft = () => {
                         {...page.props}
                         mode={isEditing ? "edit" : "render"}
                         metrics={buildPageMetrics(page)}
-                        narrativeText={buildPageNarrative(page.key)}
+                        narrativeText={buildPageNarrative(page.key, page.subIssueId)}
                         onNarrativeChange={(text) =>
                           setEditNarrativeByPage((prev) => ({ ...prev, [page.key]: text }))
                         }
@@ -872,7 +909,7 @@ const Draft = () => {
                     <PageComponent
                       {...page.props}
                       metrics={buildMetricsFromEdits(si.adapter, editMetricsByPage[page.key], actualMetricRows)}
-                      narrativeText={buildPageNarrative(page.key)}
+                      narrativeText={buildPageNarrative(page.key, si.id)}
                       subNavItems={si.pages.map((p) => ({ label: p.tabLabel, active: p.key === page.key }))}
                     />
                   </div>

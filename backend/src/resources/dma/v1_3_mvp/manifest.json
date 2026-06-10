@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "ruleVersion": "dma-rule-v1.3-mvp",
+  "architectureRevision": "R4.1-SLIM",
+  "runtimePolicyFiles": [
+    "canonical_scoring_policy.json",
+    "screening_policy.json",
+    "survey_policy.json",
+    "ai_fact_validation_policy.json",
+    "selection_policy.json"
+  ],
+  "hashAlgorithm": "SHA-256",
+  "hashTargets": "runtimePolicyFiles",
+  "serviceDirectJsonLoadAllowedYn": false,
+  "hotReloadAllowedYn": false,
+  "capabilities": {
+    "canonicalScoring": "READY",
+    "benchmarkScreening": "READY",
+    "surveyAggregation": "READY",
+    "regulationBaseScreening": "READY",
+    "regulationAutoClassification": "CONFIG_PENDING",
+    "kcgsPillarSignal": "READY",
+    "kcgsPillarBoostPropagation": "DATA_EXPORT_REQUIRED",
+    "kisFinancialResilience": "DATA_EXPORT_REQUIRED",
+    "mediaEventCanonicalAdapter": "CONFIG_PENDING"
+  }
+}

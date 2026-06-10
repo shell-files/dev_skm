@@ -548,10 +548,10 @@ const Result = () => {
   };
   const { selectedCompany } = useAuth();
   const companyId = selectedCompany.company_id;
-  const runId = useSelector((state) => state.report.workflow.current?.runId);
+  const runId = useSelector((state) => state.report.currentRunId);
   const year = useSelector((state) => state.report.currentYear);
   const handleGenerateReport = async () => {
-    console.log(companyId, runId, year)
+    // console.log(companyId, runId, year)
     if (!companyId || !runId || !year) {
       await showConfirmAlert("경고", "회사 또는 프로젝트 선택 정보가 없습니다.", "warning");
       return;

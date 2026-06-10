@@ -148,6 +148,7 @@ const initialState = {
   },
   currentRunId: null,
   currentYear: localStorage.getItem("currentYear"),
+  currentRunId: localStorage.getItem("currentRunId"),
   generateReportStatus: { loading: false, data: null, error: null },
   reportData: null,
   loading: {
@@ -812,6 +813,10 @@ const reportSlice = createSlice({
       localStorage.setItem("currentYear", action.payload);
       state.currentYear = action.payload ?? null;
     },
+    setMaterialityRunId: (state, action) => {
+      localStorage.setItem("currentRunId", action.payload);
+      state.currentRunId = action.payload ?? null;
+    },
 
     setActiveBatchId: (state, action) => {
       state.rollup.activeBatchId = action.payload ?? null;
@@ -1203,6 +1208,7 @@ export const {
   selectApprovalProject,
   setActiveBatchId,
   setCurruntYear,
+  setMaterialityRunId,
   setReportParams,
 } = reportSlice.actions;
 

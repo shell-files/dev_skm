@@ -1,5 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router";
+import { useDispatch } from "react-redux";
+import { setCurruntYear } from "@stores/reportSlice";
 
 const purposeLabel = (code) => {
   const value = String(code || "").toUpperCase();
@@ -10,11 +12,16 @@ const purposeLabel = (code) => {
 
 const RollupInboxPanel = ({ requests = [], onRefresh }) => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  
+  // const handleDetail = (req) => {
+  //   navigate(`?mode=ROLLUP_RESPONSE&batchId=${req.batchId}&reportingYear=${req.reportingYear}`);
+  // };
 
   const handleDetail = (req) => {
-    navigate(`?mode=ROLLUP_RESPONSE&batchId=${req.batchId}&reportingYear=${req.reportingYear}`);
+    dispatch(setCurruntYear(req.reportingYear));
+    navigate(`?mode=ROLLUP_RESPONSE&batchId=${req.batchId}`);
   };
-
   return (
     <div style={{ padding: "20px", background: "#fff", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>

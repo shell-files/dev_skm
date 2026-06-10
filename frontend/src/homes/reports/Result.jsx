@@ -4,9 +4,8 @@ import Observing from "@assets/icons/result_page/observe.png";
 import Chain from "@assets/icons/result_page/valuechain.png";
 import { showConfirmAlert } from "@components/UI/ServiceAlert";
 import { useDispatch, useSelector } from "react-redux";
-import { generateReport, } from "@stores/reportSlice";
+import { generateReport } from "@stores/reportSlice";
 import { useAuth } from '@hooks/AuthContext.jsx';
-import { probeCurrentWorkflow } from "@stores/reportSlice";
 
 import "@styles/result.css";
 import "@styles/benchmarking.css";
@@ -549,12 +548,9 @@ const Result = () => {
   };
   const { selectedCompany } = useAuth();
   const companyId = selectedCompany.company_id;
-  const reportState = useSelector((state) => state.report);
-
-  const runId = useSelector((state) => state.report.currentRunId);
+  const runId = useSelector((state) => state.report.workflow.current?.runId);
   const year = useSelector((state) => state.report.currentYear);
   const handleGenerateReport = async () => {
-    console.log("리덕스 상태 확인:", reportState);
     console.log(companyId, runId, year)
     if (!companyId || !runId || !year) {
       await showConfirmAlert("경고", "회사 또는 프로젝트 선택 정보가 없습니다.", "warning");

@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
 import { useDispatch } from "react-redux";
+import { useAuth } from '@hooks/AuthContext.jsx';
 import "@styles/reportBasisSelectModal.css";
 import {
   DEFAULT_REPORTING_YEAR,
   probeCurrentWorkflow,
   resumeReportWorkflow,
   startReportWorkflow,
+  setCurruntYear,
 } from "@stores/reportSlice";
 
 // Card illustrations
@@ -70,8 +72,8 @@ const buildWorkflowResumePath = ({
 };
 
 const ReportBasisSelectModal = ({
-  isOpen,
-  onClose,
+  // isOpen,
+  // onClose,
   companyId,
   reportingYear = DEFAULT_REPORTING_YEAR,
 }) => {
@@ -84,6 +86,9 @@ const ReportBasisSelectModal = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const statusCacheRef = useRef({});
+  const { isBasisModalOpen : isOpen, setIsBasisModalOpen } = useAuth();
+
+  const onClose = () => setIsBasisModalOpen(false);
 
   useEffect(() => {
     if (!isOpen) {
@@ -200,6 +205,11 @@ const ReportBasisSelectModal = ({
         setLoading(false);
         return;
       }
+
+      dispatch(setCurruntYear(selectedYear));
+      onClose();
+      navigate('/onb');
+      return;
     }
 
     if (!selected) return;
@@ -227,11 +237,11 @@ const ReportBasisSelectModal = ({
         return;
       }
 
-      onClose?.();
-      navigate(`/onb?reportingYear=${selectedYear}`, {
-        replace: true,
-        state: { workflowStartedAt: Date.now() },
-      });
+      dispatch(setCurruntYear(selectedYear));
+
+      setIsBasisModalOpen(false);
+      onClose();
+      navigate('/onb');
     } catch (err) {
       console.error("[ReportBasisSelectModal] startWorkflow error:", err);
       setError("워크플로우 시작 중 오류가 발생했습니다.");

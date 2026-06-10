@@ -141,7 +141,15 @@ const initialState = {
     activeBatchId: null,
     batchStatus: null,
   },
-
+  generateReportStatus: {
+    loading: false,
+    error: null,
+    data: null,
+  },
+  currentRunId: null,
+  currentYear: localStorage.getItem("currentYear"),
+  generateReportStatus: { loading: false, data: null, error: null },
+  reportData: null,
   loading: {
     workflow: false,
     onboarding: false,
@@ -753,6 +761,22 @@ export const rejectOnboardingApproval = createAsyncThunk(
   }
 );
 
+export const generateReport = createAsyncThunk(
+  "report/generateReport",
+  async ({ companyId, materialityRunId, year }, { rejectWithValue }) => {
+    try {
+      const res = await POST("/ai", { companyId, materialityRunId, year });
+      return rejectIfFailed(res, rejectWithValue, "보고서 생성에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: "보고서 생성 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
 const setPending = (state, key) => {
   state.loading[key] = true;
   state.error[key] = null;
@@ -784,6 +808,11 @@ const reportSlice = createSlice({
   name: "report",
   initialState,
   reducers: {
+    setCurruntYear: (state, action) => {
+      localStorage.setItem("currentYear", action.payload);
+      state.currentYear = action.payload ?? null;
+    },
+
     setActiveBatchId: (state, action) => {
       state.rollup.activeBatchId = action.payload ?? null;
     },
@@ -793,6 +822,11 @@ const reportSlice = createSlice({
       if (key && Object.prototype.hasOwnProperty.call(state.error, key)) {
         state.error[key] = null;
       }
+    },
+    setReportParams: (state, action) => {
+      // payload로 전달된 runId와 year를 전역 상태에 저장
+      state.currentRunId = action.payload.runId;
+      state.currentYear = action.payload.year;
     },
 
     resetReportState: () => initialState,
@@ -1143,6 +1177,21 @@ const reportSlice = createSlice({
       .addCase(rejectOnboardingApproval.rejected, (state, action) =>
         setApprovalMutationRejected(state, "onboardingApprovalReject", action)
       );
+    builder
+    .addCase(generateReport.pending, (state) => {
+      state.generateReportStatus.loading = true;
+      state.generateReportStatus.error = null;
+    })
+    .addCase(generateReport.fulfilled, (state, action) => {
+      console.log("API 응답 확인:", action.payload);
+      state.generateReportStatus.loading = false;
+      state.generateReportStatus.data = action.payload; // 결과 저장
+      state.reportData = action.payload; // 기존 데이터 저장소와 동기화
+    })
+    .addCase(generateReport.rejected, (state, action) => {
+      state.generateReportStatus.loading = false;
+      state.generateReportStatus.error = action.payload;
+    });
   },
 });
 
@@ -1153,6 +1202,8 @@ export const {
   resetReportState,
   selectApprovalProject,
   setActiveBatchId,
+  setCurruntYear,
+  setReportParams,
 } = reportSlice.actions;
 
 export default reportSlice.reducer;

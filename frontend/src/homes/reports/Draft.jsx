@@ -4,9 +4,8 @@ import "@styles/draft.css";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import pptxgen from "pptxgenjs";
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
-import * as XLSX from "xlsx";
 import { useSelector, useDispatch } from "react-redux";
+import { GET, POST } from "@utils/Network";
 
 // ── SR 템플릿 통합 (서브이슈 레지스트리 소비) ──
 // 새 서브이슈는 srTemplates/subIssues/<name>/ 폴더 + registry.js 한 줄로 추가됨.
@@ -146,6 +145,8 @@ const Draft = () => {
   const [trackId, setTrackId] = useState(null); // 근거 추적 패널: 선택된 metric_id
   const [trackCtx, setTrackCtx] = useState(null); // { pageLabel, area, clicked, value }
   const [savedAt, setSavedAt] = useState(null); // 마지막 저장 시각
+  const [metricRows, setMetricRows] = useState([]); // DB에서 로드한 지표 rows
+  const [aiSections, setAiSections] = useState({}); // { subIssueId → AI 생성 본문 }
 
   // ── 상태 정의 ──
   const [isEditing, setIsEditing] = useState(false); // 본문 수정 모드 상태
@@ -155,19 +156,22 @@ const Draft = () => {
   const navigate = useNavigate();
 
   // ── SR 템플릿 데이터 연결 (페이지별 웹 편집 → 미리보기/PDF 동일 반영) ──
-  // 실제 API/state 가 생기면 actualMetricRows 로 연결. 현재는 빈 배열 + 페이지별 편집값.
-  const actualMetricRows = []; // ← 실제 source 연결 시 교체 (더미 금지)
+  const actualMetricRows = metricRows; // API에서 로드한 지표 rows
 
   // 특정 페이지의 metrics Map / 본문 (페이지 키별 편집값 + 소속 서브이슈 adapter)
   const buildPageMetrics = (pageObj) =>
     buildMetricsFromEdits(pageObj.adapter, editMetricsByPage[pageObj.key], actualMetricRows);
-  const buildPageNarrative = (key) => {
+  const buildPageNarrative = (key, subIssueId) => {
     const t = (editNarrativeByPage[key] || "").trim();
-    return t ? t : null; // 비어 있으면 템플릿이 지표값으로 자동 조합
+    if (t) return t;
+    return (subIssueId && aiSections[subIssueId]) || null;
   };
 
   const STORAGE_KEY = "draft-sr-edits-v1";
-  const { reportData } = useSelector(state => state.report);
+  const { reportData, currentYear } = useSelector(state => state.report);
+  const selectedCompany = useSelector(state => state.auth.selectedCompany);
+  const companyId = selectedCompany?.company_id;
+  const year = currentYear;
 
 
   useEffect(() => {
@@ -176,28 +180,61 @@ const Draft = () => {
       console.log("데이터 없음")
     }
   }, [reportData]);
-  // 저장된 편집값 불러오기 (최초 마운트 시)
+  // 저장된 편집값 불러오기: API 우선, 실패 시 localStorage 폴백
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw);
-      if (parsed.metrics) setEditMetricsByPage(parsed.metrics);
-      if (parsed.narrative) setEditNarrativeByPage(parsed.narrative);
-      if (parsed.savedAt) setSavedAt(parsed.savedAt);
-    } catch (e) {
-      console.warn("저장된 편집값 로드 실패:", e);
-    }
-  }, []);
+    const load = async () => {
+      if (companyId && year) {
+        const json = await GET("/draft/load", { companyId, year });
+        if (json?.success && json?.data) {
+          if (json.data.metrics) setEditMetricsByPage(json.data.metrics);
+          if (json.data.narrative) setEditNarrativeByPage(json.data.narrative);
+          if (json.data.savedAt) setSavedAt(json.data.savedAt);
+          return;
+        }
+      }
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (parsed.metrics) setEditMetricsByPage(parsed.metrics);
+        if (parsed.narrative) setEditNarrativeByPage(parsed.narrative);
+        if (parsed.savedAt) setSavedAt(parsed.savedAt);
+      } catch (e) { console.warn("저장된 편집값 로드 실패:", e); }
+    };
+    load();
+  }, [companyId, year]);
 
-  // 저장: 현재 편집값을 영속화. (백엔드 미연동 → localStorage. 실제 API는 TODO 지점에 연결)
-  const handleSaveEdits = () => {
+  // 지표 데이터 로드 (DB → adapter → MetricsMap)
+  useEffect(() => {
+    if (!companyId || !year) return;
+    GET("/draft/metrics", { companyId, year })
+      .then(d => { if (d?.success) setMetricRows(d.data || []); });
+  }, [companyId, year]);
+
+  // AI 생성 본문 로드 (서브이슈별)
+  useEffect(() => {
+    if (!companyId || !year) return;
+    subIssues.forEach(si => {
+      GET("/draft/section", { companyId, year, subIssueId: si.id })
+        .then(d => {
+          if (d?.success && d.data?.report_text) {
+            setAiSections(prev => ({ ...prev, [si.id]: d.data.report_text }));
+          }
+        });
+    });
+  }, [companyId, year]);
+
+  // 저장: API 우선, 실패 시 localStorage 폴백
+  const handleSaveEdits = async () => {
     const now = new Date().toISOString();
     const payload = { metrics: editMetricsByPage, narrative: editNarrativeByPage, savedAt: now };
+    if (companyId && year) {
+      const json = await POST("/draft/save", { companyId, year, ...payload });
+      if (json?.success) { setSavedAt(json.savedAt || now); return; }
+    }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
       setSavedAt(now);
-      // TODO(R2): 여기서 실제 저장 API 호출 (예: await api.saveReportDraft(payload))
     } catch (e) {
       console.warn("편집값 저장 실패:", e);
       alert("저장에 실패했습니다. 브라우저 저장 권한을 확인해 주세요.");
@@ -251,6 +288,7 @@ const Draft = () => {
     const cur = (editMetricsByPage[pk] && editMetricsByPage[pk][src]) ?? "";
     setInlineEdit({ id: src, top: r.bottom + 4, left: r.left, width: Math.max(r.width, 160), value: cur });
   };
+
   const commitInlineEdit = (val) => {
     if (!inlineEdit) return;
     const pk = PAGES[currentPage].key;
@@ -495,216 +533,6 @@ const Draft = () => {
       }
       return;
     }
-
-    if (type === "PPT_NATIVE") {
-      // 편집형: DOM을 읽어 텍스트=텍스트박스, 표=네이티브 표, 카드=도형+텍스트.
-      // 로드맵/게이지처럼 그래픽 블록만 이미지로 삽입.
-      setPdfMode(true);
-      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-      await new Promise((r) => setTimeout(r, 120));
-      try {
-        const root = document.getElementById("pdf-render-root");
-        if (!root) return;
-        const SLIDE_W = 11.69, SLIDE_H = 8.27;
-        const FONT = "Malgun Gothic"; // PPT 기본 한글 폰트(없으면 PowerPoint가 대체)
-
-        const renderEl = (el) =>
-          html2canvas(el, {
-            scale: 2, useCORS: true, allowTaint: true, backgroundColor: null,
-            width: el.offsetWidth, height: el.offsetHeight, windowWidth: el.offsetWidth
-          });
-        const toHex = (rgb) => {
-          const m = (rgb || "").match(/\d+(\.\d+)?/g);
-          if (!m || m.length < 3) return null;
-          const [r, g, b] = m.map(Number);
-          return [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("").toUpperCase();
-        };
-
-        for (const si of subIssues) {
-          const pptx = new pptxgen();
-          pptx.defineLayout({ name: "A4L", width: SLIDE_W, height: SLIDE_H });
-          pptx.layout = "A4L";
-          const slideOf = {}; let slideNo = 0;
-
-          const makeCtx = (sec) => {
-            const pageRect = sec.getBoundingClientRect();
-            const k = SLIDE_W / pageRect.width;
-            const pos = (el) => { const r = el.getBoundingClientRect(); return { x: (r.left - pageRect.left) * k, y: (r.top - pageRect.top) * k, w: r.width * k, h: r.height * k }; };
-            const fpt = (el) => Math.max(6, parseFloat(getComputedStyle(el).fontSize) * k * 72);
-            return { k, pos, fpt };
-          };
-          const addTextEl = (slide, el, ctx, extra = {}) => {
-            const txt = (el.innerText || "").trim();
-            if (!txt) return;
-            const cs = getComputedStyle(el);
-            const p = ctx.pos(el);
-            slide.addText(txt, {
-              x: p.x, y: p.y, w: p.w, h: Math.max(p.h, 0.18),
-              fontSize: ctx.fpt(el), fontFace: FONT,
-              bold: parseInt(cs.fontWeight, 10) >= 600,
-              color: toHex(cs.color) || "16241F",
-              align: cs.textAlign === "right" ? "right" : cs.textAlign === "center" ? "center" : "left",
-              valign: "top", margin: 1, ...extra,
-            });
-          };
-
-          const buildSlide = async (sec) => {
-            const ctx = makeCtx(sec);
-            const slide = pptx.addSlide();
-
-            const topband = sec.querySelector(".sr-topband");
-            if (topband) { const p = ctx.pos(topband); slide.addShape(pptx.ShapeType.rect, { x: p.x, y: p.y, w: p.w, h: Math.max(p.h, 0.04), fill: { color: toHex(getComputedStyle(topband).backgroundColor) || "16241F" }, line: { width: 0 } }); }
-
-            const subnav = sec.querySelector(".sr-subnav");
-            if (subnav) addTextEl(slide, subnav, ctx, { color: "6b8378" });
-
-            ["sr-eyebrow", "sr-title", "sr-title-en"].forEach((cls) => { const el = sec.querySelector("." + cls); if (el) addTextEl(slide, el, ctx); });
-
-            const prose = sec.querySelector(".sr-prose");
-            if (prose) addTextEl(slide, prose, ctx);
-
-            // KPI 카드
-            sec.querySelectorAll(".sr-kpi").forEach((card) => {
-              const cs = getComputedStyle(card); const p = ctx.pos(card);
-              slide.addShape(pptx.ShapeType.roundRect, { x: p.x, y: p.y, w: p.w, h: p.h, rectRadius: 0.05, fill: { color: toHex(cs.backgroundColor) || "F4F8F6" }, line: { color: toHex(cs.borderTopColor) || "D7E2DC", width: 0.5 } });
-              ["kl", "kv", "kd"].forEach((c) => { const el = card.querySelector("." + c); if (el) addTextEl(slide, el, ctx); });
-            });
-
-            // 표 캡션 + 네이티브 표
-            sec.querySelectorAll(".sr-tcap").forEach((cap) => addTextEl(slide, cap, ctx, { bold: true }));
-            sec.querySelectorAll("table.sr-tbl").forEach((tbl) => {
-              const p = ctx.pos(tbl);
-              const rows = [];
-              tbl.querySelectorAll("tr").forEach((tr) => {
-                const cells = [];
-                tr.querySelectorAll("th,td").forEach((td) => {
-                  const cs = getComputedStyle(td);
-                  cells.push({
-                    text: (td.innerText || "").trim(), options: {
-                      bold: td.tagName === "TH" || parseInt(cs.fontWeight, 10) >= 600,
-                      color: toHex(cs.color) || "16241F",
-                      fill: { color: td.tagName === "TH" ? "EAF3EE" : "FFFFFF" },
-                      align: cs.textAlign === "right" ? "right" : cs.textAlign === "center" ? "center" : "left",
-                      fontSize: Math.max(7, ctx.fpt(td)), valign: "middle",
-                    }
-                  });
-                });
-                if (cells.length) rows.push(cells);
-              });
-              const headCells = tbl.querySelectorAll("tr:first-child th, tr:first-child td");
-              const colW = Array.from(headCells).map((c) => c.getBoundingClientRect().width * ctx.k);
-              if (rows.length) slide.addTable(rows, { x: p.x, y: p.y, w: p.w, colW: colW.length ? colW : undefined, border: { type: "solid", pt: 0.5, color: "D7E2DC" }, fontFace: FONT, autoPage: false, valign: "middle" });
-            });
-
-            // 그래픽 블록은 이미지로(로드맵·게이지)
-            for (const sel of [".sr-road", ".sr-gauge"]) {
-              const el = sec.querySelector(sel);
-              if (el) { const p = ctx.pos(el); const cv = await renderEl(el); slide.addImage({ data: cv.toDataURL("image/png"), x: p.x, y: p.y, w: p.w, h: p.h }); }
-            }
-
-            // 노트 카드(편집형)
-            sec.querySelectorAll(".sr-note-card").forEach((card) => {
-              const cs = getComputedStyle(card); const p = ctx.pos(card);
-              slide.addShape(pptx.ShapeType.roundRect, { x: p.x, y: p.y, w: p.w, h: p.h, rectRadius: 0.04, fill: { color: toHex(cs.backgroundColor) || "F4F8F6" }, line: { color: "D7E2DC", width: 0.5 } });
-              ["l", "b", "s"].forEach((c) => { const el = card.querySelector("." + c); if (el) addTextEl(slide, el, ctx); });
-            });
-
-            // 이행수단
-            const measures = sec.querySelector(".sr-measures");
-            if (measures) {
-              const cs = getComputedStyle(measures); const p = ctx.pos(measures);
-              slide.addShape(pptx.ShapeType.rect, { x: p.x, y: p.y, w: p.w, h: p.h, fill: { color: toHex(cs.backgroundColor) || "F4F8F6" }, line: { width: 0 } });
-              ["ml", "mv"].forEach((c) => { const el = measures.querySelector("." + c); if (el) addTextEl(slide, el, ctx); });
-            }
-
-            const foot = sec.querySelector(".sr-foot");
-            if (foot && (foot.innerText || "").trim()) addTextEl(slide, foot, ctx, { color: "8aa399" });
-
-            return slide;
-          };
-
-          // 목차 슬라이드(편집형 텍스트 + 슬라이드 점프 링크)
-          const tocSlide = pptx.addSlide(); slideNo++;
-          tocSlide.addText(si.label || si.id, { x: 0.6, y: 0.5, w: SLIDE_W - 1.2, h: 0.6, fontSize: 24, bold: true, color: "1B5E44", fontFace: FONT });
-          tocSlide.addText("목차", { x: 0.6, y: 1.2, w: 3, h: 0.4, fontSize: 13, color: "6B8378", fontFace: FONT });
-
-          const tocItems = [];
-          for (const page of si.pages) {
-            const sec = root.querySelector(`#pdf-sec-${si.id}-${page.key} .sr-page`);
-            if (!sec) continue;
-            await buildSlide(sec);
-            slideNo++; slideOf[page.key] = slideNo;
-            tocItems.push({ label: page.tabLabel || page.key, slide: slideNo });
-          }
-          tocItems.forEach((it, i) => {
-            tocSlide.addText(`${i + 1}. ${it.label}`, { x: 0.8, y: 1.7 + i * 0.5, w: SLIDE_W - 1.6, h: 0.42, fontSize: 15, color: "16241F", fontFace: FONT, hyperlink: { slide: it.slide } });
-          });
-
-          await pptx.writeFile({ fileName: `${si.exportName || si.id}-편집형.pptx` });
-          await new Promise((r) => setTimeout(r, 300));
-        }
-      } finally {
-        setPdfMode(false);
-      }
-      return;
-    }
-
-    if (type === "Word") {
-      const children = [
-        new Paragraph({ text: "기후목표·전환계획", heading: HeadingLevel.HEADING_1 }),
-        new Paragraph({ text: "전환 리스크에 선제적으로 대응하는 넷제로 로드맵", heading: HeadingLevel.HEADING_2 }),
-        new Paragraph({ text: "" }),
-      ];
-
-      Object.keys(paragraphData).forEach((pid) => {
-        const d = paragraphData[pid];
-        children.push(
-          new Paragraph({
-            children: [new TextRun({ text: d.tag, bold: true, color: "03A94D" })],
-            spacing: { before: 200 },
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: texts[pid], size: 22 })],
-            spacing: { after: 160 },
-          })
-        );
-      });
-
-      const doc = new Document({ sections: [{ children }] });
-      const blob = await Packer.toBlob(doc);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "sustainability_draft.docx";
-      a.click();
-      URL.revokeObjectURL(url);
-      return;
-    }
-
-    if (type === "Excel") {
-      const rows = [["태그", "단락 ID", "본문 내용"]];
-      Object.keys(paragraphData).forEach((pid) => {
-        rows.push([paragraphData[pid].tag, paragraphData[pid].id, texts[pid]]);
-      });
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      ws["!cols"] = [{ wch: 14 }, { wch: 12 }, { wch: 80 }];
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "본문");
-      XLSX.writeFile(wb, "sustainability_draft.xlsx");
-      return;
-    }
-
-    if (type === "JSON") {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(
-        JSON.stringify({ info: paragraphData, contents: texts }, null, 2)
-      );
-      const a = document.createElement("a");
-      a.setAttribute("href", dataStr);
-      a.setAttribute("download", "sustainability_draft.json");
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    };
   };
 
 
@@ -885,7 +713,7 @@ const Draft = () => {
                         {...page.props}
                         mode={isEditing ? "edit" : "render"}
                         metrics={buildPageMetrics(page)}
-                        narrativeText={buildPageNarrative(page.key)}
+                        narrativeText={buildPageNarrative(page.key, page.subIssueId)}
                         onNarrativeChange={(text) =>
                           setEditNarrativeByPage((prev) => ({ ...prev, [page.key]: text }))
                         }
@@ -1081,7 +909,7 @@ const Draft = () => {
                     <PageComponent
                       {...page.props}
                       metrics={buildMetricsFromEdits(si.adapter, editMetricsByPage[page.key], actualMetricRows)}
-                      narrativeText={buildPageNarrative(page.key)}
+                      narrativeText={buildPageNarrative(page.key, si.id)}
                       subNavItems={si.pages.map((p) => ({ label: p.tabLabel, active: p.key === page.key }))}
                     />
                   </div>

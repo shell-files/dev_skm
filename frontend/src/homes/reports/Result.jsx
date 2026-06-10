@@ -506,6 +506,7 @@ const ImportanceBadge = ({ value }) => {
 };
 
 const Result = () => {
+  const { loading: isGenerating } = useSelector((state) => state.report.generateReportStatus);
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -548,16 +549,16 @@ const Result = () => {
   };
   const { selectedCompany } = useAuth();
   const companyId = selectedCompany.company_id;
-  const runId = useSelector((state) => state.report.workflow.current?.runId);
+  const runId = useSelector((state) => state.report.currentRunId);
   const year = useSelector((state) => state.report.currentYear);
   const handleGenerateReport = async () => {
     console.log(companyId, runId, year)
+    if (isGenerating) return;
     if (!companyId || !runId || !year) {
       await showConfirmAlert("경고", "회사 또는 프로젝트 선택 정보가 없습니다.", "warning");
       return;
     }
 
-    setLoading(true);
     try {
       await dispatch(generateReport({
         companyId,
@@ -1045,24 +1046,30 @@ const Result = () => {
                     ].map((item) => (
                       <div
                         key={item.title}
-                        className="shortcut-card"
-                        onClick={item.path === "/draft" ? handleGenerateReport : () => navigate(item.path)}
+                        className={`shortcut-card ${item.path === "/draft" && isGenerating ? "shortcut-disabled" : ""}`}
+                        onClick={() => {
+                          if (item.path === "/draft" && isGenerating) return;
+                          item.path === "/draft" ? handleGenerateReport() : navigate(item.path);
+                        }}
                       >
                         <div className="shortcut-icon" style={{ background: item.bg }}>{item.icon}</div>
                         <div className="shortcut-text">
                           <div className="shortcut-title">{item.title}</div>
-                          <div className="shortcut-desc">{item.desc}</div>
+                          <div className="shortcut-desc">
+                            {item.path === "/draft" && isGenerating ? "보고서 생성 중..." : item.desc}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
-            )}
-          </section>
+            )
+            }
+          </section >
 
           {/* ── 오른쪽 패널 ── */}
-          <section id="result-right-panel">
+          < section id="result-right-panel" >
 
             {rightTab === 0 && (
               <div className="result-tab-pane">
@@ -1105,25 +1112,27 @@ const Result = () => {
               </div>
             )}
 
-            {rightTab === 1 && (
-              <div className="result-result-dashboard" id="right-tab-empty">
-                <div className="robot-view-container">
-                  <div className="particle-field" ref={particleRef}></div>
-                  <div className="robot-stage">
-                    <div className="robot-float-wrap">
-                      <img src={robot} className="robot-main-img" alt="robot" />
+            {
+              rightTab === 1 && (
+                <div className="result-result-dashboard" id="right-tab-empty">
+                  <div className="robot-view-container">
+                    <div className="particle-field" ref={particleRef}></div>
+                    <div className="robot-stage">
+                      <div className="robot-float-wrap">
+                        <img src={robot} className="robot-main-img" alt="robot" />
+                      </div>
                     </div>
+                    <h3 id="robot-empty-title">분석 미실행 상태</h3>
+                    <p id="robot-empty-desc">하단의 '설문 결과 분석' 버튼을 작동시켜 주십시오.</p>
                   </div>
-                  <h3 id="robot-empty-title">분석 미실행 상태</h3>
-                  <p id="robot-empty-desc">하단의 '설문 결과 분석' 버튼을 작동시켜 주십시오.</p>
                 </div>
-              </div>
-            )}
-          </section>
+              )
+            }
+          </section >
 
-        </div>
-      </main>
-    </div>
+        </div >
+      </main >
+    </div >
   );
 };
 

@@ -9,3 +9,5 @@ class DraftSaveRequestDto(BaseModel):
     metrics: Dict[str, Dict[str, str]] = {}
     # { pageKey: narrativeText }
     narrative: Dict[str, str] = {}
+    # { pageKey: subIssueId } — section_id / ai_run_id auto-lookup 용
+    pageSubIssueMap: Dict[str, str] = {}

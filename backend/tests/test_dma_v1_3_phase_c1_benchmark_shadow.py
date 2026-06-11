@@ -191,11 +191,11 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
         root = Path(__file__).resolve().parents[1]
         source = Path(root, "src/services/benchmarks/service.py").read_text(encoding="utf-8")
 
-        self.assertLess(source.index("saveSignals("), source.index("step4SaveBenchmarkShadowTraces("))
-        self.assertIn("Warning: Benchmark v1.3 fact shadow trace save failed", source)
+        self.assertLess(source.index("saveSignals("), source.index("step4ReplaceBenchmarkShadowTracesTx("))
+        self.assertIn("Warning: Benchmark v1.3 shadow", source)
         self.assertNotIn("benchmark_v13_shadow", source)
 
-    def test_fact_shadow_failure_keeps_legacy_success_response(self):
+    def test_transaction_failure_keeps_legacy_success_response(self):
         service = self.loadService()
         finalResult = {
             "status": True,
@@ -218,15 +218,17 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
             ), patch.object(service, "step0NormalizeBenchmarkFacts", return_value=[buildFact()]), patch.object(
                 service, "step0BuildFactTrace", return_value=buildPayload()
             ), patch.object(
-                service, "step4SaveBenchmarkShadowTraces", side_effect=RuntimeError("shadow failed")
+                service, "step2BuildBenchmarkScreeningPayloads", return_value=[]
+            ), patch.object(
+                service, "step4ReplaceBenchmarkShadowTracesTx", side_effect=RuntimeError("tx failed")
             ) as writer, patch("builtins.print") as printed:
                 response = asyncio.run(service.findSr(fileFindModel, userModel))
 
         self.assertTrue(response["status"])
         self.assertEqual(writer.call_count, 1)
-        self.assertIn("fact shadow trace save failed", printed.call_args[0][0])
+        self.assertIn("shadow replace transaction failed", printed.call_args[0][0])
 
-    def test_legacy_save_failure_skips_fact_shadow_writer(self):
+    def test_legacy_save_failure_skips_replace_transaction(self):
         service = self.loadService()
         finalResult = {
             "status": True,
@@ -246,13 +248,13 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
                 service, "convertToDmaSignals", return_value=[]
             ), patch.object(service, "scoreSignals", return_value=[]), patch.object(
                 service, "saveSignals", side_effect=RuntimeError("legacy failed")
-            ), patch.object(service, "step4SaveBenchmarkShadowTraces") as writer:
+            ), patch.object(service, "step4ReplaceBenchmarkShadowTracesTx") as writer:
                 with self.assertRaises(Exception):
                     asyncio.run(service.findSr(fileFindModel, userModel))
 
         writer.assert_not_called()
 
-    def test_screening_shadow_runs_once_per_request_after_multiple_fact_saves(self):
+    def test_replace_transaction_runs_once_per_request_after_multiple_files(self):
         service = self.loadService()
         finalResult = {
             "status": True,
@@ -281,19 +283,22 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
             ), patch.object(service, "saveSignals", return_value=None), patch.object(
                 service, "step0NormalizeBenchmarkFacts", return_value=[buildFact()]
             ), patch.object(service, "step0BuildFactTrace", return_value=buildPayload()), patch.object(
-                service, "listBenchmarkShadowObservationRows",
-                return_value=[{"sub_issue_code": "G0-02", "leader_observed": 1, "peer_observed": 1, "own_observed": 0}],
-            ) as listRows, patch.object(
-                service, "step2ResolveBenchmarkObservation", return_value="BLIND_SPOT"
-            ), patch.object(service, "step2RunScreening", return_value={"subIssueCode": "G0-02", "screeningTrace": [{"rawInputs": {}}]}), patch.object(
-                service, "step4SaveBenchmarkShadowTraces", side_effect=[1, 1, 1]
-            ) as writer:
+                service, "step2BuildBenchmarkScreeningPayloads", return_value=[buildPayload()]
+            ) as buildScreening, patch.object(
+                service, "step4ReplaceBenchmarkShadowTracesTx", return_value=3
+            ) as txWriter:
                 response = asyncio.run(service.findSr(fileFindModel, userModel))
 
         self.assertTrue(response["status"])
-        listRows.assert_called_once_with(99)
-        screeningCalls = [call for call in writer.call_args_list if call.kwargs.get("shadowKind") == "screening"]
-        self.assertEqual(len(screeningCalls), 1)
+        # Replace Transaction은 요청당 정확히 1회
+        self.assertEqual(txWriter.call_count, 1)
+        # runId=99로 호출됨
+        txCall = txWriter.call_args
+        self.assertEqual(txCall.kwargs["runId"], 99)
+        # 2개 파일 × 파일당 1개 fact = factPayloads 2건 전달
+        self.assertEqual(len(txCall.kwargs["factPayloads"]), 2)
+        # listBenchmarkShadowObservationRows는 service.py에서 더 이상 import하지 않음
+        self.assertFalse(hasattr(service, "listBenchmarkShadowObservationRows"))
 
 
 if __name__ == "__main__":

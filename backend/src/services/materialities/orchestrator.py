@@ -151,6 +151,64 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
     raise ValueError(f"Unknown screening channel: {channel!r}")
 
 
+def step2BuildBenchmarkScreeningPayloads(
+    factPayloads: Sequence[Mapping[str, Any]],
+    universeSubIssueCodes: Sequence[str],
+) -> list[dict]:
+    """
+    Build a complete Screening Payload for every sub-issue in the universe.
+    Derives observations from factPayloads only — no DB read.
+    Sub-issues absent from factPayloads receive observation=NONE and backfilledYn=True.
+    """
+    observedByCode: dict[str, dict[str, bool]] = {}
+    for fp in factPayloads:
+        ef = fp.get("extractedFacts") if isinstance(fp, dict) else None
+        if not ef or not isinstance(ef, dict):
+            continue
+        code = ef.get("subIssueCode")
+        stype = ef.get("sourceType")
+        if not code or not stype:
+            continue
+        if code not in observedByCode:
+            observedByCode[code] = {}
+        if stype in ("leader_sr", "peer_sr", "own_sr"):
+            observedByCode[code][stype] = True
+
+    screeningPayloads = []
+    for code in universeSubIssueCodes:
+        obs = observedByCode.get(code, {})
+        leaderObserved = bool(obs.get("leader_sr"))
+        peerObserved = bool(obs.get("peer_sr"))
+        ownObserved = bool(obs.get("own_sr"))
+        backfilledYn = code not in observedByCode
+
+        row = {
+            "sub_issue_code": code,
+            "leader_observed": 1 if leaderObserved else 0,
+            "peer_observed": 1 if peerObserved else 0,
+            "own_observed": 1 if ownObserved else 0,
+        }
+        observation = step2ResolveBenchmarkObservation(row)
+
+        payload = step2RunScreening("benchmark", {
+            "subIssueCode": code,
+            "observation": observation,
+            "leaderObserved": leaderObserved,
+            "peerObserved": peerObserved,
+            "ownObserved": ownObserved,
+        })
+
+        stList = payload.get("screeningTrace")
+        if isinstance(stList, list) and stList and isinstance(stList[0], dict):
+            ri = dict(stList[0].get("rawInputs") or {})
+            ri["backfilledYn"] = backfilledYn
+            stList[0]["rawInputs"] = ri
+
+        screeningPayloads.append(payload)
+
+    return screeningPayloads
+
+
 def step3RunSelection(items: Sequence[Mapping[str, Any]]) -> dict:
     policy = dmaruleregistry.getPolicy("selection_policy")
     return dmascoring.step3RunSelection(items, policy)
@@ -160,6 +218,7 @@ __all__ = [
     "step0BuildFactTrace",
     "step1RunCanonical",
     "step2ResolveBenchmarkObservation",
+    "step2BuildBenchmarkScreeningPayloads",
     "step2RunScreening",
     "step3RunSelection",
 ]

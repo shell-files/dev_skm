@@ -5,7 +5,8 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import pptxgen from "pptxgenjs";
 import { useSelector, useDispatch } from "react-redux";
-import { GET, POST } from "@utils/Network";
+import { GET, POST, DELETE } from "@utils/Network";
+import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
 
 // ── SR 템플릿 통합 (서브이슈 레지스트리 소비) ──
 // 새 서브이슈는 srTemplates/subIssues/<name>/ 폴더 + registry.js 한 줄로 추가됨.
@@ -164,11 +165,19 @@ const Draft = () => {
   const buildPageMetrics = (pageObj) =>
     buildMetricsFromEdits(pageObj.adapter, editMetricsByPage[pageObj.key], actualMetricRows);
   const buildPageNarrative = (key, subIssueId) => {
-    const t = (editNarrativeByPage[key] || "").trim();
-    if (t) return t;
-    const section = subIssueId && aiSections[subIssueId];
-    return section ? section.reportText : null;
-  };
+  const t = (editNarrativeByPage[key] || "").trim();
+
+  const looksLikeTemplate =
+    t.includes("{") && t.includes("}");
+
+  const section = subIssueId && aiSections[subIssueId];
+
+  if (t && !looksLikeTemplate) {
+    return t;
+  }
+
+  return section?.reportText || t || null;
+};
 
   const getAiMetricIds = (subIssueId) => {
     const section = subIssueId && aiSections[subIssueId];
@@ -195,7 +204,6 @@ const Draft = () => {
     const load = async () => {
       if (companyId && year) {
         const json = await GET("/draft/load", { companyId, year });
-        // console.log(json)
         if (json?.success && json?.data) {
           if (json.data.metrics) setEditMetricsByPage(json.data.metrics);
           if (json.data.narrative) setEditNarrativeByPage(json.data.narrative);
@@ -224,6 +232,7 @@ const Draft = () => {
 
   // AI 생성 본문 로드 (서브이슈별)
   const loadAiSections = () => {
+
     if (!companyId || !year) return;
     setAiLoading(true);
     const promises = subIssues.map(si =>
@@ -232,11 +241,12 @@ const Draft = () => {
           if (d?.success && d.data != null) {
             setAiSections(prev => ({
               ...prev,
-              [si.id]: { reportText: d.data.reportText || "", metricIds: d.data.metricIds || [] },
+              [si.id]: { reportText: d.data?.reportText || "", metricIds: d.data.metricIds || [] },
             }));
           }
         })
     );
+
     Promise.all(promises).finally(() => setAiLoading(false));
   };
 
@@ -244,12 +254,20 @@ const Draft = () => {
     loadAiSections();
   }, [companyId, year]);
 
+  useEffect(() => {
+    const id = setInterval(() => {
+      GET("/auth").catch(() => {});
+    }, 4 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
   // 저장: API 우선, 실패 시 localStorage 폴백
   const handleSaveEdits = async () => {
     const now = new Date().toISOString();
+    const pageSubIssueMap = Object.fromEntries(PAGES.map(p => [p.key, p.subIssueId]));
     const payload = { metrics: editMetricsByPage, narrative: editNarrativeByPage, savedAt: now };
     if (companyId && year) {
-      const json = await POST("/draft/save", { companyId, year, ...payload });
+      const json = await POST("/draft/save", { companyId, year, pageSubIssueMap, ...payload });
       if (json?.success) { setSavedAt(json.savedAt || now); return; }
     }
     try {
@@ -259,6 +277,25 @@ const Draft = () => {
       console.warn("편집값 저장 실패:", e);
       alert("저장에 실패했습니다. 브라우저 저장 권한을 확인해 주세요.");
     }
+  };
+
+  // 되돌리기: DB + localStorage 편집값 전체 삭제
+  const handleResetEdits = async () => {
+    const confirmed = await showConfirmAlert(
+      "수정 내용 전체 삭제",
+      "저장된 모든 편집값(지표 수정·본문 수정)이 삭제되고 원본으로 되돌아갑니다. 계속하시겠습니까?",
+      "warning"
+    );
+    if (!confirmed) return;
+    if (companyId && year) {
+      await DELETE(`/draft/reset?companyId=${companyId}&year=${year}`);
+    }
+    localStorage.removeItem(STORAGE_KEY);
+    setEditMetricsByPage({});
+    setEditNarrativeByPage({});
+    setSavedAt(null);
+    setIsEditing(false);
+    showDefaultAlert("되돌리기 완료", "모든 편집 내용이 삭제되었습니다.", "success");
   };
 
   // ── 페이지 이동 핸들러 (목차 / 이전·다음 / subnav 탭 공용) ──
@@ -613,7 +650,7 @@ const Draft = () => {
         setPdfMode(false);
       }
       return;
-    } 
+    }
     if (type === "PPT") {
       // PDF와 동일하게 화면 밖 풀사이즈 렌더 → 각 페이지를 한 슬라이드 이미지로
       setPdfMode(true);
@@ -804,7 +841,12 @@ const Draft = () => {
                     {aiLoading ? "로딩 중..." : " AI 본문 갱신"}
                   </button>
 
-                  {/* 1. 독립된 본문 수정 버튼 (Toggle 형태) */}
+                  {/* 1. 되돌리기 — 저장된 편집값 전체 삭제 */}
+                  <button className="doc-btn reset-btn" onClick={handleResetEdits}>
+                    ↩ 되돌리기
+                  </button>
+
+                  {/* 2. 독립된 본문 수정 버튼 (Toggle 형태) */}
                   <button
                     className={`doc-btn ${isEditing ? "editing-active" : ""}`}
                     onClick={() => setIsEditing(!isEditing)}
@@ -829,7 +871,7 @@ const Draft = () => {
               </div>
 
               <div className="doc-content">
-                
+
                 {/* ── 편집 바 (✏️ 수정 모드) — 본문·값 모두 아래 페이지에서 직접 수정 ── */}
                 {isEditing && (
                   <div className="sr-editor">
@@ -843,6 +885,15 @@ const Draft = () => {
                             저장됨 {new Date(savedAt).toLocaleString("ko-KR", { hour: "2-digit", minute: "2-digit", month: "numeric", day: "numeric" })}
                           </span>
                         )}
+                        <button
+                          className="sr-editor-cancel"
+                          onClick={() => {
+                            const pk = PAGES[currentPage].key;
+                            setEditNarrativeByPage(prev => { const n = { ...prev }; delete n[pk]; return n; });
+                            setEditMetricsByPage(prev => { const n = { ...prev }; delete n[pk]; return n; });
+                            setIsEditing(false);
+                          }}
+                        >↩ 수정 취소</button>
                         <button className="sr-editor-save" onClick={handleSaveEdits}>💾 저장</button>
                       </div>
                     </div>
@@ -852,7 +903,7 @@ const Draft = () => {
                   </div>
                 )}
 
-                
+
 
                 {/* ── 보고서 미리보기 영역: SR 운영 템플릿 (현재 페이지) ──
                     데이터는 climateMetrics(adapter) + climateNarrative 로만 구동(더미 없음).
@@ -899,7 +950,7 @@ const Draft = () => {
                 )}
               </div>
             </div>
-            
+
 
             {/* 우측 데이터 추적 패널 */}
             <div className={`draft-panel ${panelMetricIds.length > 0 && !isEditing ? "open" : ""}`} id="draftPanel">
@@ -1029,14 +1080,14 @@ const Draft = () => {
 
           </div>
         </div>
-        
+
       </main>
       {/* ── 페이지 이동 바 (이전 · 다음) ── */}
-                <div className="sr-pager">
-                  <button className="sr-pager-btn" onClick={prevPage} disabled={currentPage === 0}>‹ 이전</button>
-                  <span className="sr-pager-info">{currentPage + 1} / {PAGES.length}</span>
-                  <button className="sr-pager-btn" onClick={nextPage} disabled={currentPage === PAGES.length - 1}>다음 ›</button>
-                </div>
+      <div className="sr-pager">
+        <button className="sr-pager-btn" onClick={prevPage} disabled={currentPage === 0}>‹ 이전</button>
+        <span className="sr-pager-info">{currentPage + 1} / {PAGES.length}</span>
+        <button className="sr-pager-btn" onClick={nextPage} disabled={currentPage === PAGES.length - 1}>다음 ›</button>
+      </div>
       {/* ── PDF/PPT 내보내기용 렌더 영역 (화면 밖) ── */}
       {pdfMode && (
         <div id="pdf-render-root" className="pdf-render-root">

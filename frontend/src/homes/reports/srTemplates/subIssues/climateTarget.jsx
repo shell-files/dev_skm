@@ -79,6 +79,7 @@ function toClimateTargetMetrics(metricRows = []) {
 
 // ── 페이지 컴포넌트 ────────────────────────────────────────────
 function ClimateTargetPageA(props) {
+  
   const {
     metrics, narrativeText, mode = "render", highlight = true,
     template = NARRATIVE_TEMPLATE_CLIMATE,
@@ -90,10 +91,16 @@ function ClimateTargetPageA(props) {
   const maxVal = Math.max(baseV || 0, repV || 0) || 1;
   const cutFromBase = reductionFromBase(metrics, "E1-05__G0003", "E1-06__G0003");
   const MAXH = 150;
-
+  
   return (
     <SRChrome {...props}>
-      <Narrative narrativeText={narrativeText} template={template} metrics={metrics} mode={mode} metricIds={aiMetricIds} onNarrativeChange={props.onNarrativeChange} />
+      <Narrative 
+      narrativeText={narrativeText} 
+      template={template} 
+      metrics={metrics}
+      mode={mode} 
+      metricIds={aiMetricIds} 
+      onNarrativeChange={props.onNarrativeChange} />
 
       {/* KPI strip */}
       <div className="sr-kpis">

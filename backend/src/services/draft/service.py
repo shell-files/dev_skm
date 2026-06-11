@@ -11,6 +11,7 @@ from src.utils.draftrepository import (
     saveDraftNarrativeRows,
     getDraftMetricRows,
     getDraftNarrativeRows,
+    deleteDraftRows,
 )
 
 
@@ -90,3 +91,8 @@ def loadDraft(companyId: int, year: int, token) -> dict:
                 latestAt = t
 
     return {"success": True, "data": {"metrics": metrics, "narrative": narrative, "savedAt": latestAt}}
+
+
+def resetDraft(companyId: int, year: int, token) -> dict:
+    deleteDraftRows(companyId, year)
+    return {"success": True}

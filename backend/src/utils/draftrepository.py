@@ -1,4 +1,4 @@
-from src.utils.db import findAll, findOne, saveMany
+from src.utils.db import findAll, findOne, saveMany, save
 
 
 def getKpiMetricRows(companyId: int, year: int) -> list:
@@ -122,3 +122,8 @@ def getDraftNarrativeRows(companyId: int, year: int) -> list:
           AND delete_yn      = 0
     """
     return findAll(sql, (companyId, year))
+
+
+def deleteDraftRows(companyId: int, year: int):
+    save("UPDATE ESG_REPORT_DRAFT_METRIC SET delete_yn=1 WHERE company_id=? AND reporting_year=?", (companyId, year))
+    save("UPDATE ESG_REPORT_DRAFT_NARRATIVE SET delete_yn=1 WHERE company_id=? AND reporting_year=?", (companyId, year))

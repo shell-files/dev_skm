@@ -41,11 +41,5 @@
     "creditRatingPredictionAllowedYn": false,
     "officialCreditRatingLabelAllowedYn": false
   },
-  "externalAggregation": {"impact": "MAX", "financial": "MAX", "additiveYn": false},
-  "capabilities": {
-    "regulationAutoClassification": "CONFIG_PENDING",
-    "kcgsPillarBoostPropagation": "DATA_EXPORT_REQUIRED",
-    "kisFinancialResilience": "DATA_EXPORT_REQUIRED",
-    "mediaEventCanonicalAdapter": "CONFIG_PENDING"
-  }
+  "externalAggregation": {"impact": "MAX", "financial": "MAX", "additiveYn": false}
 }

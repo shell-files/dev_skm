@@ -180,10 +180,10 @@ def getDominantMagnitude(channels: Mapping[str, Optional[float]]) -> Tuple[Optio
 # Input: AI가 추출한 fact dict, policy.
 # Output: {"valid": bool, "violations": [...], "acceptedFacts": {...}}
 def validateAiFacts(facts: Mapping[str, Any], policy: Mapping[str, Any]) -> Dict[str, Any]:
-    allowed = set(policy.get("allowedFactFields", []))
-    forbidden = set(policy.get("forbiddenFields", []))
-    tristateFields = set(policy.get("triStateFields", []))
-    tristateValues = set(policy.get("triStateAllowedValues", ["TRUE", "FALSE", "UNKNOWN"]))
+    allowed = set(policy["allowedFactFields"])
+    forbidden = set(policy["forbiddenFields"])
+    tristateFields = set(policy["triStateFields"])
+    tristateValues = set(policy["triStateAllowedValues"])
 
     violations: List[Dict[str, str]] = []
     accepted: Dict[str, Any] = {}
@@ -410,7 +410,7 @@ def step2CalcRegulation(regime: str, applicability: str, policy: Mapping[str, An
     return ScreeningTraceV13(
         channel=f"regulation_{regime.lower()}", scorePurpose=ScorePurposeV13.PRESURVEY_SCREENING,
         impactSignal=impact, financialSignal=financial, status=status,
-        capability=policy.get("capabilities", {}).get("regulationAutoClassification"),
+        capability=None,
         rawInputs={"regime": regime, "applicability": applicability},
     )
 
@@ -478,12 +478,81 @@ def step2CalcExternalMax(signals: Sequence[ScreeningTraceV13], policy: Mapping[s
         channel="external_screening_max", scorePurpose=ScorePurposeV13.PRESURVEY_SCREENING,
         impactSignal=impactMax, financialSignal=financialMax, status=status,
         rawInputs={
-            "additiveYn": policy.get("externalAggregation", {}).get("additiveYn", False),
+            "additiveYn": policy["externalAggregation"]["additiveYn"],
             "contributingChannels": [s.channel for s in signals],
             "impactObservedCount": len(impacts),
             "financialObservedCount": len(financials),
         },
     )
+
+
+def weightedAvg(values: Sequence[Tuple[Optional[float], float]]) -> Optional[float]:
+    observed = [(float(value), float(weight)) for value, weight in values if value is not None]
+    weightSum = sum(weight for _, weight in observed)
+    if not observed or weightSum <= 0:
+        return None
+    return sum(value * weight for value, weight in observed) / weightSum
+
+
+def groupRowsByAxis(normalizedRows: Sequence[Mapping[str, Any]]) -> Dict[str, Dict[str, List[Optional[float]]]]:
+    grouped: Dict[str, Dict[str, List[Optional[float]]]] = {
+        "impact": {"employee": [], "management": [], "external": []},
+        "financial": {"employee": [], "management": [], "external": []},
+    }
+    for row in normalizedRows:
+        axis = row.get("mappedAxis")
+        group = row.get("respondentGroup")
+        if axis not in grouped or group not in grouped[axis]:
+            continue
+        score = row.get("normalizedScore")
+        grouped[axis][group].append(None if score is None else float(score))
+    return grouped
+
+
+# STEP 2. Survey overlay signal. This is stakeholder corroboration only, not canonical scoring.
+# Input: normalized survey rows from surveys.adapter.step0NormalizeSurveyRows and survey_policy.json.
+# Output: overlay values and observed counts separated by axis.
+def step2CalcSurveyOverlay(normalizedRows: Sequence[Mapping[str, Any]], surveyPolicy: Mapping[str, Any]) -> Dict[str, Any]:
+    grouped = groupRowsByAxis(normalizedRows)
+    groupWeight = surveyPolicy["groupWeight"]
+    nullPolicy = surveyPolicy["nullPolicy"]
+    excludeNull = bool(nullPolicy["excludeFromDenominatorYn"])
+    hardToJudgeAsZero = bool(nullPolicy["hardToJudgeAsZeroYn"])
+    reweightGroups = bool(nullPolicy["reweightAvailableGroupsYn"])
+
+    result: Dict[str, Any] = {
+        "impactOverlay": None,
+        "financialOverlay": None,
+        "impactObservedCount": 0,
+        "financialObservedCount": 0,
+        "scorePurpose": ScorePurposeV13.STAKEHOLDER_OVERLAY.value,
+    }
+
+    for axis in ("impact", "financial"):
+        groupMeans: List[Tuple[Optional[float], float]] = []
+        observedCount = 0
+        for group, scores in grouped[axis].items():
+            effectiveScores: List[float] = []
+            for score in scores:
+                if score is None:
+                    if excludeNull:
+                        continue
+                    if hardToJudgeAsZero:
+                        effectiveScores.append(0.0)
+                    continue
+                observedCount += 1
+                effectiveScores.append(float(score))
+            groupMean = sum(effectiveScores) / len(effectiveScores) if effectiveScores else None
+            groupMeans.append((groupMean, float(groupWeight[axis][group])))
+
+        if reweightGroups:
+            overlay = weightedAvg(groupMeans)
+        else:
+            overlay = sum((value or 0.0) * weight for value, weight in groupMeans)
+        result[f"{axis}Overlay"] = overlay
+        result[f"{axis}ObservedCount"] = observedCount
+
+    return result
 
 
 # =========================================================
@@ -606,12 +675,12 @@ def step3ApplyDecision(
     action: Mapping[str, Any],
     policy: Mapping[str, Any],
 ) -> Dict[str, Any]:
-    gate = policy.get("governanceGate", {})
-    overrideAllowed = bool(gate.get("manualScoreOverrideAllowedYn", False))
+    gate = policy["governanceGate"]
+    overrideAllowed = bool(gate["manualScoreOverrideAllowedYn"])
     offending = sorted(set(action.keys()) & _SCORE_OVERRIDE_KEYS)
     if offending and not overrideAllowed:
         raise SelectionGovernanceError(f"Manual score override is not allowed (offending keys: {offending})")
-    allowedActions = set(gate.get("manualSelectionActionsAllowed", [SELECTION_TYPE_MANUAL_ADD, SELECTION_TYPE_MANUAL_EXCLUDE]))
+    allowedActions = set(gate["manualSelectionActionsAllowed"])
     selectionType = action.get("selectionType") or action.get("selection_type")
     if selectionType not in allowedActions:
         raise SelectionGovernanceError(
@@ -658,6 +727,9 @@ __all__ = [
     "step2CalcKcgsBoost",
     "step2GetKisState",
     "step2CalcExternalMax",
+    "weightedAvg",
+    "groupRowsByAxis",
+    "step2CalcSurveyOverlay",
     # STEP 3
     "SELECTION_TYPE_AUTO",
     "SELECTION_TYPE_MANUAL_ADD",

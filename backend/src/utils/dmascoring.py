@@ -131,7 +131,7 @@ def getUrgencyScore(
     explicitNoUrgency: bool = False,
 ):
     if explicitNoUrgency:
-        return float(urgencyPolicy.get("explicitNoUrgency", 0))
+        return float(urgencyPolicy["explicitNoUrgency"])
     if timeHorizon in ("short", "mid", "long"):
         return float(urgencyPolicy[timeHorizon])
     return UNOBSERVED
@@ -432,7 +432,7 @@ def step2CalcKcgs(grade: str, trend: str, policy: Mapping[str, Any]) -> dict:
         return {"pillarSignal": None, "status": STATUS_UNOBSERVED, "gradeRisk": gradeRisk, "trendModifier": None}
     trendMod = float(trendRaw)
     # KCGS Pillar Signal 상한 처리 — gradeRisk + trendModifier가 pillarSignalMax를 초과할 수 있다.
-    pillarMax = float(kcgs.get("pillarSignalMax", 5.0))
+    pillarMax = float(kcgs["pillarSignalMax"])
     pillarSignal = min(pillarMax, gradeRisk + trendMod)
     return {"pillarSignal": pillarSignal, "status": STATUS_OBSERVED, "gradeRisk": gradeRisk, "trendModifier": trendMod}
 
@@ -549,7 +549,7 @@ def step3BuildCandidates(
     policy: Mapping[str, Any],
 ) -> List[Dict[str, Any]]:
     threshold = float(policy["candidateThreshold"])
-    missingVal = float(policy.get("ranking", {}).get("missingAxisSortValue", 0.0))
+    missingVal = float(policy["ranking"]["missingAxisSortValue"])
     candidates: List[Dict[str, Any]] = []
     for item in items:
         norm = _normalizeItem(item, missingVal)
@@ -568,7 +568,7 @@ def step3RankIssues(
     candidates: Sequence[Mapping[str, Any]],
     policy: Mapping[str, Any],
 ) -> List[Dict[str, Any]]:
-    missingVal = float(policy.get("ranking", {}).get("missingAxisSortValue", 0.0))
+    missingVal = float(policy["ranking"]["missingAxisSortValue"])
     normalized = [c if "sortMinAxis" in c else _normalizeItem(c, missingVal) for c in candidates]
     return sorted(
         normalized,
@@ -594,8 +594,8 @@ def step3RunSelection(
 ) -> Dict[str, Any]:
     candidates = step3BuildCandidates(items, policy)
     ordered = step3RankIssues(candidates, policy)
-    top10 = step3PickTop(ordered, int(policy.get("recommendedTop10", 10)))
-    top5 = step3PickTop(ordered, int(policy.get("recommendedTop5", 5)))
+    top10 = step3PickTop(ordered, int(policy["recommendedTop10"]))
+    top5 = step3PickTop(ordered, int(policy["recommendedTop5"]))
     return {"candidates": candidates, "sorted": ordered, "recommendedTop10": top10, "recommendedTop5": top5}
 
 

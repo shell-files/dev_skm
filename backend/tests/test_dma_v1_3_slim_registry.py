@@ -51,13 +51,13 @@ class SlimRegistryTest(unittest.TestCase):
             (Path(tmp) / name).write_text(text, encoding="utf-8")
         reg.RUNTIME_CONFIG_DIR = Path(tmp)
         reg.resetDmaRulesForTest()
-        return reg.getDmaRules(force_reload=True)
+        return reg.getDmaRules(forceReload=True)
 
     # 1. Manifest loads
     def test_01_manifest_loads(self):
         cfg = reg.getDmaRules()
-        self.assertEqual(cfg.rule_version, "dma-rule-v1.3-mvp")
-        self.assertEqual(cfg.architecture_revision, "R4.1-SLIM")
+        self.assertEqual(cfg.ruleVersion, "dma-rule-v1.3-mvp")
+        self.assertEqual(cfg.architectureRevision, "R4.1-SLIM")
 
     # 2. Runtime policy 5-file exact set
     def test_02_policy_exact_set(self):
@@ -135,7 +135,7 @@ class SlimRegistryTest(unittest.TestCase):
         reg.resetDmaRulesForTest()
         c = reg.getDmaRules()
         self.assertIsNot(a, c)
-        self.assertEqual(a.config_hash, c.config_hash)
+        self.assertEqual(a.configHash, c.configHash)
 
 
 class AiFactValidationTest(unittest.TestCase):
@@ -192,6 +192,54 @@ class AiFactValidationTest(unittest.TestCase):
         import sys
         for mod in ("src.utils.dmarulevalidator", "src.utils.dmascreening", "src.utils.dmaselection"):
             self.assertNotIn(mod, sys.modules, f"Deleted module {mod!r} must not be loaded")
+
+
+class PolicyKeyFailFastTest(unittest.TestCase):
+    """SSOT strict mode — missing required policy keys must raise KeyError (cases 22-26)."""
+
+    def setUp(self):
+        reg.resetDmaRulesForTest()
+
+    # 22. explicitNoUrgency 키 누락 → KeyError
+    def test_22_explicit_no_urgency_key_required(self):
+        with self.assertRaises(KeyError):
+            sc.getUrgencyScore(None, {}, explicitNoUrgency=True)
+
+    # 23. pillarSignalMax 키 누락 → KeyError
+    def test_23_pillar_signal_max_key_required(self):
+        scrPolicy = reg.getPolicy("screening_policy")
+        kcgsBroken = {k: v for k, v in scrPolicy.items()}
+        kcgsBroken["kcgs"] = {k: v for k, v in scrPolicy["kcgs"].items() if k != "pillarSignalMax"}
+        with self.assertRaises(KeyError):
+            sc.step2CalcKcgs("D", "flat", kcgsBroken)
+
+    # 24. ranking.missingAxisSortValue 키 누락 → KeyError
+    def test_24_missing_axis_sort_value_key_required(self):
+        selPolicy = reg.getPolicy("selection_policy")
+        broken = {k: v for k, v in selPolicy.items()}
+        broken["ranking"] = {}
+        with self.assertRaises(KeyError):
+            sc.step3BuildCandidates(
+                [{"subIssueCode": "X", "impactScore": 5.0, "financialScore": 3.0}], broken
+            )
+
+    # 25. recommendedTop10 키 누락 → KeyError
+    def test_25_recommended_top10_key_required(self):
+        selPolicy = reg.getPolicy("selection_policy")
+        broken = {k: v for k, v in selPolicy.items() if k != "recommendedTop10"}
+        with self.assertRaises(KeyError):
+            sc.step3RunSelection(
+                [{"subIssueCode": "X", "impactScore": 5.0, "financialScore": 3.0}], broken
+            )
+
+    # 26. recommendedTop5 키 누락 → KeyError
+    def test_26_recommended_top5_key_required(self):
+        selPolicy = reg.getPolicy("selection_policy")
+        broken = {k: v for k, v in selPolicy.items() if k != "recommendedTop5"}
+        with self.assertRaises(KeyError):
+            sc.step3RunSelection(
+                [{"subIssueCode": "X", "impactScore": 5.0, "financialScore": 3.0}], broken
+            )
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ from src.services.draft.service import (
     fetchDraftSection,
     saveDraft,
     loadDraft,
+    resetDraft,
 )
 
 router = APIRouter()
@@ -30,3 +31,8 @@ async def saveDraftRoute(req: DraftSaveRequestDto, token=Depends(get_token)):
 @router.get("/load", summary="보고서 초안 편집값 불러오기")
 async def loadDraftRoute(companyId: int, year: int, token=Depends(get_token)):
     return loadDraft(companyId, year, token)
+
+
+@router.delete("/reset", summary="보고서 초안 편집값 전체 삭제")
+async def resetDraftRoute(companyId: int, year: int, token=Depends(get_token)):
+    return resetDraft(companyId, year, token)

@@ -18,7 +18,7 @@ def _nowKst() -> str:
     return (datetime.now() + timedelta(hours=9)).isoformat(timespec="seconds")
 
 
-def fetchDraftMetrics(companyId: int, year: int) -> dict:
+def fetchDraftMetrics(companyId: int, year: int, token) -> dict:
     rows = getKpiMetricRows(companyId, year)
     existingIds = {r["metricId"] for r in rows}
     for r in getRollupMetricRows(companyId, year):
@@ -27,7 +27,7 @@ def fetchDraftMetrics(companyId: int, year: int) -> dict:
     return {"success": True, "data": rows}
 
 
-def fetchDraftSection(companyId: int, year: int, subIssueId: str) -> dict:
+def fetchDraftSection(companyId: int, year: int, subIssueId: str, token) -> dict:
     row = getAiSectionRow(companyId, year, subIssueId)
     if not row:
         return {"success": True, "data": None}
@@ -36,7 +36,7 @@ def fetchDraftSection(companyId: int, year: int, subIssueId: str) -> dict:
     return {"success": True, "data": {"reportText": row["reportText"], "metricIds": metricIds}}
 
 
-def saveDraft(req: DraftSaveRequestDto) -> dict:
+def saveDraft(req: DraftSaveRequestDto, token) -> dict:
     now = _nowKst()
 
     if req.metrics:
@@ -65,7 +65,7 @@ def saveDraft(req: DraftSaveRequestDto) -> dict:
     return {"success": True, "savedAt": now}
 
 
-def loadDraft(companyId: int, year: int) -> dict:
+def loadDraft(companyId: int, year: int, token) -> dict:
     metricRows = getDraftMetricRows(companyId, year)
     narrativeRows = getDraftNarrativeRows(companyId, year)
 

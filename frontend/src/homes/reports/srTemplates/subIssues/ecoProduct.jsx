@@ -2,7 +2,7 @@
 // 저탄소·친환경 제품 서브이슈
 import React from "react";
 import { SRChrome } from "../core/SRChrome";
-import { Narrative, mt, buildMetricsMap } from "../core/srHelpers";
+import { Narrative, mt, num, buildMetricsMap } from "../core/srHelpers";
 
 const TEMPLATE =
   "{AP-E-06__QL0001} {AP-E-06__QL0002} 연결 친환경 제품 매출액은 {AP-E-06__G0001}이며, " +
@@ -20,8 +20,12 @@ const metricFields = [
 
 function EcoProductPage(props) {
   const { metrics, narrativeText, mode = "render", aiMetricIds = [] } = props;
+  const greenRatio = num(metrics, "AP-E-06__G0003");
+  const fillPct = greenRatio != null ? Math.min(Math.max(greenRatio, 0), 100) : 0;
+
   return (
     <SRChrome {...props}>
+      {/* AI 생성 문단 — report_text 우선, 없으면 template 폴백 */}
       <Narrative
         narrativeText={narrativeText}
         template={TEMPLATE}
@@ -31,6 +35,7 @@ function EcoProductPage(props) {
         onNarrativeChange={props.onNarrativeChange}
       />
 
+      {/* KPI strip */}
       <div className="sr-kpis">
         <div className="sr-kpi">
           <div className="kl">친환경 제품 매출액</div>
@@ -54,9 +59,79 @@ function EcoProductPage(props) {
         </div>
       </div>
 
-      <div className="sr-measures" data-source="AP-E-06__QL0002">
-        <span className="ml">친환경 인증·기준</span>
-        <span className="mv">{mt(metrics, "AP-E-06__QL0002", mode)}</span>
+      {/* 친환경 제품 성과 상세 */}
+      <div className="sr-cols" style={{ marginTop: 16 }}>
+        <div className="c-main">
+          <div className="sr-tcap">
+            <span className="num">1</span>친환경 제품 성과 지표
+          </div>
+          <table className="sr-tbl">
+            <thead>
+              <tr>
+                <th style={{ width: "52%" }}>지표</th>
+                <th>보고연도</th>
+                <th>비고</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>친환경 제품 매출액</td>
+                <td className="strong" data-source="AP-E-06__G0001">
+                  {mt(metrics, "AP-E-06__G0001", mode)}
+                </td>
+                <td><span className="unit">연결</span></td>
+              </tr>
+              <tr>
+                <td>매출 대비 친환경 비중</td>
+                <td className="up" data-source="AP-E-06__G0003">
+                  {mt(metrics, "AP-E-06__G0003", mode)}
+                </td>
+                <td><span className="unit">%</span></td>
+              </tr>
+              <tr>
+                <td>제품 사용 회피 배출량</td>
+                <td data-source="AP-E-06__G0004">
+                  {mt(metrics, "AP-E-06__G0004", mode)}
+                </td>
+                <td><span className="unit">tCO₂eq</span></td>
+              </tr>
+              <tr>
+                <td>사회적 비용 절감 효과</td>
+                <td data-source="AP-E-06__G0005">
+                  {mt(metrics, "AP-E-06__G0005", mode)}
+                </td>
+                <td><span className="unit">KRW</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div className="c-side">
+          {/* 친환경 매출 비중 게이지 */}
+          <div className="sr-gauge">
+            <div className="gl">매출 대비 친환경 비중</div>
+            <div className="gv" data-source="AP-E-06__G0003">
+              {mt(metrics, "AP-E-06__G0003", mode)}
+            </div>
+            <div className="sr-track">
+              <div className="sr-fill" style={{ width: `${fillPct}%` }} />
+            </div>
+            <div className="sr-gx"><span>0%</span><span>100%</span></div>
+          </div>
+
+          {/* 친환경 인증·기준 */}
+          <div className="sr-note-card" data-source="AP-E-06__QL0002">
+            <div className="l">친환경 인증·기준</div>
+            <div className="b" style={{ fontSize: 11 }}>
+              {mt(metrics, "AP-E-06__QL0002", mode)}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="sr-measures" data-source="AP-E-06__QL0001">
+        <span className="ml">친환경 제품 전략</span>
+        <span className="mv">{mt(metrics, "AP-E-06__QL0001", mode)}</span>
       </div>
     </SRChrome>
   );

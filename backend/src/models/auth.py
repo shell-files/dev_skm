@@ -96,7 +96,12 @@ def loginProcess(response: Response, request: Request, loginModel: LoginModel):
         save(refreshTokenSql, tokenParams)
 
         # 4. accessToken redis 저장
-        setTokenRedis(tokenUuid,accessToken)
+        # 로그인 직후 세션 유실
+        # 원인: loginProcess()에서 setTokenRedis() 반환값을 검증하지 않아 Redis 저장 실패 시에도 성공 응답 반환
+        # 수정: setTokenRedis() 결과 확인 후 실패 시 에러 반환 (backend 1줄 수정)
+        redisResult = setTokenRedis(tokenUuid, accessToken)
+        if not redisResult or not redisResult.get("status"):
+            return ResponseModel(False, "세션 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.")
         max_age = (60 * 60 * 24 * settings.refresh_token_expire_days)
         response.set_cookie(key=settings.cookie_key, value=tokenUuid, domain=get_domain(request),
           httponly=True, samesite="lax",

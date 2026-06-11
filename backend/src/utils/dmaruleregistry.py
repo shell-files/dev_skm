@@ -81,9 +81,9 @@ class DmaRuleValidationError(ValueError):
 @dataclass(frozen=True)
 class RuntimeConfigV13:
     """Immutable snapshot of the loaded v1.3 slim runtime config bundle."""
-    rule_version: str
-    architecture_revision: str
-    config_hash: str
+    ruleVersion: str
+    architectureRevision: str
+    configHash: str
     manifest: Dict[str, Any]
     policies: Dict[str, Dict[str, Any]]
     capabilities: Dict[str, str]
@@ -229,9 +229,9 @@ def _loadBundle() -> RuntimeConfigV13:
     configHash = computeConfigHash(policies)
     capabilities = _resolveCapabilities(manifest, policies)
     return RuntimeConfigV13(
-        rule_version=manifest["ruleVersion"],
-        architecture_revision=manifest["architectureRevision"],
-        config_hash=configHash,
+        ruleVersion=manifest["ruleVersion"],
+        architectureRevision=manifest["architectureRevision"],
+        configHash=configHash,
         manifest=manifest,
         policies=policies,
         capabilities=capabilities,
@@ -239,12 +239,12 @@ def _loadBundle() -> RuntimeConfigV13:
 
 
 # STEP 0. Load and cache the v1.3 slim runtime config bundle (singleton).
-# Input: force_reload=True bypasses cache (used by tests).
+# Input: forceReload=True bypasses cache (used by tests).
 # Output: immutable RuntimeConfigV13 snapshot.
-def getDmaRules(force_reload: bool = False) -> RuntimeConfigV13:
+def getDmaRules(forceReload: bool = False) -> RuntimeConfigV13:
     global _cache
     with _lock:
-        if _cache is None or force_reload:
+        if _cache is None or forceReload:
             _cache = _loadBundle()
         return _cache
 
@@ -274,15 +274,15 @@ def getPolicy(name: str) -> Dict[str, Any]:
 
 
 def getConfigHash() -> str:
-    return getDmaRules().config_hash
+    return getDmaRules().configHash
 
 
 def getRuleVersion() -> str:
-    return getDmaRules().rule_version
+    return getDmaRules().ruleVersion
 
 
 def getArchRevision() -> str:
-    return getDmaRules().architecture_revision
+    return getDmaRules().architectureRevision
 
 
 def getCapabilities() -> Dict[str, str]:

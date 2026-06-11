@@ -21,7 +21,7 @@ def _lookupSection(companyId: int, year: int, subIssueId: str) -> dict:
         JOIN ESG_REPORT_AI_RUN r ON s.ai_run_id = r.ai_run_id
         WHERE r.company_id     = ?
           AND r.reporting_year = ?
-          AND s.sub_issue_id   = ?
+          AND s.sub_issue_code = ?
         ORDER BY r.created_at DESC
         LIMIT 1
     """
@@ -69,17 +69,29 @@ async def getDraftMetrics(companyId: int, year: int, userModel=Depends(get_token
 @router.get("/section", summary="AI 생성 서브이슈 본문 조회")
 async def getDraftSection(companyId: int, year: int, subIssueId: str, userModel=Depends(get_token)):
     sql = """
-        SELECT s.report_text AS reportText
+        SELECT s.section_id AS sectionId,
+               s.report_text AS reportText
         FROM ESG_REPORT_AI_SECTION s
         JOIN ESG_REPORT_AI_RUN r ON s.ai_run_id = r.ai_run_id
         WHERE r.company_id     = ?
           AND r.reporting_year = ?
-          AND s.sub_issue_id   = ?
+          AND s.sub_issue_code = ?
         ORDER BY r.created_at DESC
         LIMIT 1
     """
     row = findOne(sql, (companyId, year, subIssueId))
-    return {"success": True, "data": row}
+    if not row:
+        return {"success": True, "data": None}
+
+    traceSql = """
+        SELECT atomic_metric_id AS metricId
+        FROM ESG_REPORT_AI_METRIC_TRACE
+        WHERE section_id = ?
+    """
+    traces = findAll(traceSql, (row["sectionId"],))
+    metricIds = [t["metricId"] for t in traces] if traces else []
+
+    return {"success": True, "data": {"reportText": row["reportText"], "metricIds": metricIds}}
 
 
 # ──────────────────────────────────────────────────────────────

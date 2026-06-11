@@ -142,7 +142,7 @@ class PhaseBAdapterTest(unittest.TestCase):
             "classificationConfidence": 0.82,
             "impactFactor": {"scale": 5},
             "impactScore": 4.5,
-        }], fileId=17, sourceType="leader_sr")
+        }], fileId=17, sourceType="leader_sr", aiPolicy=reg.getPolicy("ai_fact_validation_policy"))
         self.assertEqual(len(facts), 1)
         self.assertIsInstance(facts[0], ExtractedFactsV13)
         dumped = facts[0].model_dump(mode="json", by_alias=False)
@@ -184,10 +184,82 @@ class PhaseBAdapterTest(unittest.TestCase):
             "Q2": {"subIssueCode": "S1"},
             "Q3": {"mappedAxis": "financial"},
         }
-        normalized = adapter.step0NormalizeSurveyRows(rows, questionMap)
+        bundle = adapter.step0NormalizeSurveyRows(rows, questionMap)
+        normalized = bundle["normalizedRows"]
+        skipped = bundle["skippedRows"]
         self.assertEqual(len(normalized), 1)
+        self.assertEqual(len(skipped), 2)
         self.assertIsNone(normalized[0]["normalizedScore"])
         self.assertEqual(normalized[0]["mappedAxis"], "impact")
+
+    def test_benchmark_original_result_top_level_forbidden_fields_removed(self):
+        from src.services.benchmarks import adapter
+
+        facts = adapter.step0NormalizeBenchmarkFacts([{
+            "subIssueCode": "S1",
+            "impactFactor": {"scale": 5},
+            "financialFactor": {"magnitude": 4},
+            "impactScore": 4.5,
+            "financialScore": 3.8,
+            "similarityScore": 0.82,
+        }], fileId=1, sourceType="leader_sr", aiPolicy=reg.getPolicy("ai_fact_validation_policy"))
+        original = facts[0].rawMetadata["originalResult"]
+        for forbidden in ("impactFactor", "financialFactor", "impactScore", "financialScore"):
+            self.assertNotIn(forbidden, original)
+        self.assertEqual(original["similarityScore"], 0.82)
+
+    def test_benchmark_original_result_nested_forbidden_fields_removed(self):
+        from src.services.benchmarks import adapter
+
+        facts = adapter.step0NormalizeBenchmarkFacts([{
+            "subIssueCode": "S1",
+            "nested": {"proposedScore": 5, "safeText": "keep"},
+        }], fileId=1, sourceType="leader_sr", aiPolicy=reg.getPolicy("ai_fact_validation_policy"))
+        nested = facts[0].rawMetadata["originalResult"]["nested"]
+        self.assertNotIn("proposedScore", nested)
+        self.assertEqual(nested["safeText"], "keep")
+
+    def test_survey_skip_reason_mapped_axis_missing(self):
+        from src.services.surveys import adapter
+
+        bundle = adapter.step0NormalizeSurveyRows(
+            [{"responseKey": "R1", "questionKey": "Q1", "respondentGroup": "employee"}],
+            {"Q1": {"subIssueCode": "S1"}},
+        )
+        self.assertEqual(bundle["normalizedRows"], [])
+        self.assertEqual(bundle["skippedRows"][0]["skipReason"], "MAPPED_AXIS_MISSING")
+
+    def test_survey_skip_reason_sub_issue_missing(self):
+        from src.services.surveys import adapter
+
+        bundle = adapter.step0NormalizeSurveyRows(
+            [{"responseKey": "R1", "questionKey": "Q1", "respondentGroup": "employee"}],
+            {"Q1": {"mappedAxis": "impact"}},
+        )
+        self.assertEqual(bundle["normalizedRows"], [])
+        self.assertEqual(bundle["skippedRows"][0]["skipReason"], "SUB_ISSUE_CODE_MISSING")
+
+    def test_survey_skip_reason_respondent_group_invalid(self):
+        from src.services.surveys import adapter
+
+        bundle = adapter.step0NormalizeSurveyRows(
+            [{"responseKey": "R1", "questionKey": "Q1", "respondentGroup": "vendor"}],
+            {"Q1": {"subIssueCode": "S1", "mappedAxis": "impact"}},
+        )
+        self.assertEqual(bundle["normalizedRows"], [])
+        self.assertEqual(bundle["skippedRows"][0]["skipReason"], "RESPONDENT_GROUP_INVALID")
+
+    def test_survey_skip_reason_raw_row_invalid(self):
+        from src.services.surveys import adapter
+
+        bundle = adapter.step0NormalizeSurveyRows(["bad-row"], {})
+        self.assertEqual(bundle["normalizedRows"], [])
+        self.assertEqual(bundle["skippedRows"][0], {
+            "rowIndex": 0,
+            "responseKey": None,
+            "questionKey": None,
+            "skipReason": "RAW_ROW_INVALID",
+        })
 
 
 class PhaseBSurveyOverlayTest(unittest.TestCase):
@@ -211,6 +283,24 @@ class PhaseBSurveyOverlayTest(unittest.TestCase):
         self.assertEqual(result["financialObservedCount"], 2)
         self.assertEqual(result["scorePurpose"], ScorePurposeV13.STAKEHOLDER_OVERLAY.value)
         self.assertNotIn("impactScore", rows[0])
+
+
+class PhaseBRegulationStrictTest(unittest.TestCase):
+    def setUp(self):
+        reg.resetDmaRulesForTest()
+        self.policy = reg.getPolicy("screening_policy")
+
+    def test_regulation_rule_card_impact_key_required(self):
+        broken = copy.deepcopy(self.policy)
+        broken["regulation"]["CSRD"]["DIRECT_MANDATORY"].pop("impact")
+        with self.assertRaises(KeyError):
+            sc.step2CalcRegulation("CSRD", "DIRECT_MANDATORY", broken)
+
+    def test_regulation_rule_card_financial_key_required(self):
+        broken = copy.deepcopy(self.policy)
+        broken["regulation"]["CSRD"]["DIRECT_MANDATORY"].pop("financial")
+        with self.assertRaises(KeyError):
+            sc.step2CalcRegulation("CSRD", "DIRECT_MANDATORY", broken)
 
 
 class PhaseBOrchestratorTest(unittest.TestCase):
@@ -275,9 +365,32 @@ class PhaseBOrchestratorTest(unittest.TestCase):
 
         self.assertEqual(benchmark["screeningTrace"][0]["impactSignal"], 4.0)
         self.assertEqual(regulation["screeningTrace"][0]["financialSignal"], 4.0)
-        self.assertEqual(kcgs["screeningTrace"][0]["impactSignal"], 5.0)
+        self.assertEqual(kcgs["screeningTrace"][0]["channel"], "kcgs_pillar_boost")
+        self.assertIsNone(kcgs["screeningTrace"][0]["impactSignal"])
+        self.assertIsNone(kcgs["screeningTrace"][0]["financialSignal"])
         self.assertEqual(external["screeningTrace"][0]["financialSignal"], 4.0)
         self.assertEqual(survey["scorePurpose"], ScorePurposeV13.STAKEHOLDER_OVERLAY.value)
+
+    def test_kcgs_payload_is_boost_only(self):
+        from src.services.materialities import orchestrator
+
+        payload = orchestrator.step2RunScreening("kcgs", {"grade": "D", "trend": "flat"})
+        trace = payload["screeningTrace"][0]
+        self.assertEqual(trace["channel"], "kcgs_pillar_boost")
+        self.assertIsNone(trace["impactSignal"])
+        self.assertIsNone(trace["financialSignal"])
+        self.assertIn("pillarSignal", trace["rawInputs"])
+        self.assertIn("subIssueBoost", trace["rawInputs"])
+        self.assertIs(trace["rawInputs"]["directCanonicalFinalAllowedYn"], False)
+
+    def test_kcgs_trace_does_not_contribute_to_external_max(self):
+        from src.services.materialities import orchestrator
+
+        kcgs = orchestrator.step2RunScreening("kcgs", {"grade": "D", "trend": "flat"})
+        external = orchestrator.step2RunScreening("externalMax", {"signals": [kcgs["screeningTrace"][0]]})
+        trace = external["screeningTrace"][0]
+        self.assertIsNone(trace["impactSignal"])
+        self.assertIsNone(trace["financialSignal"])
 
     def test_step3_run_selection_delegates_to_selection_policy(self):
         from src.services.materialities import orchestrator

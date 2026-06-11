@@ -36,10 +36,42 @@ def resolveQuestionMeta(rawRowsKey: Any, questionMap: Mapping[str, Mapping[str, 
     return questionMap.get(str(rawRowsKey), {})
 
 
-def step0NormalizeSurveyRows(rawRows: list, questionMap: Mapping[str, Mapping[str, Any]]) -> list[dict]:
+# STEP 0 internal helper. Decides why a survey row is excluded.
+# Input: mapped row interpretation.
+# Output: skipReason or None.
+def getSkipReason(
+    *,
+    subIssueCode: Any,
+    mappedAxis: str,
+    respondentGroup: str,
+) -> Optional[str]:
+    if not subIssueCode:
+        return "SUB_ISSUE_CODE_MISSING"
+    if not mappedAxis:
+        return "MAPPED_AXIS_MISSING"
+    if mappedAxis not in VALID_AXES:
+        return "MAPPED_AXIS_INVALID"
+    if not respondentGroup:
+        return "RESPONDENT_GROUP_MISSING"
+    if respondentGroup not in VALID_RESPONDENT_GROUPS:
+        return "RESPONDENT_GROUP_INVALID"
+    return None
+
+
+# STEP 0. Normalizes survey source rows into overlay input rows.
+# Input: external response rows and question map.
+# Output: normalizedRows and skippedRows. Invalid rows are never silently dropped.
+def step0NormalizeSurveyRows(rawRows: list, questionMap: Mapping[str, Mapping[str, Any]]) -> dict:
     normalized: list[dict] = []
-    for row in rawRows or []:
+    skipped: list[dict] = []
+    for rowIndex, row in enumerate(rawRows or []):
         if not isinstance(row, Mapping):
+            skipped.append({
+                "rowIndex": rowIndex,
+                "responseKey": None,
+                "questionKey": None,
+                "skipReason": "RAW_ROW_INVALID",
+            })
             continue
         responseKey = firstPresent(row, ("responseKey", "response_key", "id", "questionKey", "question_key"))
         questionKey = firstPresent(row, ("questionKey", "question_key", "questionId", "question_id", "metricId"))
@@ -47,7 +79,18 @@ def step0NormalizeSurveyRows(rawRows: list, questionMap: Mapping[str, Mapping[st
         subIssueCode = firstPresent(row, ("subIssueCode", "sub_issue_code"), firstPresent(meta, ("subIssueCode", "sub_issue_code")))
         mappedAxis = str(firstPresent(row, ("mappedAxis", "mapped_axis"), firstPresent(meta, ("mappedAxis", "mapped_axis"), ""))).lower()
         respondentGroup = str(firstPresent(row, ("respondentGroup", "respondent_group"), firstPresent(meta, ("respondentGroup", "respondent_group"), ""))).lower()
-        if not subIssueCode or mappedAxis not in VALID_AXES or respondentGroup not in VALID_RESPONDENT_GROUPS:
+        skipReason = getSkipReason(
+            subIssueCode=subIssueCode,
+            mappedAxis=mappedAxis,
+            respondentGroup=respondentGroup,
+        )
+        if skipReason:
+            skipped.append({
+                "rowIndex": rowIndex,
+                "responseKey": responseKey,
+                "questionKey": questionKey,
+                "skipReason": skipReason,
+            })
             continue
         normalized.append({
             "responseKey": responseKey,
@@ -59,7 +102,7 @@ def step0NormalizeSurveyRows(rawRows: list, questionMap: Mapping[str, Mapping[st
             "externalSubtype": firstPresent(row, ("externalSubtype", "external_subtype"), firstPresent(meta, ("externalSubtype", "external_subtype"))),
             "priorityYn": normalizeBool(firstPresent(row, ("priorityYn", "priority_yn", "priority"), firstPresent(meta, ("priorityYn", "priority_yn", "priority")))),
         })
-    return normalized
+    return {"normalizedRows": normalized, "skippedRows": skipped}
 
 
 __all__ = ["step0NormalizeSurveyRows"]

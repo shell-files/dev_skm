@@ -146,7 +146,7 @@ const Draft = () => {
   const [trackCtx, setTrackCtx] = useState(null); // { pageLabel, area, clicked, value }
   const [savedAt, setSavedAt] = useState(null); // 마지막 저장 시각
   const [metricRows, setMetricRows] = useState([]); // DB에서 로드한 지표 rows
-  const [aiSections, setAiSections] = useState({}); // { subIssueId → AI 생성 본문 }
+  const [aiSections, setAiSections] = useState({}); // { subIssueId → { reportText, metricIds } }
 
   // ── 상태 정의 ──
   const [isEditing, setIsEditing] = useState(false); // 본문 수정 모드 상태
@@ -164,7 +164,13 @@ const Draft = () => {
   const buildPageNarrative = (key, subIssueId) => {
     const t = (editNarrativeByPage[key] || "").trim();
     if (t) return t;
-    return (subIssueId && aiSections[subIssueId]) || null;
+    const section = subIssueId && aiSections[subIssueId];
+    return section ? section.reportText : null;
+  };
+
+  const getAiMetricIds = (subIssueId) => {
+    const section = subIssueId && aiSections[subIssueId];
+    return section ? (section.metricIds || []) : [];
   };
 
   const STORAGE_KEY = "draft-sr-edits-v1";
@@ -221,7 +227,10 @@ const Draft = () => {
       GET("/draft/section", { companyId, year, subIssueId: si.id })
         .then(d => {
           if (d?.success && d.data?.reportText) {
-            setAiSections(prev => ({ ...prev, [si.id]: d.data.reportText }));
+            setAiSections(prev => ({
+              ...prev,
+              [si.id]: { reportText: d.data.reportText, metricIds: d.data.metricIds || [] },
+            }));
           }
         });
     });
@@ -868,6 +877,7 @@ const Draft = () => {
                         mode={isEditing ? "edit" : "render"}
                         metrics={buildPageMetrics(page)}
                         narrativeText={buildPageNarrative(page.key, page.subIssueId)}
+                        aiMetricIds={getAiMetricIds(page.subIssueId)}
                         onNarrativeChange={(text) =>
                           setEditNarrativeByPage((prev) => ({ ...prev, [page.key]: text }))
                         }
@@ -1064,6 +1074,7 @@ const Draft = () => {
                       {...page.props}
                       metrics={buildMetricsFromEdits(si.adapter, editMetricsByPage[page.key], actualMetricRows)}
                       narrativeText={buildPageNarrative(page.key, si.id)}
+                      aiMetricIds={getAiMetricIds(si.id)}
                       subNavItems={si.pages.map((p) => ({ label: p.tabLabel, active: p.key === page.key }))}
                     />
                   </div>

@@ -405,6 +405,21 @@
 .related-para-label{font-size:12px;font-weight:700;color:#03A94D;}
 .related-para-btn{font-size:11px;color:#64748b;font-weight:600;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;cursor:pointer;font-family:inherit;}
 
+/* 추적 가능 요소 커서 */
+.sr-page [data-source] { cursor: pointer; }
+
+/* 패널 지표 선택 */
+.panel-select-wrap { display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid #f1f5f9; background:#fafbfc; }
+.panel-metric-select { flex:1; height:32px; padding:0 10px; border:1px solid #d1d5db; border-radius:8px; background:#fff; font-size:12px; font-weight:600; color:#1e293b; font-family:inherit; cursor:pointer; outline:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
+.panel-metric-select:focus { border-color:#03A94D; box-shadow:0 0 0 2px rgba(3,169,77,.12); }
+.panel-select-count { font-size:10.5px; font-weight:700; color:#94a3b8; white-space:nowrap; }
+.panel-tab-body { padding:14px 18px; display:flex; flex-direction:column; gap:10px; }
+.metric-rows-block { border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; padding:10px 14px; display:flex; flex-direction:column; gap:6px; background:#f8fafc; }
+
+/* 단일 통합 PDF 목차 */
+.pdf-toc-si-group { margin-bottom:12px; }
+.pdf-toc-si-header { font-size:11px; font-weight:800; color:#34805c; text-transform:uppercase; letter-spacing:.5px; padding:6px 6px 4px; }
+
 /* Status bar */
 .draft-statusbar{height:40px;background:#fff;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .statusbar-pill{padding:5px 18px;background:#f1f5f9;border-radius:20px;font-size:12px;font-weight:700;color:#64748b;}

@@ -13,20 +13,20 @@ router = APIRouter()
 
 
 @router.get("/metrics", summary="보고서 초안 지표 조회")
-async def getDraftMetrics(companyId: int, year: int, userModel=Depends(get_token)):
-    return fetchDraftMetrics(companyId, year, userModel)
+async def getDraftMetrics(companyId: int, year: int, token=Depends(get_token)):
+    return fetchDraftMetrics(companyId, year, token)
 
 
 @router.get("/section", summary="AI 생성 서브이슈 본문 조회")
-async def getDraftSection(companyId: int, year: int, subIssueId: str, userModel=Depends(get_token)):
-    return fetchDraftSection(companyId, year, subIssueId, userModel)
+async def getDraftSection(companyId: int, year: int, subIssueId: str, token=Depends(get_token)):
+    return fetchDraftSection(companyId, year, subIssueId, token)
 
 
 @router.post("/save", summary="보고서 초안 편집값 저장")
-async def saveDraftRoute(req: DraftSaveRequestDto, userModel=Depends(get_token)):
-    return saveDraft(req, userModel)
+async def saveDraftRoute(req: DraftSaveRequestDto, token=Depends(get_token)):
+    return saveDraft(req, token)
 
 
 @router.get("/load", summary="보고서 초안 편집값 불러오기")
-async def loadDraftRoute(companyId: int, year: int, userModel=Depends(get_token)):
-    return loadDraft(companyId, year, userModel)
+async def loadDraftRoute(companyId: int, year: int, token=Depends(get_token)):
+    return loadDraft(companyId, year, token)

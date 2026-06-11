@@ -434,7 +434,158 @@ const Draft = () => {
       }
       return;
     }
+    if (type === "PPT_NATIVE") {
+      // 편집형: DOM을 읽어 텍스트=텍스트박스, 표=네이티브 표, 카드=도형+텍스트.
+      // 로드맵/게이지처럼 그래픽 블록만 이미지로 삽입.
+      setPdfMode(true);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      await new Promise((r) => setTimeout(r, 120));
+      try {
+        const root = document.getElementById("pdf-render-root");
+        if (!root) return;
+        const SLIDE_W = 11.69, SLIDE_H = 8.27;
+        const FONT = "Malgun Gothic"; // PPT 기본 한글 폰트(없으면 PowerPoint가 대체)
 
+        const renderEl = (el) =>
+          html2canvas(el, {
+            scale: 2, useCORS: true, allowTaint: true, backgroundColor: null,
+            width: el.offsetWidth, height: el.offsetHeight, windowWidth: el.offsetWidth
+          });
+        const toHex = (rgb) => {
+          const m = (rgb || "").match(/\d+(\.\d+)?/g);
+          if (!m || m.length < 3) return null;
+          const [r, g, b] = m.map(Number);
+          return [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("").toUpperCase();
+        };
+
+        for (const si of subIssues) {
+          const pptx = new pptxgen();
+          pptx.defineLayout({ name: "A4L", width: SLIDE_W, height: SLIDE_H });
+          pptx.layout = "A4L";
+          const slideOf = {}; let slideNo = 0;
+
+          const makeCtx = (sec) => {
+            const pageRect = sec.getBoundingClientRect();
+            const k = SLIDE_W / pageRect.width;
+            const pos = (el) => { const r = el.getBoundingClientRect(); return { x: (r.left - pageRect.left) * k, y: (r.top - pageRect.top) * k, w: r.width * k, h: r.height * k }; };
+            const fpt = (el) => Math.max(6, parseFloat(getComputedStyle(el).fontSize) * k * 72);
+            return { k, pos, fpt };
+          };
+          const addTextEl = (slide, el, ctx, extra = {}) => {
+            const txt = (el.innerText || "").trim();
+            if (!txt) return;
+            const cs = getComputedStyle(el);
+            const p = ctx.pos(el);
+            slide.addText(txt, {
+              x: p.x, y: p.y, w: p.w, h: Math.max(p.h, 0.18),
+              fontSize: ctx.fpt(el), fontFace: FONT,
+              bold: parseInt(cs.fontWeight, 10) >= 600,
+              color: toHex(cs.color) || "16241F",
+              align: cs.textAlign === "right" ? "right" : cs.textAlign === "center" ? "center" : "left",
+              valign: "top", margin: 1, ...extra,
+            });
+          };
+
+          const buildSlide = async (sec) => {
+            const ctx = makeCtx(sec);
+            const slide = pptx.addSlide();
+
+            const topband = sec.querySelector(".sr-topband");
+            if (topband) { const p = ctx.pos(topband); slide.addShape(pptx.ShapeType.rect, { x: p.x, y: p.y, w: p.w, h: Math.max(p.h, 0.04), fill: { color: toHex(getComputedStyle(topband).backgroundColor) || "16241F" }, line: { width: 0 } }); }
+
+            const subnav = sec.querySelector(".sr-subnav");
+            if (subnav) addTextEl(slide, subnav, ctx, { color: "6b8378" });
+
+            ["sr-eyebrow", "sr-title", "sr-title-en"].forEach((cls) => { const el = sec.querySelector("." + cls); if (el) addTextEl(slide, el, ctx); });
+
+            const prose = sec.querySelector(".sr-prose");
+            if (prose) addTextEl(slide, prose, ctx);
+
+            // KPI 카드
+            sec.querySelectorAll(".sr-kpi").forEach((card) => {
+              const cs = getComputedStyle(card); const p = ctx.pos(card);
+              slide.addShape(pptx.ShapeType.roundRect, { x: p.x, y: p.y, w: p.w, h: p.h, rectRadius: 0.05, fill: { color: toHex(cs.backgroundColor) || "F4F8F6" }, line: { color: toHex(cs.borderTopColor) || "D7E2DC", width: 0.5 } });
+              ["kl", "kv", "kd"].forEach((c) => { const el = card.querySelector("." + c); if (el) addTextEl(slide, el, ctx); });
+            });
+
+            // 표 캡션 + 네이티브 표
+            sec.querySelectorAll(".sr-tcap").forEach((cap) => addTextEl(slide, cap, ctx, { bold: true }));
+            sec.querySelectorAll("table.sr-tbl").forEach((tbl) => {
+              const p = ctx.pos(tbl);
+              const rows = [];
+              tbl.querySelectorAll("tr").forEach((tr) => {
+                const cells = [];
+                tr.querySelectorAll("th,td").forEach((td) => {
+                  const cs = getComputedStyle(td);
+                  cells.push({
+                    text: (td.innerText || "").trim(), options: {
+                      bold: td.tagName === "TH" || parseInt(cs.fontWeight, 10) >= 600,
+                      color: toHex(cs.color) || "16241F",
+                      fill: { color: td.tagName === "TH" ? "EAF3EE" : "FFFFFF" },
+                      align: cs.textAlign === "right" ? "right" : cs.textAlign === "center" ? "center" : "left",
+                      fontSize: Math.max(7, ctx.fpt(td)), valign: "middle",
+                    }
+                  });
+                });
+                if (cells.length) rows.push(cells);
+              });
+              const headCells = tbl.querySelectorAll("tr:first-child th, tr:first-child td");
+              const colW = Array.from(headCells).map((c) => c.getBoundingClientRect().width * ctx.k);
+              if (rows.length) slide.addTable(rows, { x: p.x, y: p.y, w: p.w, colW: colW.length ? colW : undefined, border: { type: "solid", pt: 0.5, color: "D7E2DC" }, fontFace: FONT, autoPage: false, valign: "middle" });
+            });
+
+            // 그래픽 블록은 이미지로(로드맵·게이지)
+            for (const sel of [".sr-road", ".sr-gauge"]) {
+              const el = sec.querySelector(sel);
+              if (el) { const p = ctx.pos(el); const cv = await renderEl(el); slide.addImage({ data: cv.toDataURL("image/png"), x: p.x, y: p.y, w: p.w, h: p.h }); }
+            }
+
+            // 노트 카드(편집형)
+            sec.querySelectorAll(".sr-note-card").forEach((card) => {
+              const cs = getComputedStyle(card); const p = ctx.pos(card);
+              slide.addShape(pptx.ShapeType.roundRect, { x: p.x, y: p.y, w: p.w, h: p.h, rectRadius: 0.04, fill: { color: toHex(cs.backgroundColor) || "F4F8F6" }, line: { color: "D7E2DC", width: 0.5 } });
+              ["l", "b", "s"].forEach((c) => { const el = card.querySelector("." + c); if (el) addTextEl(slide, el, ctx); });
+            });
+
+            // 이행수단
+            const measures = sec.querySelector(".sr-measures");
+            if (measures) {
+              const cs = getComputedStyle(measures); const p = ctx.pos(measures);
+              slide.addShape(pptx.ShapeType.rect, { x: p.x, y: p.y, w: p.w, h: p.h, fill: { color: toHex(cs.backgroundColor) || "F4F8F6" }, line: { width: 0 } });
+              ["ml", "mv"].forEach((c) => { const el = measures.querySelector("." + c); if (el) addTextEl(slide, el, ctx); });
+            }
+
+            const foot = sec.querySelector(".sr-foot");
+            if (foot && (foot.innerText || "").trim()) addTextEl(slide, foot, ctx, { color: "8aa399" });
+
+            return slide;
+          };
+
+          // 목차 슬라이드(편집형 텍스트 + 슬라이드 점프 링크)
+          const tocSlide = pptx.addSlide(); slideNo++;
+          tocSlide.addText(si.label || si.id, { x: 0.6, y: 0.5, w: SLIDE_W - 1.2, h: 0.6, fontSize: 24, bold: true, color: "1B5E44", fontFace: FONT });
+          tocSlide.addText("목차", { x: 0.6, y: 1.2, w: 3, h: 0.4, fontSize: 13, color: "6B8378", fontFace: FONT });
+
+          const tocItems = [];
+          for (const page of si.pages) {
+            const sec = root.querySelector(`#pdf-sec-${si.id}-${page.key} .sr-page`);
+            if (!sec) continue;
+            await buildSlide(sec);
+            slideNo++; slideOf[page.key] = slideNo;
+            tocItems.push({ label: page.tabLabel || page.key, slide: slideNo });
+          }
+          tocItems.forEach((it, i) => {
+            tocSlide.addText(`${i + 1}. ${it.label}`, { x: 0.8, y: 1.7 + i * 0.5, w: SLIDE_W - 1.6, h: 0.42, fontSize: 15, color: "16241F", fontFace: FONT, hyperlink: { slide: it.slide } });
+          });
+
+          await pptx.writeFile({ fileName: `${si.exportName || si.id}-편집형.pptx` });
+          await new Promise((r) => setTimeout(r, 300));
+        }
+      } finally {
+        setPdfMode(false);
+      }
+      return;
+    } 
     if (type === "PPT") {
       // PDF와 동일하게 화면 밖 풀사이즈 렌더 → 각 페이지를 한 슬라이드 이미지로
       setPdfMode(true);
@@ -609,7 +760,7 @@ const Draft = () => {
             <div className="draft-doc" id="draftDoc">
               <div className="doc-toolbar">
                 <div className="doc-breadcrumb">
-                  
+
                 </div>
                 <div className="doc-actions">
                   {/* 1. 독립된 본문 수정 버튼 (Toggle 형태) */}

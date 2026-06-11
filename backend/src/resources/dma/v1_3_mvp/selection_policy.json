@@ -7,6 +7,9 @@
   "sortStrategy": ["MAX_AXIS_DESC", "MIN_AXIS_DESC", "SURVEY_PRIORITY_RATE_DESC", "SUB_ISSUE_CODE_ASC"],
   "recommendedTop10": 10,
   "recommendedTop5": 5,
+  "ranking": {
+    "missingAxisSortValue": 0.0
+  },
   "governanceGate": {
     "separateFromScoringYn": true,
     "scoreEditPermissionYn": false,

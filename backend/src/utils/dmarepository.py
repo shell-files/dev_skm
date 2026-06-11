@@ -2,11 +2,9 @@
 Domain: DMA Materiality
 Layer: utils/repository
 Responsibility:
-- Persist DMA evidence and signal rows
-- Recalculate stage/final score summaries
-- Update DMA rankings
-- Query persisted DMA scoring state
-Public functions:
+- LEGACY: DMA evidence / signal 저장, 집계, 랭킹, 쿼리 (기존 Pipeline 호환)
+- STEP 4: v1.3 Canonical Payload 구성·읽기·업데이트 보조 (Phase C DB wire 대기)
+Public functions (LEGACY):
 - saveSignals / saveDmaSignals
 - recalcStage / recalculateStageScore
 - recalcFinal / recalculateFinalScore
@@ -14,12 +12,12 @@ Public functions:
 - listResults / getDmaResults
 - listTopMediaIssues / getTopIssuesByMediaScore
 - getMediaCoverage / getMediaCoverageFromSummary
-- query/count helpers for materiality result APIs
+Public functions (STEP 4):
+- step4BuildTrace / step4WriteTrace / step4ReadTrace
+- step4UpdateTrace / appendFactorTrace / isLegacyPayload
 Do not:
 - do not mutate unrelated DB state
-- do not change scoring formula unless explicitly requested
-- do not change scoring formula directly
-- do not change aggregation weights directly
+- do not hardcode score numbers or rule-card values
 - do not call FastAPI router directly
 - do not modify auth/token/common code
 """
@@ -889,24 +887,18 @@ def getLatestReportRunByMaterialityRun(runId: int) -> dict:
     return getLatestReportRun(runId)
 
 
-# =====================================================================================
-# DMA v1.3 MVP Slim — Payload Trace Helpers (PARALLEL ADDITION, NO DB EXECUTION)
-# =====================================================================================
-# These helpers BUILD / READ the v1.3 canonical payload that will (in Phase C) live in
-# the EXISTING column ESG_DMA_SIGNAL_DETAIL.scoring_payload_json. No new table/column.
-#
-# Phase A guarantees enforced here:
-#   - PURE builders: none of these functions execute SQL / open a DB connection.
-#   - Legacy payloads are NEVER auto-migrated, their scores NEVER reused, NEVER updated.
-#   - Reads are read-only; legacy payloads are detected, not rewritten.
-# DB persistence of these payloads is intentionally deferred to Phase C.
-# =====================================================================================
+# =========================================================
+# STEP 4. TRACE PAYLOAD BUILD / READ / UPDATE
+# =========================================================
+# PURE builders: none of these functions execute SQL / open a DB connection.
+# Legacy payloads are NEVER auto-migrated, their scores NEVER reused, NEVER updated.
+# DB persistence is deferred to Phase C (wire step4WriteTrace into the save path).
 
 _V13_RULE_VERSION = "dma-rule-v1.3-mvp"
 
 
-def _coerce_payload_dict(raw: Union[str, Dict[str, Any], None]) -> Optional[Dict[str, Any]]:
-    """Parse a scoring_payload_json value (JSON str or dict) into a dict, or None."""
+def _coercePayload(raw: Union[str, Dict[str, Any], None]) -> Optional[Dict[str, Any]]:
+    """scoring_payload_json 값을 dict으로 파싱한다. 실패 시 None 반환."""
     if raw is None:
         return None
     if isinstance(raw, str):
@@ -920,172 +912,144 @@ def _coerce_payload_dict(raw: Union[str, Dict[str, Any], None]) -> Optional[Dict
     return None
 
 
-def is_legacy_scoring_payload(raw: Union[str, Dict[str, Any], None]) -> bool:
-    """
-    True if a scoring_payload_json value is NOT a v1.3 canonical payload.
-
-    A v1.3 payload is identified by ``factorPayloadSchemaVersion`` present AND
-    ``ruleVersion == 'dma-rule-v1.3-mvp'``. Anything else (legacy DMASignal dump,
-    empty, unparseable) is treated as legacy.
-    """
-    payload = _coerce_payload_dict(raw)
+# STEP 4. v1.3 payload 여부 판단 — False면 v1.3, True면 Legacy(또는 빈 값).
+# Input: scoring_payload_json 값 (str | dict | None).
+# Output: bool. True = legacy.
+def isLegacyPayload(raw: Union[str, Dict[str, Any], None]) -> bool:
+    payload = _coercePayload(raw)
     if not payload:
         return True
-    has_schema = "factorPayloadSchemaVersion" in payload
-    is_v13_rule = payload.get("ruleVersion") == _V13_RULE_VERSION
-    return not (has_schema and is_v13_rule)
+    hasSchema = "factorPayloadSchemaVersion" in payload
+    isV13Rule = payload.get("ruleVersion") == _V13_RULE_VERSION
+    return not (hasSchema and isV13Rule)
 
 
-def build_scoring_payload_v13(
+# STEP 4. v1.3 Canonical payload dict를 구성한다 (DB 저장 없음).
+# Input: payload 구성 요소 (rule_version/config_hash는 Registry에서 기본값 조회).
+# Output: JSON-직렬화 가능한 camelCase dict.
+def step4BuildTrace(
     *,
-    score_purpose: Union[ScorePurposeV13, str] = ScorePurposeV13.CANONICAL_IRO,
-    source_channel: Optional[str] = None,
-    sub_issue_code: Optional[str] = None,
-    extracted_facts: Any = None,
-    factor_trace: Optional[Sequence[Any]] = None,
-    axis_scores: Optional[Sequence[Any]] = None,
-    screening_trace: Optional[Sequence[Any]] = None,
-    aggregation_trace: Any = None,
-    legacy_compatibility: Any = None,
-    rule_version: Optional[str] = None,
-    config_hash: Optional[str] = None,
-    evaluated_at: Optional[str] = None,
+    scorePurpose: Union[ScorePurposeV13, str] = ScorePurposeV13.CANONICAL_IRO,
+    sourceChannel: Optional[str] = None,
+    subIssueCode: Optional[str] = None,
+    extractedFacts: Any = None,
+    factorTrace: Optional[Sequence[Any]] = None,
+    axisScores: Optional[Sequence[Any]] = None,
+    screeningTrace: Optional[Sequence[Any]] = None,
+    aggregationTrace: Any = None,
+    legacyCompatibility: Any = None,
+    ruleVersion: Optional[str] = None,
+    configHash: Optional[str] = None,
+    evaluatedAt: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """
-    Build a JSON-serializable v1.3 canonical payload dict (camelCase keys).
-
-    rule_version / config_hash default to the loaded slim runtime config (Registry).
-    Inputs may be pydantic models or plain dicts; pydantic validates them (and the
-    ExtractedFactsV13 ``extra='forbid'`` guard still rejects any AI score field here).
-    This does not touch a DB.
-    """
-    if rule_version is None or config_hash is None:
-        # Lazy import to avoid any import cycle and to keep this a pure builder.
+    if ruleVersion is None or configHash is None:
         from src.utils import dmaruleregistry
-        if rule_version is None:
-            rule_version = dmaruleregistry.get_rule_version()
-        if config_hash is None:
-            config_hash = dmaruleregistry.get_config_hash()
-
+        if ruleVersion is None:
+            ruleVersion = dmaruleregistry.getRuleVersion()
+        if configHash is None:
+            configHash = dmaruleregistry.getConfigHash()
     payload = ScoringPayloadV13(
-        ruleVersion=rule_version,
-        configHash=config_hash,
-        scorePurpose=score_purpose,
-        sourceChannel=source_channel,
-        subIssueCode=sub_issue_code,
-        extractedFacts=extracted_facts,
-        factorTrace=list(factor_trace) if factor_trace else [],
-        axisScores=list(axis_scores) if axis_scores else [],
-        screeningTrace=list(screening_trace) if screening_trace else [],
-        aggregationTrace=aggregation_trace,
-        legacyCompatibility=legacy_compatibility or LegacyCompatibilityV13(),
-        evaluatedAt=evaluated_at,
+        ruleVersion=ruleVersion,
+        configHash=configHash,
+        scorePurpose=scorePurpose,
+        sourceChannel=sourceChannel,
+        subIssueCode=subIssueCode,
+        extractedFacts=extractedFacts,
+        factorTrace=list(factorTrace) if factorTrace else [],
+        axisScores=list(axisScores) if axisScores else [],
+        screeningTrace=list(screeningTrace) if screeningTrace else [],
+        aggregationTrace=aggregationTrace,
+        legacyCompatibility=legacyCompatibility or LegacyCompatibilityV13(),
+        evaluatedAt=evaluatedAt,
     )
     return payload.model_dump(mode="json", by_alias=False)
 
 
-def write_scoring_payload_v13(
+# STEP 4. payload를 직렬화한다. Phase C에서 DB 저장 경로에 연결한다.
+# Input: ScoringPayloadV13 또는 dict, as_json=True이면 JSON 문자열 반환.
+# Output: dict 또는 JSON 문자열.
+def step4WriteTrace(
     payload: Union[ScoringPayloadV13, Dict[str, Any]],
     *,
-    as_json: bool = False,
+    asJson: bool = False,
 ) -> Union[Dict[str, Any], str]:
-    """
-    Produce the serialized v1.3 payload destined for ESG_DMA_SIGNAL_DETAIL.scoring_payload_json.
-
-    Phase A: this returns the payload only — it does NOT execute any SQL or open a DB
-    connection. Actual persistence is wired in Phase C. ``as_json=True`` returns a JSON
-    string instead of a dict.
-    """
     if isinstance(payload, ScoringPayloadV13):
         data = payload.model_dump(mode="json", by_alias=False)
     elif isinstance(payload, dict):
-        # Validate/normalize through the model so we never persist a malformed payload.
         data = ScoringPayloadV13(**payload).model_dump(mode="json", by_alias=False)
     else:
         raise TypeError("payload must be a ScoringPayloadV13 or dict")
-    if as_json:
+    if asJson:
         return json.dumps(data, ensure_ascii=False)
     return data
 
 
-def read_scoring_payload_v13(raw: Union[str, Dict[str, Any], None]) -> Optional[Dict[str, Any]]:
-    """
-    Read-only parse of a scoring_payload_json value into a normalized v1.3 payload dict.
-
-    Returns None if the value is legacy / missing / not a valid v1.3 payload. Never
-    rewrites or migrates the source.
-    """
-    if is_legacy_scoring_payload(raw):
+# STEP 4. scoring_payload_json 값을 읽어 v1.3 payload dict로 반환한다.
+# Input: scoring_payload_json 값 (str | dict | None).
+# Output: 정규화된 v1.3 payload dict 또는 None (legacy / 빈 값).
+def step4ReadTrace(raw: Union[str, Dict[str, Any], None]) -> Optional[Dict[str, Any]]:
+    if isLegacyPayload(raw):
         return None
-    payload = _coerce_payload_dict(raw)
+    payload = _coercePayload(raw)
     try:
         return ScoringPayloadV13(**payload).model_dump(mode="json", by_alias=False)
     except Exception:
         return None
 
 
-def build_updated_factor_trace_payload_v13(
-    existing_v13_payload: Union[str, Dict[str, Any]],
-    new_factor_traces: Sequence[Any],
+# STEP 4. 기존 v1.3 payload에 factor trace를 추가한 새 dict를 반환한다.
+# Input: 기존 v1.3 payload (legacy이면 ValueError), 추가할 FactorTraceV13 목록.
+# Output: factorTrace가 추가된 새 payload dict.
+def appendFactorTrace(
+    existingPayload: Union[str, Dict[str, Any]],
+    newFactorTraces: Sequence[Any],
 ) -> Dict[str, Any]:
-    """
-    Append factor traces to an EXISTING v1.3 payload and return a NEW dict.
-
-    Raises ValueError if the input is a legacy payload (legacy is never migrated here).
-    The input is deep-copied; legacy/score fields are never created or reused.
-    """
-    if is_legacy_scoring_payload(existing_v13_payload):
+    if isLegacyPayload(existingPayload):
         raise ValueError("Refusing to update factor trace on a legacy payload (no legacy migration)")
-    payload = copy.deepcopy(_coerce_payload_dict(existing_v13_payload)) or {}
+    payload = copy.deepcopy(_coercePayload(existingPayload)) or {}
     traces = list(payload.get("factorTrace", []))
-    for trace in new_factor_traces:
+    for trace in newFactorTraces:
         if isinstance(trace, FactorTraceV13):
             traces.append(trace.model_dump(mode="json", by_alias=False))
         elif isinstance(trace, dict):
             traces.append(FactorTraceV13(**trace).model_dump(mode="json", by_alias=False))
         else:
-            raise TypeError("new_factor_traces items must be FactorTraceV13 or dict")
+            raise TypeError("newFactorTraces items must be FactorTraceV13 or dict")
     payload["factorTrace"] = traces
     return payload
 
 
-def update_signal_factor_trace_v13(
-    existing_raw_payload: Union[str, Dict[str, Any], None],
-    new_factor_traces: Sequence[Any],
+# STEP 4. 시그널의 factor trace payload를 갱신한다. Legacy이면 새 v1.3 payload 생성.
+# Input: 기존 raw payload (legacy 또는 v1.3), 추가할 traces.
+# Output: 갱신된 v1.3 payload dict (DB 저장은 Phase C에서 수행).
+def step4UpdateTrace(
+    existingRawPayload: Union[str, Dict[str, Any], None],
+    newFactorTraces: Sequence[Any],
     *,
-    score_purpose: Union[ScorePurposeV13, str] = ScorePurposeV13.CANONICAL_IRO,
-    source_channel: Optional[str] = None,
-    sub_issue_code: Optional[str] = None,
-    rule_version: Optional[str] = None,
-    config_hash: Optional[str] = None,
+    scorePurpose: Union[ScorePurposeV13, str] = ScorePurposeV13.CANONICAL_IRO,
+    sourceChannel: Optional[str] = None,
+    subIssueCode: Optional[str] = None,
+    ruleVersion: Optional[str] = None,
+    configHash: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """
-    Produce the v1.3 payload that WOULD be written back for a signal's factor trace.
+    if not isLegacyPayload(existingRawPayload):
+        return appendFactorTrace(existingRawPayload, newFactorTraces)
 
-    - If the existing payload is already v1.3: append the new traces (no legacy touch).
-    - If it is legacy / missing: build a FRESH v1.3 payload (legacy is NOT migrated and
-      its score is NOT reused); legacyCompatibility records that a legacy payload existed.
-
-    Phase A: PURE builder — returns the payload dict; performs NO DB write.
-    """
-    if not is_legacy_scoring_payload(existing_raw_payload):
-        return build_updated_factor_trace_payload_v13(existing_raw_payload, new_factor_traces)
-
-    legacy_present = _coerce_payload_dict(existing_raw_payload) is not None
-    legacy_compat = LegacyCompatibilityV13(
-        legacyScoringPayloadPresentYn=legacy_present,
+    legacyPresent = _coercePayload(existingRawPayload) is not None
+    legacyCompat = LegacyCompatibilityV13(
+        legacyScoringPayloadPresentYn=legacyPresent,
         legacyMigratedYn=False,
         legacyScoreReusedYn=False,
         legacyUpdatedYn=False,
     )
-    return build_scoring_payload_v13(
-        score_purpose=score_purpose,
-        source_channel=source_channel,
-        sub_issue_code=sub_issue_code,
-        factor_trace=list(new_factor_traces),
-        legacy_compatibility=legacy_compat,
-        rule_version=rule_version,
-        config_hash=config_hash,
+    return step4BuildTrace(
+        scorePurpose=scorePurpose,
+        sourceChannel=sourceChannel,
+        subIssueCode=subIssueCode,
+        factorTrace=list(newFactorTraces),
+        legacyCompatibility=legacyCompat,
+        ruleVersion=ruleVersion,
+        configHash=configHash,
     )
 
 
@@ -1145,11 +1109,11 @@ __all__ = [
     "getMissingRequiredMetricCount",
     "getLatestReportRun",
     "getLatestReportRunByMaterialityRun",
-    # v1.3 MVP slim payload trace helpers (no DB execution in Phase A)
-    "is_legacy_scoring_payload",
-    "build_scoring_payload_v13",
-    "write_scoring_payload_v13",
-    "read_scoring_payload_v13",
-    "build_updated_factor_trace_payload_v13",
-    "update_signal_factor_trace_v13",
+    # STEP 4: v1.3 Payload Trace helpers (no DB execution — Phase C wire pending)
+    "isLegacyPayload",
+    "step4BuildTrace",
+    "step4WriteTrace",
+    "step4ReadTrace",
+    "step4UpdateTrace",
+    "appendFactorTrace",
 ]

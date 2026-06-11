@@ -1,32 +1,29 @@
 """
 Domain: DMA Materiality (v1.3 MVP Slim Engine)
-Layer: utils/config-registry
-Responsibility:
+Layer: utils/rule-registry
+Responsibility: STEP 0 — Rule Load, Validate, Hash, Cache
 - Own ALL runtime IO for the v1.3 MVP slim runtime config
-- Load manifest + 5 policy files from backend/src/resources/dma/v1_3_mvp/
-- Validate via dmarulevalidator (fail-fast)
-- Compute a canonical-JSON SHA-256 config hash over the 5 policy files only
+- Inline all config validation (path guard, manifest, exact-set, rule-version)
+- Compute canonical-JSON SHA-256 config hash over the 5 policy files only
 - Provide a singleton cache, deep-copy reads, and a test cache reset
-- Expose Optional Capability status
+- Expose capability status
 Public surface:
-- RUNTIME_CONFIG_DIR
+- RUNTIME_CONFIG_DIR, MANIFEST_FILENAME
+- EXPECTED_RULE_VERSION, EXPECTED_ARCHITECTURE_REVISION, EXPECTED_POLICY_FILES
+- DmaRuleValidationError
 - RuntimeConfigV13
-- compute_config_hash
-- load_runtime_config
-- get_manifest / get_policy / get_all_policies
-- get_config_hash / get_rule_version / get_architecture_revision
-- get_capabilities / get_capability
-- reset_cache
+- validatePath
+- getDmaRules / resetDmaRulesForTest / computeConfigHash
+- getManifest / getAllPolicies / getPolicy
+- getConfigHash / getRuleVersion / getArchRevision
+- getCapabilities / getCapability
 Do not:
 - do not let services import or read these JSON files directly (Registry only)
 - do not read docs/dma/** at runtime
 - do not eval / exec config strings
-- do not include the manifest, golden tests, or impl docs in the config hash
+- do not include the manifest in the config hash
 - do not connect to a DB / Redis / Kafka
 - do not enable hot reload
-
-Runtime은 이 Registry를 통해서만 Slim Config를 읽는다.
-Hash 대상은 정책 5종이며 Manifest 자기 자신은 제외한다.
 """
 
 from __future__ import annotations
@@ -34,20 +31,36 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 import threading
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, Iterable, Mapping, Optional
 
-from src.utils import dmarulevalidator as validator
-from src.utils.dmarulevalidator import DmaRuleValidationError
+# =========================================================
+# STEP 0. RULE LOAD / VALIDATE / HASH
+# =========================================================
+
+# SSOT contract constants
+EXPECTED_RULE_VERSION = "dma-rule-v1.3-mvp"
+EXPECTED_ARCHITECTURE_REVISION = "R4.1-SLIM"
+EXPECTED_HASH_ALGORITHM = "SHA-256"
+
+# Exact runtime policy file set. Manifest is excluded from this set and from the hash.
+EXPECTED_POLICY_FILES = frozenset({
+    "canonical_scoring_policy.json",
+    "screening_policy.json",
+    "survey_policy.json",
+    "ai_fact_validation_policy.json",
+    "selection_policy.json",
+})
+
+_SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9_]+\.json$")
 
 # backend/src/utils/dmaruleregistry.py -> parents[1] == backend/src
 RUNTIME_CONFIG_DIR = Path(__file__).resolve().parents[1] / "resources" / "dma" / "v1_3_mvp"
 MANIFEST_FILENAME = "manifest.json"
 
-# Minimum / baseline capability contract (Phase A). Policy-declared capability
-# overrides are merged on top of these defaults.
 _DEFAULT_CAPABILITIES: Dict[str, str] = {
     "canonicalScoring": "READY",
     "benchmarkScreening": "READY",
@@ -61,10 +74,13 @@ _DEFAULT_CAPABILITIES: Dict[str, str] = {
 }
 
 
+class DmaRuleValidationError(ValueError):
+    """Raised when a v1.3 slim runtime config violates the contract."""
+
+
 @dataclass(frozen=True)
 class RuntimeConfigV13:
     """Immutable snapshot of the loaded v1.3 slim runtime config bundle."""
-
     rule_version: str
     architecture_revision: str
     config_hash: str
@@ -77,50 +93,93 @@ _lock = threading.RLock()
 _cache: Optional[RuntimeConfigV13] = None
 
 
-# ──────────────────────────────────────────────
-# Config Hash
-# ──────────────────────────────────────────────
-
-def _canonical_json(obj: Any) -> str:
-    """
-    Canonical JSON form: keys sorted, no insignificant whitespace.
-    This makes the hash invariant to key ordering and whitespace, while
-    remaining sensitive to any value change.
-    """
-    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-
-
-def compute_config_hash(policies: Mapping[str, Any]) -> str:
-    """
-    Compute the runtime config hash over the policy file set.
-
-    - Canonical-JSON per file (sort_keys + compact separators)
-    - Files folded in sorted filename order (deterministic)
-    - A single NUL byte delimiter is placed between the filename and its
-      canonical JSON, and after the JSON, so a value cannot "bleed" across files
-    - Returns ``sha256:<hexdigest>``
-
-    The manifest is intentionally NOT a hash input.
-    """
-    digest = hashlib.sha256()
-    for filename in sorted(policies):
-        digest.update(filename.encode("utf-8"))
-        digest.update(b"\x00")
-        digest.update(_canonical_json(policies[filename]).encode("utf-8"))
-        digest.update(b"\x00")
-    return "sha256:" + digest.hexdigest()
+# STEP 0. Path guard — rejects traversal, absolute, nested, non-json filenames.
+# Input: raw filename string from manifest.
+# Output: validated safe filename string.
+def validatePath(filename: Any) -> str:
+    if not isinstance(filename, str):
+        raise DmaRuleValidationError(f"Config filename must be a string, got {type(filename)!r}")
+    raw = filename.strip()
+    if not raw:
+        raise DmaRuleValidationError("Config filename must not be empty")
+    if ".." in raw:
+        raise DmaRuleValidationError(f"Path traversal not allowed: {filename!r}")
+    if raw.startswith("./") or raw.startswith(".\\"):
+        raise DmaRuleValidationError(f"Relative './' prefix not allowed: {filename!r}")
+    if "/" in raw or "\\" in raw:
+        raise DmaRuleValidationError(f"Nested sub-paths not allowed: {filename!r}")
+    if re.match(r"^[A-Za-z]:", raw):
+        raise DmaRuleValidationError(f"Absolute paths not allowed: {filename!r}")
+    if not raw.lower().endswith(".json"):
+        raise DmaRuleValidationError(f"Only .json files allowed: {filename!r}")
+    if not _SAFE_FILENAME_RE.match(raw):
+        raise DmaRuleValidationError(f"Unsafe config filename: {filename!r}")
+    return raw
 
 
-# ──────────────────────────────────────────────
-# Loading
-# ──────────────────────────────────────────────
+def validateManifest(manifest: Dict[str, Any]) -> None:
+    if not isinstance(manifest, dict):
+        raise DmaRuleValidationError("manifest.json must be a JSON object")
+    rv = manifest.get("ruleVersion")
+    if rv != EXPECTED_RULE_VERSION:
+        raise DmaRuleValidationError(
+            f"manifest ruleVersion mismatch: expected {EXPECTED_RULE_VERSION!r}, got {rv!r}"
+        )
+    arch = manifest.get("architectureRevision")
+    if arch != EXPECTED_ARCHITECTURE_REVISION:
+        raise DmaRuleValidationError(
+            f"manifest architectureRevision mismatch: expected {EXPECTED_ARCHITECTURE_REVISION!r}, got {arch!r}"
+        )
+    algo = manifest.get("hashAlgorithm")
+    if algo != EXPECTED_HASH_ALGORITHM:
+        raise DmaRuleValidationError(
+            f"manifest hashAlgorithm mismatch: expected {EXPECTED_HASH_ALGORITHM!r}, got {algo!r}"
+        )
+    files = manifest.get("runtimePolicyFiles")
+    if not isinstance(files, list) or not files:
+        raise DmaRuleValidationError("manifest.runtimePolicyFiles must be a non-empty list")
+    for name in files:
+        validatePath(name)
+    if len(set(files)) != len(files):
+        raise DmaRuleValidationError("manifest.runtimePolicyFiles contains duplicates")
+    validatePolicies(files)
+    if manifest.get("serviceDirectJsonLoadAllowedYn") is not False:
+        raise DmaRuleValidationError("manifest.serviceDirectJsonLoadAllowedYn must be false")
 
-def _read_json(path: Path) -> Any:
+
+def validatePolicies(filenames: Iterable[str]) -> None:
+    actual = set(filenames)
+    missing = EXPECTED_POLICY_FILES - actual
+    extra = actual - EXPECTED_POLICY_FILES
+    if missing or extra:
+        raise DmaRuleValidationError(
+            f"runtime policy file set mismatch. missing={sorted(missing)} unexpected={sorted(extra)}"
+        )
+
+
+def validatePolicyVersions(policies: Dict[str, Dict[str, Any]]) -> None:
+    for name, body in policies.items():
+        if not isinstance(body, dict):
+            raise DmaRuleValidationError(f"policy {name!r} must be a JSON object")
+        version = body.get("ruleVersion")
+        if version != EXPECTED_RULE_VERSION:
+            raise DmaRuleValidationError(
+                f"policy {name!r} ruleVersion mismatch: expected {EXPECTED_RULE_VERSION!r}, got {version!r}"
+            )
+
+
+def validateBundle(manifest: Dict[str, Any], policies: Dict[str, Dict[str, Any]]) -> None:
+    validateManifest(manifest)
+    validatePolicies(policies.keys())
+    validatePolicyVersions(policies)
+
+
+def readJson(path: Path) -> Any:
     if not path.exists():
         raise DmaRuleValidationError(f"Required runtime config file is missing: {path.name}")
     try:
         text = path.read_text(encoding="utf-8")
-    except OSError as exc:  # pragma: no cover - filesystem error
+    except OSError as exc:  # pragma: no cover
         raise DmaRuleValidationError(f"Unable to read runtime config file {path.name}: {exc}") from exc
     try:
         return json.loads(text)
@@ -128,128 +187,136 @@ def _read_json(path: Path) -> Any:
         raise DmaRuleValidationError(f"Invalid JSON in runtime config file {path.name}: {exc}") from exc
 
 
-def _resolve_capabilities(manifest: Dict[str, Any], policies: Dict[str, Dict[str, Any]]) -> Dict[str, str]:
-    capabilities = dict(_DEFAULT_CAPABILITIES)
-    # Manifest-level declaration (full map) takes precedence over defaults.
-    manifest_caps = manifest.get("capabilities")
-    if isinstance(manifest_caps, dict):
-        capabilities.update({str(k): str(v) for k, v in manifest_caps.items()})
-    # Screening policy may restate the screening-specific subset.
-    screening_caps = policies.get("screening_policy.json", {}).get("capabilities")
-    if isinstance(screening_caps, dict):
-        capabilities.update({str(k): str(v) for k, v in screening_caps.items()})
-    return capabilities
+def _canonicalJson(obj: Any) -> str:
+    """Canonical JSON: keys sorted, compact separators — hash-invariant to key order and whitespace."""
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
-def _load_bundle() -> RuntimeConfigV13:
-    manifest = _read_json(RUNTIME_CONFIG_DIR / MANIFEST_FILENAME)
+# STEP 0. Compute SHA-256 hash over the 5 policy files (manifest excluded).
+# Input: policy dict keyed by filename.
+# Output: 'sha256:<hexdigest>' string.
+def computeConfigHash(policies: Mapping[str, Any]) -> str:
+    digest = hashlib.sha256()
+    for filename in sorted(policies):
+        digest.update(filename.encode("utf-8"))
+        digest.update(b"\x00")
+        digest.update(_canonicalJson(policies[filename]).encode("utf-8"))
+        digest.update(b"\x00")
+    return "sha256:" + digest.hexdigest()
+
+
+def _resolveCapabilities(manifest: Dict[str, Any], policies: Dict[str, Dict[str, Any]]) -> Dict[str, str]:
+    caps = dict(_DEFAULT_CAPABILITIES)
+    mCaps = manifest.get("capabilities")
+    if isinstance(mCaps, dict):
+        caps.update({str(k): str(v) for k, v in mCaps.items()})
+    sCaps = policies.get("screening_policy.json", {}).get("capabilities")
+    if isinstance(sCaps, dict):
+        caps.update({str(k): str(v) for k, v in sCaps.items()})
+    return caps
+
+
+def _loadBundle() -> RuntimeConfigV13:
+    manifest = readJson(RUNTIME_CONFIG_DIR / MANIFEST_FILENAME)
     if not isinstance(manifest, dict):
         raise DmaRuleValidationError("manifest.json must be a JSON object")
-
-    # Validate manifest first so we trust its declared file list.
-    validator.validate_manifest(manifest)
-
+    validateManifest(manifest)
     policies: Dict[str, Dict[str, Any]] = {}
     for filename in manifest["runtimePolicyFiles"]:
-        safe_name = validator.validate_config_filename(filename)
-        policies[safe_name] = _read_json(RUNTIME_CONFIG_DIR / safe_name)
-
-    # Full bundle validation (exact set + per-policy ruleVersion).
-    validator.validate_runtime_bundle(manifest, policies)
-
-    config_hash = compute_config_hash(policies)
-    capabilities = _resolve_capabilities(manifest, policies)
-
+        safeName = validatePath(filename)
+        policies[safeName] = readJson(RUNTIME_CONFIG_DIR / safeName)
+    validateBundle(manifest, policies)
+    configHash = computeConfigHash(policies)
+    capabilities = _resolveCapabilities(manifest, policies)
     return RuntimeConfigV13(
         rule_version=manifest["ruleVersion"],
         architecture_revision=manifest["architectureRevision"],
-        config_hash=config_hash,
+        config_hash=configHash,
         manifest=manifest,
         policies=policies,
         capabilities=capabilities,
     )
 
 
-def load_runtime_config(force_reload: bool = False) -> RuntimeConfigV13:
-    """
-    Load (and cache) the v1.3 slim runtime config bundle.
-
-    Singleton cached; pass ``force_reload=True`` or call :func:`reset_cache`
-    to reload (used by tests). Fail-fast: any missing file, invalid JSON, or
-    contract violation raises DmaRuleValidationError.
-    """
+# STEP 0. Load and cache the v1.3 slim runtime config bundle (singleton).
+# Input: force_reload=True bypasses cache (used by tests).
+# Output: immutable RuntimeConfigV13 snapshot.
+def getDmaRules(force_reload: bool = False) -> RuntimeConfigV13:
     global _cache
     with _lock:
         if _cache is None or force_reload:
-            _cache = _load_bundle()
+            _cache = _loadBundle()
         return _cache
 
 
-def reset_cache() -> None:
+def resetDmaRulesForTest() -> None:
     """Clear the singleton cache (test helper)."""
     global _cache
     with _lock:
         _cache = None
 
 
-# ──────────────────────────────────────────────
-# Read accessors (deep-copy returns; callers cannot mutate cached state)
-# ──────────────────────────────────────────────
-
-def get_manifest() -> Dict[str, Any]:
-    return copy.deepcopy(load_runtime_config().manifest)
+def getManifest() -> Dict[str, Any]:
+    return copy.deepcopy(getDmaRules().manifest)
 
 
-def get_all_policies() -> Dict[str, Dict[str, Any]]:
-    return copy.deepcopy(load_runtime_config().policies)
+def getAllPolicies() -> Dict[str, Dict[str, Any]]:
+    return copy.deepcopy(getDmaRules().policies)
 
 
-def get_policy(name: str) -> Dict[str, Any]:
-    """
-    Return a deep copy of one policy by filename (e.g. ``screening_policy.json``)
-    or by bare stem (``screening_policy``).
-    """
+def getPolicy(name: str) -> Dict[str, Any]:
     filename = name if name.endswith(".json") else f"{name}.json"
-    filename = validator.validate_config_filename(filename)
-    policies = load_runtime_config().policies
+    filename = validatePath(filename)
+    policies = getDmaRules().policies
     if filename not in policies:
         raise DmaRuleValidationError(f"Unknown runtime policy: {name!r}")
     return copy.deepcopy(policies[filename])
 
 
-def get_config_hash() -> str:
-    return load_runtime_config().config_hash
+def getConfigHash() -> str:
+    return getDmaRules().config_hash
 
 
-def get_rule_version() -> str:
-    return load_runtime_config().rule_version
+def getRuleVersion() -> str:
+    return getDmaRules().rule_version
 
 
-def get_architecture_revision() -> str:
-    return load_runtime_config().architecture_revision
+def getArchRevision() -> str:
+    return getDmaRules().architecture_revision
 
 
-def get_capabilities() -> Dict[str, str]:
-    return copy.deepcopy(load_runtime_config().capabilities)
+def getCapabilities() -> Dict[str, str]:
+    return copy.deepcopy(getDmaRules().capabilities)
 
 
-def get_capability(name: str) -> Optional[str]:
-    return load_runtime_config().capabilities.get(name)
+def getCapability(name: str) -> Optional[str]:
+    return getDmaRules().capabilities.get(name)
 
 
 __all__ = [
     "RUNTIME_CONFIG_DIR",
     "MANIFEST_FILENAME",
+    "EXPECTED_RULE_VERSION",
+    "EXPECTED_ARCHITECTURE_REVISION",
+    "EXPECTED_HASH_ALGORITHM",
+    "EXPECTED_POLICY_FILES",
+    "DmaRuleValidationError",
     "RuntimeConfigV13",
-    "compute_config_hash",
-    "load_runtime_config",
-    "reset_cache",
-    "get_manifest",
-    "get_all_policies",
-    "get_policy",
-    "get_config_hash",
-    "get_rule_version",
-    "get_architecture_revision",
-    "get_capabilities",
-    "get_capability",
+    "validatePath",
+    "validateManifest",
+    "validatePolicies",
+    "validatePolicyVersions",
+    "validateBundle",
+    "readJson",
+    "computeConfigHash",
+    "getDmaRules",
+    "resetDmaRulesForTest",
+    "getManifest",
+    "getAllPolicies",
+    "getPolicy",
+    "getConfigHash",
+    "getRuleVersion",
+    "getArchRevision",
+    "getCapabilities",
+    "getCapability",
 ]

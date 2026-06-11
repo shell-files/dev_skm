@@ -907,6 +907,78 @@ _V13_RULE_VERSION = "dma-rule-v1.3-mvp"
 BENCHMARK_V13_SHADOW_SOURCE_STEP = "benchmark_v13_shadow"
 BENCHMARK_V13_SCREENING_SHADOW_SOURCE_STEP = "benchmark_v13_screening_shadow"
 
+_SHADOW_INSERT_SQL = """
+    INSERT INTO ESG_DMA_SIGNAL_DETAIL (
+        esg_materiality_run_id,
+        evidence_id,
+        raw_issue_label,
+        sub_issue_code,
+        source_step,
+        source_type,
+        impact_score,
+        financial_score,
+        confidence_score,
+        scoring_payload_json
+    ) VALUES (
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+    )
+"""
+
+
+def _buildBenchmarkShadowRows(
+    runId: int,
+    payloads: Sequence[Dict[str, Any]],
+    shadowKind: Literal["fact", "screening"],
+) -> list[tuple]:
+    """Row-serialization SSOT for Benchmark Shadow INSERT. No DB access."""
+    if shadowKind not in ("fact", "screening"):
+        raise ValueError(f"Unknown benchmark shadow kind: {shadowKind!r}")
+    rows = []
+    for payload in payloads:
+        payloadJson = step4WriteTrace(payload, asJson=True)
+        payloadData = json.loads(payloadJson)
+        if shadowKind == "fact":
+            extractedFacts = payloadData.get("extractedFacts")
+            if not isinstance(extractedFacts, dict):
+                raise ValueError("extractedFacts is required for benchmark shadow trace")
+            subIssueCode = extractedFacts.get("subIssueCode")
+            if not subIssueCode:
+                raise ValueError("extractedFacts.subIssueCode is required for benchmark shadow trace")
+            rawMetadata = extractedFacts.get("rawMetadata") or {}
+            rows.append((
+                runId,
+                None,
+                rawMetadata.get("rawIssueLabel") or "",
+                subIssueCode,
+                BENCHMARK_V13_SHADOW_SOURCE_STEP,
+                extractedFacts.get("sourceType") or "benchmark",
+                None,
+                None,
+                extractedFacts.get("classificationConfidence"),
+                payloadJson,
+            ))
+        else:
+            subIssueCode = payloadData.get("subIssueCode")
+            screeningTrace = payloadData.get("screeningTrace") or []
+            if not subIssueCode:
+                raise ValueError("subIssueCode is required for benchmark screening shadow trace")
+            if not screeningTrace:
+                raise ValueError("screeningTrace is required for benchmark screening shadow trace")
+            rawInputs = screeningTrace[0].get("rawInputs") if isinstance(screeningTrace[0], dict) else {}
+            rows.append((
+                runId,
+                None,
+                (rawInputs or {}).get("observation") or "",
+                subIssueCode,
+                BENCHMARK_V13_SCREENING_SHADOW_SOURCE_STEP,
+                "benchmark",
+                None,
+                None,
+                None,
+                payloadJson,
+            ))
+    return rows
+
 
 def _coercePayload(raw: Union[str, Dict[str, Any], None]) -> Optional[Dict[str, Any]]:
     """scoring_payload_json 값을 dict으로 파싱한다. 실패 시 None 반환."""
@@ -1023,81 +1095,97 @@ def step4SaveBenchmarkShadowTraces(
 ) -> int:
     if not payloads:
         return 0
-    if shadowKind not in ("fact", "screening"):
-        raise ValueError(f"Unknown benchmark shadow kind: {shadowKind!r}")
-
-    rows = []
-    for payload in payloads:
-        payloadJson = step4WriteTrace(payload, asJson=True)
-        payloadData = json.loads(payloadJson)
-        if shadowKind == "fact":
-            extractedFacts = payloadData.get("extractedFacts")
-            if not isinstance(extractedFacts, dict):
-                raise ValueError("extractedFacts is required for benchmark shadow trace")
-
-            subIssueCode = extractedFacts.get("subIssueCode")
-            if not subIssueCode:
-                raise ValueError("extractedFacts.subIssueCode is required for benchmark shadow trace")
-
-            rawMetadata = extractedFacts.get("rawMetadata") or {}
-            rows.append((
-                runId,
-                None,
-                rawMetadata.get("rawIssueLabel") or "",
-                subIssueCode,
-                BENCHMARK_V13_SHADOW_SOURCE_STEP,
-                extractedFacts.get("sourceType") or "benchmark",
-                None,
-                None,
-                extractedFacts.get("classificationConfidence"),
-                payloadJson,
-            ))
-        else:
-            subIssueCode = payloadData.get("subIssueCode")
-            screeningTrace = payloadData.get("screeningTrace") or []
-            if not subIssueCode:
-                raise ValueError("subIssueCode is required for benchmark screening shadow trace")
-            if not screeningTrace:
-                raise ValueError("screeningTrace is required for benchmark screening shadow trace")
-
-            rawInputs = screeningTrace[0].get("rawInputs") if isinstance(screeningTrace[0], dict) else {}
-            rows.append((
-                runId,
-                None,
-                (rawInputs or {}).get("observation") or "",
-                subIssueCode,
-                BENCHMARK_V13_SCREENING_SHADOW_SOURCE_STEP,
-                "benchmark",
-                None,
-                None,
-                None,
-                payloadJson,
-            ))
-
-    sql = """
-        INSERT INTO ESG_DMA_SIGNAL_DETAIL (
-            esg_materiality_run_id,
-            evidence_id,
-            raw_issue_label,
-            sub_issue_code,
-            source_step,
-            source_type,
-            impact_score,
-            financial_score,
-            confidence_score,
-            scoring_payload_json
-        ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-        )
-    """
+    rows = _buildBenchmarkShadowRows(runId, payloads, shadowKind)
     conn = getConn()
     if conn is None:
         raise RuntimeError("DB connection is not available for benchmark shadow trace save")
     try:
         with conn.cursor(dictionary=True) as cur:
-            cur.executemany(sql, rows)
+            cur.executemany(_SHADOW_INSERT_SQL, rows)
         conn.commit()
         return len(rows)
+    except Exception:
+        if hasattr(conn, "rollback"):
+            conn.rollback()
+        raise
+    finally:
+        if hasattr(conn, "close"):
+            conn.close()
+
+
+def step4ReplaceBenchmarkShadowTracesTx(
+    runId: int,
+    factPayloads: Sequence[Dict[str, Any]],
+    screeningPayloads: Sequence[Dict[str, Any]],
+    expectedScreeningCount: int,
+) -> int:
+    """
+    Replace-Active Transaction for Benchmark Shadow rows.
+    Within a single transaction:
+      1. Row-lock ESG_MATERIALITY_RUN
+      2. Soft-delete active Fact + Screening shadow rows for runId
+      3. INSERT new Fact shadow rows
+      4. INSERT new Screening shadow rows
+      5. Verify screening completeness (count == expectedScreeningCount)
+      6. COMMIT on success, ROLLBACK on any failure
+    Returns total rows inserted.
+    """
+    factRows = _buildBenchmarkShadowRows(runId, factPayloads, "fact") if factPayloads else []
+    screeningRows = _buildBenchmarkShadowRows(runId, screeningPayloads, "screening") if screeningPayloads else []
+
+    conn = getConn()
+    if conn is None:
+        raise RuntimeError("DB connection is not available for benchmark shadow replace transaction")
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? FOR UPDATE",
+                (runId,),
+            )
+            lockRow = cur.fetchone()
+            if not lockRow:
+                raise RuntimeError(f"ESG_MATERIALITY_RUN row not found for runId={runId}")
+
+            cur.execute(
+                """
+                UPDATE ESG_DMA_SIGNAL_DETAIL
+                SET delete_yn = 1
+                WHERE esg_materiality_run_id = ?
+                  AND source_step IN (?, ?)
+                  AND delete_yn = 0
+                """,
+                (runId, BENCHMARK_V13_SHADOW_SOURCE_STEP, BENCHMARK_V13_SCREENING_SHADOW_SOURCE_STEP),
+            )
+
+            if factRows:
+                cur.executemany(_SHADOW_INSERT_SQL, factRows)
+            if screeningRows:
+                cur.executemany(_SHADOW_INSERT_SQL, screeningRows)
+
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*) AS row_count,
+                    COUNT(DISTINCT sub_issue_code) AS distinct_count
+                FROM ESG_DMA_SIGNAL_DETAIL
+                WHERE esg_materiality_run_id = ?
+                  AND source_step = ?
+                  AND delete_yn = 0
+                """,
+                (runId, BENCHMARK_V13_SCREENING_SHADOW_SOURCE_STEP),
+            )
+            verifyRow = cur.fetchone() or {}
+            rowCount = int(verifyRow.get("row_count") or 0)
+            distinctCount = int(verifyRow.get("distinct_count") or 0)
+            if rowCount != expectedScreeningCount or distinctCount != expectedScreeningCount:
+                raise RuntimeError(
+                    f"Screening completeness check failed: "
+                    f"expected={expectedScreeningCount}, "
+                    f"row_count={rowCount}, distinct_count={distinctCount}"
+                )
+
+        conn.commit()
+        return len(factRows) + len(screeningRows)
     except Exception:
         if hasattr(conn, "rollback"):
             conn.rollback()
@@ -1240,6 +1328,7 @@ __all__ = [
     "step4WriteTrace",
     "listBenchmarkShadowObservationRows",
     "step4SaveBenchmarkShadowTraces",
+    "step4ReplaceBenchmarkShadowTracesTx",
     "step4ReadTrace",
     "step4UpdateTrace",
     "appendFactorTrace",

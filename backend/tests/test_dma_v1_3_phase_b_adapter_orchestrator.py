@@ -320,7 +320,7 @@ class PhaseBOrchestratorTest(unittest.TestCase):
         ):
             self.assertNotIn(banned, source)
 
-    def test_orchestrator_public_surface_is_five_functions(self):
+    def test_orchestrator_public_surface_is_six_functions(self):
         from src.services.materialities import orchestrator
 
         functions = sorted(
@@ -330,6 +330,7 @@ class PhaseBOrchestratorTest(unittest.TestCase):
         self.assertEqual(functions, [
             "step0BuildFactTrace",
             "step1RunCanonical",
+            "step2BuildBenchmarkScreeningPayloads",
             "step2ResolveBenchmarkObservation",
             "step2RunScreening",
             "step3RunSelection",

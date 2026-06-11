@@ -24,7 +24,8 @@
       "weights": {"magnitude": 0.55, "likelihood": 0.25, "urgency": 0.20},
       "required": ["magnitude"],
       "optional": ["likelihood", "urgency"]
-    }
+    },
+    "ratioMissingPolicy": "UNOBSERVED"
   },
   "urgency": {"short": 5, "mid": 3, "long": 1, "explicitNoUrgency": 0, "missingEvidence": "UNOBSERVED"},
   "financialMagnitudeRatioBands": [

@@ -37,6 +37,21 @@ def step0BuildFactTrace(
     )
 
 
+def step2ResolveBenchmarkObservation(row: Mapping[str, Any]) -> str:
+    if not (row.get("sub_issue_code") or row.get("subIssueCode")):
+        raise ValueError("sub_issue_code is required for benchmark observation resolution")
+
+    leaderObserved = int(row.get("leader_observed") or 0) > 0
+    peerObserved = int(row.get("peer_observed") or 0) > 0
+    ownObserved = int(row.get("own_observed") or 0) > 0
+
+    if leaderObserved and peerObserved and not ownObserved:
+        return "BLIND_SPOT"
+    if leaderObserved and peerObserved:
+        return "COMMON_ISSUE"
+    return "NONE"
+
+
 def step1RunCanonical(
     *,
     subIssueCode: Optional[str] = None,
@@ -63,10 +78,11 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
     screeningPolicy = dmaruleregistry.getPolicy("screening_policy")
     normalizedChannel = str(channel)
 
-    def buildPayload(trace: ScreeningTraceV13) -> dict:
+    def buildPayload(trace: ScreeningTraceV13, subIssueCode: Optional[str] = None) -> dict:
         return step4BuildTrace(
             scorePurpose=trace.scorePurpose,
             sourceChannel=normalizedChannel,
+            subIssueCode=subIssueCode,
             screeningTrace=[trace],
             ruleVersion=dmaruleregistry.getRuleVersion(),
             configHash=dmaruleregistry.getConfigHash(),
@@ -74,8 +90,16 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
 
     if normalizedChannel == "benchmark":
         trace = dmascoring.step2CalcBenchmark(str(payload["observation"]), screeningPolicy)
-        trace = trace.model_copy(update={"capability": dmaruleregistry.getCapability("benchmarkScreening")})
-        return buildPayload(trace)
+        trace = trace.model_copy(update={
+            "capability": dmaruleregistry.getCapability("benchmarkScreening"),
+            "rawInputs": {
+                **trace.rawInputs,
+                "leaderObserved": bool(payload.get("leaderObserved")),
+                "peerObserved": bool(payload.get("peerObserved")),
+                "ownObserved": bool(payload.get("ownObserved")),
+            },
+        })
+        return buildPayload(trace, subIssueCode=payload.get("subIssueCode"))
 
     if normalizedChannel == "regulation":
         trace = dmascoring.step2CalcRegulation(str(payload["regime"]), str(payload["applicability"]), screeningPolicy)
@@ -132,4 +156,10 @@ def step3RunSelection(items: Sequence[Mapping[str, Any]]) -> dict:
     return dmascoring.step3RunSelection(items, policy)
 
 
-__all__ = ["step0BuildFactTrace", "step1RunCanonical", "step2RunScreening", "step3RunSelection"]
+__all__ = [
+    "step0BuildFactTrace",
+    "step1RunCanonical",
+    "step2ResolveBenchmarkObservation",
+    "step2RunScreening",
+    "step3RunSelection",
+]

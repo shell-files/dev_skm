@@ -6,13 +6,17 @@ is exercised.
 """
 
 import inspect
+import asyncio
+import importlib
 import json
 import os
 import sys
+import tempfile
 import types
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 
 
 _DUMMY_ENV = {
@@ -127,7 +131,6 @@ class PhaseC1BenchmarkShadowWriterTest(unittest.TestCase):
 
         self.assertEqual(count, 1)
         self.assertEqual(conn.cursor_obj.params[0][4], dmarepository.BENCHMARK_V13_SHADOW_SOURCE_STEP)
-        self.assertEqual(conn.cursor_obj.params[0][4], "benchmark_v13_shadow")
 
     def test_shadow_writer_does_not_store_scores_or_evidence(self):
         _, conn = self.savePayloads([buildPayload()])
@@ -173,13 +176,124 @@ class PhaseC1BenchmarkShadowWriterTest(unittest.TestCase):
 
 
 class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
+    def loadService(self):
+        fakeOcraiv8 = types.ModuleType("src.utils.ocraiv8")
+
+        async def fakeGemini(results, filePaths):
+            return {"status": True, "data": []}
+
+        fakeOcraiv8.gemini = fakeGemini
+        sys.modules["src.utils.ocraiv8"] = fakeOcraiv8
+        sys.modules.pop("src.services.benchmarks.service", None)
+        return importlib.import_module("src.services.benchmarks.service")
+
     def test_service_hook_runs_after_legacy_save_and_is_failure_isolated(self):
         root = Path(__file__).resolve().parents[1]
         source = Path(root, "src/services/benchmarks/service.py").read_text(encoding="utf-8")
 
         self.assertLess(source.index("saveSignals("), source.index("step4SaveBenchmarkShadowTraces("))
-        self.assertIn("Warning: Benchmark v1.3 shadow trace save failed", source)
+        self.assertIn("Warning: Benchmark v1.3 fact shadow trace save failed", source)
         self.assertNotIn("benchmark_v13_shadow", source)
+
+    def test_fact_shadow_failure_keeps_legacy_success_response(self):
+        service = self.loadService()
+        finalResult = {
+            "status": True,
+            "data": [{"fileName": "a.pdf", "result": [{"subIssueCode": "G0-02"}]}],
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "a.pdf").write_text("pdf", encoding="utf-8")
+            service.settings.file_dir = tmp
+            fileFindModel = SimpleNamespace(
+                file=["a.pdf"], page="SR", esgMaterialityRunId=99, sourceType="leader_sr", sourceStep="benchmark"
+            )
+            userModel = SimpleNamespace(id=7)
+            with patch.object(service, "findOne", return_value={
+                "id": 17, "origin": "A", "file_name": "a.pdf", "type": "leader_sr", "company_name": "C",
+            }), patch.object(service, "gemini", AsyncMock(return_value=finalResult)), patch.object(
+                service, "convertToDmaSignals", return_value=[]
+            ), patch.object(service, "scoreSignals", return_value=[]), patch.object(
+                service, "saveSignals", return_value=None
+            ), patch.object(service, "step0NormalizeBenchmarkFacts", return_value=[buildFact()]), patch.object(
+                service, "step0BuildFactTrace", return_value=buildPayload()
+            ), patch.object(
+                service, "step4SaveBenchmarkShadowTraces", side_effect=RuntimeError("shadow failed")
+            ) as writer, patch("builtins.print") as printed:
+                response = asyncio.run(service.findSr(fileFindModel, userModel))
+
+        self.assertTrue(response["status"])
+        self.assertEqual(writer.call_count, 1)
+        self.assertIn("fact shadow trace save failed", printed.call_args[0][0])
+
+    def test_legacy_save_failure_skips_fact_shadow_writer(self):
+        service = self.loadService()
+        finalResult = {
+            "status": True,
+            "data": [{"fileName": "a.pdf", "result": [{"subIssueCode": "G0-02"}]}],
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "a.pdf").write_text("pdf", encoding="utf-8")
+            service.settings.file_dir = tmp
+            fileFindModel = SimpleNamespace(
+                file=["a.pdf"], page="SR", esgMaterialityRunId=99, sourceType="leader_sr", sourceStep="benchmark"
+            )
+            userModel = SimpleNamespace(id=7)
+            with patch.object(service, "findOne", return_value={
+                "id": 17, "origin": "A", "file_name": "a.pdf", "type": "leader_sr", "company_name": "C",
+            }), patch.object(service, "gemini", AsyncMock(return_value=finalResult)), patch.object(
+                service, "convertToDmaSignals", return_value=[]
+            ), patch.object(service, "scoreSignals", return_value=[]), patch.object(
+                service, "saveSignals", side_effect=RuntimeError("legacy failed")
+            ), patch.object(service, "step4SaveBenchmarkShadowTraces") as writer:
+                with self.assertRaises(Exception):
+                    asyncio.run(service.findSr(fileFindModel, userModel))
+
+        writer.assert_not_called()
+
+    def test_screening_shadow_runs_once_per_request_after_multiple_fact_saves(self):
+        service = self.loadService()
+        finalResult = {
+            "status": True,
+            "data": [
+                {"fileName": "a.pdf", "result": [{"subIssueCode": "G0-02"}]},
+                {"fileName": "b.pdf", "result": [{"subIssueCode": "G0-02"}]},
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "a.pdf").write_text("pdf", encoding="utf-8")
+            Path(tmp, "b.pdf").write_text("pdf", encoding="utf-8")
+            service.settings.file_dir = tmp
+            fileFindModel = SimpleNamespace(
+                file=["a.pdf", "b.pdf"], page="SR", esgMaterialityRunId=99, sourceType="leader_sr", sourceStep="benchmark"
+            )
+            userModel = SimpleNamespace(id=7)
+            records = [
+                {"id": 17, "origin": "A", "file_name": "a.pdf", "type": "leader_sr", "company_name": "C"},
+                {"id": 18, "origin": "B", "file_name": "b.pdf", "type": "peer_sr", "company_name": "C"},
+            ]
+            with patch.object(service, "findOne", side_effect=records), patch.object(
+                service, "gemini", AsyncMock(return_value=finalResult)
+            ), patch.object(service, "convertToDmaSignals", return_value=[]), patch.object(
+                service, "scoreSignals", return_value=[]
+            ), patch.object(service, "saveSignals", return_value=None), patch.object(
+                service, "step0NormalizeBenchmarkFacts", return_value=[buildFact()]
+            ), patch.object(service, "step0BuildFactTrace", return_value=buildPayload()), patch.object(
+                service, "listBenchmarkShadowObservationRows",
+                return_value=[{"sub_issue_code": "G0-02", "leader_observed": 1, "peer_observed": 1, "own_observed": 0}],
+            ) as listRows, patch.object(
+                service, "step2ResolveBenchmarkObservation", return_value="BLIND_SPOT"
+            ), patch.object(service, "step2RunScreening", return_value={"subIssueCode": "G0-02", "screeningTrace": [{"rawInputs": {}}]}), patch.object(
+                service, "step4SaveBenchmarkShadowTraces", side_effect=[1, 1, 1]
+            ) as writer:
+                response = asyncio.run(service.findSr(fileFindModel, userModel))
+
+        self.assertTrue(response["status"])
+        listRows.assert_called_once_with(99)
+        screeningCalls = [call for call in writer.call_args_list if call.kwargs.get("shadowKind") == "screening"]
+        self.assertEqual(len(screeningCalls), 1)
 
 
 if __name__ == "__main__":

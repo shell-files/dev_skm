@@ -10,10 +10,18 @@ from src.models.model import ResponseModel, UserModel
 from src.models.benchmk import FileModel, FileFindModel
 from src.utils.ocraiv8 import gemini
 from src.utils import dmaruleregistry
-from src.utils.dmarepository import saveSignals, step4SaveBenchmarkShadowTraces
+from src.utils.dmarepository import (
+    listBenchmarkShadowObservationRows,
+    saveSignals,
+    step4SaveBenchmarkShadowTraces,
+)
 from src.utils.dmascoring import scoreSignals
 from src.services.benchmarks.adapter import convertToDmaSignals, step0NormalizeBenchmarkFacts
-from src.services.materialities.orchestrator import step0BuildFactTrace
+from src.services.materialities.orchestrator import (
+    step0BuildFactTrace,
+    step2ResolveBenchmarkObservation,
+    step2RunScreening,
+)
 
 def normalizeSourceType(value: str) -> str:
     if not value:
@@ -143,6 +151,7 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
     
     # 결과(BENCHMK TABLE)DB 저장
     if finalResult:
+        shadowFactSavedYn = False
         for item in finalResult["data"]:
             if item == None:
                 continue
@@ -189,15 +198,39 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
                         )
                         for fact in shadowFacts
                     ]
-                    step4SaveBenchmarkShadowTraces(
+                    savedCount = step4SaveBenchmarkShadowTraces(
                         runId=fileFindModel.esgMaterialityRunId,
                         payloads=shadowPayloads,
+                        shadowKind="fact",
                     )
+                    if savedCount > 0:
+                        shadowFactSavedYn = True
                 except Exception as shadowError:
-                    print(f"Warning: Benchmark v1.3 shadow trace save failed: {shadowError}")
+                    print(f"Warning: Benchmark v1.3 fact shadow trace save failed: {shadowError}")
             except Exception as e:
                 raise Exception(f"{dbFileName} 파일 분석 후 DB 저장 중 오류가 발생했습니다: {e}")
                 
+        if shadowFactSavedYn:
+            try:
+                observationRows = listBenchmarkShadowObservationRows(fileFindModel.esgMaterialityRunId)
+                screeningPayloads = []
+                for row in observationRows:
+                    observation = step2ResolveBenchmarkObservation(row)
+                    screeningPayloads.append(step2RunScreening("benchmark", {
+                        "subIssueCode": row["sub_issue_code"],
+                        "observation": observation,
+                        "leaderObserved": int(row.get("leader_observed") or 0) > 0,
+                        "peerObserved": int(row.get("peer_observed") or 0) > 0,
+                        "ownObserved": int(row.get("own_observed") or 0) > 0,
+                    }))
+                step4SaveBenchmarkShadowTraces(
+                    runId=fileFindModel.esgMaterialityRunId,
+                    payloads=screeningPayloads,
+                    shadowKind="screening",
+                )
+            except Exception as shadowError:
+                print(f"Warning: Benchmark v1.3 screening shadow trace save failed: {shadowError}")
+
         return ResponseModel(True, "분석이 성공적으로 완료되었습니다.", finalResult)
            
     return finalResult

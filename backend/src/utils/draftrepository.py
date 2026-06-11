@@ -127,3 +127,35 @@ def getDraftNarrativeRows(companyId: int, year: int) -> list:
 def deleteDraftRows(companyId: int, year: int):
     save("UPDATE ESG_REPORT_DRAFT_METRIC SET delete_yn=1 WHERE company_id=? AND reporting_year=?", (companyId, year))
     save("UPDATE ESG_REPORT_DRAFT_NARRATIVE SET delete_yn=1 WHERE company_id=? AND reporting_year=?", (companyId, year))
+
+
+def getMetricTrendRows(companyId: int, metricId: str, baseYear: int) -> list:
+    """지표의 baseYear 이하 연도별 값 조회. KPI_FACT 우선, 없으면 ROLLUP 조회."""
+    sql_kpi = """
+        SELECT reporting_year AS year,
+               value_numeric  AS valueNumeric,
+               value_text     AS valueText,
+               unit
+        FROM ESG_KPI_FACT
+        WHERE company_id       = ?
+          AND atomic_metric_id = ?
+          AND reporting_year  <= ?
+          AND delete_yn        = 0
+        ORDER BY reporting_year ASC
+    """
+    rows = findAll(sql_kpi, (companyId, metricId, baseYear))
+    if rows:
+        return rows
+    sql_rollup = """
+        SELECT reporting_year        AS year,
+               value_numeric         AS valueNumeric,
+               value_text            AS valueText,
+               unit
+        FROM ESG_GROUP_ROLLUP_RESULT
+        WHERE parent_company_id      = ?
+          AND group_atomic_metric_id = ?
+          AND reporting_year        <= ?
+          AND delete_yn              = 0
+        ORDER BY reporting_year ASC
+    """
+    return findAll(sql_rollup, (companyId, metricId, baseYear))

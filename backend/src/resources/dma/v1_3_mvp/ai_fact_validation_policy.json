@@ -45,6 +45,16 @@
     "assignedScore",
     "scoreCandidate",
     "sameEventGroupId",
-    "deduplicatedEventGroupId"
+    "deduplicatedEventGroupId",
+    "impactFactor",
+    "financialFactor",
+    "impactScore",
+    "financialScore",
+    "impactScore05",
+    "financialScore05",
+    "finalScore",
+    "scoreOverride",
+    "overrideScore",
+    "scoringPayloadJson"
   ]
 }

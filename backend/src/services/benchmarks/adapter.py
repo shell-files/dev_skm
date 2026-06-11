@@ -56,11 +56,28 @@ def buildEvidenceSpans(rawSpans: Any, sourceType: Optional[str]) -> List[Evidenc
     return spans
 
 
+# STEP 0 internal helper. Removes AI score/factor fields from benchmark raw metadata.
+# Input: raw metadata and SSOT forbiddenFields.
+# Output: copied structure with forbidden keys recursively removed.
+def sanitizeMetadata(value: Any, forbiddenFields: set[str]) -> Any:
+    if isinstance(value, Mapping):
+        return {
+            key: sanitizeMetadata(child, forbiddenFields)
+            for key, child in value.items()
+            if key not in forbiddenFields
+        }
+    if isinstance(value, list):
+        return [sanitizeMetadata(item, forbiddenFields) for item in value]
+    return value
+
+
 def step0NormalizeBenchmarkFacts(
     resultList: list,
     fileId: Optional[int],
     sourceType: Optional[str],
+    aiPolicy: Mapping[str, Any],
 ) -> list[ExtractedFactsV13]:
+    forbiddenFields = set(aiPolicy["forbiddenFields"])
     facts: list[ExtractedFactsV13] = []
     for result in resultList or []:
         if not isinstance(result, Mapping):
@@ -80,7 +97,7 @@ def step0NormalizeBenchmarkFacts(
             "rawIssueLabel": rawIssueLabel,
             "displaySubIssueName": displayName,
             "sourceType": resolvedSourceType,
-            "originalResult": dict(result),
+            "originalResult": sanitizeMetadata(dict(result), forbiddenFields),
         }
         facts.append(ExtractedFactsV13(
             subIssueCode=str(subIssueCode),

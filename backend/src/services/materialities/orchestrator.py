@@ -67,14 +67,20 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
 
     if normalizedChannel == "kcgs":
         state = dmascoring.step2CalcKcgs(str(payload["grade"]), str(payload["trend"]), screeningPolicy)
+        subIssueBoost = dmascoring.step2CalcKcgsBoost(state["pillarSignal"], screeningPolicy)
+        # KCGS pillar movement is not an axis score. Preserve it only as a Top20 boost hint.
         trace = ScreeningTraceV13(
-            channel="kcgs",
+            channel="kcgs_pillar_boost",
             scorePurpose=ScorePurposeV13.PRESURVEY_SCREENING,
-            impactSignal=state["pillarSignal"],
-            financialSignal=state["pillarSignal"],
+            impactSignal=None,
+            financialSignal=None,
             status=state["status"],
             capability=dmaruleregistry.getCapability("kcgsPillarSignal"),
-            rawInputs=state,
+            rawInputs={
+                **state,
+                "subIssueBoost": subIssueBoost,
+                "directCanonicalFinalAllowedYn": screeningPolicy["kcgs"]["directCanonicalFinalAllowedYn"],
+            },
         )
         return buildPayload(trace)
 

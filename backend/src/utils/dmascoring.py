@@ -404,8 +404,9 @@ def step2CalcRegulation(regime: str, applicability: str, policy: Mapping[str, An
     if applicability not in regimeRules:
         raise ValueError(f"Unknown applicability {applicability!r} for regime {regime!r}")
     cell = regimeRules[applicability]
-    impact = _sigVal(cell.get("impact"))
-    financial = _sigVal(cell.get("financial"))
+    # Missing rule-card axis keys are config errors; do not convert them to UNOBSERVED.
+    impact = _sigVal(cell["impact"])
+    financial = _sigVal(cell["financial"])
     status = STATUS_UNOBSERVED if (impact is None and financial is None) else STATUS_OBSERVED
     return ScreeningTraceV13(
         channel=f"regulation_{regime.lower()}", scorePurpose=ScorePurposeV13.PRESURVEY_SCREENING,

@@ -210,6 +210,9 @@ table.sr-tbl.nums tbody td:not(:first-child){white-space:nowrap;}
 .sr-editor-save{font:700 12px/1 "Noto Sans KR",sans-serif;padding:8px 16px;border:none;border-radius:8px;
   background:#03A94D;color:#fff;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.12);transition:background .15s;}
 .sr-editor-save:hover{background:#02913f;}
+.sr-editor-cancel{font:600 12px/1 "Noto Sans KR",sans-serif;padding:8px 14px;border:1px solid #e2e8f0;border-radius:8px;
+  background:#fff;color:#64748b;cursor:pointer;transition:background .15s;}
+.sr-editor-cancel:hover{background:#f8fafc;color:#334155;}
 .sr-editor-hint{font-size:10.5px;color:#94a3b8;margin-bottom:8px;}
 
 /* ============================================================

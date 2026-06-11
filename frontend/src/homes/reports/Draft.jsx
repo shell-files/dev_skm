@@ -252,8 +252,15 @@ const Draft = () => {
 
   useEffect(() => {
     loadAiSections();
-
   }, [companyId, year]);
+
+  // 세션 유지 4분마다 /auth 호출해서 쿠키 갱신 (Draft는 장시간 읽기만 해서 401 발생)
+  useEffect(() => {
+    const id = setInterval(() => {
+      GET("/auth").catch(() => {});
+    }, 4 * 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
 
   // 저장: API 우선, 실패 시 localStorage 폴백
   const handleSaveEdits = async () => {

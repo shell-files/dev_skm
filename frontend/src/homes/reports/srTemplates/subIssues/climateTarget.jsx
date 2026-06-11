@@ -82,6 +82,7 @@ function ClimateTargetPageA(props) {
   const {
     metrics, narrativeText, mode = "render", highlight = true,
     template = NARRATIVE_TEMPLATE_CLIMATE,
+    aiMetricIds = [],
   } = props;
 
   const baseV = num(metrics, "E1-05__G0003");
@@ -92,7 +93,7 @@ function ClimateTargetPageA(props) {
 
   return (
     <SRChrome {...props}>
-      <Narrative narrativeText={narrativeText} template={template} metrics={metrics} mode={mode} highlight={highlight} onNarrativeChange={props.onNarrativeChange} />
+      <Narrative narrativeText={narrativeText} template={template} metrics={metrics} mode={mode} metricIds={aiMetricIds} onNarrativeChange={props.onNarrativeChange} />
 
       {/* KPI strip */}
       <div className="sr-kpis">
@@ -171,7 +172,7 @@ function ClimateTargetPageA(props) {
 
 // ── 서브이슈 매니페스트 ────────────────────────────────────────
 const climateTarget = {
-  id: "climate-target",
+  id: "E_CLIMATE__CLIMATE_TARGETS_TRANSITION",
   label: "기후목표·전환계획",
   subLabel: "기후변화 대응",
   exportName: "climate-target",
@@ -181,6 +182,7 @@ const climateTarget = {
     {
       key: "climate-a",
       tabLabel: "기후변화 대응",
+      tocTag: "E1",
       Component: ClimateTargetPageA,
       props: {
         pageTitle: "기후목표·전환계획",

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import Observing from "@assets/icons/result_page/observe.png";
 import Chain from "@assets/icons/result_page/valuechain.png";
-import { showConfirmAlert } from "@components/UI/ServiceAlert";
+import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
 import { useDispatch, useSelector } from "react-redux";
 import { generateReport } from "@stores/reportSlice";
 import { useAuth } from '@hooks/AuthContext.jsx';

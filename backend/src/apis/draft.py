@@ -8,6 +8,7 @@ from src.services.draft.service import (
     saveDraft,
     loadDraft,
     resetDraft,
+    fetchMetricTrend,
 )
 
 router = APIRouter()
@@ -36,3 +37,8 @@ async def loadDraftRoute(companyId: int, year: int, token=Depends(get_token)):
 @router.delete("/reset", summary="보고서 초안 편집값 전체 삭제")
 async def resetDraftRoute(companyId: int, year: int, token=Depends(get_token)):
     return resetDraft(companyId, year, token)
+
+
+@router.get("/metric-trend", summary="지표 연도별 추이 조회")
+async def getMetricTrendRoute(companyId: int, year: int, metricId: str, token=Depends(get_token)):
+    return fetchMetricTrend(companyId, year, metricId, token)

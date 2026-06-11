@@ -74,47 +74,7 @@ subIssues.forEach((si) =>
   })
 );
 
-// 지표 상세 메타(단위·최신값·추이·구성·산식·AI근거). 실데이터/API 연결 시 여기에 채우면
-// 패널에 추이 차트·구성 표·산식이 자동 표시됨. 비어 있으면 "데이터 연동 예정"으로 표기.
-// ⚠ 아래는 패널 데모용 예시 값입니다. 실제 지표 API 연동 시 이 값들을 교체하세요.
-//    TrendChart 형식: trend: [{ y: "연도", v: 숫자값 }, ...]
-const metricMeta = {
-  "E1-05__G0003": {
-    unit: "tCO₂eq", latest: "112,500",
-    trend: [{ y: "2021", v: 128000 }, { y: "2022", v: 121000 }, { y: "2023", v: 116000 }, { y: "2024", v: 112500 }],
-    breakdown: [{ l: "Scope 1 (직접)", v: "41,200" }, { l: "Scope 2 (간접)", v: "71,300" }],
-    formula: "Scope 1 + Scope 2\nE1-05__G0001 + E1-05__G0002",
-    aiDesc: "기준연도 온실가스 총배출량(연결 기준)으로, 감축 목표·로드맵 산정의 기준점이 되는 핵심 지표입니다.",
-  },
-  "E1-06__G0003": {
-    unit: "tCO₂eq", latest: "104,800",
-    trend: [{ y: "2021", v: 128000 }, { y: "2022", v: 121000 }, { y: "2023", v: 112000 }, { y: "2024", v: 104800 }],
-    breakdown: [{ l: "Scope 1 (직접)", v: "37,900" }, { l: "Scope 2 (간접)", v: "66,900" }],
-    formula: "Scope 1 + Scope 2\nE1-06__G0001 + E1-06__G0002",
-    aiDesc: "보고연도 온실가스 총배출량으로, 기준연도 대비 감축 성과를 정량적으로 보여줍니다.",
-  },
-  "E1-06__G0004": {
-    unit: "tCO₂eq", latest: "7,200",
-    trend: [{ y: "2022", v: 7000 }, { y: "2023", v: 9000 }, { y: "2024", v: 7200 }],
-    breakdown: [{ l: "에너지 효율화", v: "3,100" }, { l: "재생에너지 전환", v: "2,800" }, { l: "공정 개선", v: "1,300" }],
-    formula: "전년도 배출량 − 보고연도 배출량",
-    aiDesc: "전년 대비 절대 감축량으로, 연간 감축 노력의 실효성을 나타냅니다.",
-  },
-  "E1-06__G0005": {
-    unit: "%", latest: "18.1",
-    trend: [{ y: "2021", v: 0 }, { y: "2022", v: 5.5 }, { y: "2023", v: 12.5 }, { y: "2024", v: 18.1 }],
-    breakdown: [{ l: "기준연도 대비 누적 감축률", v: "18.1%" }],
-    formula: "(기준연도 배출량 − 보고연도 배출량) / 기준연도 배출량 × 100",
-    aiDesc: "기준연도 대비 누적 감축률로, 중장기 감축 경로상의 진척도를 보여줍니다.",
-  },
-  "E1-07__G0003": {
-    unit: "%", latest: "31.4",
-    trend: [{ y: "2021", v: 12 }, { y: "2022", v: 19 }, { y: "2023", v: 26 }, { y: "2024", v: 31.4 }],
-    breakdown: [{ l: "PPA", v: "14.0%" }, { l: "REC 구매", v: "10.4%" }, { l: "자가발전", v: "7.0%" }],
-    formula: "재생에너지 사용량 / 총 전력 사용량 × 100",
-    aiDesc: "재생에너지 전환율로, RE100 및 Scope 2 감축 경로의 핵심 동인입니다.",
-  },
-};
+// metricMeta는 API에서 동적으로 로드 (metricTrend state로 대체)
 
 
 // 편집 입력값(displayValue) + 실제 row 를 해당 서브이슈 adapter 로 합쳐 metrics Map 생성.
@@ -146,6 +106,7 @@ const Draft = () => {
   const [trackId, setTrackId] = useState(null); // 근거 추적 패널: 선택된 탭 metric_id
   const [trackCtx, setTrackCtx] = useState(null);
   const [panelMetricIds, setPanelMetricIds] = useState([]); // 패널에 표시할 탭 목록
+  const [metricTrend, setMetricTrend] = useState({}); // { metricId → { trend, unit } }
   const [savedAt, setSavedAt] = useState(null); // 마지막 저장 시각
   const [metricRows, setMetricRows] = useState([]); // DB에서 로드한 지표 rows
   const [aiSections, setAiSections] = useState({}); // { subIssueId → { reportText, metricIds } }
@@ -254,12 +215,38 @@ const Draft = () => {
     loadAiSections();
   }, [companyId, year]);
 
+  // trackId 선택 시 정량 지표만 연도별 추이 API 조회 (정성은 스킵)
   useEffect(() => {
-    const id = setInterval(() => {
-      GET("/auth").catch(() => {});
-    }, 4 * 60 * 1000);
-    return () => clearInterval(id);
-  }, []);
+    if (!trackId || !companyId || !year) return;
+    if (/__QL/.test(trackId)) return;
+    if (metricTrend[trackId]) return; // 이미 로드됨
+    GET("/draft/metric-trend", { companyId, year, metricId: trackId })
+      .then(d => {
+        if (d?.success && d.data) {
+          const rawUnit = d.data.unit ?? "";
+          const isKrw = rawUnit.toUpperCase() === "KRW";
+          const unit = isKrw ? "억 원" : rawUnit;
+          // TrendChart 형식으로 변환: [{y, v}] — KRW는 1억 단위로 스케일
+          const trend = (d.data.trend || [])
+            .filter(t => t.value != null)
+            .map(t => ({
+              y: String(t.year),
+              v: isKrw ? Math.round((t.value / 100_000_000) * 10) / 10 : t.value,
+            }));
+          setMetricTrend(prev => ({
+            ...prev,
+            [trackId]: { trend: trend.length > 0 ? trend : null, unit },
+          }));
+        }
+      });
+  }, [trackId, companyId, year]);
+
+  // useEffect(() => {
+  //   const id = setInterval(() => {
+  //     GET("/auth").catch(() => {});
+  //   }, 4 * 60 * 1000);
+  //   return () => clearInterval(id);
+  // }, []);
 
   // 저장: API 우선, 실패 시 localStorage 폴백
   const handleSaveEdits = async () => {
@@ -781,8 +768,14 @@ const Draft = () => {
   const data = currentPid ? paragraphData[currentPid] : null;
   const metric = data ? data.metrics[0] : null;
 
-  // ── 근거 추적 패널: 선택된 SR 지표 정보(실데이터 기반, 더미 없음) ──
-  const srMeta = trackId ? (metricMeta[trackId] || null) : null;
+  // ── 근거 추적 패널: 선택된 SR 지표 정보 ──
+  const srTrendData = trackId ? (metricTrend[trackId] || null) : null;
+  // 현재 페이지 metrics에서 선택 지표의 표시값 조회
+  const srCurrentVal = (() => {
+    if (!trackId) return null;
+    const m = buildPageMetrics(PAGES[currentPage]);
+    return m[trackId]?.displayValue ?? null;
+  })();
   const srMetric = trackId
     ? {
       metricId: trackId,
@@ -791,13 +784,12 @@ const Draft = () => {
       name: (SR_FIELD_MAP[trackId] && SR_FIELD_MAP[trackId].label) || trackId,
       subIssueLabel: (SR_FIELD_MAP[trackId] && SR_FIELD_MAP[trackId].subIssueLabel) || "",
       dataType: /__QL/.test(trackId) ? "정성 (Qualitative)" : "정량 (Quantitative)",
-      value: (trackCtx && trackCtx.value) || null,
-      unit: (srMeta && srMeta.unit) || null,
-      latest: (srMeta && srMeta.latest) || null,
-      trend: (srMeta && srMeta.trend) || null,
-      breakdown: (srMeta && srMeta.breakdown) || null,
-      formula: (srMeta && srMeta.formula) || null,
-      aiDesc: (srMeta && srMeta.aiDesc) || null,
+      value: srCurrentVal,
+      unit: srTrendData?.unit || null,
+      trend: srTrendData?.trend || null,
+      breakdown: null,
+      formula: null,
+      aiDesc: null,
     }
     : null;
 

@@ -48,9 +48,18 @@
 
 import React from "react";
 
+/** KRW 단위 → 억 원 변환 (소수점 1자리, 불필요한 .0 제거) */
+function krwToUk(n) {
+  const uk = n / 100_000_000;
+  return uk % 1 === 0
+    ? uk.toLocaleString("ko-KR")
+    : uk.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
+}
+
 /**
  * 범용 adapter: metricRows(API) → MetricsMap
  * 모든 서브이슈 파일에서 import해서 adapter로 사용
+ * - 단위가 KRW이면 1억 단위로 변환하여 표시 (unit → "억 원")
  */
 export function buildMetricsMap(metricRows = []) {
   const map = {};
@@ -59,12 +68,15 @@ export function buildMetricsMap(metricRows = []) {
     if (!row) continue;
     const id = row.metricId ?? row.metric_id ?? row.atomicMetricId ?? row.atomic_metric_id;
     if (!id) continue;
+    const isKrw = (row.unit ?? "").toUpperCase() === "KRW";
     let displayValue;
     if (row.displayValue != null && String(row.displayValue).trim() !== "") {
       displayValue = row.displayValue;
     } else if (row.valueNumeric != null && !Number.isNaN(Number(row.valueNumeric))) {
-      const n = Number(row.valueNumeric).toLocaleString("en-US");
-      displayValue = row.unit ? `${n} ${row.unit}` : n;
+      const n = Number(row.valueNumeric);
+      displayValue = isKrw
+        ? `${krwToUk(n)} 억 원`
+        : `${n.toLocaleString("en-US")}${row.unit ? ` ${row.unit}` : ""}`;
     } else if (row.valueText != null && String(row.valueText).trim() !== "") {
       displayValue = String(row.valueText);
     } else {
@@ -81,7 +93,7 @@ export function buildMetricsMap(metricRows = []) {
     map[id] = {
       value,
       displayValue,
-      unit: row.unit,
+      unit: isKrw ? "억 원" : row.unit,
       sourceType: row.sourceType ?? row.source_type,
       status: row.status,
       label: row.label,

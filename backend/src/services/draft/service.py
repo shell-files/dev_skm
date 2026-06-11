@@ -1,3 +1,4 @@
+import json as json_mod
 from datetime import datetime, timedelta
 
 from src.models.draft import DraftSaveRequestDto
@@ -13,6 +14,8 @@ from src.utils.draftrepository import (
     getDraftNarrativeRows,
     deleteDraftRows,
     getMetricTrendRows,
+    getRollupSourceValuesRow,
+    getCompanyNamesByIds,
 )
 
 
@@ -99,10 +102,62 @@ def resetDraft(companyId: int, year: int, token) -> dict:
     return {"success": True}
 
 
+def _buildBreakdown(sourceValuesJson: str, unit: str) -> list:
+    """source_company_values_json → [{l, v, contributionRate}] 리스트 변환."""
+    if not sourceValuesJson:
+        return []
+    try:
+        parsed = json_mod.loads(sourceValuesJson)
+    except Exception:
+        return []
+
+    company_val_map = {}
+    if isinstance(parsed, dict) and parsed:
+        first_val = next(iter(parsed.values()))
+        if isinstance(first_val, (int, float)):
+            # 단순 {companyId: value} 형식
+            for cid_str, val in parsed.items():
+                try:
+                    company_val_map[int(cid_str)] = float(val)
+                except (ValueError, TypeError):
+                    pass
+        elif isinstance(first_val, dict):
+            # 중첩 {atomicId: {companyId: value}} 형식 — 첫 번째 atomic만 사용
+            first_atomic_vals = first_val
+            for cid_str, val in first_atomic_vals.items():
+                try:
+                    v = float(val) if isinstance(val, (int, float)) else None
+                    if v is not None:
+                        company_val_map[int(cid_str)] = v
+                except (ValueError, TypeError):
+                    pass
+
+    if not company_val_map:
+        return []
+
+    company_names = getCompanyNamesByIds(list(company_val_map.keys()))
+    is_krw = (unit or "").upper() == "KRW"
+    total = sum(company_val_map.values())
+
+    result = []
+    for cid, val in sorted(company_val_map.items()):
+        cname = company_names.get(cid) or str(cid)
+        if is_krw:
+            uk = val / 100_000_000
+            uk_r = round(uk * 10) / 10
+            display_v = f"{int(uk_r):,} 억 원" if uk_r % 1 == 0 else f"{uk_r:,} 억 원"
+        else:
+            display_v = f"{int(val):,}{(' ' + unit) if unit else ''}" if val % 1 == 0 else f"{val:,.1f}{(' ' + unit) if unit else ''}"
+        contrib = round((val / total) * 100, 1) if total > 0 else None
+        result.append({"l": cname, "v": display_v, "contributionRate": contrib})
+
+    return result
+
+
 def fetchMetricTrend(companyId: int, year: int, metricId: str, token) -> dict:
-    rows = getMetricTrendRows(companyId, metricId, year)
+    rows, isRollup = getMetricTrendRows(companyId, metricId, year)
     if not rows:
-        return {"success": True, "data": {"trend": [], "unit": None}}
+        return {"success": True, "data": {"trend": [], "unit": None, "isRollup": False, "breakdown": []}}
     unit = None
     trend = []
     for r in rows:
@@ -120,4 +175,11 @@ def fetchMetricTrend(companyId: int, year: int, metricId: str, token) -> dict:
         trend.append({"year": str(r["year"]), "value": v})
         if r.get("unit") and not unit:
             unit = r["unit"]
-    return {"success": True, "data": {"trend": trend, "unit": unit}}
+
+    breakdown = []
+    if isRollup:
+        rollupRow = getRollupSourceValuesRow(companyId, metricId, year)
+        if rollupRow:
+            breakdown = _buildBreakdown(rollupRow.get("sourceValuesJson"), unit)
+
+    return {"success": True, "data": {"trend": trend, "unit": unit, "isRollup": isRollup, "breakdown": breakdown}}

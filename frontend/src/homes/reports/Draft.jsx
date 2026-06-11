@@ -223,13 +223,19 @@ const Draft = () => {
     GET("/draft/metric-trend", { companyId, year, metricId: trackId })
       .then(d => {
         if (d?.success && d.data) {
-          // TrendChart 형식으로 변환: [{y, v}]
+          const rawUnit = d.data.unit ?? "";
+          const isKrw = rawUnit.toUpperCase() === "KRW";
+          const unit = isKrw ? "억 원" : rawUnit;
+          // TrendChart 형식으로 변환: [{y, v}] — KRW는 1억 단위로 스케일
           const trend = (d.data.trend || [])
             .filter(t => t.value != null)
-            .map(t => ({ y: String(t.year), v: t.value }));
+            .map(t => ({
+              y: String(t.year),
+              v: isKrw ? Math.round((t.value / 100_000_000) * 10) / 10 : t.value,
+            }));
           setMetricTrend(prev => ({
             ...prev,
-            [trackId]: { trend: trend.length > 0 ? trend : null, unit: d.data.unit },
+            [trackId]: { trend: trend.length > 0 ? trend : null, unit },
           }));
         }
       });

@@ -148,6 +148,7 @@ const Draft = () => {
   const [savedAt, setSavedAt] = useState(null); // 마지막 저장 시각
   const [metricRows, setMetricRows] = useState([]); // DB에서 로드한 지표 rows
   const [aiSections, setAiSections] = useState({}); // { subIssueId → { reportText, metricIds } }
+  const [aiLoading, setAiLoading] = useState(false);
 
   // ── 상태 정의 ──
   const [isEditing, setIsEditing] = useState(false); // 본문 수정 모드 상태
@@ -222,19 +223,25 @@ const Draft = () => {
   }, [companyId, year]);
 
   // AI 생성 본문 로드 (서브이슈별)
-  useEffect(() => {
+  const loadAiSections = () => {
     if (!companyId || !year) return;
-    subIssues.forEach(si => {
+    setAiLoading(true);
+    const promises = subIssues.map(si =>
       GET("/draft/section", { companyId, year, subIssueId: si.id })
         .then(d => {
-          if (d?.success && d.data?.reportText) {
+          if (d?.success && d.data != null) {
             setAiSections(prev => ({
               ...prev,
-              [si.id]: { reportText: d.data.reportText, metricIds: d.data.metricIds || [] },
+              [si.id]: { reportText: d.data.reportText || "", metricIds: d.data.metricIds || [] },
             }));
           }
-        });
-    });
+        })
+    );
+    Promise.all(promises).finally(() => setAiLoading(false));
+  };
+
+  useEffect(() => {
+    loadAiSections();
   }, [companyId, year]);
 
   // 저장: API 우선, 실패 시 localStorage 폴백
@@ -788,6 +795,15 @@ const Draft = () => {
 
                 </div>
                 <div className="doc-actions">
+                  {/* 0. AI 본문 새로고침 */}
+                  <button
+                    className="doc-btn"
+                    onClick={loadAiSections}
+                    disabled={aiLoading}
+                  >
+                    {aiLoading ? "로딩 중..." : " AI 본문 갱신"}
+                  </button>
+
                   {/* 1. 독립된 본문 수정 버튼 (Toggle 형태) */}
                   <button
                     className={`doc-btn ${isEditing ? "editing-active" : ""}`}

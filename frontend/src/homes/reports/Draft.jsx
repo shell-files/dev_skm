@@ -254,7 +254,6 @@ const Draft = () => {
     loadAiSections();
   }, [companyId, year]);
 
-  // 세션 유지 4분마다 /auth 호출해서 쿠키 갱신 (Draft는 장시간 읽기만 해서 401 발생)
   useEffect(() => {
     const id = setInterval(() => {
       GET("/auth").catch(() => {});

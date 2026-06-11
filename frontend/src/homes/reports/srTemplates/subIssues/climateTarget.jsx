@@ -182,6 +182,7 @@ const climateTarget = {
     {
       key: "climate-a",
       tabLabel: "기후변화 대응",
+      tocTag: "E1",
       Component: ClimateTargetPageA,
       props: {
         pageTitle: "기후목표·전환계획",

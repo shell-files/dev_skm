@@ -9,9 +9,11 @@ from src.utils.db import save, findOne
 from src.models.model import ResponseModel, UserModel
 from src.models.benchmk import FileModel, FileFindModel
 from src.utils.ocraiv8 import gemini
-from src.utils.dmarepository import saveSignals
+from src.utils import dmaruleregistry
+from src.utils.dmarepository import saveSignals, step4SaveBenchmarkShadowTraces
 from src.utils.dmascoring import scoreSignals
-from src.services.benchmarks.adapter import convertToDmaSignals
+from src.services.benchmarks.adapter import convertToDmaSignals, step0NormalizeBenchmarkFacts
+from src.services.materialities.orchestrator import step0BuildFactTrace
 
 def normalizeSourceType(value: str) -> str:
     if not value:
@@ -156,6 +158,7 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
             fileMeta = fileMetaByName.get(dbFileName, {})
             fileId = fileMeta.get("fileId")
             sourceTitle = fileMeta.get("sourceTitle", dbFileName)
+            sourceType = fileMeta.get("sourceType")
                     
             # DMASignal 객체 리스트로 변환
             signalsToSave = convertToDmaSignals(resultList, fileId)
@@ -171,6 +174,27 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
                     fileId=fileId,
                     sourceTitle=sourceTitle
                 )
+                try:
+                    aiPolicy = dmaruleregistry.getPolicy("ai_fact_validation_policy")
+                    shadowFacts = step0NormalizeBenchmarkFacts(
+                        resultList,
+                        fileId=fileId,
+                        sourceType=sourceType,
+                        aiPolicy=aiPolicy,
+                    )
+                    shadowPayloads = [
+                        step0BuildFactTrace(
+                            extractedFact=fact,
+                            sourceChannel="benchmark",
+                        )
+                        for fact in shadowFacts
+                    ]
+                    step4SaveBenchmarkShadowTraces(
+                        runId=fileFindModel.esgMaterialityRunId,
+                        payloads=shadowPayloads,
+                    )
+                except Exception as shadowError:
+                    print(f"Warning: Benchmark v1.3 shadow trace save failed: {shadowError}")
             except Exception as e:
                 raise Exception(f"{dbFileName} 파일 분석 후 DB 저장 중 오류가 발생했습니다: {e}")
                 

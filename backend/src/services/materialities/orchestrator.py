@@ -20,6 +20,23 @@ from src.utils import dmaruleregistry, dmascoring
 from src.utils.dmarepository import step4BuildTrace
 
 
+def step0BuildFactTrace(
+    *,
+    extractedFact: ExtractedFactsV13 | Mapping[str, Any],
+    sourceChannel: str,
+) -> dict:
+    # STEP 0. Fact-only DTO를 v1.3 Trace Payload로 감싼다.
+    # Input: ExtractedFactsV13 1건과 sourceChannel.
+    # Output: 점수/Screening 없는 ScoringPayloadV13 dict.
+    fact = extractedFact if isinstance(extractedFact, ExtractedFactsV13) else ExtractedFactsV13(**dict(extractedFact))
+    return step4BuildTrace(
+        scorePurpose=ScorePurposeV13.PRESURVEY_SCREENING,
+        sourceChannel=sourceChannel,
+        subIssueCode=fact.subIssueCode,
+        extractedFacts=fact,
+    )
+
+
 def step1RunCanonical(
     *,
     subIssueCode: Optional[str] = None,
@@ -115,4 +132,4 @@ def step3RunSelection(items: Sequence[Mapping[str, Any]]) -> dict:
     return dmascoring.step3RunSelection(items, policy)
 
 
-__all__ = ["step1RunCanonical", "step2RunScreening", "step3RunSelection"]
+__all__ = ["step0BuildFactTrace", "step1RunCanonical", "step2RunScreening", "step3RunSelection"]

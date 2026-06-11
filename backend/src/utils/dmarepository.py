@@ -895,6 +895,7 @@ def getLatestReportRunByMaterialityRun(runId: int) -> dict:
 # DB persistence is deferred to Phase C (wire step4WriteTrace into the save path).
 
 _V13_RULE_VERSION = "dma-rule-v1.3-mvp"
+BENCHMARK_V13_SHADOW_SOURCE_STEP = "benchmark_v13_shadow"
 
 
 def _coercePayload(raw: Union[str, Dict[str, Any], None]) -> Optional[Dict[str, Any]]:
@@ -982,6 +983,75 @@ def step4WriteTrace(
     if asJson:
         return json.dumps(data, ensure_ascii=False)
     return data
+
+
+# STEP 4. Benchmark v1.3 Extracted Fact Trace를 Shadow Row로 저장한다.
+# Input: runId와 ScoringPayloadV13 payload 목록.
+# Output: 저장 Row 수. Legacy 집계, 랭킹, 선정은 호출하지 않는다.
+def step4SaveBenchmarkShadowTraces(
+    runId: int,
+    payloads: Sequence[Dict[str, Any]],
+) -> int:
+    if not payloads:
+        return 0
+
+    rows = []
+    for payload in payloads:
+        payloadJson = step4WriteTrace(payload, asJson=True)
+        payloadData = json.loads(payloadJson)
+        extractedFacts = payloadData.get("extractedFacts")
+        if not isinstance(extractedFacts, dict):
+            raise ValueError("extractedFacts is required for benchmark shadow trace")
+
+        subIssueCode = extractedFacts.get("subIssueCode")
+        if not subIssueCode:
+            raise ValueError("extractedFacts.subIssueCode is required for benchmark shadow trace")
+
+        rawMetadata = extractedFacts.get("rawMetadata") or {}
+        rows.append((
+            runId,
+            None,
+            rawMetadata.get("rawIssueLabel") or "",
+            subIssueCode,
+            BENCHMARK_V13_SHADOW_SOURCE_STEP,
+            extractedFacts.get("sourceType") or "benchmark",
+            None,
+            None,
+            extractedFacts.get("classificationConfidence"),
+            payloadJson,
+        ))
+
+    sql = """
+        INSERT INTO ESG_DMA_SIGNAL_DETAIL (
+            esg_materiality_run_id,
+            evidence_id,
+            raw_issue_label,
+            sub_issue_code,
+            source_step,
+            source_type,
+            impact_score,
+            financial_score,
+            confidence_score,
+            scoring_payload_json
+        ) VALUES (
+            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        )
+    """
+    conn = getConn()
+    if conn is None:
+        raise RuntimeError("DB connection is not available for benchmark shadow trace save")
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cur.executemany(sql, rows)
+        conn.commit()
+        return len(rows)
+    except Exception:
+        if hasattr(conn, "rollback"):
+            conn.rollback()
+        raise
+    finally:
+        if hasattr(conn, "close"):
+            conn.close()
 
 
 # STEP 4. scoring_payload_json 값을 읽어 v1.3 payload dict로 반환한다.
@@ -1110,9 +1180,11 @@ __all__ = [
     "getLatestReportRun",
     "getLatestReportRunByMaterialityRun",
     # STEP 4: v1.3 Payload Trace helpers (no DB execution — Phase C wire pending)
+    "BENCHMARK_V13_SHADOW_SOURCE_STEP",
     "isLegacyPayload",
     "step4BuildTrace",
     "step4WriteTrace",
+    "step4SaveBenchmarkShadowTraces",
     "step4ReadTrace",
     "step4UpdateTrace",
     "appendFactorTrace",

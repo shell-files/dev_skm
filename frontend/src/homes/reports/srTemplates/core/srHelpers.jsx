@@ -48,6 +48,48 @@
 
 import React from "react";
 
+/**
+ * 범용 adapter: metricRows(API) → MetricsMap
+ * 모든 서브이슈 파일에서 import해서 adapter로 사용
+ */
+export function buildMetricsMap(metricRows = []) {
+  const map = {};
+  if (!Array.isArray(metricRows)) return map;
+  for (const row of metricRows) {
+    if (!row) continue;
+    const id = row.metricId ?? row.metric_id ?? row.atomicMetricId ?? row.atomic_metric_id;
+    if (!id) continue;
+    let displayValue;
+    if (row.displayValue != null && String(row.displayValue).trim() !== "") {
+      displayValue = row.displayValue;
+    } else if (row.valueNumeric != null && !Number.isNaN(Number(row.valueNumeric))) {
+      const n = Number(row.valueNumeric).toLocaleString("en-US");
+      displayValue = row.unit ? `${n} ${row.unit}` : n;
+    } else if (row.valueText != null && String(row.valueText).trim() !== "") {
+      displayValue = String(row.valueText);
+    } else {
+      displayValue = "—";
+    }
+    let value = null;
+    if (typeof row.valueNumeric === "number") value = row.valueNumeric;
+    else if (row.valueNumeric != null) {
+      const n = parseFloat(String(row.valueNumeric).replace(/[^0-9.\-]/g, ""));
+      value = Number.isNaN(n) ? null : n;
+    } else {
+      value = row.value ?? null;
+    }
+    map[id] = {
+      value,
+      displayValue,
+      unit: row.unit,
+      sourceType: row.sourceType ?? row.source_type,
+      status: row.status,
+      label: row.label,
+    };
+  }
+  return map;
+}
+
 /** 기후목표·전환계획 기본 narrative 템플릿 (option B: 값으로 문장 조합) */
 export const NARRATIVE_TEMPLATE_CLIMATE =
   "{E1-05__QL0001} 기준연도는 {E1-05__QL0002}이며 기준연도 연결 Scope 1·2 배출량은 {E1-05__G0003}이다. " +
@@ -166,8 +208,17 @@ export function splitNarrative(template) {
     .filter((n) => n.token || n.text);
 }
 
-/** 정적 본문(보기/PDF): 토큰 값은 .sr-fig 로 강조, 미입력 토큰은 .empty */
-export function NarrativeStatic({ template, metrics }) {
+/**
+ * 정적 본문(보기/PDF):
+ *  - {token} 형식이 있으면 토큰 기반 강조 렌더링
+ *  - 없으면(AI 생성 텍스트) metricIds 를 이용해 highlightFigures 로 수치 강조
+ */
+export function NarrativeStatic({ template, metrics, metricIds = [] }) {
+  const hasTokens = /\{[^}]+\}/.test(template || "");
+  if (!hasTokens && metricIds.length > 0 && template) {
+    const nodes = highlightFigures(template, metrics, metricIds);
+    return <div className="sr-prose"><p>{nodes}</p></div>;
+  }
   const nodes = splitNarrative(template);
   return (
     <div className="sr-prose">
@@ -236,12 +287,12 @@ export function EditableNarrative({ template, metrics, onChange }) {
 
 /** 본문 렌더 컴포넌트 (A/B 공통) */
 export function Narrative({
-  narrativeText, template, metrics, mode = "render", onNarrativeChange,
+  narrativeText, template, metrics, mode = "render", onNarrativeChange, metricIds = [],
 }) {
-  // 커스텀 본문(토큰 포함 템플릿)이 있으면 우선, 없으면 기본 템플릿
+  // AI 생성 본문이 있으면 우선, 없으면 기본 템플릿({token} 방식)
   const tpl = (narrativeText && narrativeText.trim()) ? narrativeText : template;
   if (mode === "edit") {
     return <EditableNarrative template={tpl} metrics={metrics} onChange={onNarrativeChange} />;
   }
-  return <NarrativeStatic template={tpl} metrics={metrics} />;
+  return <NarrativeStatic template={tpl} metrics={metrics} metricIds={metricIds} />;
 }

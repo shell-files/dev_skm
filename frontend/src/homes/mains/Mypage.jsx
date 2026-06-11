@@ -116,6 +116,7 @@ const requestApi = {
    } = useAuth();
 
   // ── States ──
+  
 
   // [데이터] 사용자 기본 정보 (이메일 고정)
   const [userData, setUserData] = useState({
@@ -141,7 +142,7 @@ const requestApi = {
     // console.log("=== 지금 보내려는 user 객체 내용 ===", authData);
     setUserData({
       name: userName || '사용자',
-      email: user?.email || selectedCompany?.email || '-',
+      email: selectedCompany?.email || user?.email || '-',
       role: selectedCompany?.role_name 
     });
   }, [user, selectedCompany]);

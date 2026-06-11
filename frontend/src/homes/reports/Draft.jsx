@@ -164,11 +164,19 @@ const Draft = () => {
   const buildPageMetrics = (pageObj) =>
     buildMetricsFromEdits(pageObj.adapter, editMetricsByPage[pageObj.key], actualMetricRows);
   const buildPageNarrative = (key, subIssueId) => {
-    const t = (editNarrativeByPage[key] || "").trim();
-    if (t) return t;
-    const section = subIssueId && aiSections[subIssueId];
-    return section ? section.reportText : null;
-  };
+  const t = (editNarrativeByPage[key] || "").trim();
+
+  const looksLikeTemplate =
+    t.includes("{") && t.includes("}");
+
+  const section = subIssueId && aiSections[subIssueId];
+
+  if (t && !looksLikeTemplate) {
+    return t;
+  }
+
+  return section?.reportText || t || null;
+};
 
   const getAiMetricIds = (subIssueId) => {
     const section = subIssueId && aiSections[subIssueId];
@@ -195,7 +203,6 @@ const Draft = () => {
     const load = async () => {
       if (companyId && year) {
         const json = await GET("/draft/load", { companyId, year });
-        // console.log(json)
         if (json?.success && json?.data) {
           if (json.data.metrics) setEditMetricsByPage(json.data.metrics);
           if (json.data.narrative) setEditNarrativeByPage(json.data.narrative);
@@ -224,6 +231,7 @@ const Draft = () => {
 
   // AI 생성 본문 로드 (서브이슈별)
   const loadAiSections = () => {
+
     if (!companyId || !year) return;
     setAiLoading(true);
     const promises = subIssues.map(si =>
@@ -232,16 +240,18 @@ const Draft = () => {
           if (d?.success && d.data != null) {
             setAiSections(prev => ({
               ...prev,
-              [si.id]: { reportText: d.data.reportText || "", metricIds: d.data.metricIds || [] },
+              [si.id]: { reportText: d.data?.reportText || "", metricIds: d.data.metricIds || [] },
             }));
           }
         })
     );
+
     Promise.all(promises).finally(() => setAiLoading(false));
   };
 
   useEffect(() => {
     loadAiSections();
+
   }, [companyId, year]);
 
   // 저장: API 우선, 실패 시 localStorage 폴백
@@ -613,7 +623,7 @@ const Draft = () => {
         setPdfMode(false);
       }
       return;
-    } 
+    }
     if (type === "PPT") {
       // PDF와 동일하게 화면 밖 풀사이즈 렌더 → 각 페이지를 한 슬라이드 이미지로
       setPdfMode(true);
@@ -829,7 +839,7 @@ const Draft = () => {
               </div>
 
               <div className="doc-content">
-                
+
                 {/* ── 편집 바 (✏️ 수정 모드) — 본문·값 모두 아래 페이지에서 직접 수정 ── */}
                 {isEditing && (
                   <div className="sr-editor">
@@ -852,7 +862,7 @@ const Draft = () => {
                   </div>
                 )}
 
-                
+
 
                 {/* ── 보고서 미리보기 영역: SR 운영 템플릿 (현재 페이지) ──
                     데이터는 climateMetrics(adapter) + climateNarrative 로만 구동(더미 없음).
@@ -899,7 +909,7 @@ const Draft = () => {
                 )}
               </div>
             </div>
-            
+
 
             {/* 우측 데이터 추적 패널 */}
             <div className={`draft-panel ${panelMetricIds.length > 0 && !isEditing ? "open" : ""}`} id="draftPanel">
@@ -1029,14 +1039,14 @@ const Draft = () => {
 
           </div>
         </div>
-        
+
       </main>
       {/* ── 페이지 이동 바 (이전 · 다음) ── */}
-                <div className="sr-pager">
-                  <button className="sr-pager-btn" onClick={prevPage} disabled={currentPage === 0}>‹ 이전</button>
-                  <span className="sr-pager-info">{currentPage + 1} / {PAGES.length}</span>
-                  <button className="sr-pager-btn" onClick={nextPage} disabled={currentPage === PAGES.length - 1}>다음 ›</button>
-                </div>
+      <div className="sr-pager">
+        <button className="sr-pager-btn" onClick={prevPage} disabled={currentPage === 0}>‹ 이전</button>
+        <span className="sr-pager-info">{currentPage + 1} / {PAGES.length}</span>
+        <button className="sr-pager-btn" onClick={nextPage} disabled={currentPage === PAGES.length - 1}>다음 ›</button>
+      </div>
       {/* ── PDF/PPT 내보내기용 렌더 영역 (화면 밖) ── */}
       {pdfMode && (
         <div id="pdf-render-root" className="pdf-render-root">

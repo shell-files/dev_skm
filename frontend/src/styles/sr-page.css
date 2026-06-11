@@ -278,3 +278,35 @@ table.sr-tbl.nums tbody td:not(:first-child){white-space:nowrap;}
   background:transparent !important; border:0 !important;
   border-radius:0 !important; padding:0 !important;
 }
+
+/* ============================================================
+   [추가] 공급망 감사 하단 데이터 패널 (supplyChain 전용)
+   ============================================================ */
+:root{ --panel:#eef0ec; --panel-line:#d7ddd6; --flow:#1b5e44; --flow2:#3f9468; --flowlabel:#13362a; }
+.sr-panel{background:var(--panel);border-radius:8px;margin-top:16px;padding:15px 18px 16px;}
+.sr-panel-grid{display:flex;gap:24px;align-items:stretch;}
+.sr-panel-l{flex:1.5;min-width:0;}
+.sr-panel-r{flex:1;border-left:1px solid var(--panel-line);padding-left:22px;}
+.sr-panel-h{font-size:11px;font-weight:800;color:var(--brand);margin-bottom:11px;letter-spacing:.2px;
+  display:flex;align-items:center;gap:7px;}
+.sr-panel-h .tagn{width:16px;height:16px;border-radius:50%;background:var(--brand);color:#fff;font-size:9px;
+  display:inline-flex;align-items:center;justify-content:center;font-weight:700;}
+.sr-flow-row{display:flex;align-items:stretch;gap:8px;}
+.sr-flow-label{flex:none;width:62px;background:var(--flowlabel);color:#dfeee6;border-radius:5px;
+  display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;text-align:center;padding:6px 4px;line-height:1.3;}
+.sr-chevs{display:flex;flex:1;gap:3px;min-width:0;}
+.sr-chev{position:relative;flex:1;min-width:0;background:linear-gradient(100deg,var(--flow2),var(--flow));
+  color:#fff;font-size:8.7px;font-weight:600;line-height:1.22;padding:7px 13px 7px 17px;
+  clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%,10px 50%);
+  display:flex;align-items:center;gap:5px;}
+.sr-chev:first-child{clip-path:polygon(0 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,0 100%);padding-left:11px;}
+.sr-chev .n{display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;
+  background:rgba(255,255,255,.22);font-size:8px;font-weight:800;flex:none;}
+.sr-flow-note{font-size:8.8px;color:var(--ink-soft);line-height:1.55;margin-top:11px;
+  padding-top:10px;border-top:1px dashed var(--panel-line);}
+.sr-flow-note b{color:var(--brand);font-weight:700;}
+.sr-stat{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--panel-line);}
+.sr-stat:last-child{border-bottom:none;}
+.sr-stat .l{font-size:9.3px;color:var(--ink-soft);font-weight:500;line-height:1.4;}
+.sr-stat .v{font-size:20px;font-weight:900;color:var(--ink);white-space:nowrap;line-height:1;}
+.sr-stat.hl .v{color:var(--brand);}

@@ -4,6 +4,15 @@ import React from "react";
 import { SRChrome } from "../core/SRChrome";
 import { Narrative, mt, num, buildMetricsMap } from "../core/srHelpers";
 
+// 실사 프로세스 텍스트에서 단계 추출
+// "실사는 A, B, C 및 D의 순서로..." → ["A","B","C","D"]
+function processSteps(text) {
+  if (!text) return [];
+  const m = text.match(/실사는\s*(.+?)\s*의?\s*순서로/);
+  const seg = m ? m[1] : text;
+  return seg.split(/\s*(?:,|·|→|및)\s*/).map(s => s.trim()).filter(Boolean);
+}
+
 const TEMPLATE =
   "{S6-01__QL0001} {S6-02__QL0001} 연결 기준 공급업체 감사 수행률은 {S6-04__G0003}, " +
   "고위험 공급업체 수는 {S6-04__G0004}이다. " +
@@ -121,7 +130,63 @@ function SupplyChainPage(props) {
         <span className="ml">공급망 사회적 책임 정책</span>
         <span className="mv">{mt(metrics, "S6-01__QL0001", mode)}</span>
       </div>
+
+      {/* 하단 데이터 패널: 실사 프로세스 + 감사 현황 수치 */}
+      <SupplyPanel metrics={metrics} mode={mode} />
     </SRChrome>
+  );
+}
+
+function SupplyPanel({ metrics, mode }) {
+  const steps = processSteps(mt(metrics, "S6-02__QL0001", "render"));
+  return (
+    <div className="sr-panel">
+      <div className="sr-panel-grid">
+        {/* 좌: 공급망 실사 프로세스 */}
+        <div className="sr-panel-l">
+          <div className="sr-panel-h">
+            <span className="tagn">1</span> 공급망 실사 프로세스
+          </div>
+          {steps.length >= 2 ? (
+            <div className="sr-flow-row" data-source="S6-02__QL0001">
+              <div className="sr-flow-label">공급망<br />실사 절차</div>
+              <div className="sr-chevs">
+                {steps.map((s, i) => (
+                  <div className="sr-chev" key={i}>
+                    <span className="n">{i + 1}</span>
+                    <span>{s}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <p style={{ fontSize: "15px", color: "var(--ink-soft)" }} data-source="S6-02__QL0001">
+              {mt(metrics, "S6-02__QL0001", mode)}
+            </p>
+          )}
+          <div className="sr-flow-note" data-source="S6-05__QL0001">
+            <b>주요 시정조치</b> · {mt(metrics, "S6-05__QL0001", mode)}
+          </div>
+        </div>
+
+        {/* 우: 감사·심사 수치 */}
+        {/* <div className="sr-panel-r">
+          <div className="sr-panel-h">공급망 감사·심사 현황</div>
+          <div className="sr-stat hl">
+            <span className="l">공급업체 감사 수행률<br /><small>연결 기준</small></span>
+            <span className="v" data-source="S6-04__G0003">{mt(metrics, "S6-04__G0003", mode)}</span>
+          </div>
+          <div className="sr-stat">
+            <span className="l">고위험 공급업체 수<br /><small>감사 결과 식별</small></span>
+            <span className="v" data-source="S6-04__G0004">{mt(metrics, "S6-04__G0004", mode)}</span>
+          </div>
+          <div className="sr-stat hl">
+            <span className="l">공급망 CAP 완료율<br /><small>시정조치 이행</small></span>
+            <span className="v" data-source="S6-05__G0003">{mt(metrics, "S6-05__G0003", mode)}</span>
+          </div>
+        </div> */}
+      </div>
+    </div>
   );
 }
 

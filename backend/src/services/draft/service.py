@@ -12,6 +12,7 @@ from src.utils.draftrepository import (
     getDraftMetricRows,
     getDraftNarrativeRows,
     deleteDraftRows,
+    getMetricTrendRows,
 )
 
 
@@ -96,3 +97,27 @@ def loadDraft(companyId: int, year: int, token) -> dict:
 def resetDraft(companyId: int, year: int, token) -> dict:
     deleteDraftRows(companyId, year)
     return {"success": True}
+
+
+def fetchMetricTrend(companyId: int, year: int, metricId: str, token) -> dict:
+    rows = getMetricTrendRows(companyId, metricId, year)
+    if not rows:
+        return {"success": True, "data": {"trend": [], "unit": None}}
+    unit = None
+    trend = []
+    for r in rows:
+        v = r.get("valueNumeric")
+        if v is not None:
+            try:
+                v = float(v)
+            except (TypeError, ValueError):
+                v = None
+        if v is None and r.get("valueText"):
+            try:
+                v = float(str(r["valueText"]).replace(",", ""))
+            except (TypeError, ValueError):
+                pass
+        trend.append({"year": str(r["year"]), "value": v})
+        if r.get("unit") and not unit:
+            unit = r["unit"]
+    return {"success": True, "data": {"trend": trend, "unit": unit}}

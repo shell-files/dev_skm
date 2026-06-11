@@ -19,7 +19,8 @@ const metricFields = [
 ];
 
 function EcoProductPage(props) {
-  const { metrics, narrativeText, mode = "render", aiMetricIds = [] } = props;
+  const { metrics, narrativeText, mode = "render", 
+    aiMetricIds = [] } = props;
   const greenRatio = num(metrics, "AP-E-06__G0003");
   const fillPct = greenRatio != null ? Math.min(Math.max(greenRatio, 0), 100) : 0;
 

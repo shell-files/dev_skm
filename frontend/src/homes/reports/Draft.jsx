@@ -5,7 +5,8 @@ import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import pptxgen from "pptxgenjs";
 import { useSelector, useDispatch } from "react-redux";
-import { GET, POST } from "@utils/Network";
+import { GET, POST, DELETE } from "@utils/Network";
+import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
 
 // ── SR 템플릿 통합 (서브이슈 레지스트리 소비) ──
 // 새 서브이슈는 srTemplates/subIssues/<name>/ 폴더 + registry.js 한 줄로 추가됨.
@@ -270,6 +271,25 @@ const Draft = () => {
       console.warn("편집값 저장 실패:", e);
       alert("저장에 실패했습니다. 브라우저 저장 권한을 확인해 주세요.");
     }
+  };
+
+  // 되돌리기: DB + localStorage 편집값 전체 삭제
+  const handleResetEdits = async () => {
+    const confirmed = await showConfirmAlert(
+      "수정 내용 전체 삭제",
+      "저장된 모든 편집값(지표 수정·본문 수정)이 삭제되고 원본으로 되돌아갑니다. 계속하시겠습니까?",
+      "warning"
+    );
+    if (!confirmed) return;
+    if (companyId && year) {
+      await DELETE(`/draft/reset?companyId=${companyId}&year=${year}`);
+    }
+    localStorage.removeItem(STORAGE_KEY);
+    setEditMetricsByPage({});
+    setEditNarrativeByPage({});
+    setSavedAt(null);
+    setIsEditing(false);
+    showDefaultAlert("되돌리기 완료", "모든 편집 내용이 삭제되었습니다.", "success");
   };
 
   // ── 페이지 이동 핸들러 (목차 / 이전·다음 / subnav 탭 공용) ──
@@ -815,7 +835,12 @@ const Draft = () => {
                     {aiLoading ? "로딩 중..." : " AI 본문 갱신"}
                   </button>
 
-                  {/* 1. 독립된 본문 수정 버튼 (Toggle 형태) */}
+                  {/* 1. 되돌리기 — 저장된 편집값 전체 삭제 */}
+                  <button className="doc-btn reset-btn" onClick={handleResetEdits}>
+                    ↩ 되돌리기
+                  </button>
+
+                  {/* 2. 독립된 본문 수정 버튼 (Toggle 형태) */}
                   <button
                     className={`doc-btn ${isEditing ? "editing-active" : ""}`}
                     onClick={() => setIsEditing(!isEditing)}

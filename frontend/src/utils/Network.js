@@ -29,6 +29,13 @@ const request = async (config) => {
     const response = await axios(config);
     return response.data;
   } catch (err) {
+    if (err.response?.status === 401) {
+      import('@components/UI/ServiceAlert').then(({ showDefaultAlert }) => {
+        showDefaultAlert("세션 만료", "로그인 세션이 만료되었습니다. 다시 로그인해 주세요.", "warning");
+      });
+      setTimeout(() => { window.location.href = '/'; }, 1500);
+      return { status: false, error: "401" };
+    }
     console.error(`[API Error]: ${err.message}`);
     return { status: false, error: err.response?.data || err.message };
   }

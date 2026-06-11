@@ -565,6 +565,11 @@ const Result = () => {
         materialityRunId: runId,
         year,
       })).unwrap();
+      await showDefaultAlert(
+        "보고서 초안 생성 완료",
+        "AI가 ESG 보고서 초안을 성공적으로 생성했습니다. 초안 페이지로 이동합니다.",
+        "success"
+      );
       navigate("/draft");
     } catch (error) {
       const errorMessage = error?.message || "보고서를 생성하는 중 오류가 발생했습니다.";

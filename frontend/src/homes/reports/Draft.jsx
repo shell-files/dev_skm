@@ -257,9 +257,10 @@ const Draft = () => {
   // 저장: API 우선, 실패 시 localStorage 폴백
   const handleSaveEdits = async () => {
     const now = new Date().toISOString();
+    const pageSubIssueMap = Object.fromEntries(PAGES.map(p => [p.key, p.subIssueId]));
     const payload = { metrics: editMetricsByPage, narrative: editNarrativeByPage, savedAt: now };
     if (companyId && year) {
-      const json = await POST("/draft/save", { companyId, year, ...payload });
+      const json = await POST("/draft/save", { companyId, year, pageSubIssueMap, ...payload });
       if (json?.success) { setSavedAt(json.savedAt || now); return; }
     }
     try {
@@ -853,6 +854,15 @@ const Draft = () => {
                             저장됨 {new Date(savedAt).toLocaleString("ko-KR", { hour: "2-digit", minute: "2-digit", month: "numeric", day: "numeric" })}
                           </span>
                         )}
+                        <button
+                          className="sr-editor-cancel"
+                          onClick={() => {
+                            const pk = PAGES[currentPage].key;
+                            setEditNarrativeByPage(prev => { const n = { ...prev }; delete n[pk]; return n; });
+                            setEditMetricsByPage(prev => { const n = { ...prev }; delete n[pk]; return n; });
+                            setIsEditing(false);
+                          }}
+                        >↩ 수정 취소</button>
                         <button className="sr-editor-save" onClick={handleSaveEdits}>💾 저장</button>
                       </div>
                     </div>

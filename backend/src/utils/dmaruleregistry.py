@@ -55,24 +55,23 @@ EXPECTED_POLICY_FILES = frozenset({
     "selection_policy.json",
 })
 
+EXPECTED_CAPABILITY_KEYS = frozenset({
+    "canonicalScoring",
+    "benchmarkScreening",
+    "surveyAggregation",
+    "regulationBaseScreening",
+    "regulationAutoClassification",
+    "kcgsPillarSignal",
+    "kcgsPillarBoostPropagation",
+    "kisFinancialResilience",
+    "mediaEventCanonicalAdapter",
+})
+
 _SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9_]+\.json$")
 
 # backend/src/utils/dmaruleregistry.py -> parents[1] == backend/src
 RUNTIME_CONFIG_DIR = Path(__file__).resolve().parents[1] / "resources" / "dma" / "v1_3_mvp"
 MANIFEST_FILENAME = "manifest.json"
-
-_DEFAULT_CAPABILITIES: Dict[str, str] = {
-    "canonicalScoring": "READY",
-    "benchmarkScreening": "READY",
-    "surveyAggregation": "READY",
-    "regulationBaseScreening": "READY",
-    "regulationAutoClassification": "CONFIG_PENDING",
-    "kcgsPillarSignal": "READY",
-    "kcgsPillarBoostPropagation": "DATA_EXPORT_REQUIRED",
-    "kisFinancialResilience": "DATA_EXPORT_REQUIRED",
-    "mediaEventCanonicalAdapter": "CONFIG_PENDING",
-}
-
 
 class DmaRuleValidationError(ValueError):
     """Raised when a v1.3 slim runtime config violates the contract."""
@@ -145,6 +144,12 @@ def validateManifest(manifest: Dict[str, Any]) -> None:
     validatePolicies(files)
     if manifest.get("serviceDirectJsonLoadAllowedYn") is not False:
         raise DmaRuleValidationError("manifest.serviceDirectJsonLoadAllowedYn must be false")
+    capabilities = manifest.get("capabilities")
+    if not isinstance(capabilities, dict):
+        raise DmaRuleValidationError("manifest.capabilities must be a JSON object")
+    missingCaps = EXPECTED_CAPABILITY_KEYS - set(capabilities)
+    if missingCaps:
+        raise DmaRuleValidationError(f"manifest.capabilities missing required keys: {sorted(missingCaps)}")
 
 
 def validatePolicies(filenames: Iterable[str]) -> None:
@@ -205,15 +210,12 @@ def computeConfigHash(policies: Mapping[str, Any]) -> str:
     return "sha256:" + digest.hexdigest()
 
 
-def _resolveCapabilities(manifest: Dict[str, Any], policies: Dict[str, Dict[str, Any]]) -> Dict[str, str]:
-    caps = dict(_DEFAULT_CAPABILITIES)
-    mCaps = manifest.get("capabilities")
-    if isinstance(mCaps, dict):
-        caps.update({str(k): str(v) for k, v in mCaps.items()})
-    sCaps = policies.get("screening_policy.json", {}).get("capabilities")
-    if isinstance(sCaps, dict):
-        caps.update({str(k): str(v) for k, v in sCaps.items()})
-    return caps
+def _resolveCapabilities(manifest: Dict[str, Any]) -> Dict[str, str]:
+    capabilities = manifest["capabilities"]
+    missingCaps = EXPECTED_CAPABILITY_KEYS - set(capabilities)
+    if missingCaps:
+        raise DmaRuleValidationError(f"manifest.capabilities missing required keys: {sorted(missingCaps)}")
+    return copy.deepcopy({str(k): str(v) for k, v in capabilities.items()})
 
 
 def _loadBundle() -> RuntimeConfigV13:
@@ -227,7 +229,7 @@ def _loadBundle() -> RuntimeConfigV13:
         policies[safeName] = readJson(RUNTIME_CONFIG_DIR / safeName)
     validateBundle(manifest, policies)
     configHash = computeConfigHash(policies)
-    capabilities = _resolveCapabilities(manifest, policies)
+    capabilities = _resolveCapabilities(manifest)
     return RuntimeConfigV13(
         ruleVersion=manifest["ruleVersion"],
         architectureRevision=manifest["architectureRevision"],
@@ -300,6 +302,7 @@ __all__ = [
     "EXPECTED_ARCHITECTURE_REVISION",
     "EXPECTED_HASH_ALGORITHM",
     "EXPECTED_POLICY_FILES",
+    "EXPECTED_CAPABILITY_KEYS",
     "DmaRuleValidationError",
     "RuntimeConfigV13",
     "validatePath",

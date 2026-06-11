@@ -1,5 +1,75 @@
-from src.models.dmaengine import DMASignal
+from typing import Any, List, Mapping, Optional, Sequence
 
+from src.models.dmaengine import DMASignal, EvidenceSpanV13, ExtractedFactsV13
+
+
+def firstPresent(row: Mapping[str, Any], keys: Sequence[str], default: Any = None) -> Any:
+    for key in keys:
+        value = row.get(key)
+        if value is not None:
+            return value
+    return default
+
+
+def asFloat(value: Any) -> Optional[float]:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def buildEvidenceSpan(result: Mapping[str, Any]) -> List[EvidenceSpanV13]:
+    chunk = firstPresent(result, ("chunk", "textSpan", "text_span", "evidence"))
+    if not chunk:
+        return []
+    return [EvidenceSpanV13(
+        textSpan=str(chunk),
+        sourceType="news",
+        sourceTitle=result.get("title"),
+        sourceUrl=result.get("url"),
+        publishedAt=result.get("publishedAt"),
+        teCrawlingId=result.get("teCrawlingId") or result.get("te_crawling_id"),
+    )]
+
+
+def step0NormalizeMediaFacts(analysisResults: list) -> list[ExtractedFactsV13]:
+    facts: list[ExtractedFactsV13] = []
+    for result in analysisResults or []:
+        if not isinstance(result, Mapping):
+            continue
+        subIssueCode = firstPresent(result, ("bestSubIssueId", "subIssueCode", "sub_issue_code"))
+        if not subIssueCode:
+            continue
+        rawIssueLabel = firstPresent(result, ("rawIssueLabel", "title"), "")
+        displayName = firstPresent(result, ("bestSubIssueNameKr", "displaySubIssueName", "display_sub_issue_name"))
+        similarityScore = asFloat(firstPresent(result, ("bestSimilarityScore", "similarityScore", "similarity_score")))
+        mappingWeight = asFloat(firstPresent(result, ("mappingWeight", "mapping_weight", "bestSimilarityScore")))
+        metadata = {
+            "rawIssueLabel": rawIssueLabel,
+            "displaySubIssueName": displayName,
+            "similarityScore": similarityScore,
+            "mappingWeight": mappingWeight,
+            "source": result.get("source"),
+            "sourceUrl": result.get("url"),
+            "publishedAt": result.get("publishedAt"),
+            "issueSimilarityMatches": result.get("issueSimilarityMatches", []),
+        }
+        facts.append(ExtractedFactsV13(
+            subIssueCode=str(subIssueCode),
+            sourceType="news",
+            classificationConfidence=similarityScore,
+            eventType=result.get("eventType"),
+            evidenceSpans=buildEvidenceSpan(result),
+            rawMetadata=metadata,
+        ))
+    return facts
+
+
+# LEGACY ONLY:
+# Existing media -> DMASignal conversion path. Not called by the new v1.3 Orchestrator.
+# Delete after Phase C Runtime Migration confirms import count is 0.
 def convertMediaToDmaSignals(analysisResults: list) -> list[DMASignal]:
     """
     미디어/언론 분석 결과를 DMASignal 객체 리스트로 변환합니다.

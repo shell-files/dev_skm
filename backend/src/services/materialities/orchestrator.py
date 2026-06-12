@@ -20,6 +20,8 @@ from src.models.dmaengine import (
     ExtractedFactsV13,
     MediaNewsDedupTraceV13,
     MediaNewsEventResolutionTraceV13,
+    RegulationApplicabilityInputV13,
+    RegulationSubIssueMappingSeedV13,
     ScorePurposeV13,
     ScreeningTraceV13,
 )
@@ -30,6 +32,17 @@ from src.services.medias.eventresolver import (
 )
 from src.utils import dmaruleregistry, dmascoring
 from src.utils.dmarepository import step4BuildTrace
+
+REGULATION_REGIMES = ("CBAM", "CSRD", "DPP")
+REGULATION_APPLICABILITIES = (
+    "DIRECT_MANDATORY",
+    "MATERIAL_VALUE_CHAIN",
+    "MONITORING_ONLY",
+    "NOT_APPLICABLE",
+    "UNKNOWN",
+)
+REGULATION_INPUT_METHODS = ("CONSULTANT_INPUT", "MANUAL", "POLICY_SEED")
+REGULATION_REVIEW_STATUSES = ("APPROVED", "DRAFT", "REVIEWED")
 
 
 def step0BuildFactTrace(
@@ -90,10 +103,14 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
     screeningPolicy = dmaruleregistry.getPolicy("screening_policy")
     normalizedChannel = str(channel)
 
-    def buildPayload(trace: ScreeningTraceV13, subIssueCode: Optional[str] = None) -> dict:
+    def buildPayload(
+        trace: ScreeningTraceV13,
+        subIssueCode: Optional[str] = None,
+        sourceChannel: Optional[str] = None,
+    ) -> dict:
         return step4BuildTrace(
             scorePurpose=trace.scorePurpose,
-            sourceChannel=normalizedChannel,
+            sourceChannel=sourceChannel or normalizedChannel,
             subIssueCode=subIssueCode,
             screeningTrace=[trace],
             ruleVersion=dmaruleregistry.getRuleVersion(),
@@ -115,8 +132,23 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
 
     if normalizedChannel == "regulation":
         trace = dmascoring.step2CalcRegulation(str(payload["regime"]), str(payload["applicability"]), screeningPolicy)
-        trace = trace.model_copy(update={"capability": dmaruleregistry.getCapability("regulationBaseScreening")})
-        return buildPayload(trace)
+        rawInputs = {
+            **trace.rawInputs,
+            "sourceStep": "media_external",
+            "sourceType": "regulation",
+            "companyId": payload.get("companyId"),
+            "reportingYear": payload.get("reportingYear"),
+            "inputMethod": payload.get("inputMethod"),
+            "sourceDocumentRef": payload.get("sourceDocumentRef"),
+            "reviewStatus": payload.get("reviewStatus"),
+            "reviewerComment": payload.get("reviewerComment"),
+            "mappingReason": payload.get("mappingReason"),
+        }
+        trace = trace.model_copy(update={
+            "capability": dmaruleregistry.getCapability("regulationBaseScreening"),
+            "rawInputs": rawInputs,
+        })
+        return buildPayload(trace, subIssueCode=payload.get("subIssueCode"), sourceChannel="media_external")
 
     if normalizedChannel == "kcgs":
         state = dmascoring.step2CalcKcgs(str(payload["grade"]), str(payload["trend"]), screeningPolicy)
@@ -225,6 +257,86 @@ def step2BuildBenchmarkScreeningPayloads(
         screeningPayloads.append(payload)
 
     return screeningPayloads
+
+
+def step2BuildRegulationScreeningPayloads(
+    applicabilityInputs: Sequence[RegulationApplicabilityInputV13 | Mapping[str, Any]],
+    mappingRows: Sequence[RegulationSubIssueMappingSeedV13 | Mapping[str, Any]],
+) -> list[dict]:
+    inputs = [
+        item if isinstance(item, RegulationApplicabilityInputV13)
+        else RegulationApplicabilityInputV13(**dict(item))
+        for item in applicabilityInputs
+    ]
+    mappings = [
+        item if isinstance(item, RegulationSubIssueMappingSeedV13)
+        else RegulationSubIssueMappingSeedV13(**dict(item))
+        for item in mappingRows
+    ]
+
+    approvedInputs = {}
+    for item in inputs:
+        if item.regime not in REGULATION_REGIMES:
+            raise ValueError(f"Unknown regulation regime: {item.regime!r}")
+        if item.applicability not in REGULATION_APPLICABILITIES:
+            raise ValueError(f"Unknown regulation applicability: {item.applicability!r}")
+        if item.inputMethod not in REGULATION_INPUT_METHODS:
+            raise ValueError(f"Unknown regulation inputMethod: {item.inputMethod!r}")
+        if item.reviewStatus not in REGULATION_REVIEW_STATUSES:
+            raise ValueError(f"Unknown regulation reviewStatus: {item.reviewStatus!r}")
+        if item.reviewStatus != "APPROVED":
+            continue
+        key = (item.companyId, item.reportingYear, item.regime)
+        if key in approvedInputs:
+            raise ValueError(
+                "Duplicate APPROVED regulation applicability input: "
+                f"companyId={item.companyId}, reportingYear={item.reportingYear}, regime={item.regime}"
+            )
+        approvedInputs[key] = item
+
+    approvedMappingsByRegime: dict[str, list[RegulationSubIssueMappingSeedV13]] = {}
+    mappingKeys = set()
+    for item in mappings:
+        if item.regime not in REGULATION_REGIMES:
+            raise ValueError(f"Unknown regulation mapping regime: {item.regime!r}")
+        if item.reviewStatus not in REGULATION_REVIEW_STATUSES:
+            raise ValueError(f"Unknown regulation mapping reviewStatus: {item.reviewStatus!r}")
+        if not item.subIssueCode:
+            raise ValueError("regulation mapping subIssueCode is required")
+        key = (item.regime, item.subIssueCode)
+        if key in mappingKeys:
+            raise ValueError(
+                "Duplicate regulation sub-issue mapping seed: "
+                f"regime={item.regime}, subIssueCode={item.subIssueCode}"
+            )
+        mappingKeys.add(key)
+        if item.reviewStatus == "APPROVED" and item.activeYn:
+            approvedMappingsByRegime.setdefault(item.regime, []).append(item)
+
+    rows = []
+    for key in sorted(approvedInputs.keys()):
+        item = approvedInputs[key]
+        for mapping in sorted(
+            approvedMappingsByRegime.get(item.regime, []),
+            key=lambda row: row.subIssueCode,
+        ):
+            rows.append((item.companyId, item.reportingYear, item.regime, mapping.subIssueCode, item, mapping))
+
+    return [
+        step2RunScreening("regulation", {
+            "companyId": item.companyId,
+            "reportingYear": item.reportingYear,
+            "regime": item.regime,
+            "applicability": item.applicability,
+            "inputMethod": item.inputMethod,
+            "sourceDocumentRef": item.sourceDocumentRef,
+            "reviewStatus": item.reviewStatus,
+            "reviewerComment": item.reviewerComment,
+            "subIssueCode": mapping.subIssueCode,
+            "mappingReason": mapping.mappingReason,
+        })
+        for _, _, _, _, item, mapping in rows
+    ]
 
 
 def _mediaNewsCandidateFingerprint(candidate) -> tuple:
@@ -382,6 +494,7 @@ __all__ = [
     "step1RunCanonical",
     "step2ResolveBenchmarkObservation",
     "step2BuildBenchmarkScreeningPayloads",
+    "step2BuildRegulationScreeningPayloads",
     "step2RunScreening",
     "step3RunSelection",
 ]

@@ -213,7 +213,7 @@ const MatrixTooltip = ({ active, payload }) => {
   const d = payload[0]?.payload;
   if (!d?.label) return null;
 
-  const lvl = (v) => (v < 1.5 ? "Low" : v < 2.5 ? "Middle" : "High");
+  const lvl = (v) => (v < 4 ? "Low" : v < 7 ? "Middle" : "High");
   const cfg = CAT_CONFIG[d.cat] ?? { bg: "rgba(148,163,184,0.9)", badge: { bg: "#f1f5f9", color: "#475569" } };
 
   return (
@@ -247,6 +247,19 @@ const DoubleMaterialityMatrix = ({ data = MATRIX_POINTS }) => {
     data.some((p) => p.cat === cat)
   );
 
+  // 데이터 범위에 맞춘 동적 도메인 (점이 차트 전체에 퍼져 보이게)
+  const allX = data.map((p) => p.x).filter((v) => v != null);
+  const allY = data.map((p) => p.y).filter((v) => v != null);
+  const xMin = allX.length ? Math.min(...allX) : 0;
+  const xMax = allX.length ? Math.max(...allX) : 10;
+  const yMin = allY.length ? Math.min(...allY) : 0;
+  const yMax = allY.length ? Math.max(...allY) : 10;
+  const xPad = Math.max((xMax - xMin) * 0.3, 0.8);
+  const yPad = Math.max((yMax - yMin) * 0.3, 0.8);
+  const xDomain = [Math.max(0, xMin - xPad), Math.min(10, xMax + xPad)];
+  const yDomain = [Math.max(0, yMin - yPad), Math.min(10, yMax + yPad)];
+  const HIGH = 7.0; // 백엔드 HIGH_PRIORITY_THRESHOLD_10
+
   return (
     <div className="dmat-wrap">
 
@@ -258,55 +271,27 @@ const DoubleMaterialityMatrix = ({ data = MATRIX_POINTS }) => {
           <ResponsiveContainer width="100%" height={340}>
             <ScatterChart margin={{ top: 16, right: 28, bottom: 44, left: 20 }}>
               {/* 우상단: High Financial + High Impact (빨강) */}
-              <ReferenceArea x1={2.35} x2={4.2} y1={2} y2={3.5} fill="rgba(239,68,68,0.08)" />
+              <ReferenceArea x1={HIGH} x2={xDomain[1]} y1={HIGH} y2={yDomain[1]} fill="rgba(239,68,68,0.08)" />
 
               {/* 좌상단: Low Financial + High Impact (주황) */}
-              <ReferenceArea x1={0.5} x2={2.35} y1={2} y2={3.5} fill="rgba(245,158,11,0.08)" />
+              <ReferenceArea x1={xDomain[0]} x2={HIGH} y1={HIGH} y2={yDomain[1]} fill="rgba(245,158,11,0.08)" />
 
               {/* 우하단: High Financial + Low Impact (파랑) */}
-              <ReferenceArea x1={2.35} x2={4.2} y1={0.5} y2={2} fill="rgba(59,130,246,0.08)" />
+              <ReferenceArea x1={HIGH} x2={xDomain[1]} y1={yDomain[0]} y2={HIGH} fill="rgba(59,130,246,0.08)" />
 
               {/* 좌하단: Low Financial + Low Impact (회색) */}
-              <ReferenceArea x1={0.5} x2={2.35} y1={0.5} y2={2} fill="rgba(148,163,184,0.08)" />
-              <ReferenceLine
-                x={2.35}
-                stroke="#94a3b8"
-                strokeDasharray="6 5"
-                strokeWidth={1.5}
-                ifOverflow="extendDomain"
-              />
-              <ReferenceLine
-                y={2}
-                stroke="#94a3b8"
-                strokeDasharray="6 5"
-                strokeWidth={1.5}
-                ifOverflow="extendDomain"
-              />
+              <ReferenceArea x1={xDomain[0]} x2={HIGH} y1={yDomain[0]} y2={HIGH} fill="rgba(148,163,184,0.08)" />
 
-
-
-              {/* 좌하단 모서리 Low 라벨 */}
-              <ReferenceLine
-                x={0.5}
-                stroke="transparent"
-                label={{
-                  value: "Low",
-                  position: "insideBottomLeft",
-                  fontSize: 12,
-                  fill: "#64748b",
-                  fontFamily: "Pretendard, sans-serif",
-                }}
-              />
-
-
+              <ReferenceLine x={HIGH} stroke="#94a3b8" strokeDasharray="6 5" strokeWidth={1.5} />
+              <ReferenceLine y={HIGH} stroke="#94a3b8" strokeDasharray="6 5" strokeWidth={1.5} />
 
               {/* X축: 재무중요성 */}
               <XAxis
                 type="number"
                 dataKey="x"
-                domain={[0.5, 4.2]}
-                ticks={[2.35, 4.2]}
-                tickFormatter={(v) => v < 3 ? "Middle" : "High"}
+                domain={xDomain}
+                ticks={[HIGH]}
+                tickFormatter={() => "High (≥7)"}
                 label={{
                   value: "Financial Materiality (재무중요성)",
                   position: "insideBottom", offset: -30,
@@ -322,9 +307,9 @@ const DoubleMaterialityMatrix = ({ data = MATRIX_POINTS }) => {
               <YAxis
                 type="number"
                 dataKey="y"
-                domain={[0.5, 3.5]}
-                ticks={[1, 2, 3]}
-                tickFormatter={(v) => ({ 2: "Middle", 3: "High" }[v] ?? "")}
+                domain={yDomain}
+                ticks={[HIGH]}
+                tickFormatter={() => "High (≥7)"}
                 label={{
                   value: "Environmental & Social Materiality (영향중요성)",
                   angle: -90, position: "insideLeft", offset: -5,
@@ -534,16 +519,18 @@ const Result = () => {
   const materialitySelectionProcess = useSelector((state) => state.report.materialitySelectionProcess);
 
   useEffect(() => {
-    if (runId) {
-      dispatch(fetchMaterialityResults({ runId }));
-      dispatch(fetchMaterialitySelectionProcess({ runId }));
+    if (!runId) {
+      navigate("/benchmk");
+      return;
     }
-  }, [dispatch, runId]);
+    dispatch(fetchMaterialityResults({ runId }));
+    dispatch(fetchMaterialitySelectionProcess({ runId }));
+  }, [dispatch, runId, navigate]);
 
-  // matrixItems → 차트용 1~3 스케일 변환
+  // matrixItems → 10점 원본값 그대로 (차트 도메인이 동적으로 맞춤)
   const apiMatrixPoints = materialityResults?.matrixItems?.map((item) => ({
-    x: normalize10to3(item.xFinancialScore10),
-    y: normalize10to3(item.yImpactScore10),
+    x: item.xFinancialScore10,
+    y: item.yImpactScore10,
     rank: item.rankNo,
     label: item.displaySubIssueName,
     cat: item.domain,
@@ -882,7 +869,6 @@ const Result = () => {
                     <thead>
                       <tr>
                         <th className="th-left" style={{ width: "30%" }}>이슈</th>
-                        <th className="th-center" style={{ width: "12%" }}>후보순위</th>
                         <th className="th-center" style={{ width: "12%" }}>최종순위</th>
                         <th className="th-left">포함 사유</th>
                       </tr>

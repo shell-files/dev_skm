@@ -125,6 +125,14 @@ class RollupRequestResponseDto(RollupBaseModel):
     data: RollupRequestListDto
 
 
+class RollupRequestMetricItemDto(RollupBaseModel):
+    metricId: str
+    metricName: Optional[str] = None
+    requiredAtomicCount: int = 0
+    approvedAtomicCount: int = 0
+    missingAtomicMetricIds: list[str] = Field(default_factory=list)
+
+
 class RollupScopePreviewDto(RollupBaseModel):
     runId: Optional[int] = None
     sourceCycleId: Optional[int] = None
@@ -136,19 +144,13 @@ class RollupScopePreviewDto(RollupBaseModel):
     metricIds: list[str]
     requiredAtomicCount: int
     requiredAtomicMetricIds: list[str]
+    items: list[RollupRequestMetricItemDto] = Field(default_factory=list)
 
 
 class RollupScopePreviewResponseDto(RollupBaseModel):
     success: bool = True
     data: RollupScopePreviewDto
 
-
-class RollupRequestMetricItemDto(RollupBaseModel):
-    metricId: str
-    metricName: Optional[str] = None
-    requiredAtomicCount: int = 0
-    approvedAtomicCount: int = 0
-    missingAtomicMetricIds: list[str] = Field(default_factory=list)
 
 
 class RollupInputWorkspaceDto(RollupBaseModel):

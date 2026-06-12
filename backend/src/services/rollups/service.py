@@ -503,6 +503,14 @@ def getScopePreview(
     if not rules:
         raise RollupError(422, "ROLLUP_RULE_NOT_FOUND", "No consolidated calculation rules were found in rollup scope.")
     requiredAtomicIds = resolveExternalAtomicIdsFromRules(rules, sources)
+    from src.utils.onboardinginputrepository import getMetricName
+    items = []
+    for metricId in metricIds:
+        items.append(RollupRequestMetricItemDto(
+            metricId=metricId,
+            metricName=getMetricName(metricId)
+        ))
+
     return RollupScopePreviewResponseDto(
         data=RollupScopePreviewDto(
             runId=runId,
@@ -515,6 +523,7 @@ def getScopePreview(
             metricIds=metricIds,
             requiredAtomicCount=len(requiredAtomicIds),
             requiredAtomicMetricIds=requiredAtomicIds,
+            items=items,
         )
     )
 

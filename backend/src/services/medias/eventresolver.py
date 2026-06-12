@@ -60,7 +60,10 @@ def resolveMediaNewsCanonicalFactors(
     Reuses Canonical Core; does not reimplement scoring math.
     REJECTED / CONFLICTED resolution → both axes None (no Canonical calculation).
     """
-    if resolution.resolverStatus in ("REJECTED", "CONFLICTED"):
+    if (
+        resolution.resolverStatus in ("REJECTED", "CONFLICTED")
+        or resolution.dedup.dedupStatus == "CONFLICTED"
+    ):
         return {"impact": None, "financial": None}
 
     impact_input: Optional[Dict[str, Any]] = None
@@ -177,6 +180,11 @@ def resolveMediaNewsEventGroup(
             for i in indices:
                 results[i] = results[i].model_copy(
                     update={
+                        "resolverStatus": (
+                            "CONFLICTED"
+                            if dedup_status == "CONFLICTED"
+                            else results[i].resolverStatus
+                        ),
                         "dedup": MediaNewsDedupTraceV13(
                             eventGroupCandidateId=results[i].dedup.eventGroupCandidateId,
                             confirmedEventGroupKey=confirmedKey,
@@ -186,7 +194,7 @@ def resolveMediaNewsEventGroup(
                                 "groupCount": len(indices),
                                 "mergePolicy": "COMPOSITE_PLUS_MATCHING_ADVISORY_HINT",
                             }],
-                        )
+                        ),
                     }
                 )
 

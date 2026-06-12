@@ -1,0 +1,57 @@
+.skm-page-title-content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.skm-page-title-icon-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.skm-page-title-bar {
+  width: 4px;
+  height: 48px;
+  background-color: #1b5e20;
+  border-radius: 4px;
+}
+
+.skm-page-title-circle {
+  width: 56px;
+  height: 56px;
+  background-color: #e8f5e9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1b5e20;
+  font-size: 24px;
+}
+
+.skm-page-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skm-page-title-category {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1b5e20;
+}
+
+.skm-page-title-heading {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.skm-page-title-description {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+}

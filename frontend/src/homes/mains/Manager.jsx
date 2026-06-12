@@ -4,6 +4,7 @@ import Invite from './Invite.jsx'
 import UserTab from './UserTab';
 import UserManagementModal from './modal/UserManagementModal';
 import TabButton from '@components/UI/TabButton';
+import PageHeader from '@components/UI/PageHeader';
 import { useAuth } from '@hooks/AuthContext'
 
 /**
@@ -144,7 +145,12 @@ const Manager = () => {
       <div className="manager-content-container">
         <div className="page-header">
           <div className="page-title-area">
-            <h2 className="page-title">ESG 통합 관리 시스템</h2>
+            <PageHeader
+              category="시스템"
+              title="ESG 통합 관리 시스템"
+              description="사용자, 프로젝트, 승인 데이터를 통합 조회합니다."
+              iconClass="bi-building-fill"
+            />
           </div>
 
           <TabButton.Category

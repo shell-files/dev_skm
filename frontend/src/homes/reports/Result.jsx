@@ -877,7 +877,6 @@ const Result = () => {
                       {selectedIssues.map((row, i) => (
                         <tr key={i} style={{ borderBottom: i < selectedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
                           <td className="td-name">{row.name}</td>
-                          <td className="td-center">{row.candRank}</td>
                           <td className="td-center-green">{row.finalRank}</td>
                           <td className="td-text">{row.reason}</td>
                         </tr>
@@ -893,7 +892,6 @@ const Result = () => {
                     <thead>
                       <tr>
                         <th className="th-left" style={{ width: "30%" }}>이슈</th>
-                        <th className="th-center" style={{ width: "12%" }}>후보순위</th>
                         <th className="th-center" style={{ width: "12%" }}>최종순위</th>
                         <th className="th-left">제외 사유</th>
                       </tr>
@@ -903,7 +901,6 @@ const Result = () => {
                         <tr key={i} style={{ borderBottom: i < excludedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
                           <td className="td-name">{row.name}</td>
                           <td className="td-center">{row.candRank}</td>
-                          <td className="td-center-muted">-</td>
                           <td className="td-text">{row.reason}</td>
                         </tr>
                       ))}

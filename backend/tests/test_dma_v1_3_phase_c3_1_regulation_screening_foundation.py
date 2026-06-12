@@ -165,6 +165,18 @@ class PhaseC31DtoFailFastTest(unittest.TestCase):
         with self.assertRaises(ValidationError):
             RegulationApplicabilityInputV13(**item)
 
+    def test_14_company_id_numeric_string_is_rejected(self):
+        item = approvedInput()
+        item["companyId"] = "1001"
+        with self.assertRaises(ValidationError):
+            RegulationApplicabilityInputV13(**item)
+
+    def test_15_company_id_zero_is_rejected(self):
+        item = approvedInput()
+        item["companyId"] = 0
+        with self.assertRaises(ValidationError):
+            RegulationApplicabilityInputV13(**item)
+
 
 class PhaseC31MappingExpansionTest(unittest.TestCase):
     def test_13_approved_input_and_mapping_create_payload(self):
@@ -345,10 +357,10 @@ class PhaseC31DuplicateAndGuardTest(unittest.TestCase):
         self.assertNotIn("REGULATION_REGIMES", source)
         self.assertNotIn("REGULATION_APPLICABILITIES", source)
 
-    def test_39_service_runtime_must_not_call_regulation_screening_directly(self):
-        services = Path(ROOT, "src/services")
+    def test_39_runtime_must_not_call_regulation_screening_directly(self):
+        sourceRoot = Path(ROOT, "src")
         offenders = []
-        for path in services.rglob("*.py"):
+        for path in sourceRoot.rglob("*.py"):
             relative = path.relative_to(ROOT).as_posix()
             if relative == "src/services/materialities/orchestrator.py":
                 continue

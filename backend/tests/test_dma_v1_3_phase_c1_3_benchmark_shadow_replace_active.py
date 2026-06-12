@@ -42,6 +42,7 @@ if "mariadb" not in sys.modules:
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.models.dmaengine import ExtractedFactsV13  # noqa: E402
+from src.services.benchmarks.adapter import step0NormalizeBenchmarkFacts  # noqa: E402
 from src.services.materialities import orchestrator  # noqa: E402
 from src.utils import dmarepository, dmaruleregistry  # noqa: E402
 from src.utils.subissuemaster import subissueMaster  # noqa: E402
@@ -469,6 +470,41 @@ class PhaseC13BuildScreeningPayloadsTest(unittest.TestCase):
         outsiderPayload = buildFactPayload(subIssueCode="G0-FAKE-999")
         with self.assertRaises(ValueError):
             orchestrator.step2BuildBenchmarkScreeningPayloads([outsiderPayload], universe)
+
+    def test_invalid_source_type_in_fact_payload_raises(self):
+        universe = self._getUniverse()
+        targetCode = universe[0]
+        badPayload = buildFactPayload(subIssueCode=targetCode)
+        badPayload["extractedFacts"]["sourceType"] = "unknown_channel"
+        with self.assertRaises(ValueError):
+            orchestrator.step2BuildBenchmarkScreeningPayloads([badPayload], universe)
+
+
+# ── step0NormalizeBenchmarkFacts — Adapter Fail-Fast ─────────────────────────
+
+class PhaseC13AdapterNormalizationTest(unittest.TestCase):
+    def setUp(self):
+        dmaruleregistry.resetDmaRulesForTest()
+        self._aiPolicy = dmaruleregistry.getPolicy("ai_fact_validation_policy")
+
+    def test_non_mapping_row_raises(self):
+        with self.assertRaises(ValueError):
+            step0NormalizeBenchmarkFacts(
+                resultList=["not_a_dict"],
+                fileId=1,
+                sourceType="leader_sr",
+                aiPolicy=self._aiPolicy,
+            )
+
+    def test_missing_sub_issue_code_raises(self):
+        row = {"rawIssueLabel": "climate issue", "classificationConfidence": 0.82}
+        with self.assertRaises(ValueError):
+            step0NormalizeBenchmarkFacts(
+                resultList=[row],
+                fileId=1,
+                sourceType="leader_sr",
+                aiPolicy=self._aiPolicy,
+            )
 
 
 if __name__ == "__main__":

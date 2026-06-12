@@ -1148,8 +1148,8 @@ def step4ReplaceBenchmarkShadowTracesTx(
     conn = getConn()
     if conn is None:
         raise RuntimeError("DB connection is not available for benchmark shadow replace transaction")
-    conn.autocommit = False
     try:
+        conn.autocommit = False
         with conn.cursor(dictionary=True) as cur:
             cur.execute(
                 "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? FOR UPDATE",
@@ -1333,7 +1333,7 @@ __all__ = [
     "getMissingRequiredMetricCount",
     "getLatestReportRun",
     "getLatestReportRunByMaterialityRun",
-    # STEP 4: v1.3 Payload Trace helpers (no DB execution — Phase C wire pending)
+    # STEP 4: v1.3 Payload Trace helpers and Benchmark shadow persistence
     "BENCHMARK_V13_SHADOW_SOURCE_STEP",
     "BENCHMARK_V13_SCREENING_SHADOW_SOURCE_STEP",
     "isLegacyPayload",

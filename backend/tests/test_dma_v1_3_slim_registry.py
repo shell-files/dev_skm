@@ -59,7 +59,7 @@ class SlimRegistryTest(unittest.TestCase):
         self.assertEqual(cfg.ruleVersion, "dma-rule-v1.3-mvp")
         self.assertEqual(cfg.architectureRevision, "R4.1-SLIM")
 
-    # 2. Runtime policy 5-file exact set
+    # 2. Runtime policy 6-file exact set
     def test_02_policy_exact_set(self):
         cfg = reg.getDmaRules()
         self.assertEqual(set(cfg.policies.keys()), set(reg.EXPECTED_POLICY_FILES))

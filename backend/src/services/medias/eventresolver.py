@@ -5,7 +5,7 @@ No DB connections, no Runtime Wiring, no repository writes.
 from __future__ import annotations
 
 from datetime import date
-from typing import Any, Dict, List, Literal, Mapping, Optional
+from typing import Any, Dict, List, Literal, Mapping, Optional, Tuple
 
 from src.models.dmaengine import (
     AxisScoreTraceV13,
@@ -28,12 +28,17 @@ def resolveMediaNewsEventObservation(
     Maps raw AI-extracted facts → resolver-level axis candidates.
     Pure function: no DB, no registry IO, no side effects.
     """
+    dedupRules = policy.get("eventDedupRules", {})
     normalizedEventType = _normalizeEventType(fact.eventType, policy)
-    eventDateBucket = _deriveEventDateBucket(fact)
+    eventDateBucket = _deriveEventDateBucket(fact, dedupRules)
     impactCandidate = _resolveImpactCandidate(fact, policy, evaluationDate)
-    financialCandidate = _resolveFinancialCandidate(fact, policy)
+    financialCandidate, ratioRejected = _resolveFinancialCandidate(fact, policy)
     dedup = _buildDedupTrace(fact)
-    status = _calcResolverStatus(impactCandidate, financialCandidate)
+
+    status: Literal["RESOLVED", "PARTIAL", "UNOBSERVED", "CONFLICTED", "REJECTED"] = (
+        "REJECTED" if ratioRejected
+        else _calcResolverStatus(impactCandidate, financialCandidate)
+    )
 
     return MediaNewsEventResolutionTraceV13(
         resolverStatus=status,
@@ -53,7 +58,11 @@ def resolveMediaNewsCanonicalFactors(
     """
     MediaNewsEventResolutionTraceV13 → step1CalcAxes() → AxisScoreTraceV13 dict.
     Reuses Canonical Core; does not reimplement scoring math.
+    REJECTED / CONFLICTED resolution → both axes None (no Canonical calculation).
     """
+    if resolution.resolverStatus in ("REJECTED", "CONFLICTED"):
+        return {"impact": None, "financial": None}
+
     impact_input: Optional[Dict[str, Any]] = None
     financial_input: Optional[Dict[str, Any]] = None
 
@@ -90,8 +99,16 @@ def resolveMediaNewsEventGroup(
 ) -> List[MediaNewsEventResolutionTraceV13]:
     """
     Applies Event Dedup across a list of resolutions.
-    Same composite mandatory key → MERGED; missing mandatory key → UNRESOLVED;
-    eventGroupCandidateId match alone → no merge (advisory only).
+
+    Rule:
+      A. mandatory key missing            → UNRESOLVED
+      B. composite key unique (1 match)   → UNIQUE
+      C. composite key duplicated
+         AND all eventGroupCandidateIds non-null AND same → MERGED
+      D. composite key duplicated
+         BUT candidateId missing or different            → CONFLICTED
+
+    eventGroupCandidateId alone → no merge (advisory only).
     """
     dedupRules = policy.get("eventDedupRules", {})
     mandatoryKeys: List[str] = dedupRules.get("mandatoryKeys", [])
@@ -151,14 +168,24 @@ def resolveMediaNewsEventGroup(
                 }
             )
         else:
+            candidate_ids = [results[i].dedup.eventGroupCandidateId for i in indices]
+            all_non_null = all(cid is not None for cid in candidate_ids)
+            all_same = len(set(candidate_ids)) == 1
+            dedup_status: Literal["MERGED", "CONFLICTED"] = (
+                "MERGED" if (all_non_null and all_same) else "CONFLICTED"
+            )
             for i in indices:
                 results[i] = results[i].model_copy(
                     update={
                         "dedup": MediaNewsDedupTraceV13(
                             eventGroupCandidateId=results[i].dedup.eventGroupCandidateId,
                             confirmedEventGroupKey=confirmedKey,
-                            dedupStatus="MERGED",
-                            ruleTrace=[{"compositeKey": confirmedKey, "mergedCount": len(indices)}],
+                            dedupStatus=dedup_status,
+                            ruleTrace=[{
+                                "compositeKey": confirmedKey,
+                                "groupCount": len(indices),
+                                "mergePolicy": "COMPOSITE_PLUS_MATCHING_ADVISORY_HINT",
+                            }],
                         )
                     }
                 )
@@ -177,52 +204,37 @@ def _normalizeEventType(eventType: Optional[str], policy: Mapping[str, Any]) -> 
     aliases = normalization.get("aliases", {})
     if eventType in aliases:
         return aliases[eventType]
-    unknownPolicy = normalization.get("unknownPolicy", "PASSTHROUGH")
-    return eventType if unknownPolicy == "PASSTHROUGH" else None
+    return eventType if normalization.get("unknownPolicy", "PASSTHROUGH") == "PASSTHROUGH" else None
 
 
-def _deriveEventDateBucket(fact: ExtractedFactsV13) -> Optional[str]:
-    for raw in (fact.deadlineDate, fact.effectiveDate, fact.eventDate):
+def _deriveEventDateBucket(fact: ExtractedFactsV13, dedupRules: Mapping[str, Any]) -> Optional[str]:
+    priority: List[str] = dedupRules.get("dateBucketSourcePriority", ["eventDate", "effectiveDate", "deadlineDate"])
+    precision: str = dedupRules.get("dateBucketPrecision", "DAY")
+    for field_name in priority:
+        raw = getattr(fact, field_name, None)
         if raw:
             try:
                 d = date.fromisoformat(raw[:10])
-                return f"{d.year:04d}-{d.month:02d}"
+                return d.isoformat() if precision == "DAY" else f"{d.year:04d}-{d.month:02d}"
             except Exception:
                 continue
     return None
 
 
-def _applySimpleBand(value: float, bands: List[dict]) -> Optional[float]:
-    """Inclusive-inclusive band lookup (integer counts / probability values)."""
+def _applyBand(value: float, bands: List[dict]) -> Optional[float]:
+    """Unified band lookup with explicit minInclusive / maxExclusive flags."""
     for band in bands:
         lo = band.get("min")
         hi = band.get("max")
-        score = band.get("score")
-        if lo is not None and value < lo:
-            continue
-        if hi is not None and value > hi:
-            continue
-        return float(score)
-    return None
-
-
-def _applyRatioBand(value: float, bands: List[dict]) -> Optional[float]:
-    """Band lookup with explicit minInclusive / maxExclusive flags (canonical ratio bands)."""
-    for band in bands:
-        lo = band.get("min")
-        hi = band.get("max")
-        minInclusive = band.get("minInclusive", True)
-        maxExclusive = band.get("maxExclusive", False)
-        score = band.get("score")
+        min_inc: bool = band.get("minInclusive", True)
+        max_exc: bool = band.get("maxExclusive", False)
         if lo is not None:
-            lo_ok = (value >= lo) if minInclusive else (value > lo)
-            if not lo_ok:
+            if not (value >= lo if min_inc else value > lo):
                 continue
         if hi is not None:
-            hi_ok = (value < hi) if maxExclusive else (value <= hi)
-            if not hi_ok:
+            if not (value < hi if max_exc else value <= hi):
                 continue
-        return float(score)
+        return float(band["score"])
     return None
 
 
@@ -256,9 +268,7 @@ def _resolveTimeHorizon(
         diff = (target - evalDate).days
         if diff <= shortMaxDays:
             return "short"
-        if diff <= midMaxDays:
-            return "mid"
-        return "long"
+        return "mid" if diff <= midMaxDays else "long"
     return None
 
 
@@ -270,15 +280,13 @@ def _resolveImpactCandidate(
     polarity = fact.impactDirection
 
     scale: Optional[float] = None
-    scaleRules = policy.get("impactScaleRules", {})
     if fact.affectedCount is not None:
-        scale = _applySimpleBand(float(fact.affectedCount), scaleRules.get("bands", []))
+        scale = _applyBand(float(fact.affectedCount), policy.get("impactScaleRules", {}).get("bands", []))
 
     likelihood: Optional[float] = None
-    likRules = policy.get("impactLikelihoodRules", {})
     if fact.probabilityValue is not None:
         pnorm = _normalizeProbability(fact.probabilityValue)
-        likelihood = _applySimpleBand(pnorm, likRules.get("bands", []))
+        likelihood = _applyBand(pnorm, policy.get("impactLikelihoodRules", {}).get("bands", []))
 
     timeHorizon = _resolveTimeHorizon(fact, policy, evaluationDate)
     explicitNoUrgency = fact.explicitNoUrgencyYn
@@ -310,22 +318,34 @@ def _resolveImpactCandidate(
 def _resolveFinancialCandidate(
     fact: ExtractedFactsV13,
     policy: Mapping[str, Any],
-) -> Optional[MediaNewsResolvedAxisCandidateV13]:
+) -> Tuple[Optional[MediaNewsResolvedAxisCandidateV13], bool]:
+    """Returns (candidate, ratio_rejected). ratio_rejected=True → resolverStatus REJECTED."""
     polarity = fact.financialIroType
-
     magnitude: Optional[float] = None
-    magRules = policy.get("financialMagnitudeRules", {})
+
     if fact.ratioValue is not None:
-        magnitude = _applyRatioBand(fact.ratioValue, magRules.get("bands", []))
+        contract = policy.get("ratioValueContract", {})
+        min_val: float = contract.get("min", 0.0)
+        max_val: float = contract.get("max", 1.0)
+        if fact.ratioValue < min_val or fact.ratioValue > max_val:
+            return MediaNewsResolvedAxisCandidateV13(
+                polarity=polarity,
+                ruleTrace=[{
+                    "factor": "magnitude",
+                    "reason": "RATIO_VALUE_OUT_OF_RANGE",
+                    "rawValue": fact.ratioValue,
+                    "outOfRangePolicy": contract.get("outOfRangePolicy", "REJECTED"),
+                }],
+            ), True
+        magnitude = _applyBand(fact.ratioValue, policy.get("financialMagnitudeRules", {}).get("bands", []))
 
     likelihood: Optional[float] = None
-    finLikRules = policy.get("financialLikelihoodRules", {})
     if fact.probabilityValue is not None:
         pnorm = _normalizeProbability(fact.probabilityValue)
-        likelihood = _applySimpleBand(pnorm, finLikRules.get("bands", []))
+        likelihood = _applyBand(pnorm, policy.get("financialLikelihoodRules", {}).get("bands", []))
 
     if polarity is None and magnitude is None and likelihood is None:
-        return None
+        return None, False
 
     ruleTrace: List[Dict[str, Any]] = []
     if magnitude is not None:
@@ -343,7 +363,7 @@ def _resolveFinancialCandidate(
         timeHorizon=None,
         explicitNoUrgencyYn=None,
         ruleTrace=ruleTrace,
-    )
+    ), False
 
 
 def _buildDedupTrace(fact: ExtractedFactsV13) -> MediaNewsDedupTraceV13:
@@ -380,12 +400,8 @@ def _calcResolverStatus(
     if has_full_impact or has_full_financial:
         return "RESOLVED"
 
-    has_any_impact = impact is not None and any([
-        impact.polarity, impact.scale, impact.likelihood, impact.timeHorizon,
-    ])
-    has_any_financial = financial is not None and any([
-        financial.polarity, financial.magnitude,
-    ])
+    has_any_impact = impact is not None and any([impact.polarity, impact.scale, impact.likelihood, impact.timeHorizon])
+    has_any_financial = financial is not None and any([financial.polarity, financial.magnitude])
     if has_any_impact or has_any_financial:
         return "PARTIAL"
 

@@ -33,6 +33,7 @@ def runMediaAnalysis(
     runId: int,
     keywords: Optional[list[str]] = None,
     industryKeywords: Optional[list[str]] = None,
+    shadowReplaceYn: bool = True,
 ):
     """
     미디어 언론 분석 전체 워크플로우를 실행합니다.
@@ -55,10 +56,11 @@ def runMediaAnalysis(
     if scoredSignals:
         saveSignals(runId=runId, signals=scoredSignals, fileId=None, sourceTitle="Media Analysis")
 
-    try:
-        _replaceMediaNewsShadowFromPipelineResults(runId=runId, pipelineResults=pipelineResults)
-    except Exception as shadowError:
-        print(f"Warning: media_external.news v1.3 shadow replace failed: {shadowError}")
+    if shadowReplaceYn:
+        try:
+            _replaceMediaNewsShadowFromPipelineResults(runId=runId, pipelineResults=pipelineResults)
+        except Exception as shadowError:
+            print(f"Warning: media_external.news v1.3 shadow replace failed: {shadowError}")
 
     return scoredSignals
 
@@ -95,6 +97,7 @@ def runMediaCrawlAndAnalyze(
         industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
     )
 
+    crawlCompleteYn = _isCrawlComplete(crawlResult)
     scoredSignals = []
     savedSignalCountsBySource = {}
     if crawlResult.articles:
@@ -103,9 +106,10 @@ def runMediaCrawlAndAnalyze(
             runId=request.runId,
             keywords=MVP_DEMO_COMPANY_KEYWORDS,
             industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
+            shadowReplaceYn=crawlCompleteYn,
         )
         savedSignalCountsBySource = _countSavedSignalsBySource(scoredSignals)
-    elif _isCrawlNormalEmpty(crawlResult):
+    elif crawlCompleteYn:
         try:
             _replaceMediaNewsShadowFromPipelineResults(runId=request.runId, pipelineResults=[])
         except Exception as shadowError:
@@ -197,12 +201,14 @@ def _replaceMediaNewsShadowFromPipelineResults(runId: int, pipelineResults: list
     step4ReplaceMediaNewsShadowTracesTx(runId=runId, factPayloads=factPayloads)
 
 
-def _isCrawlNormalEmpty(crawlResult) -> bool:
+def _isCrawlComplete(crawlResult) -> bool:
     if not crawlResult.allowedSources:
         return False
     if crawlResult.errors:
         return False
-    return all(item.status == "SUCCESS" for item in crawlResult.sourceBreakdown)
+    return bool(crawlResult.sourceBreakdown) and all(
+        item.status == "SUCCESS" for item in crawlResult.sourceBreakdown
+    )
 
 
 def _parseRequestDate(value: str, fieldName: str) -> date:

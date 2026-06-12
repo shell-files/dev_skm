@@ -1,25 +1,26 @@
 import { useState, useEffect } from "react";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
 import ApprovalProjectSelectModal from "./mains/modal/ApprovalProjectSelectModal";
 import { useAuth } from "@hooks/AuthContext";
 import { GET } from "@utils/Network";
+import { setCurruntYear, setMaterialityRunId } from "@stores/reportSlice";
 import "@styles/dashboard.css";
 
 const MOCK_PROJECTS = [
-  { runId: 1, reportingYear: 2026, reportBasisType: "CONSOLIDATED", runStatus: "ACTIVE",    currentStageLabel: "플랫폼 소개", pendingCount: 0, readOnlyYn: false },
-  { runId: 2, reportingYear: 2025, reportBasisType: "CONSOLIDATED", runStatus: "COMPLETED", currentStageLabel: "completed",   pendingCount: 0, readOnlyYn: true  },
-  { runId: 3, reportingYear: 2026, reportBasisType: "ENTITY",       runStatus: "ACTIVE",    currentStageLabel: "데이터 수집",  pendingCount: 0, readOnlyYn: false },
-  { runId: 4, reportingYear: 2025, reportBasisType: "CONSOLIDATED", runStatus: "ARCHIVED",  currentStageLabel: "규제 검토",   pendingCount: 0, readOnlyYn: true  },
+  { runId: 1, reportingYear: 2026, reportBasisType: "CONSOLIDATED", runStatus: "ACTIVE", currentStageLabel: "플랫폼 소개", pendingCount: 0, readOnlyYn: false },
+  { runId: 2, reportingYear: 2025, reportBasisType: "CONSOLIDATED", runStatus: "COMPLETED", currentStageLabel: "completed", pendingCount: 0, readOnlyYn: true },
+  { runId: 3, reportingYear: 2026, reportBasisType: "ENTITY", runStatus: "ACTIVE", currentStageLabel: "데이터 수집", pendingCount: 0, readOnlyYn: false },
+  { runId: 4, reportingYear: 2025, reportBasisType: "CONSOLIDATED", runStatus: "ARCHIVED", currentStageLabel: "규제 검토", pendingCount: 0, readOnlyYn: true },
 ];
 
 // Result.jsx 주석 처리된 "필요 온보딩 지표" 데이터 인용
 const ONBOARDING_ROWS = [
-  { name: "기후변화 대응",          e: true,  s: true,  g: false, count: "8개", done: "3/8", doneColor: "#ef4444" },
-  { name: "지속가능한 공급망 관리",  e: false, s: true,  g: true,  count: "6개", done: "2/6", doneColor: "#ef4444" },
-  { name: "정보보호 및 데이터 보안", e: false, s: false, g: true,  count: "5개", done: "1/5", doneColor: "#ef4444" },
-  { name: "인재 육성 및 역량 강화",  e: false, s: true,  g: false, count: "6개", done: "4/6", doneColor: "#475569" },
-  { name: "친환경 제품·서비스 확대", e: true,  s: false, g: false, count: "5개", done: "2/5", doneColor: "#ef4444" },
+  { name: "??", e: true, s: true, g: false, count: "?개", done: "?/?", doneColor: "#ef4444" },
+  { name: "??", e: false, s: true, g: true, count: "?개", done: "?/?", doneColor: "#ef4444" },
+  { name: "??", e: false, s: false, g: true, count: "?개", done: "?/?", doneColor: "#ef4444" },
+  { name: "??", e: false, s: true, g: false, count: "?개", done: "?/?", doneColor: "#475569" },
+  { name: "??", e: true, s: false, g: false, count: "?개", done: "?/?", doneColor: "#ef4444" },
 ];
 
 const MODULES = [
@@ -90,38 +91,38 @@ const getStageLabel = (label) => {
   return label;
 };
 
-// approvalStatus 기준 "입력 완료" 판단
-const DONE_STATUSES = new Set(["SUBMITTED", "REVIEWED", "APPROVED"]);
+// materiality results → 선정 이슈 행 (selectedYn: true 필터)
+const buildMaterialityRows = (items = [], nextStep = null) => {
+  console.log(nextStep)
+  const total = nextStep?.requiredMetricCount ?? null;
+  const missing = nextStep?.onboardingMissingCount ?? null;
+  const done = total != null && missing != null ? total - missing : null;
+  const doneColor = done != null && done === total ? "#475569" : "#ef4444";
 
-// API 응답 items → 서브이슈별 행 집계
-const buildOnboardingRows = (items = []) => {
-  const map = new Map();
-  for (const item of items) {
-    const key = item.subIssueName || item.subIssueCode || item.metricId;
-    if (!map.has(key)) map.set(key, { name: key, e: false, s: false, g: false, total: 0, done: 0 });
-    const row = map.get(key);
-    const domain = (item.issueDomain || "").toUpperCase();
-    if (domain === "E") row.e = true;
-    if (domain === "S") row.s = true;
-    if (domain === "G") row.g = true;
-    row.total++;
-    if (DONE_STATUSES.has((item.approvalStatus || "").toUpperCase())) row.done++;
-  }
-  return Array.from(map.values()).map((r) => ({
-    name: r.name,
-    e: r.e, s: r.s, g: r.g,
-    count: `${r.total}개`,
-    done: `${r.done}/${r.total}`,
-    doneColor: r.done === r.total ? "#475569" : "#ef4444",
-  }));
+  return items
+    .filter((it) => it.selectedYn)
+    .map((it) => {
+      const d = (it.domain || "").toUpperCase();
+      return {
+        name: it.displaySubIssueName || it.subIssueCode,
+        e: d.startsWith("E"),
+        s: d.startsWith("S"),
+        g: d.startsWith("G"),
+        count: total != null ? `${total}개` : "-",
+        done: done != null ? `${done}/${total}` : "-",
+        doneColor,
+      };
+    });
 };
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { selectedCompany } = useAuth();
   const companyId = selectedCompany?.company_id;
   const companyName = selectedCompany?.company_name || "A_GROUP";
   const currentYear = useSelector((state) => state.report.currentYear);
+  const currentRunId = useSelector((state) => state.report.currentRunId);
 
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [currentProject, setCurrentProject] = useState(MOCK_PROJECTS[0]);
@@ -129,28 +130,26 @@ const Dashboard = () => {
   const [onboardingLoading, setOnboardingLoading] = useState(false);
 
   useEffect(() => {
-    if (!companyId || !currentYear) return;
+    if (!currentRunId) return;
     const load = async () => {
       setOnboardingLoading(true);
       try {
-        const res = await GET("/onboarding", {
-          companyId,
-          reportingYear: currentYear,
-          cycleType: "POST_DMA_DISCLOSURE",
-        });
-        const rows = buildOnboardingRows(res?.items);
+        const res = await GET(`/materiality/results/${currentRunId}`);
+        const rows = buildMaterialityRows(res?.items, res?.nextStep);
         if (rows.length > 0) setOnboardingRows(rows);
       } catch {
-        // fallback: 목 데이터 유지
+        // fallback: mock 유지
       } finally {
         setOnboardingLoading(false);
       }
     };
     load();
-  }, [companyId, currentYear]);
+  }, [currentRunId]);
 
   const handleSelectProject = (project) => {
     setCurrentProject(project);
+    dispatch(setCurruntYear(project.reportingYear));
+    dispatch(setMaterialityRunId(project.runId));
     setShowProjectModal(false);
   };
 
@@ -161,7 +160,7 @@ const Dashboard = () => {
         <div>
           <p className="db-project-label">현재 보고서 프로젝트</p>
           <h2 className="db-project-title">
-            {currentProject.reportingYear} 지속가능경영보고서
+            {currentYear} 지속가능경영보고서
           </h2>
           <p className="db-project-meta">
             {companyName} · {getBasisLabel(currentProject.reportBasisType)} · {getProjectStatusLabel(currentProject.runStatus)}
@@ -225,9 +224,9 @@ const Dashboard = () => {
           <div className="db-steps-list">
             {[
               ["프로젝트 선택", "보고할 프로젝트를 선택합니다."],
-              ["데이터 입력",   "필요한 데이터를 입력하고 관리합니다."],
-              ["분석 실행",     "분석을 실행하고 결과를 확인합니다."],
-              ["결과 검토",     "결과를 검토하고 보고서를 완성합니다."],
+              ["데이터 입력", "필요한 데이터를 입력하고 관리합니다."],
+              ["분석 실행", "분석을 실행하고 결과를 확인합니다."],
+              ["결과 검토", "결과를 검토하고 보고서를 완성합니다."],
             ].map(([title, desc], i) => (
               <div key={i} className="db-step-item">
                 <span className="db-step-num">{i + 1}</span>
@@ -319,7 +318,7 @@ const Dashboard = () => {
         </div>
       </section>
 
-      
+
 
       {/* ── 프로젝트 선택 모달 ── */}
       <ApprovalProjectSelectModal

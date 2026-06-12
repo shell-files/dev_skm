@@ -226,6 +226,37 @@ class PhaseC2NewsFactResolverTest(unittest.TestCase):
         self.assertEqual(facts[0].sourceType, "news")
         self.assertEqual(facts[0].rawMetadata["mediaExternalSourceType"], "news")
 
+    # 12b. Nested issueSimilarityMatches 내부 forbidden 필드 제거
+    def test_nested_similarity_matches_forbidden_fields_removed(self):
+        row = minimalResult(issueSimilarityMatches=[
+            {
+                "issueId": "E_CLIMATE__CLIMATE_TARGETS_TRANSITION",
+                "subIssueNameKr": "기후변화 대응",
+                "score": 0.71,
+                "impactScore": 5,
+                "impactFactor": {"scale": 5},
+                "finalScore": 4.8,
+                "financialScore": 3.0,
+            }
+        ])
+        facts = step0NormalizeMediaFacts([row])
+        matches = facts[0].rawMetadata["issueSimilarityMatches"]
+        self.assertEqual(len(matches), 1)
+        allowed = {"issueId", "subIssueNameKr", "score"}
+        self.assertEqual(set(matches[0].keys()), allowed)
+        for forbidden in ("impactScore", "impactFactor", "finalScore", "financialScore"):
+            self.assertNotIn(forbidden, matches[0])
+
+    def test_nested_similarity_matches_allowed_keys_preserved(self):
+        row = minimalResult(issueSimilarityMatches=[
+            {"issueId": "E-01", "subIssueNameKr": "기후", "score": 0.85}
+        ])
+        facts = step0NormalizeMediaFacts([row])
+        match = facts[0].rawMetadata["issueSimilarityMatches"][0]
+        self.assertEqual(match["issueId"], "E-01")
+        self.assertEqual(match["subIssueNameKr"], "기후")
+        self.assertAlmostEqual(match["score"], 0.85)
+
     # 15. manifest capability 유지
     def test_manifest_capability_config_pending(self):
         manifest_path = (

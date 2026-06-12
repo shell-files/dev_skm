@@ -12,6 +12,7 @@ async def test_list_onboarding_metrics_passes_user_model():
                 reportingYear=2024,
                 cycleType="ROLLUP_RESPONSE",
                 metricId=None,
+                batchId=None,
                 userModel=user_model
             )
             
@@ -20,5 +21,6 @@ async def test_list_onboarding_metrics_passes_user_model():
                 reportingYear=2024,
                 cycleType="ROLLUP_RESPONSE",
                 metricId=None,
+                batchId=None,
                 userModel=user_model
             )

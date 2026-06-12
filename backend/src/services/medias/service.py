@@ -8,15 +8,17 @@ from src.models.media import (
     MediaNewsCrawlAnalyzeResponse,
     MediaTopIssue,
 )
-from src.services.medias.adapter import convertMediaToDmaSignals
+from src.services.medias.adapter import convertMediaToDmaSignals, step0NormalizeMediaFacts
 from src.services.medias.baseline import applyMediaBaseline
 from src.services.medias.crawler import applySavedSignalCounts, crawlNewsArticles
 from src.services.medias.pipeline import processMediaPipeline
+from src.services.materialities.orchestrator import step0BuildFactTrace
 from src.utils.dmarepository import (
     getMediaCoverage,
     countMediaSubIssues,
     listTopMediaIssues,
     saveSignals,
+    step4ReplaceMediaNewsShadowTracesTx,
 )
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
 from src.utils.subissuemaster import getSubIssueDisplayName
@@ -52,6 +54,16 @@ def runMediaAnalysis(
 
     if scoredSignals:
         saveSignals(runId=runId, signals=scoredSignals, fileId=None, sourceTitle="Media Analysis")
+
+    try:
+        shadowFacts = step0NormalizeMediaFacts(pipelineResults)
+        factPayloads = [
+            step0BuildFactTrace(extractedFact=fact, sourceChannel="media_external")
+            for fact in shadowFacts
+        ]
+        step4ReplaceMediaNewsShadowTracesTx(runId=runId, factPayloads=factPayloads)
+    except Exception as shadowError:
+        print(f"Warning: media_external.news v1.3 shadow replace failed: {shadowError}")
 
     return scoredSignals
 

@@ -907,6 +907,7 @@ def getLatestReportRunByMaterialityRun(runId: int) -> dict:
 _V13_RULE_VERSION = "dma-rule-v1.3-mvp"
 BENCHMARK_V13_SHADOW_SOURCE_STEP = "benchmark_v13_shadow"
 BENCHMARK_V13_SCREENING_SHADOW_SOURCE_STEP = "benchmark_v13_screening_shadow"
+MEDIA_EXTERNAL_NEWS_V13_SHADOW_SOURCE_STEP = "media_external_news_v13_shadow"
 
 _SHADOW_INSERT_SQL = """
     INSERT INTO ESG_DMA_SIGNAL_DETAIL (
@@ -1208,6 +1209,107 @@ def step4ReplaceBenchmarkShadowTracesTx(
             conn.close()
 
 
+def _buildMediaNewsShadowRows(
+    runId: int,
+    payloads: Sequence[Dict[str, Any]],
+) -> list[tuple]:
+    """Row-serialization SSOT for media_external.news Shadow INSERT. No DB access."""
+    rows = []
+    for payload in payloads:
+        payloadJson = step4WriteTrace(payload, asJson=True)
+        payloadData = json.loads(payloadJson)
+        extractedFacts = payloadData.get("extractedFacts")
+        if not isinstance(extractedFacts, dict):
+            raise ValueError("extractedFacts is required for media_external.news shadow trace")
+        subIssueCode = extractedFacts.get("subIssueCode")
+        if not subIssueCode:
+            raise ValueError("extractedFacts.subIssueCode is required for media_external.news shadow trace")
+        sourceType = extractedFacts.get("sourceType")
+        if sourceType != "news":
+            raise ValueError(
+                f"media_external.news shadow trace requires sourceType='news', got {sourceType!r}"
+            )
+        rawMetadata = extractedFacts.get("rawMetadata") or {}
+        rows.append((
+            runId,
+            None,
+            rawMetadata.get("rawIssueLabel") or "",
+            subIssueCode,
+            MEDIA_EXTERNAL_NEWS_V13_SHADOW_SOURCE_STEP,
+            "news",
+            None,
+            None,
+            extractedFacts.get("classificationConfidence"),
+            payloadJson,
+        ))
+    return rows
+
+
+def step4ReplaceMediaNewsShadowTracesTx(
+    runId: int,
+    factPayloads: Sequence[Dict[str, Any]],
+) -> int:
+    """
+    Replace-Active Transaction for media_external.news Shadow Rows.
+    factPayloads=[] is a valid empty-observation result — still runs the transaction.
+    """
+    factRows = _buildMediaNewsShadowRows(runId, factPayloads)
+
+    conn = getConn()
+    if conn is None:
+        raise RuntimeError("DB connection is not available for media news shadow replace transaction")
+    try:
+        conn.autocommit = False
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? FOR UPDATE",
+                (runId,),
+            )
+            lockRow = cur.fetchone()
+            if not lockRow:
+                raise RuntimeError(f"ESG_MATERIALITY_RUN row not found for runId={runId}")
+
+            cur.execute(
+                """
+                UPDATE ESG_DMA_SIGNAL_DETAIL
+                SET delete_yn = 1
+                WHERE esg_materiality_run_id = ?
+                  AND source_step = ?
+                  AND delete_yn = 0
+                """,
+                (runId, MEDIA_EXTERNAL_NEWS_V13_SHADOW_SOURCE_STEP),
+            )
+
+            if factRows:
+                cur.executemany(_SHADOW_INSERT_SQL, factRows)
+
+            cur.execute(
+                """
+                SELECT COUNT(*) AS row_count
+                FROM ESG_DMA_SIGNAL_DETAIL
+                WHERE esg_materiality_run_id = ?
+                  AND source_step = ?
+                  AND delete_yn = 0
+                """,
+                (runId, MEDIA_EXTERNAL_NEWS_V13_SHADOW_SOURCE_STEP),
+            )
+            verifyRow = cur.fetchone() or {}
+            rowCount = int(verifyRow.get("row_count") or 0)
+            if rowCount != len(factRows):
+                raise RuntimeError(
+                    f"News shadow count check failed: expected={len(factRows)}, row_count={rowCount}"
+                )
+        conn.commit()
+        return len(factRows)
+    except Exception:
+        if hasattr(conn, "rollback"):
+            conn.rollback()
+        raise
+    finally:
+        if hasattr(conn, "close"):
+            conn.close()
+
+
 # STEP 4. scoring_payload_json 값을 읽어 v1.3 payload dict로 반환한다.
 # Input: scoring_payload_json 값 (str | dict | None).
 # Output: 정규화된 v1.3 payload dict 또는 None (legacy / 빈 값).
@@ -1333,15 +1435,17 @@ __all__ = [
     "getMissingRequiredMetricCount",
     "getLatestReportRun",
     "getLatestReportRunByMaterialityRun",
-    # STEP 4: v1.3 Payload Trace helpers and Benchmark shadow persistence
+    # STEP 4: v1.3 Payload Trace helpers and shadow persistence
     "BENCHMARK_V13_SHADOW_SOURCE_STEP",
     "BENCHMARK_V13_SCREENING_SHADOW_SOURCE_STEP",
+    "MEDIA_EXTERNAL_NEWS_V13_SHADOW_SOURCE_STEP",
     "isLegacyPayload",
     "step4BuildTrace",
     "step4WriteTrace",
     "listBenchmarkShadowObservationRows",
     # step4SaveBenchmarkShadowTraces is intentionally omitted — test compatibility only
     "step4ReplaceBenchmarkShadowTracesTx",
+    "step4ReplaceMediaNewsShadowTracesTx",
     "step4ReadTrace",
     "step4UpdateTrace",
     "appendFactorTrace",

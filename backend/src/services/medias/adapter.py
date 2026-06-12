@@ -41,16 +41,21 @@ def _resolveNewsProviderKey(result: Mapping[str, Any]) -> str:
     return "unknown"
 
 
-_SIMILARITY_MATCH_ALLOWED_KEYS = frozenset({"issueId", "subIssueNameKr", "score"})
-
-
 def _sanitizeIssueSimilarityMatches(rawMatches) -> list:
-    if not rawMatches:
+    if not isinstance(rawMatches, list):
         return []
     sanitized = []
     for match in rawMatches:
-        if isinstance(match, dict):
-            sanitized.append({k: v for k, v in match.items() if k in _SIMILARITY_MATCH_ALLOWED_KEYS})
+        if not isinstance(match, Mapping):
+            continue
+        issueId = match.get("issueId")
+        subIssueNameKr = match.get("subIssueNameKr")
+        score = asFloat(match.get("score"))
+        sanitized.append({
+            "issueId": str(issueId) if issueId is not None and not isinstance(issueId, (dict, list, tuple, set)) else None,
+            "subIssueNameKr": str(subIssueNameKr) if subIssueNameKr is not None and not isinstance(subIssueNameKr, (dict, list, tuple, set)) else None,
+            "score": score,
+        })
     return sanitized
 
 

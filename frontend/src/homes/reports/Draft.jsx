@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
 import "@styles/draft.css";
 import jsPDF from "jspdf";
@@ -831,7 +831,7 @@ const Draft = () => {
 
         <div className="draft-stepper-row">
           {steps.map((step, index) => (
-            <div key={step.id} className="stepper-step-wrap">
+            <Fragment key={step.id}>
               <div
                 className={`step-box ${index === activeIndex ? "active" : ""}`}
                 onClick={() => { if (index !== activeIndex) navigate(step.path); }}
@@ -840,7 +840,7 @@ const Draft = () => {
                 <div className="step-title-text">{step.title}</div>
               </div>
               {index < steps.length - 1 && <div className="step-line"></div>}
-            </div>
+            </Fragment>
           ))}
         </div>
       </header>

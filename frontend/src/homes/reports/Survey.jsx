@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
 import "@styles/sr.css";
 import "@styles/survey.css";
@@ -365,13 +365,7 @@ const Survey = () => {
         ====================================================== */}
         <div className="survey-stepper-row">
           {steps.map((step, index) => (
-            <div
-              key={step.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
+            <Fragment key={step.id}>
               <div
                 className={`step-box ${index === activeIndex
                   ? "active"
@@ -393,8 +387,8 @@ const Survey = () => {
                 </div>
               </div>
 
-              
-            </div>
+              {index < steps.length - 1 && <div className="step-line"></div>}
+            </Fragment>
           ))}
         </div>
       </header>

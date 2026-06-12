@@ -34,14 +34,21 @@ def buildEvidenceSpan(result: Mapping[str, Any]) -> List[EvidenceSpanV13]:
     )]
 
 
+def _resolveNewsProviderKey(result: Mapping[str, Any]) -> str:
+    raw = result.get("source")
+    if raw is not None and str(raw).strip():
+        return str(raw).strip()
+    return "unknown"
+
+
 def step0NormalizeMediaFacts(analysisResults: list) -> list[ExtractedFactsV13]:
     facts: list[ExtractedFactsV13] = []
     for result in analysisResults or []:
         if not isinstance(result, Mapping):
-            continue
+            raise ValueError("media news raw result must be a mapping")
         subIssueCode = firstPresent(result, ("bestSubIssueId", "subIssueCode", "sub_issue_code"))
         if not subIssueCode:
-            continue
+            raise ValueError("media news raw result subIssueCode is required")
         rawIssueLabel = firstPresent(result, ("rawIssueLabel", "title"), "")
         displayName = firstPresent(result, ("bestSubIssueNameKr", "displaySubIssueName", "display_sub_issue_name"))
         similarityScore = asFloat(firstPresent(result, ("bestSimilarityScore", "similarityScore", "similarity_score")))
@@ -52,6 +59,8 @@ def step0NormalizeMediaFacts(analysisResults: list) -> list[ExtractedFactsV13]:
             "similarityScore": similarityScore,
             "mappingWeight": mappingWeight,
             "source": result.get("source"),
+            "mediaExternalSourceType": "news",
+            "providerKey": _resolveNewsProviderKey(result),
             "sourceUrl": result.get("url"),
             "publishedAt": result.get("publishedAt"),
             "issueSimilarityMatches": result.get("issueSimilarityMatches", []),
@@ -61,6 +70,20 @@ def step0NormalizeMediaFacts(analysisResults: list) -> list[ExtractedFactsV13]:
             sourceType="news",
             classificationConfidence=similarityScore,
             eventType=result.get("eventType"),
+            impactDirection=result.get("impactDirection"),
+            financialIroType=result.get("financialIroType"),
+            actualYn=result.get("actualYn"),
+            officialConfirmedYn=result.get("officialConfirmedYn"),
+            explicitImmediateActionYn=result.get("explicitImmediateActionYn"),
+            explicitNoUrgencyYn=result.get("explicitNoUrgencyYn"),
+            affectedCount=result.get("affectedCount"),
+            financialAmount=result.get("financialAmount"),
+            ratioValue=result.get("ratioValue"),
+            probabilityValue=result.get("probabilityValue"),
+            eventDate=result.get("eventDate"),
+            effectiveDate=result.get("effectiveDate"),
+            deadlineDate=result.get("deadlineDate"),
+            eventGroupCandidateId=result.get("eventGroupCandidateId"),
             evidenceSpans=buildEvidenceSpan(result),
             rawMetadata=metadata,
         ))

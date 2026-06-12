@@ -4,7 +4,7 @@ import Observing from "@assets/icons/result_page/observe.png";
 import Chain from "@assets/icons/result_page/valuechain.png";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
 import { useDispatch, useSelector } from "react-redux";
-import { generateReport } from "@stores/reportSlice";
+import { generateReport, fetchMaterialityResults, fetchMaterialitySelectionProcess } from "@stores/reportSlice";
 import { useAuth } from '@hooks/AuthContext.jsx';
 
 import "@styles/result.css";
@@ -33,37 +33,53 @@ const CAT_CONFIG = {
   G: { label: "거버넌스(G)", bg: "rgba(245,43,43,0.88)", badge: { bg: "#fee2e2", color: "#dc2626" } },
 };
 
+// ── 점수 스케일 변환 헬퍼 ────────────────────────────────────────
+// 10점 스케일 → 차트용 1~3 스케일 (7.0 = High 기준)
+const normalize10to3 = (v10) => (v10 != null ? (v10 / 10) * 3 : null);
+// 10점 스케일 → ImportanceBadge용 1/2/3 레벨
+const toImportanceLevel = (v10) => {
+  if (v10 == null) return null;
+  if (v10 < 6) return 1;
+  if (v10 < 9) return 2;
+  return 3;
+};
+
+// 도메인별 색상 헬퍼
+const domainColor = { E: "#22c55e", S: "#f59e0b", G: "#3b82f6" };
+const getDomainColor = (domain) => domainColor[domain] ?? "#94a3b8";
+
+// Fallback 데이터 (API 미연결 시 사용) ───────────────────────────
 // 선정된 이슈 데이터 (x: 재무중요성, y: 영향중요성, 1~3 스케일)
 const MATRIX_POINTS = [
-  { x: 3, y: 3, rank: 1, label: "기후목표·전환계획", cat: "E" },
-  { x: 1, y: 2, rank: 2, label: "저탄소·친환경 제품", cat: "E" },
-  { x: 2, y: 1, rank: 3, label: "교육훈련·역량개발", cat: "S" },
-  { x: 2, y: 2, rank: 4, label: "소비자 건강·제품안전", cat: "S" },
-  { x: 2.9, y: 2.8, rank: 5, label: "공급망 감사·시정조치", cat: "S" },
-  { x: 1, y: 3, rank: 6, label: "교육훈련·역량개발", cat: "G" },
-  { x: 1.8, y: 1, rank: 7, label: "소비자 건강·제품안전", cat: "G" },
-  { x: 3.9, y: 2.8, rank: 8, label: "공급망 감사·시정조치", cat: "G" },
+  // { x: 3, y: 3, rank: 1, label: "기후목표·전환계획", cat: "E" },
+  // { x: 1, y: 2, rank: 2, label: "저탄소·친환경 제품", cat: "E" },
+  // { x: 2, y: 1, rank: 3, label: "교육훈련·역량개발", cat: "S" },
+  // { x: 2, y: 2, rank: 4, label: "소비자 건강·제품안전", cat: "S" },
+  // { x: 2.9, y: 2.8, rank: 5, label: "공급망 감사·시정조치", cat: "S" },
+  // { x: 1, y: 3, rank: 6, label: "교육훈련·역량개발", cat: "G" },
+  // { x: 1.8, y: 1, rank: 7, label: "소비자 건강·제품안전", cat: "G" },
+  // { x: 3.9, y: 2.8, rank: 8, label: "공급망 감사·시정조치", cat: "G" },
 ];
 
 const SELECTED_ISSUES = [
-  { name: "기후변화 대응", candRank: 1, finalRank: 1, reason: "양측 점수 High, 규제 및 시장 영향 큼, 이해관계자 관심도 높음" },
-  { name: "지배구조 건전성 강화", candRank: 2, finalRank: 2, reason: "재무적 영향 High, 투자자 요구 증가, 거버넌스 핵심 이슈" },
-  { name: "공급망 지속가능성 관리", candRank: 3, finalRank: 3, reason: "공급망 리스크 및 평판 영향 큼, 고객 요구 증가" },
-  { name: "인재 확보 및 육성", candRank: 4, finalRank: 4, reason: "사회적 영향 High, 인력 경쟁 심화" },
-  { name: "그린 제품·서비스 혁신", candRank: 6, finalRank: 5, reason: "기회 요인 크고, 매출 및 시장 확장과 연계" },
-  { name: "에너지 효율 및 온실가스 관리", candRank: 5, finalRank: 6, reason: "온실가스 감축 목표 연계, 비용 절감 효과" },
-  { name: "제품 안전·품질 강화", candRank: 7, finalRank: 7, reason: "고객 신뢰 및 규제 영향 큼" },
-  { name: "정보보안 및 데이터 보호", candRank: 8, finalRank: 8, reason: "디지털 전환 가속, 정보보안 리스크 증가" },
-  { name: "사업장 안전보건", candRank: 9, finalRank: 9, reason: "임직원 안전과 직결, 규제 및 평판 영향" },
-  { name: "생물다양성 보호", candRank: 12, finalRank: 10, reason: "자연자본 영향 증가, 글로벌 이니셔티브 대응" },
+  // { name: "기후변화 대응", candRank: 1, finalRank: 1, reason: "양측 점수 High, 규제 및 시장 영향 큼, 이해관계자 관심도 높음" },
+  // { name: "지배구조 건전성 강화", candRank: 2, finalRank: 2, reason: "재무적 영향 High, 투자자 요구 증가, 거버넌스 핵심 이슈" },
+  // { name: "공급망 지속가능성 관리", candRank: 3, finalRank: 3, reason: "공급망 리스크 및 평판 영향 큼, 고객 요구 증가" },
+  // { name: "인재 확보 및 육성", candRank: 4, finalRank: 4, reason: "사회적 영향 High, 인력 경쟁 심화" },
+  // { name: "그린 제품·서비스 혁신", candRank: 6, finalRank: 5, reason: "기회 요인 크고, 매출 및 시장 확장과 연계" },
+  // { name: "에너지 효율 및 온실가스 관리", candRank: 5, finalRank: 6, reason: "온실가스 감축 목표 연계, 비용 절감 효과" },
+  // { name: "제품 안전·품질 강화", candRank: 7, finalRank: 7, reason: "고객 신뢰 및 규제 영향 큼" },
+  // { name: "정보보안 및 데이터 보호", candRank: 8, finalRank: 8, reason: "디지털 전환 가속, 정보보안 리스크 증가" },
+  // { name: "사업장 안전보건", candRank: 9, finalRank: 9, reason: "임직원 안전과 직결, 규제 및 평판 영향" },
+  // { name: "생물다양성 보호", candRank: 12, finalRank: 10, reason: "자연자본 영향 증가, 글로벌 이니셔티브 대응" },
 ];
 
 const EXCLUDED_ISSUES = [
-  { name: "수자원 관리", candRank: 13, reason: "재무적 영향 Medium 이하, 분석축 반복 관측 부족" },
-  { name: "지역사회 투자 및 공헌", candRank: 18, reason: "사회적 영향은 있으나, 전략적 연계성 낮음" },
-  { name: "폐기물 및 순환경제", candRank: 21, reason: "영향도는 있으나, 우선순위 상대적으로 낮음" },
-  { name: "동물복지", candRank: 24, reason: "가치사슬 관련성 낮고, 이해관계자 관심도 낮음" },
-  { name: "정치자금 및 로비 활동", candRank: 28, reason: "분석축 반복 관측 부족, 리스크 영향 낮음" },
+  // { name: "수자원 관리", candRank: 13, reason: "재무적 영향 Medium 이하, 분석축 반복 관측 부족" },
+  // { name: "지역사회 투자 및 공헌", candRank: 18, reason: "사회적 영향은 있으나, 전략적 연계성 낮음" },
+  // { name: "폐기물 및 순환경제", candRank: 21, reason: "영향도는 있으나, 우선순위 상대적으로 낮음" },
+  // { name: "동물복지", candRank: 24, reason: "가치사슬 관련성 낮고, 이해관계자 관심도 낮음" },
+  // { name: "정치자금 및 로비 활동", candRank: 28, reason: "분석축 반복 관측 부족, 리스크 영향 낮음" },
 ];
 
 
@@ -222,13 +238,13 @@ const MatrixTooltip = ({ active, payload }) => {
 // ════════════════════════════════════════════════════════════════
 // 이중 중대성 매트릭스 — 메인 컴포넌트
 // ════════════════════════════════════════════════════════════════
-const DoubleMaterialityMatrix = () => {
+const DoubleMaterialityMatrix = ({ data = MATRIX_POINTS }) => {
   const [hoveredKey, setHoveredKey] = useState(null);
   const chartWrapRef = useRef(null); // 배경 오버레이용 컨테이너 ref
 
   // 실제 데이터에 있는 카테고리만 렌더링 (CAT_CONFIG 선언 순서 유지)
   const activeCats = Object.keys(CAT_CONFIG).filter((cat) =>
-    MATRIX_POINTS.some((p) => p.cat === cat)
+    data.some((p) => p.cat === cat)
   );
 
   return (
@@ -328,7 +344,7 @@ const DoubleMaterialityMatrix = () => {
                 <Scatter
                   key={cat}
                   name={CAT_CONFIG[cat].label}
-                  data={MATRIX_POINTS.filter((p) => p.cat === cat)}
+                  data={data.filter((p) => p.cat === cat)}
                   shape={<RankedDot />}
                   fill={CAT_CONFIG[cat].bg}
                 />
@@ -350,7 +366,7 @@ const DoubleMaterialityMatrix = () => {
 
       {/* 선정 이슈 목록 */}
       <div className="dmat-issue-grid">
-        {MATRIX_POINTS.map((p) => {
+        {data.map((p) => {
           const cfg = CAT_CONFIG[p.cat] ?? { bg: "rgba(148,163,184,0.9)", badge: { bg: "#f1f5f9", color: "#475569" } };
           const key = `${p.cat}-${p.rank}`;
           return (
@@ -512,6 +528,87 @@ const Result = () => {
   const navigate = useNavigate();
   const activeIndex = 3;
 
+  // ── API 데이터 ──────────────────────────────────────────────────
+  const runId = useSelector((state) => state.report.currentRunId);
+  const materialityResults = useSelector((state) => state.report.materialityResults);
+  const materialitySelectionProcess = useSelector((state) => state.report.materialitySelectionProcess);
+
+  useEffect(() => {
+    if (runId) {
+      dispatch(fetchMaterialityResults({ runId }));
+      dispatch(fetchMaterialitySelectionProcess({ runId }));
+    }
+  }, [dispatch, runId]);
+
+  // matrixItems → 차트용 1~3 스케일 변환
+  const apiMatrixPoints = materialityResults?.matrixItems?.map((item) => ({
+    x: normalize10to3(item.xFinancialScore10),
+    y: normalize10to3(item.yImpactScore10),
+    rank: item.rankNo,
+    label: item.displaySubIssueName,
+    cat: item.domain,
+    selected: item.selectedYn,
+  }));
+  const matrixChartData = apiMatrixPoints ?? MATRIX_POINTS;
+
+  // 요약 카드 수치 (API 우선, fallback: 하드코딩)
+  const summaryEvalCount = materialityResults?.totalCandidateSubIssueCount ?? 62;
+  const summaryScoredCount = materialityResults?.scoredSubIssueCount ?? 25;
+  const summarySelectedCount = materialityResults?.selectedSubIssueCount ?? 10;
+  const summaryHighCount = materialityResults?.highPriorityCount ?? 5;
+
+  // 선정 이슈 테이블 데이터 (선정 과정 API)
+  const selectedIssues = materialitySelectionProcess?.selectedIssues?.map((item) => ({
+    name: item.displaySubIssueName,
+    candRank: item.rankNo,
+    finalRank: item.rankNo,
+    reason: item.selectionReason ?? "-",
+  })) ?? SELECTED_ISSUES;
+
+  // 제외 이슈 테이블 데이터 (선정 과정 API)
+  const excludedIssues = materialitySelectionProcess?.excludedIssues?.map((item) => ({
+    name: item.displaySubIssueName,
+    candRank: item.rankNo,
+    reason: item.selectionReason ?? "-",
+  })) ?? EXCLUDED_ISSUES;
+
+  // 선정 과정 플로우 수치
+  const flowCandidateCount = materialitySelectionProcess?.candidateCount ?? 62;
+  const flowScoredCount = materialitySelectionProcess?.scoredCount ?? 25;
+  const flowSelectedCount = materialitySelectionProcess?.selectedCount ?? 10;
+
+  // 최종 Top 이슈 점수 분해 (items[])
+  const topIssueScores = materialityResults?.items?.slice(0, 5).map((item) => ({
+    name: item.displaySubIssueName,
+    finalScore: item.finalScore05?.toFixed(2) ?? "-",
+    impact: item.finalImpactScore05?.toFixed(2) ?? "-",
+    financial: item.finalFinancialScore05?.toFixed(2) ?? "-",
+    benchmark: item.benchmarkImpactScore05?.toFixed(2) ?? "-",
+    media: item.mediaImpactScore05?.toFixed(2) ?? "-",
+    survey: item.surveyImpactScore05?.toFixed(2) ?? "-",
+  }));
+
+  // 선정 사유 (selectionReasons[])
+  const selectionReasonItems = materialityResults?.selectionReasons;
+
+  // 우선순위 이슈 (topIssues[])
+  const priorityItems = materialityResults?.topIssues?.map((issue) => ({
+    rank: `${issue.rankNo}순위`,
+    color: getDomainColor(issue.domain),
+    name: issue.displaySubIssueName,
+    score: String(issue.finalScore05?.toFixed(2) ?? ""),
+  })) ?? PRIORITY_ITEMS;
+
+  // 산점도 테이블 행 (matrixItems[])
+  const scatterTableRows = materialityResults?.matrixItems?.map((item) => ({
+    rank: item.rankNo,
+    cat: item.domain,
+    name: item.displaySubIssueName,
+    selected: item.selectedYn,
+    fin: toImportanceLevel(item.xFinancialScore10),
+    impact: toImportanceLevel(item.yImpactScore10),
+  })) ?? SCATTER_TABLE_ROWS;
+
   const steps = [
     { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
     { id: 2, title: "미디어 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><polyline points="5,13 8,10 11,12 14,8 19,6" /></svg>, path: "/media" },
@@ -549,7 +646,6 @@ const Result = () => {
   };
   const { selectedCompany } = useAuth();
   const companyId = selectedCompany.company_id;
-  const runId = useSelector((state) => state.report.currentRunId);
   const year = useSelector((state) => state.report.currentYear);
   const handleGenerateReport = async () => {
     console.log(companyId, runId, year)
@@ -616,7 +712,7 @@ const Result = () => {
           {/* ── 왼쪽 패널 ── */}
           <section id="result-left-panel">
             <div className="result-tab-bar">
-              {["최종선정요약", "후보군 최종선정 과정", "점수 해석", "다음 단계 연결"].map((label, i) => (
+              {["최종선정요약", "후보군 최종선정 과정", "점수 해석"].map((label, i) => (
                 <button
                   key={i}
                   className={`result-tab-button ${leftTab === i ? "active" : ""}`}
@@ -627,10 +723,8 @@ const Result = () => {
               ))}
             </div>
 
-            {/* 탭 0: 최종선정요약 */}
             {leftTab === 0 && (
               <div className="result-tab-pane">
-                {/* 최종 선정 요약 */}
                 <div className="card-container">
                   <div className="card-title-row">
                     <span className="card-title">최종 선정 요약</span>
@@ -638,10 +732,10 @@ const Result = () => {
                   </div>
                   <div id="result-summary-grid" className="summary-grid">
                     {[
-                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>, label: "평가 대상", value: "62개", cls: "" },
-                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2z" /></svg>, label: "최종 선정", value: "10개", cls: "success", valueClass: "text-green" },
-                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8"><polyline points="17 11 12 6 7 11" /><polyline points="17 18 12 13 7 18" /></svg>, label: "High 영역", value: "5개", cls: "danger", valueClass: "text-red" },
-                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>, label: "후보군", value: "25개", cls: "" },
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>, label: "평가 대상", value: `${summaryEvalCount}개`, cls: "" },
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2z" /></svg>, label: "최종 선정", value: `${summarySelectedCount}개`, cls: "success", valueClass: "text-green" },
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8"><polyline points="17 11 12 6 7 11" /><polyline points="17 18 12 13 7 18" /></svg>, label: "High 영역", value: `${summaryHighCount}개`, cls: "danger", valueClass: "text-red" },
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>, label: "후보군", value: `${summaryScoredCount}개`, cls: "" },
                     ].map((card, i) => (
                       <div key={i} className={`info-card ${card.cls}`}>
                         {card.icon}
@@ -652,7 +746,6 @@ const Result = () => {
                   </div>
                 </div>
 
-                {/* 최종 Top 이슈 점수 분해 */}
                 <div className="card-container">
                   <div className="card-title">최종 Top 이슈 점수 분해</div>
                   <table className="result-table">
@@ -660,8 +753,23 @@ const Result = () => {
                       <tr><th>이슈</th><th>최종점수</th><th>영향</th><th>재무</th><th>벤치마킹</th><th>미디어</th><th>설문</th></tr>
                     </thead>
                     <tbody>
-                      <tr><td className="issue-name">기후변화 대응</td><td className="score-main">4.61</td><td>4.40</td><td>4.75</td><td>4.20</td><td>4.60</td><td>4.70</td></tr>
-                      <tr><td className="issue-name">에너지 관리</td><td className="score-highlight">4.34</td><td>4.10</td><td>4.50</td><td>4.00</td><td>4.30</td><td>4.40</td></tr>
+                      {topIssueScores
+                        ? topIssueScores.map((row, i) => (
+                          <tr key={i}>
+                            <td className="issue-name">{row.name}</td>
+                            <td className="score-main">{row.finalScore}</td>
+                            <td>{row.impact}</td>
+                            <td>{row.financial}</td>
+                            <td>{row.benchmark}</td>
+                            <td>{row.media}</td>
+                            <td>{row.survey}</td>
+                          </tr>
+                        ))
+                        : <>
+                          <tr><td className="issue-name">기후변화 대응</td><td className="score-main">4.61</td><td>4.40</td><td>4.75</td><td>4.20</td><td>4.60</td><td>4.70</td></tr>
+                          <tr><td className="issue-name">에너지 관리</td><td className="score-highlight">4.34</td><td>4.10</td><td>4.50</td><td>4.00</td><td>4.30</td><td>4.40</td></tr>
+                        </>
+                      }
                     </tbody>
                   </table>
                 </div>
@@ -670,28 +778,38 @@ const Result = () => {
                 <div className="card-container">
                   <div className="card-title">선정 사유 요약</div>
                   <div id="result-reason-list">
-                    {[
-                      {
-                        bg: "#f0fdf4", title: "영향 및 재무 동시 고점 이슈 우선", desc: "영향 중대성과 재무 중대성 모두 높은 이슈를 우선 최종 선정하였습니다.",
-                        icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>
-                      },
-                      {
-                        bg: "#eff6ff", title: "이해관계자 의견 반영", desc: "설문 결과와 주요 이해관계자 인터뷰를 반영하여 중요 이슈를 확정하였습니다.",
-                        icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-                      },
-                      {
-                        bg: "#f5f3ff", title: "지속가능경영 전략 연계", desc: "기업의 전략 방향 및 리스크/기회 관점에서 관리가 필요한 이슈를 포함하였습니다.",
-                        icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
-                      },
-                    ].map((item, i) => (
-                      <div key={i} className="result-reason-row">
-                        <div className="result-reason-icon" style={{ background: item.bg }}>{item.icon}</div>
-                        <div>
-                          <div className="result-reason-title">{item.title}</div>
-                          <p className="result-reason-desc">{item.desc}</p>
+                    {selectionReasonItems && selectionReasonItems.length > 0
+                      ? selectionReasonItems.map((item, i) => {
+                        const cfg = CAT_BADGE_STYLE[item.domain] ?? { bg: "#f1f5f9", color: "#475569", text: item.domain };
+                        return (
+                          <div key={item.subIssueCode ?? i} className="result-reason-row">
+                            <div className="result-reason-icon" style={{ background: cfg.bg }}>
+                              <span style={{ fontWeight: 800, color: cfg.color, fontSize: 14 }}>{item.rankNo}</span>
+                            </div>
+                            <div>
+                              <div className="result-reason-title">
+                                {item.displaySubIssueName}
+                                <span className="dmat-cat-badge" style={{ background: cfg.bg, color: cfg.color, marginLeft: 8 }}>{cfg.text}</span>
+                              </div>
+                              <p className="result-reason-desc">{item.selectionReason ?? "-"}</p>
+                            </div>
+                          </div>
+                        );
+                      })
+                      : [
+                        { bg: "#f0fdf4", title: "영향 및 재무 동시 고점 이슈 우선", desc: "영향 중대성과 재무 중대성 모두 높은 이슈를 우선 최종 선정하였습니다.", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg> },
+                        { bg: "#eff6ff", title: "이해관계자 의견 반영", desc: "설문 결과와 주요 이해관계자 인터뷰를 반영하여 중요 이슈를 확정하였습니다.", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> },
+                        { bg: "#f5f3ff", title: "지속가능경영 전략 연계", desc: "기업의 전략 방향 및 리스크/기회 관점에서 관리가 필요한 이슈를 포함하였습니다.", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg> },
+                      ].map((item, i) => (
+                        <div key={i} className="result-reason-row">
+                          <div className="result-reason-icon" style={{ background: item.bg }}>{item.icon}</div>
+                          <div>
+                            <div className="result-reason-title">{item.title}</div>
+                            <p className="result-reason-desc">{item.desc}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    }
                   </div>
                 </div>
               </div>
@@ -709,15 +827,15 @@ const Result = () => {
                     <div className="flow-col">
                       {[
                         {
-                          count: "62개 평가 대상", desc: "벤치마킹, 미디어, 이해관계자 설문을 통해<br>도출된 전체 평가 이슈 수집", last: false,
+                          count: `${flowCandidateCount}개 평가 대상`, desc: "벤치마킹, 미디어, 이해관계자 설문을 통해<br>도출된 전체 평가 이슈 수집", last: false,
                           icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                         },
                         {
-                          count: "25개 후보군", desc: "양축 점수 기준 충족 및 주요성 기준을<br>충족한 이슈", last: false,
+                          count: `${flowScoredCount}개 후보군`, desc: "양축 점수 기준 충족 및 주요성 기준을<br>충족한 이슈", last: false,
                           icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
                         },
                         {
-                          count: "최종 10개 선정", desc: "이사회 및 ESG 실무 협의 기반<br>보고서 핵심 이슈로 최종 선정", last: true,
+                          count: `최종 ${flowSelectedCount}개 선정`, desc: "이사회 및 ESG 실무 협의 기반<br>보고서 핵심 이슈로 최종 선정", last: true,
                           icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
                         },
                       ].map((card, i) => (
@@ -770,8 +888,8 @@ const Result = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {SELECTED_ISSUES.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: i < SELECTED_ISSUES.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                      {selectedIssues.map((row, i) => (
+                        <tr key={i} style={{ borderBottom: i < selectedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
                           <td className="td-name">{row.name}</td>
                           <td className="td-center">{row.candRank}</td>
                           <td className="td-center-green">{row.finalRank}</td>
@@ -795,8 +913,8 @@ const Result = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {EXCLUDED_ISSUES.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: i < EXCLUDED_ISSUES.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                      {excludedIssues.map((row, i) => (
+                        <tr key={i} style={{ borderBottom: i < excludedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
                           <td className="td-name">{row.name}</td>
                           <td className="td-center">{row.candRank}</td>
                           <td className="td-center-muted">-</td>
@@ -883,17 +1001,50 @@ const Result = () => {
                     ))}
                   </div>
                 </section>
+                <section>
+                  <div className="result-matrix-zones">
+                    <span className="section-title">4. 바로가기</span>
+                  </div>
+                  <div id="shortcut-grid">
+                    {[
+                      {
+                        bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onboard",
+                        icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+                      },
+                      {
+                        bg: "#ede9fe", title: "보고서 초안 생성", desc: "선택 이슈 기반 초안 생성", path: "/draft",
+                        icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                      },
+                    ].map((item) => (
+                      <div
+                        key={item.title}
+                        className={`shortcut-card ${item.path === "/draft" && isGenerating ? "shortcut-disabled" : ""}`}
+                        onClick={() => {
+                          if (item.path === "/draft" && isGenerating) return;
+                          item.path === "/draft" ? handleGenerateReport() : navigate(item.path);
+                        }}
+                      >
+                        <div className="shortcut-icon" style={{ background: item.bg }}>{item.icon}</div>
+                        <div className="shortcut-text">
+                          <div className="shortcut-title">{item.title}</div>
+                          <div className="shortcut-desc">
+                            {item.path === "/draft" && isGenerating ? "보고서 생성 중..." : item.desc}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
               </div>
             )}
 
             {/* 탭 2: 다음 단계 연결 */}
-            {leftTab === 3 && (
+            {/* {leftTab === 3 && (
               <div className="card-container result-tab-pane" id="result-next-steps">
                 <div className="card-title">다음 단계 연결</div>
 
 
 
-                {/* 섹션 1: 보고서 반영 우선순위 */}
                 <div className="accordion">
                   <div className="accordion-head static">
                     <span className="accordion-title">1. 보고서 반영 우선순위</span>
@@ -908,7 +1059,7 @@ const Result = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {PRIORITY_ITEMS.map((item, index) => {
+                        {priorityItems.map((item, index) => {
                           const percent = (Number(item.score) / 5) * 100;
 
                           const category =
@@ -961,7 +1112,6 @@ const Result = () => {
                   </div>
                 </div>
 
-                {/* 섹션 2: 필요 온보딩 지표 */}
                 <div className="accordion">
                   <div className="accordion-head static">
                     <span className="accordion-title">2. 필요 온보딩 지표</span>
@@ -991,7 +1141,6 @@ const Result = () => {
                   </div>
                 </div>
 
-                {/* 섹션 3: 부족 데이터 현황 */}
                 <div className="accordion">
                   <div className="accordion-head static">
                     <span className="accordion-title">3. 부족 데이터 현황</span>
@@ -1015,7 +1164,6 @@ const Result = () => {
                                 <span className="missing-text">{row.missing}</span>
                               </span>
                             </td>
-                            {/* [TODO-동작] row.pct / row.barColor 로 프로그레스 바 그릴 수 있음 */}
                             <td>
                               <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                                 <span style={{ flex: 1, height: "8px", borderRadius: "4px", background: "#e5e7eb", overflow: "hidden" }}>
@@ -1033,7 +1181,6 @@ const Result = () => {
                   </div>
                 </div>
 
-                {/* 섹션 4: 바로가기 */}
                 <div className="accordion">
                   <div className="accordion-head static">
                     <span className="accordion-title">4. 바로가기</span>
@@ -1070,7 +1217,7 @@ const Result = () => {
                 </div>
               </div>
             )
-            }
+            } */}
           </section >
 
           {/* ── 오른쪽 패널 ── */}
@@ -1080,7 +1227,7 @@ const Result = () => {
               <div className="result-tab-pane">
                 <div className="matrix-card">
                   <div id="matrix-card-title">이중 중대성 매트릭스</div>
-                  <DoubleMaterialityMatrix />
+                  <DoubleMaterialityMatrix data={matrixChartData} />
                 </div>
                 <div id="table-card">
                   <div className="scatter-legend-row">
@@ -1097,16 +1244,14 @@ const Result = () => {
                   </div>
                   <table className="result-table">
                     <thead>
-                      <tr><th>순위</th><th>구분</th><th>탑 이슈</th><th>Type</th><th>Period</th><th>재무중요성</th><th>영향중요성</th></tr>
+                      <tr><th>순위</th><th>구분</th><th>탑 이슈</th><th>재무중요성</th><th>영향중요성</th></tr>
                     </thead>
                     <tbody>
-                      {SCATTER_TABLE_ROWS.map((row) => (
+                      {scatterTableRows.map((row) => (
                         <tr key={row.rank}>
                           <td className="score-main">{row.rank}</td>
-                          <td><span className={`badge badge-${row.cat.toLowerCase()}`}>{row.cat}</span></td>
+                          <td><span className={`badge badge-${row.cat?.toLowerCase()}`}>{row.cat}</span></td>
                           <td className="issue-name">{row.name}</td>
-                          <td><span className={row.type === "위기" ? "type-badge-risk" : "type-badge-opp"}>{row.type}</span></td>
-                          <td><span className={row.period === "장기" ? "period-badge-long" : "period-badge-short"}>{row.period}</span></td>
                           <td><ImportanceBadge value={row.fin} /></td>
                           <td><ImportanceBadge value={row.impact} /></td>
                         </tr>

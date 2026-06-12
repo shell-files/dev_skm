@@ -737,6 +737,42 @@ class PhaseC212PartialCrawlProtectionTest(unittest.TestCase):
         txMock = self._runCrawlWithPatches(crawlResult)
         txMock.assert_not_called()
 
+    # 43. C2.1.2 회귀: 기사 존재 + Source FAILED → Legacy saveSignals 1회 호출 유지 + Shadow TX 미호출
+    def test_articles_with_failed_source_keeps_legacy_save_and_skips_shadow_replace(self):
+        crawlResult = self._CrawlExecutionResult(
+            requestedSources=["impacton", "esgeconomy"],
+            allowedSources=["impacton", "esgeconomy"],
+            sourceBreakdown=[
+                self._makeBreakdown("impacton", "SUCCESS"),
+                self._makeBreakdown("esgeconomy", "FAILED", error="network error"),
+            ],
+            articles=[buildNewsResult()],
+            errors=[self._MediaCrawlerError(sourceKey="esgeconomy", message="network error")],
+        )
+        legacySignal = object()
+        svc = self._service
+
+        with patch.object(svc, "crawlNewsArticles", return_value=crawlResult), \
+             patch.object(svc, "processMediaPipeline", return_value=[buildNewsResult()]), \
+             patch.object(svc, "convertMediaToDmaSignals", return_value=[legacySignal]), \
+             patch.object(svc, "applyMediaBaseline", return_value=[legacySignal]), \
+             patch.object(svc, "scoreSignals", return_value=[legacySignal]), \
+             patch.object(svc, "saveSignals") as saveMock, \
+             patch.object(svc, "applySavedSignalCounts", return_value=[]), \
+             patch.object(svc, "getMediaCoverage", return_value={"coverageStatus": "LOW"}), \
+             patch.object(svc, "countMediaSubIssues", return_value=0), \
+             patch.object(svc, "listTopMediaIssues", return_value=[]), \
+             patch.object(svc, "step4ReplaceMediaNewsShadowTracesTx") as txMock:
+            svc.runMediaCrawlAndAnalyze(self._makeRequest())
+
+        saveMock.assert_called_once_with(
+            runId=99,
+            signals=[legacySignal],
+            fileId=None,
+            sourceTitle="Media Analysis",
+        )
+        txMock.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

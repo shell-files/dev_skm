@@ -222,6 +222,18 @@ def _validateBandSection(section: Mapping[str, Any], section_name: str, must_hav
                 raise DmaRuleValidationError(
                     f"media_event_resolver_policy: {section_name}.bands[{idx}]->[{idx+1}] overlap (max={hi} > min={lo_next})"
                 )
+            # hi == lo_next: verify exactly one endpoint includes the boundary
+            if hi == lo_next:
+                prev_max_exc = bool(bands[idx].get("maxExclusive", False))
+                next_min_inc = bool(bands[idx + 1].get("minInclusive", True))
+                if not prev_max_exc and next_min_inc:
+                    raise DmaRuleValidationError(
+                        f"media_event_resolver_policy: {section_name}.bands[{idx}]->[{idx+1}] boundary duplicate: both include {hi}"
+                    )
+                if prev_max_exc and not next_min_inc:
+                    raise DmaRuleValidationError(
+                        f"media_event_resolver_policy: {section_name}.bands[{idx}]->[{idx+1}] boundary gap: neither includes {hi}"
+                    )
 
 
 def validateMediaEventResolverPolicy(policy: Mapping[str, Any]) -> None:

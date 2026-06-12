@@ -12,13 +12,16 @@ from src.services.medias.adapter import convertMediaToDmaSignals, step0Normalize
 from src.services.medias.baseline import applyMediaBaseline
 from src.services.medias.crawler import applySavedSignalCounts, crawlNewsArticles
 from src.services.medias.pipeline import processMediaPipeline
-from src.services.materialities.orchestrator import step0BuildFactTrace
+from src.services.materialities.orchestrator import (
+    step0BuildFactTrace,
+    step1BuildMediaNewsCanonicalPayloads,
+)
 from src.utils.dmarepository import (
     getMediaCoverage,
     countMediaSubIssues,
     listTopMediaIssues,
     saveSignals,
-    step4ReplaceMediaNewsShadowTracesTx,
+    step4ReplaceMediaNewsShadowBundleTx,
 )
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
 from src.utils.subissuemaster import getSubIssueDisplayName
@@ -194,11 +197,22 @@ def _score10(score05):
 
 def _replaceMediaNewsShadowFromPipelineResults(runId: int, pipelineResults: list) -> None:
     shadowFacts = step0NormalizeMediaFacts(pipelineResults)
+
     factPayloads = [
         step0BuildFactTrace(extractedFact=fact, sourceChannel="media_external")
         for fact in shadowFacts
     ]
-    step4ReplaceMediaNewsShadowTracesTx(runId=runId, factPayloads=factPayloads)
+
+    canonicalPayloads = step1BuildMediaNewsCanonicalPayloads(
+        shadowFacts,
+        evaluationDate=date.today().isoformat(),
+    )
+
+    step4ReplaceMediaNewsShadowBundleTx(
+        runId=runId,
+        factPayloads=factPayloads,
+        canonicalPayloads=canonicalPayloads,
+    )
 
 
 def _isCrawlComplete(crawlResult) -> bool:

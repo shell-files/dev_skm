@@ -323,15 +323,18 @@ class PhaseBOrchestratorTest(unittest.TestCase):
         ):
             self.assertNotIn(banned, source)
 
-    def test_orchestrator_public_surface_is_six_functions(self):
+    def test_orchestrator_public_surface_is_seven_functions(self):
         from src.services.materialities import orchestrator
 
         functions = sorted(
             name for name, value in vars(orchestrator).items()
-            if callable(value) and getattr(value, "__module__", None) == orchestrator.__name__
+            if callable(value)
+            and getattr(value, "__module__", None) == orchestrator.__name__
+            and not name.startswith("_")
         )
         self.assertEqual(functions, [
             "step0BuildFactTrace",
+            "step1BuildMediaNewsCanonicalPayloads",
             "step1RunCanonical",
             "step2BuildBenchmarkScreeningPayloads",
             "step2ResolveBenchmarkObservation",

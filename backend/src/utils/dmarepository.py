@@ -908,6 +908,9 @@ _V13_RULE_VERSION = "dma-rule-v1.3-mvp"
 BENCHMARK_V13_SHADOW_SOURCE_STEP = "benchmark_v13_shadow"
 BENCHMARK_V13_SCREENING_SHADOW_SOURCE_STEP = "benchmark_v13_screening_shadow"
 MEDIA_EXTERNAL_NEWS_V13_SHADOW_SOURCE_STEP = "media_external_news_v13_shadow"
+MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP = (
+    "media_external_news_v13_canonical_shadow"
+)
 
 _SHADOW_INSERT_SQL = """
     INSERT INTO ESG_DMA_SIGNAL_DETAIL (
@@ -1026,6 +1029,7 @@ def step4BuildTrace(
     ruleVersion: Optional[str] = None,
     configHash: Optional[str] = None,
     evaluatedAt: Optional[str] = None,
+    eventResolutionTrace: Any = None,
 ) -> Dict[str, Any]:
     if ruleVersion is None or configHash is None:
         from src.utils import dmaruleregistry
@@ -1046,6 +1050,7 @@ def step4BuildTrace(
         aggregationTrace=aggregationTrace,
         legacyCompatibility=legacyCompatibility or LegacyCompatibilityV13(),
         evaluatedAt=evaluatedAt,
+        eventResolutionTrace=eventResolutionTrace,
     )
     return payload.model_dump(mode="json", by_alias=False)
 
@@ -1250,7 +1255,8 @@ def step4ReplaceMediaNewsShadowTracesTx(
     factPayloads: Sequence[Dict[str, Any]],
 ) -> int:
     """
-    Replace-Active Transaction for media_external.news Shadow Rows.
+    LEGACY TEST COMPATIBILITY ONLY.
+    Active Runtime uses step4ReplaceMediaNewsShadowBundleTx().
     factPayloads=[] is a valid empty-observation result — still runs the transaction.
     """
     factRows = _buildMediaNewsShadowRows(runId, factPayloads)
@@ -1301,6 +1307,187 @@ def step4ReplaceMediaNewsShadowTracesTx(
                 )
         conn.commit()
         return len(factRows)
+    except Exception:
+        if hasattr(conn, "rollback"):
+            conn.rollback()
+        raise
+    finally:
+        if hasattr(conn, "close"):
+            conn.close()
+
+
+def _getAxisScore(payloadData: Dict[str, Any], axis: str) -> Optional[float]:
+    """Extract score for a named axis from a serialized ScoringPayloadV13 dict."""
+    for entry in payloadData.get("axisScores") or []:
+        if isinstance(entry, dict) and entry.get("axis") == axis:
+            score = entry.get("score")
+            return float(score) if score is not None else None
+    return None
+
+
+def _buildMediaNewsCanonicalShadowRows(
+    runId: int,
+    payloads: Sequence[Dict[str, Any]],
+) -> list[tuple]:
+    """Row-serialization SSOT for media_external.news Canonical Shadow INSERT. No DB access."""
+    rows = []
+    for payload in payloads:
+        payloadJson = step4WriteTrace(payload, asJson=True)
+        payloadData = json.loads(payloadJson)
+
+        if payloadData.get("scorePurpose") != "CANONICAL_IRO":
+            raise ValueError(
+                f"Canonical Shadow scorePurpose must be 'CANONICAL_IRO', got {payloadData.get('scorePurpose')!r}"
+            )
+        if payloadData.get("sourceChannel") != "media_external":
+            raise ValueError(
+                f"Canonical Shadow sourceChannel must be 'media_external', got {payloadData.get('sourceChannel')!r}"
+            )
+        subIssueCode = payloadData.get("subIssueCode")
+        if not subIssueCode:
+            raise ValueError("subIssueCode is required for Canonical Shadow trace")
+
+        extractedFacts = payloadData.get("extractedFacts")
+        if not isinstance(extractedFacts, dict):
+            raise ValueError("extractedFacts is required for Canonical Shadow trace")
+        efCode = extractedFacts.get("subIssueCode")
+        if not efCode:
+            raise ValueError("extractedFacts.subIssueCode is required for Canonical Shadow trace")
+        if efCode != subIssueCode:
+            raise ValueError(
+                f"extractedFacts.subIssueCode mismatch: payload={subIssueCode!r}, ef={efCode!r}"
+            )
+        if extractedFacts.get("sourceType") != "news":
+            raise ValueError(
+                f"Canonical Shadow requires sourceType='news', got {extractedFacts.get('sourceType')!r}"
+            )
+
+        ert = payloadData.get("eventResolutionTrace")
+        if not isinstance(ert, dict):
+            raise ValueError("eventResolutionTrace is required for Canonical Shadow trace")
+        if ert.get("subIssueCode") != subIssueCode:
+            raise ValueError(
+                f"eventResolutionTrace.subIssueCode mismatch: payload={subIssueCode!r}, trace={ert.get('subIssueCode')!r}"
+            )
+
+        axisScores = payloadData.get("axisScores") or []
+        if not isinstance(axisScores, list):
+            raise ValueError("axisScores must be a list")
+        seen_axes: set = set()
+        for entry in axisScores:
+            axis = entry.get("axis") if isinstance(entry, dict) else None
+            if axis is not None:
+                if axis in seen_axes:
+                    raise ValueError(f"Duplicate axis in axisScores: {axis!r}")
+                seen_axes.add(axis)
+                if axis not in ("impact", "financial"):
+                    raise ValueError(f"Invalid axis in axisScores: {axis!r}")
+
+        rawMetadata = extractedFacts.get("rawMetadata") or {}
+        rows.append((
+            runId,
+            None,
+            rawMetadata.get("rawIssueLabel") or "",
+            subIssueCode,
+            MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP,
+            "news",
+            _getAxisScore(payloadData, "impact"),
+            _getAxisScore(payloadData, "financial"),
+            extractedFacts.get("classificationConfidence"),
+            payloadJson,
+        ))
+    return rows
+
+
+def step4ReplaceMediaNewsShadowBundleTx(
+    runId: int,
+    factPayloads: Sequence[Dict[str, Any]],
+    canonicalPayloads: Sequence[Dict[str, Any]],
+) -> int:
+    """
+    Replace-Active Transaction for Fact + Canonical Shadow Bundles.
+
+    Serializes all rows before opening a DB connection, then within a single
+    transaction: row-locks the run, soft-deletes both namespaces, inserts new
+    rows, verifies counts, and commits. Any failure triggers ROLLBACK.
+    """
+    # Serialize before acquiring DB connection
+    factRows = _buildMediaNewsShadowRows(runId, factPayloads)
+    canonicalRows = _buildMediaNewsCanonicalShadowRows(runId, canonicalPayloads)
+
+    conn = getConn()
+    if conn is None:
+        raise RuntimeError(
+            "DB connection is not available for media news shadow bundle replace transaction"
+        )
+    try:
+        conn.autocommit = False
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? FOR UPDATE",
+                (runId,),
+            )
+            lockRow = cur.fetchone()
+            if not lockRow:
+                raise RuntimeError(f"ESG_MATERIALITY_RUN row not found for runId={runId}")
+
+            cur.execute(
+                """
+                UPDATE ESG_DMA_SIGNAL_DETAIL
+                SET delete_yn = 1
+                WHERE esg_materiality_run_id = ?
+                  AND source_step IN (?, ?)
+                  AND delete_yn = 0
+                """,
+                (
+                    runId,
+                    MEDIA_EXTERNAL_NEWS_V13_SHADOW_SOURCE_STEP,
+                    MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP,
+                ),
+            )
+
+            if factRows:
+                cur.executemany(_SHADOW_INSERT_SQL, factRows)
+            if canonicalRows:
+                cur.executemany(_SHADOW_INSERT_SQL, canonicalRows)
+
+            cur.execute(
+                """
+                SELECT COUNT(*) AS row_count
+                FROM ESG_DMA_SIGNAL_DETAIL
+                WHERE esg_materiality_run_id = ?
+                  AND source_step = ?
+                  AND delete_yn = 0
+                """,
+                (runId, MEDIA_EXTERNAL_NEWS_V13_SHADOW_SOURCE_STEP),
+            )
+            factVerify = cur.fetchone() or {}
+            factRowCount = int(factVerify.get("row_count") or 0)
+            if factRowCount != len(factRows):
+                raise RuntimeError(
+                    f"Fact shadow count check failed: expected={len(factRows)}, row_count={factRowCount}"
+                )
+
+            cur.execute(
+                """
+                SELECT COUNT(*) AS row_count
+                FROM ESG_DMA_SIGNAL_DETAIL
+                WHERE esg_materiality_run_id = ?
+                  AND source_step = ?
+                  AND delete_yn = 0
+                """,
+                (runId, MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP),
+            )
+            canonicalVerify = cur.fetchone() or {}
+            canonicalRowCount = int(canonicalVerify.get("row_count") or 0)
+            if canonicalRowCount != len(canonicalRows):
+                raise RuntimeError(
+                    f"Canonical shadow count check failed: "
+                    f"expected={len(canonicalRows)}, row_count={canonicalRowCount}"
+                )
+
+        conn.commit()
+        return len(factRows) + len(canonicalRows)
     except Exception:
         if hasattr(conn, "rollback"):
             conn.rollback()
@@ -1439,6 +1626,7 @@ __all__ = [
     "BENCHMARK_V13_SHADOW_SOURCE_STEP",
     "BENCHMARK_V13_SCREENING_SHADOW_SOURCE_STEP",
     "MEDIA_EXTERNAL_NEWS_V13_SHADOW_SOURCE_STEP",
+    "MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP",
     "isLegacyPayload",
     "step4BuildTrace",
     "step4WriteTrace",
@@ -1446,6 +1634,7 @@ __all__ = [
     # step4SaveBenchmarkShadowTraces is intentionally omitted — test compatibility only
     "step4ReplaceBenchmarkShadowTracesTx",
     "step4ReplaceMediaNewsShadowTracesTx",
+    "step4ReplaceMediaNewsShadowBundleTx",
     "step4ReadTrace",
     "step4UpdateTrace",
     "appendFactorTrace",

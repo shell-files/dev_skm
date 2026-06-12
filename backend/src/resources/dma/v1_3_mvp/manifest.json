@@ -7,7 +7,8 @@
     "screening_policy.json",
     "survey_policy.json",
     "ai_fact_validation_policy.json",
-    "selection_policy.json"
+    "selection_policy.json",
+    "media_event_resolver_policy.json"
   ],
   "hashAlgorithm": "SHA-256",
   "hashTargets": "runtimePolicyFiles",

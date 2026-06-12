@@ -63,7 +63,7 @@ class SlimRegistryTest(unittest.TestCase):
     def test_02_policy_exact_set(self):
         cfg = reg.getDmaRules()
         self.assertEqual(set(cfg.policies.keys()), set(reg.EXPECTED_POLICY_FILES))
-        self.assertEqual(len(cfg.policies), 5)
+        self.assertEqual(len(cfg.policies), 6)
 
     # 3. Hash sha256: prefix
     def test_03_hash_prefix(self):

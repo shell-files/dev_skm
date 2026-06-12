@@ -105,6 +105,7 @@ class FakeTxConnection:
         self.committed = False
         self.rolled_back = False
         self.closed = False
+        self.autocommit = True  # starts True; transaction code must set False
 
     def cursor(self, dictionary=True):
         return self.cursor_obj
@@ -280,14 +281,15 @@ class PhaseC13ReplaceTransactionTest(unittest.TestCase):
     def test_transaction_rollbacks_on_missing_run_row(self):
         fakeConn = FakeTxConnection(fetchone_map={
             "FOR UPDATE": None,
+            "COUNT(": {"row_count": 1, "distinct_count": 1},
         })
         with patch.object(dmarepository, "getConn", return_value=fakeConn):
             with self.assertRaises(RuntimeError):
                 dmarepository.step4ReplaceBenchmarkShadowTracesTx(
                     runId=99,
                     factPayloads=[],
-                    screeningPayloads=[],
-                    expectedScreeningCount=0,
+                    screeningPayloads=[self._makeScreeningPayload()],
+                    expectedScreeningCount=1,
                 )
         self.assertTrue(fakeConn.rolled_back)
 
@@ -305,6 +307,43 @@ class PhaseC13ReplaceTransactionTest(unittest.TestCase):
         self.assertNotIn(dmarepository.BENCHMARK_V13_SHADOW_SOURCE_STEP, sourceStepsInserted)
         self.assertIn(dmarepository.BENCHMARK_V13_SCREENING_SHADOW_SOURCE_STEP, sourceStepsInserted)
 
+    def test_transaction_sets_autocommit_false(self):
+        fakeConn = makeConn(expectedCount=1)
+        self.assertTrue(fakeConn.autocommit)  # starts True
+        with patch.object(dmarepository, "getConn", return_value=fakeConn):
+            dmarepository.step4ReplaceBenchmarkShadowTracesTx(
+                runId=99,
+                factPayloads=[buildFactPayload()],
+                screeningPayloads=[self._makeScreeningPayload()],
+                expectedScreeningCount=1,
+            )
+        self.assertFalse(fakeConn.autocommit)  # must be set False before any SQL
+
+    def test_zero_expected_screening_count_raises_before_conn(self):
+        getConnCalled = []
+        def fakeGetConn():
+            getConnCalled.append(True)
+            return makeConn(expectedCount=0)
+        with patch.object(dmarepository, "getConn", side_effect=fakeGetConn):
+            with self.assertRaises(ValueError):
+                dmarepository.step4ReplaceBenchmarkShadowTracesTx(
+                    runId=99, factPayloads=[], screeningPayloads=[], expectedScreeningCount=0
+                )
+        self.assertEqual(len(getConnCalled), 0, "getConn must NOT be called when expectedScreeningCount=0")
+
+    def test_screening_payloads_count_mismatch_raises_before_conn(self):
+        getConnCalled = []
+        def fakeGetConn():
+            getConnCalled.append(True)
+            return makeConn(expectedCount=2)
+        sp = self._makeScreeningPayload()
+        with patch.object(dmarepository, "getConn", side_effect=fakeGetConn):
+            with self.assertRaises(ValueError):
+                dmarepository.step4ReplaceBenchmarkShadowTracesTx(
+                    runId=99, factPayloads=[], screeningPayloads=[sp], expectedScreeningCount=2
+                )
+        self.assertEqual(len(getConnCalled), 0, "getConn must NOT be called when payload count mismatches")
+
     def test_transaction_does_not_call_legacy_side_effects(self):
         import inspect
         source = inspect.getsource(dmarepository.step4ReplaceBenchmarkShadowTracesTx)
@@ -314,10 +353,11 @@ class PhaseC13ReplaceTransactionTest(unittest.TestCase):
         self.assertNotIn("ESG_MATERIALITY_SELECTED_SUB_ISSUE", source)
 
     def test_conn_none_raises_runtime_error(self):
+        sp = self._makeScreeningPayload()
         with patch.object(dmarepository, "getConn", return_value=None):
             with self.assertRaises(RuntimeError):
                 dmarepository.step4ReplaceBenchmarkShadowTracesTx(
-                    runId=99, factPayloads=[], screeningPayloads=[], expectedScreeningCount=0
+                    runId=99, factPayloads=[], screeningPayloads=[sp], expectedScreeningCount=1
                 )
 
 
@@ -410,6 +450,25 @@ class PhaseC13BuildScreeningPayloadsTest(unittest.TestCase):
         universe = self._getUniverse()
         g0Codes = [code for code in universe if code.upper().startswith("G0")]
         self.assertEqual(len(g0Codes), 0)
+
+    def test_malformed_fact_payload_not_mapping_raises(self):
+        universe = self._getUniverse()
+        with self.assertRaises(ValueError):
+            orchestrator.step2BuildBenchmarkScreeningPayloads(["not_a_dict"], universe)
+
+    def test_malformed_fact_payload_missing_sub_issue_code_raises(self):
+        universe = self._getUniverse()
+        badPayload = buildFactPayload()
+        # Remove subIssueCode from extractedFacts
+        badPayload["extractedFacts"]["subIssueCode"] = None
+        with self.assertRaises(ValueError):
+            orchestrator.step2BuildBenchmarkScreeningPayloads([badPayload], universe)
+
+    def test_fact_payload_outside_universe_raises(self):
+        universe = self._getUniverse()
+        outsiderPayload = buildFactPayload(subIssueCode="G0-FAKE-999")
+        with self.assertRaises(ValueError):
+            orchestrator.step2BuildBenchmarkScreeningPayloads([outsiderPayload], universe)
 
 
 if __name__ == "__main__":

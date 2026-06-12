@@ -160,19 +160,25 @@ def step2BuildBenchmarkScreeningPayloads(
     Derives observations from factPayloads only — no DB read.
     Sub-issues absent from factPayloads receive observation=NONE and backfilledYn=True.
     """
+    universeSet = set(universeSubIssueCodes)
     observedByCode: dict[str, dict[str, bool]] = {}
     for fp in factPayloads:
-        ef = fp.get("extractedFacts") if isinstance(fp, dict) else None
-        if not ef or not isinstance(ef, dict):
-            continue
+        if not isinstance(fp, dict):
+            raise ValueError("benchmark fact payload must be a dict")
+        ef = fp.get("extractedFacts")
+        if not isinstance(ef, dict):
+            raise ValueError("extractedFacts is required and must be a dict")
         code = ef.get("subIssueCode")
+        if not code:
+            raise ValueError("extractedFacts.subIssueCode is required")
         stype = ef.get("sourceType")
-        if not code or not stype:
-            continue
+        if stype not in ("leader_sr", "peer_sr", "own_sr"):
+            raise ValueError(f"invalid benchmark sourceType: {stype!r}")
+        if code not in universeSet:
+            raise ValueError(f"subIssueCode is outside benchmark universe: {code!r}")
         if code not in observedByCode:
             observedByCode[code] = {}
-        if stype in ("leader_sr", "peer_sr", "own_sr"):
-            observedByCode[code][stype] = True
+        observedByCode[code][stype] = True
 
     screeningPayloads = []
     for code in universeSubIssueCodes:

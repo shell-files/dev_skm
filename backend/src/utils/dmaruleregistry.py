@@ -53,6 +53,7 @@ EXPECTED_POLICY_FILES = frozenset({
     "survey_policy.json",
     "ai_fact_validation_policy.json",
     "selection_policy.json",
+    "media_event_resolver_policy.json",
 })
 
 EXPECTED_CAPABILITY_KEYS = frozenset({

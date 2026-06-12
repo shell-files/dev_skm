@@ -345,6 +345,51 @@ class LegacyCompatibilityV13(BaseModel):
     legacyRuleVersion: Optional[str] = Field(None, alias="legacy_rule_version")
 
 
+class MediaNewsResolvedAxisCandidateV13(BaseModel):
+    """Resolver-level axis factor candidate before Canonical scoring."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    polarity: Optional[str] = None
+    scale: Optional[float] = None
+    scope: Optional[float] = None
+    likelihood: Optional[float] = None
+    irremediability: Optional[float] = None
+    magnitude: Optional[float] = None
+    timeHorizon: Optional[str] = Field(None, alias="time_horizon")
+    explicitNoUrgencyYn: Optional[TriState] = Field(None, alias="explicit_no_urgency_yn")
+    ruleTrace: List[Dict[str, Any]] = Field(default_factory=list, alias="rule_trace")
+
+
+class MediaNewsDedupTraceV13(BaseModel):
+    """Event dedup status for a single media news observation."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    eventGroupCandidateId: Optional[str] = Field(None, alias="event_group_candidate_id")
+    confirmedEventGroupKey: Optional[str] = Field(None, alias="confirmed_event_group_key")
+    dedupStatus: Literal["UNRESOLVED", "UNIQUE", "MERGED", "CONFLICTED", "REJECTED"] = Field(
+        "UNRESOLVED", alias="dedup_status"
+    )
+    ruleTrace: List[Dict[str, Any]] = Field(default_factory=list, alias="rule_trace")
+
+
+class MediaNewsEventResolutionTraceV13(BaseModel):
+    """Full event resolution result for one media news fact."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    resolverStatus: Literal["RESOLVED", "PARTIAL", "UNOBSERVED", "CONFLICTED", "REJECTED"] = Field(
+        ..., alias="resolver_status"
+    )
+    subIssueCode: str = Field(..., alias="sub_issue_code")
+    normalizedEventType: Optional[str] = Field(None, alias="normalized_event_type")
+    eventDateBucket: Optional[str] = Field(None, alias="event_date_bucket")
+    impact: Optional[MediaNewsResolvedAxisCandidateV13] = None
+    financial: Optional[MediaNewsResolvedAxisCandidateV13] = None
+    dedup: MediaNewsDedupTraceV13 = Field(default_factory=MediaNewsDedupTraceV13)
+
+
 class ScoringPayloadV13(BaseModel):
     """
     The v1.3 canonical payload persisted (in Phase B/C) inside the existing
@@ -368,3 +413,6 @@ class ScoringPayloadV13(BaseModel):
         default_factory=LegacyCompatibilityV13, alias="legacy_compatibility"
     )
     evaluatedAt: Optional[str] = Field(None, alias="evaluated_at")
+    eventResolutionTrace: Optional[MediaNewsEventResolutionTraceV13] = Field(
+        None, alias="event_resolution_trace"
+    )

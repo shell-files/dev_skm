@@ -97,7 +97,7 @@ function buildMetricsFromEdits(adapter, editMetrics, rows) {
 
 const Draft = () => {
   const [currentPid, setCurrentPid] = useState(null);
-  const [metricOpen, setMetricOpen] = useState(true);
+  const [metricOpen, setMetricOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(0); // 현재 보고서 페이지 인덱스
   const [pdfMode, setPdfMode] = useState(false); // PDF 내보내기용 전체 페이지 렌더 모드
   const [editMetricsByPage, setEditMetricsByPage] = useState({}); // { pageKey: { metric_id: 표시값 } }
@@ -963,19 +963,36 @@ const Draft = () => {
                   </div>
 
                   {/* 지표 선택 — 이 섹션에서 사용된 모든 metric_id */}
-                  <div className="panel-select-wrap">
-                    <select
-                      className="panel-metric-select"
-                      value={trackId || ""}
-                      onChange={(e) => setTrackId(e.target.value)}
-                    >
-                      {panelMetricIds.map((id) => (
-                        <option key={id} value={id}>
-                          {(SR_FIELD_MAP[id] && SR_FIELD_MAP[id].label) || id}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="panel-select-count">{panelMetricIds.length}개 지표</span>
+                  <div className={`panel-metric-list-wrap${metricOpen ? " open" : ""}`}>
+                    <div className="panel-metric-list-hd" onClick={() => setMetricOpen(v => !v)}>
+                      <span className="panel-metric-list-label">
+                        {trackId
+                          ? ((SR_FIELD_MAP[trackId] && SR_FIELD_MAP[trackId].label) || trackId)
+                          : "지표 선택"}
+                      </span>
+                      <span className="panel-metric-list-right">
+                        <span className="panel-select-count">{panelMetricIds.length}개</span>
+                        <span className="panel-metric-chevron">{metricOpen ? "▲" : "▼"}</span>
+                      </span>
+                    </div>
+                    {metricOpen && (
+                      <div className="panel-metric-list">
+                        {panelMetricIds.map((id) => (
+                          <div
+                            key={id}
+                            className={`panel-metric-item${trackId === id ? " active" : ""}`}
+                            onClick={() => { setTrackId(id); setMetricOpen(false); }}
+                          >
+                            <span className="panel-metric-item-name">
+                              {(SR_FIELD_MAP[id] && SR_FIELD_MAP[id].label) || id}
+                            </span>
+                            {/__G\d/.test(id) && (
+                              <span className="panel-metric-item-badge">연결</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* 선택된 탭 상세 */}
@@ -1000,7 +1017,7 @@ const Draft = () => {
                             <span className={`metric-badge ${/__QL/.test(srMetric.metricId) ? "" : "blue"}`}>
                               {/__QL/.test(srMetric.metricId) ? "정성" : "정량"}
                             </span>
-                            {srMetric.isRollup && (
+                            {srMetric.breakdown && (
                               <span className="metric-badge blue" style={{ opacity: 0.75 }}>연결</span>
                             )}
                           </span>
@@ -1027,34 +1044,30 @@ const Draft = () => {
                         </div>
                       )}
 
-                      {srMetric.isRollup && (
+                      {srMetric.breakdown && (
                         <div className="panel-subsection">
                           <div className="trend-section-title">
                             구성 법인별 내역
                             <span className="metric-badge blue" style={{ marginLeft: 6, fontSize: 10 }}>연결</span>
                           </div>
-                          {srMetric.breakdown && srMetric.breakdown.length > 0 ? (
-                            <table className="breakdown-table">
-                              <thead>
-                                <tr>
-                                  <th>법인</th>
-                                  <th className="breakdown-val">값</th>
-                                  <th className="breakdown-val">비중</th>
+                          <table className="breakdown-table">
+                            <thead>
+                              <tr>
+                                <th>법인</th>
+                                <th className="breakdown-val">값</th>
+                                <th className="breakdown-val">비중</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {srMetric.breakdown.map((b, i) => (
+                                <tr key={i}>
+                                  <td>{b.l}</td>
+                                  <td className="breakdown-val">{b.v}</td>
+                                  <td className="breakdown-val">{b.contributionRate != null ? `${b.contributionRate}%` : "—"}</td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                                {srMetric.breakdown.map((b, i) => (
-                                  <tr key={i}>
-                                    <td>{b.l}</td>
-                                    <td className="breakdown-val">{b.v}</td>
-                                    <td className="breakdown-val">{b.contributionRate != null ? `${b.contributionRate}%` : "—"}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          ) : (
-                            <div className="ai-desc-box muted">[미집계 데이터]</div>
-                          )}
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                       )}
 

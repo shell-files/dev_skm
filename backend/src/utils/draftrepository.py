@@ -198,31 +198,25 @@ def getCompanyNamesByIds(companyIds: list) -> dict:
     return {int(r["companyId"]): r["companyName"] for r in rows}
 
 
-def getSubsidiaryKpiByMetrics(parentCompanyId: int, metricIds: list, year: int) -> list:
+def getSourceMetricRollupRows(parentCompanyId: int, metricIds: list, year: int) -> list:
     """
-    자회사별 여러 지표 KPI_FACT를 단일 쿼리로 조회.
-    metricIds: 조회할 atomic_metric_id 목록 (source metrics 포함).
-    반환: [{companyId, companyName, metricId, valueNumeric, valueText, unit}]
+    RECALCULATE fallback: source metric들의 ESG_GROUP_ROLLUP_RESULT를 단일 쿼리로 조회.
+    metricId별 최신 연도 우선 정렬; 호출부에서 first-seen 기준으로 최신 1건씩 사용.
+    반환: [{metricId, sourceValuesJson, unit, year}]
     """
     if not metricIds:
         return []
     placeholders = ",".join("?" * len(metricIds))
     sql = f"""
-        SELECT f.company_id       AS companyId,
-               f.atomic_metric_id AS metricId,
-               f.value_numeric    AS valueNumeric,
-               f.value_text       AS valueText,
-               f.unit,
-               COALESCE(p.company_code, CAST(f.company_id AS CHAR)) AS companyName
-        FROM ESG_KPI_FACT f
-        JOIN ESG_COMPANY_ROLLUP_SCOPE s
-          ON s.source_company_id = f.company_id
-         AND s.parent_company_id = ?
-         AND s.delete_yn         = 0
-        LEFT JOIN ESG_COMPANY_PROFILE p
-          ON p.company_id = f.company_id AND p.delete_yn = 0
-        WHERE f.atomic_metric_id IN ({placeholders})
-          AND f.reporting_year   = ?
-          AND f.delete_yn        = 0
+        SELECT group_atomic_metric_id AS metricId,
+               source_company_values_json AS sourceValuesJson,
+               unit,
+               reporting_year AS year
+        FROM ESG_GROUP_ROLLUP_RESULT
+        WHERE parent_company_id      = ?
+          AND group_atomic_metric_id IN ({placeholders})
+          AND reporting_year        <= ?
+          AND delete_yn              = 0
+        ORDER BY reporting_year DESC, id DESC
     """
     return findAll(sql, (parentCompanyId, *metricIds, year))

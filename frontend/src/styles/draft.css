@@ -410,11 +410,22 @@
 /* 추적 가능 요소 커서 */
 .sr-page [data-source] { cursor: pointer; }
 
-/* 패널 지표 선택 */
-.panel-select-wrap { display:flex; align-items:center; gap:8px; padding:10px 14px; border-bottom:1px solid #f1f5f9; background:#fafbfc; }
-.panel-metric-select { flex:1; height:32px; padding:0 10px; border:1px solid #d1d5db; border-radius:8px; background:#fff; font-size:12px; font-weight:600; color:#1e293b; font-family:inherit; cursor:pointer; outline:none; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px; }
-.panel-metric-select:focus { border-color:#03A94D; box-shadow:0 0 0 2px rgba(3,169,77,.12); }
+/* 패널 지표 선택 (접이식 리스트) */
 .panel-select-count { font-size:10.5px; font-weight:700; color:#94a3b8; white-space:nowrap; }
+.panel-metric-list-wrap { border-bottom:1px solid #e8edf3; background:#f8fafc; position:relative; }
+.panel-metric-list-hd { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; cursor:pointer; user-select:none; border:1px solid #d1d5db; border-radius:8px; margin:8px 12px; background:#fff; transition:border-color .15s, box-shadow .15s; }
+.panel-metric-list-wrap.open .panel-metric-list-hd { border-color:#03A94D; box-shadow:0 0 0 2px rgba(3,169,77,.12); border-bottom-left-radius:0; border-bottom-right-radius:0; margin-bottom:0; }
+.panel-metric-list-label { font-size:12px; font-weight:600; color:#1e293b; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.panel-metric-list-right { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.panel-metric-chevron { font-size:9px; color:#94a3b8; }
+.panel-metric-list { display:flex; flex-direction:column; max-height:200px; overflow-y:auto; padding:4px 8px 8px; gap:2px; border:1px solid #03A94D; border-top:none; border-radius:0 0 8px 8px; margin:0 12px 8px; background:#fff; box-shadow:0 4px 12px rgba(0,0,0,.08); }
+.panel-metric-item { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; color:#475569; transition:background .12s, color .12s; }
+.panel-metric-item:hover { background:#f0fdf4; color:#1e293b; }
+.panel-metric-item.active { background:#03A94D; color:#fff; }
+.panel-metric-item-name { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.panel-metric-item-badge { font-size:9.5px; font-weight:700; padding:1px 6px; border-radius:20px; flex-shrink:0; }
+.panel-metric-item:not(.active) .panel-metric-item-badge { background:#dbeafe; color:#2563eb; }
+.panel-metric-item.active .panel-metric-item-badge { background:rgba(255,255,255,.25); color:#fff; }
 .panel-tab-body { padding:14px 18px; display:flex; flex-direction:column; gap:10px; }
 .metric-rows-block { border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; padding:10px 14px; display:flex; flex-direction:column; gap:6px; background:#f8fafc; }
 

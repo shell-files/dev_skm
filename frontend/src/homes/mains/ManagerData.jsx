@@ -430,7 +430,7 @@ const ManagerData = () => {
       if (isRollupResponseApproval && !approvalBatchId) {
         showDefaultAlert(
           "오류",
-          "ROLLUP_RESPONSE Batch 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
+          "데이터 요청 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
           "error"
         );
         return false;
@@ -474,7 +474,7 @@ const ManagerData = () => {
     if (isRollupResponseApproval && !approvalBatchId) {
       showDefaultAlert(
         "오류",
-        "ROLLUP_RESPONSE Batch 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
+        "데이터 요청 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
         "error"
       );
       return false;
@@ -516,7 +516,7 @@ const ManagerData = () => {
     if (isRollupResponseApproval && !approvalBatchId) {
       showDefaultAlert(
         "오류",
-        "ROLLUP_RESPONSE Batch 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
+        "데이터 요청 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
         "error"
       );
       return false;
@@ -681,7 +681,7 @@ const ManagerData = () => {
           <div className="manager-data-tab-container">
             {!hasValidRollupApprovalContext ? (
               <div className="ob1-empty-state">
-                <p className="ob1-empty-title">ROLLUP_RESPONSE Batch 정보가 없습니다.</p>
+                <p className="ob1-empty-title">데이터 요청 정보가 없습니다.</p>
                 <p className="ob1-empty-desc">받은 요청함에서 다시 진입해 주세요.</p>
               </div>
             ) : (

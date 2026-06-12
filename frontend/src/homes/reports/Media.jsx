@@ -295,7 +295,7 @@ const Media = () => {
   return (
     <>
       <div className="media-container">
-        <header className="media-header" style={{ padding: "10px 0", marginBottom: "18px" }}>
+        <header className="media-header">
           <div className="media-stepper-row">
             {STEPS.map((step, index) => (
               <Fragment key={step.id}>
@@ -313,9 +313,9 @@ const Media = () => {
           </div>
         </header>
 
-        <main className="main-content">
+        <main className="media-main-content">
           {/* 전체 콘텐츠를 감싸고, 중앙 정렬 & 최대 너비 부여 */}
-          <div className="media-input-card" style={{ maxWidth: "1440px", margin: "0 auto", padding: "30px 40px", width: "100%", textAlign: "left" }}>
+          <div className="media-input-card">
             <div style={{ marginBottom: "18px" }}>
               <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px", color: "#0f172a" }}>
                 미디어 및 기관별 필터 수집 설정
@@ -325,7 +325,7 @@ const Media = () => {
               </p>
             </div>
 
-            <div className="media-compact-workspace" style={{ width: "100%" }}>
+            <div className="media-compact-workspace" style={{ width: "100%", textAlign: "left" }}>
               {/* 좌측 패널 */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div className="media-compact-tabs">
@@ -389,7 +389,7 @@ const Media = () => {
                       </div>
                     </div>
 
-                    <div className="status-container" style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px dashed #e2e8f0" }}>
+                    <div className="status-container" style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px dashed #e2e8f0" }}>
                       <span className="status-label">현재 상태</span>
                       <span className={`status-badge ${status.press}`}>{getStatusText(status.press)}</span>
                     </div>
@@ -423,7 +423,7 @@ const Media = () => {
                       </div>
                     </div>
 
-                    <div className="status-container" style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px dashed #e2e8f0" }}>
+                    <div className="status-container" style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px dashed #e2e8f0" }}>
                       <span className="status-label">현재 상태</span>
                       <span className={`status-badge ${regulationReady ? "complete" : "ready"}`}>
                         {regulationReady ? "규제 선택 완료" : "규제 선택 대기"}
@@ -459,7 +459,7 @@ const Media = () => {
                       </div>
                     </div>
 
-                    <div className="status-container" style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px dashed #e2e8f0" }}>
+                    <div className="status-container" style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px dashed #e2e8f0" }}>
                       <span className="status-label">현재 상태</span>
                       <span className={`status-badge ${institutionReady ? "complete" : "ready"}`}>
                         {institutionReady ? "기관 선택 완료" : "기관 선택 대기"}
@@ -469,9 +469,9 @@ const Media = () => {
                 )}
 
                 {/* 체크리스트 */}
-                <div className="media-checklist-container">
+                <div className="media-checklist-wrapper" style={{ marginTop: "16px", marginBottom: "22px" }}>
                   <div className="media-checklist-title">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><polyline points="9,11 10.5,12.5 13,10"/><polyline points="9,16 10.5,17.5 13,15"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><polyline points="9,11 10.5,12.5 13,10"/><polyline points="9,16 10.5,17.5 13,15"/></svg>
                     분석 준비 체크리스트
                   </div>
                   <div className="media-checklist-grid">
@@ -481,12 +481,12 @@ const Media = () => {
                       { label: "규제 데이터 소스", done: regulationReady },
                       { label: "전문 평가기관 선택", done: institutionReady },
                     ].map(item => (
-                      <div key={item.label} className="media-checklist-item">
+                      <div key={item.label} className={`media-checklist-card ${item.done ? "done" : "pending"}`}>
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={item.done ? "#03A94D" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                           <polyline points="20 6 9 17 4 12" />
                         </svg>
-                        <span style={{ color: item.done ? "#1e293b" : "#94a3b8", flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{item.label}</span>
-                        <span style={{ flexShrink: 0, padding: "2px 8px", borderRadius: "10px", fontSize: "0.72rem", fontWeight: 700, background: item.done ? "#dcfce7" : "#fef3c7", color: item.done ? "#15803d" : "#92400e" }}>
+                        <span className="checklist-card-label" style={{ color: item.done ? "#1e293b" : "#94a3b8" }}>{item.label}</span>
+                        <span className={`checklist-card-badge ${item.done ? "done" : "pending"}`}>
                           {item.done ? "완료" : "설정 필요"}
                         </span>
                       </div>
@@ -537,29 +537,48 @@ const Media = () => {
 
                 <div className="media-summary-card">
                   <div className="media-summary-title">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                    분석 준비 상태
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                    미디어 분석 진행 상태
                   </div>
+                  
                   <div className="media-summary-row">
                     <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontWeight: 600 }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={pressReady ? "#03A94D" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                      언론 뉴스 수집
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={(isAnalyzing || showResult) ? "#03A94D" : (pressReady && regulationReady && institutionReady ? "#03A94D" : "#94a3b8")} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      준비 단계
                     </span>
-                    <span style={{ fontWeight: 700, color: pressReady ? "#15803d" : "#92400e" }}>{pressReady ? "준비 완료" : "설정 필요"}</span>
+                    <span style={{ fontWeight: 700, color: (isAnalyzing || showResult) ? "#15803d" : (pressReady && regulationReady && institutionReady ? "#15803d" : "#94a3b8") }}>
+                      {(isAnalyzing || showResult) ? "완료" : (pressReady && regulationReady && institutionReady ? "준비 완료" : "대기 중")}
+                    </span>
                   </div>
+
                   <div className="media-summary-row">
                     <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontWeight: 600 }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={regulationReady ? "#03A94D" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                      규제 데이터 룰
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={status.press === "complete" ? "#03A94D" : status.press === "ing" ? "#0284c7" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      기사 수집 단계
                     </span>
-                    <span style={{ fontWeight: 700, color: regulationReady ? "#15803d" : "#92400e" }}>{regulationReady ? "준비 완료" : "설정 필요"}</span>
+                    <span style={{ fontWeight: 700, color: status.press === "complete" ? "#15803d" : status.press === "ing" ? "#0284c7" : "#94a3b8" }}>
+                      {status.press === "complete" ? "완료" : status.press === "ing" ? "수집 중" : "대기 중"}
+                    </span>
                   </div>
+
                   <div className="media-summary-row">
                     <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontWeight: 600 }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={institutionReady ? "#03A94D" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                      전문기관 데이터
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={status.reg === "complete" ? "#03A94D" : status.reg === "ing" ? "#0284c7" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      규제 분석 상태
                     </span>
-                    <span style={{ fontWeight: 700, color: institutionReady ? "#15803d" : "#92400e" }}>{institutionReady ? "준비 완료" : "설정 필요"}</span>
+                    <span style={{ fontWeight: 700, color: status.reg === "complete" ? "#15803d" : status.reg === "ing" ? "#0284c7" : "#94a3b8" }}>
+                      {status.reg === "complete" ? "완료" : status.reg === "ing" ? "분석 중" : "대기 중"}
+                    </span>
+                  </div>
+
+                  <div className="media-summary-row">
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontWeight: 600 }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={status.expert === "complete" ? "#03A94D" : status.expert === "ing" ? "#0284c7" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      전문 평가기관 분석 상태
+                    </span>
+                    <span style={{ fontWeight: 700, color: status.expert === "complete" ? "#15803d" : status.expert === "ing" ? "#0284c7" : "#94a3b8" }}>
+                      {status.expert === "complete" ? "완료" : status.expert === "ing" ? "분석 중" : "대기 중"}
+                    </span>
                   </div>
                 </div>
               </div>

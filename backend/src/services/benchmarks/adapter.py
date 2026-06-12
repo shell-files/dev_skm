@@ -81,10 +81,10 @@ def step0NormalizeBenchmarkFacts(
     facts: list[ExtractedFactsV13] = []
     for result in resultList or []:
         if not isinstance(result, Mapping):
-            continue
+            raise ValueError("benchmark raw result must be a mapping")
         subIssueCode = firstPresent(result, ("subIssueCode", "sub_issue_code", "bestSubIssueId", "best_sub_issue_id"))
         if not subIssueCode:
-            continue
+            raise ValueError("benchmark raw result subIssueCode is required")
         resolvedSourceType = sourceType or firstPresent(result, ("sourceType", "source_type"), "benchmark")
         rawIssueLabel = firstPresent(result, ("rawIssueLabel", "raw_issue_label", "issueLabel", "title"), "")
         displayName = firstPresent(

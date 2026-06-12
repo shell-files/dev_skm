@@ -4,7 +4,7 @@ Layer: utils/rule-registry
 Responsibility: STEP 0 — Rule Load, Validate, Hash, Cache
 - Own ALL runtime IO for the v1.3 MVP slim runtime config
 - Inline all config validation (path guard, manifest, exact-set, rule-version)
-- Compute canonical-JSON SHA-256 config hash over the 5 policy files only
+- Compute canonical-JSON SHA-256 config hash over the 6 policy files only
 - Provide a singleton cache, deep-copy reads, and a test cache reset
 - Expose capability status
 Public surface:
@@ -46,7 +46,7 @@ EXPECTED_RULE_VERSION = "dma-rule-v1.3-mvp"
 EXPECTED_ARCHITECTURE_REVISION = "R4.1-SLIM"
 EXPECTED_HASH_ALGORITHM = "SHA-256"
 
-# Exact runtime policy file set. Manifest is excluded from this set and from the hash.
+# Exact runtime policy file set (6 files). Manifest is excluded from this set and from the hash.
 EXPECTED_POLICY_FILES = frozenset({
     "canonical_scoring_policy.json",
     "screening_policy.json",
@@ -174,10 +174,123 @@ def validatePolicyVersions(policies: Dict[str, Dict[str, Any]]) -> None:
             )
 
 
+_KNOWN_DEDUP_MANDATORY_KEYS = frozenset({"subIssueCode", "normalizedEventType", "eventDateBucket"})
+
+
+def _validateBandSection(section: Mapping[str, Any], section_name: str, must_have_bands: bool) -> None:
+    if "missingPolicy" not in section:
+        raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name} missing 'missingPolicy'")
+    if not must_have_bands:
+        return
+    bands = section.get("bands")
+    if not isinstance(bands, list) or not bands:
+        raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands must be a non-empty list")
+    for idx, band in enumerate(bands):
+        if not isinstance(band, dict):
+            raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] must be a dict")
+        if "score" not in band:
+            raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] missing 'score'")
+        score = band["score"]
+        if not isinstance(score, (int, float)) or not (0 <= score <= 5):
+            raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] score must be in 0..5")
+        if "minInclusive" not in band:
+            raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] missing 'minInclusive'")
+        if "maxExclusive" not in band:
+            raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] missing 'maxExclusive'")
+        lo = band.get("min")
+        hi = band.get("max")
+        if lo is not None and not isinstance(lo, (int, float)):
+            raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] min must be numeric or null")
+        if hi is not None and not isinstance(hi, (int, float)):
+            raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] max must be numeric or null")
+        if lo is not None and hi is not None and lo > hi:
+            raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] min > max (reversed order)")
+
+
+def validateMediaEventResolverPolicy(policy: Mapping[str, Any]) -> None:
+    """Fail-fast structural validation for media_event_resolver_policy.json."""
+    if not isinstance(policy, Mapping):
+        raise DmaRuleValidationError("media_event_resolver_policy must be a JSON object")
+    for key in (
+        "version", "ruleVersion", "resolverVersion", "scoreDecisionByAiAllowedYn",
+        "eventTypeNormalization", "impactScaleRules", "impactScopeRules",
+        "impactLikelihoodRules", "impactIrremediabilityRules",
+        "financialMagnitudeRules", "financialLikelihoodRules",
+        "timeHorizonRules", "eventDedupRules", "ratioValueContract", "missingPolicy",
+    ):
+        if key not in policy:
+            raise DmaRuleValidationError(f"media_event_resolver_policy missing required key: '{key}'")
+
+    if policy["scoreDecisionByAiAllowedYn"] is not False:
+        raise DmaRuleValidationError("media_event_resolver_policy: scoreDecisionByAiAllowedYn must be false")
+
+    etn = policy["eventTypeNormalization"]
+    for k in ("unknownPolicy", "aliases"):
+        if k not in etn:
+            raise DmaRuleValidationError(f"media_event_resolver_policy: eventTypeNormalization missing '{k}'")
+
+    _validateBandSection(policy["impactScaleRules"], "impactScaleRules", must_have_bands=True)
+
+    scope = policy["impactScopeRules"]
+    if "enabledYn" not in scope:
+        raise DmaRuleValidationError("media_event_resolver_policy: impactScopeRules missing 'enabledYn'")
+    if scope["enabledYn"] is True:
+        if not scope.get("sourceField"):
+            raise DmaRuleValidationError("media_event_resolver_policy: impactScopeRules enabledYn=true requires sourceField")
+        _validateBandSection(scope, "impactScopeRules", must_have_bands=True)
+    else:
+        if "missingPolicy" not in scope:
+            raise DmaRuleValidationError("media_event_resolver_policy: impactScopeRules missing 'missingPolicy'")
+
+    _validateBandSection(policy["impactLikelihoodRules"], "impactLikelihoodRules", must_have_bands=True)
+
+    irrem = policy["impactIrremediabilityRules"]
+    if "missingPolicy" not in irrem:
+        raise DmaRuleValidationError("media_event_resolver_policy: impactIrremediabilityRules missing 'missingPolicy'")
+
+    mag = policy["financialMagnitudeRules"]
+    if "primarySource" not in mag:
+        raise DmaRuleValidationError("media_event_resolver_policy: financialMagnitudeRules missing 'primarySource'")
+    if mag.get("financialAmountDirectScoringAllowedYn") is not False:
+        raise DmaRuleValidationError("media_event_resolver_policy: financialMagnitudeRules.financialAmountDirectScoringAllowedYn must be false")
+    _validateBandSection(mag, "financialMagnitudeRules", must_have_bands=True)
+
+    _validateBandSection(policy["financialLikelihoodRules"], "financialLikelihoodRules", must_have_bands=True)
+
+    th = policy["timeHorizonRules"]
+    for k in ("sourcePriority", "shortMaxDays", "midMaxDays", "missingPolicy"):
+        if k not in th:
+            raise DmaRuleValidationError(f"media_event_resolver_policy: timeHorizonRules missing '{k}'")
+
+    dedup = policy["eventDedupRules"]
+    for k in ("mandatoryKeys", "advisoryOnlyFields", "mergePolicy", "conflictPolicy",
+              "missingMandatoryKeyPolicy", "dateBucketSourcePriority", "dateBucketPrecision"):
+        if k not in dedup:
+            raise DmaRuleValidationError(f"media_event_resolver_policy: eventDedupRules missing '{k}'")
+    unknown_keys = set(dedup["mandatoryKeys"]) - _KNOWN_DEDUP_MANDATORY_KEYS
+    if unknown_keys:
+        raise DmaRuleValidationError(
+            f"media_event_resolver_policy: eventDedupRules.mandatoryKeys unknown keys: {sorted(unknown_keys)}"
+        )
+
+    rv = policy["ratioValueContract"]
+    for k in ("normalization", "min", "max", "outOfRangePolicy"):
+        if k not in rv:
+            raise DmaRuleValidationError(f"media_event_resolver_policy: ratioValueContract missing '{k}'")
+
+    mp = policy["missingPolicy"]
+    if "requiredFactorMissing" not in mp:
+        raise DmaRuleValidationError("media_event_resolver_policy: missingPolicy missing 'requiredFactorMissing'")
+    if mp.get("missingAsZeroForbiddenYn") is not True:
+        raise DmaRuleValidationError("media_event_resolver_policy: missingPolicy.missingAsZeroForbiddenYn must be true")
+
+
 def validateBundle(manifest: Dict[str, Any], policies: Dict[str, Dict[str, Any]]) -> None:
     validateManifest(manifest)
     validatePolicies(policies.keys())
     validatePolicyVersions(policies)
+    if "media_event_resolver_policy.json" in policies:
+        validateMediaEventResolverPolicy(policies["media_event_resolver_policy.json"])
 
 
 def readJson(path: Path) -> Any:
@@ -311,6 +424,7 @@ __all__ = [
     "validatePolicies",
     "validatePolicyVersions",
     "validateBundle",
+    "validateMediaEventResolverPolicy",
     "readJson",
     "computeConfigHash",
     "getDmaRules",

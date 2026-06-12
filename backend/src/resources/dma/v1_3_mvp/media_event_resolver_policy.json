@@ -10,34 +10,30 @@
   "impactScaleRules": {
     "sourceField": "affectedCount",
     "bands": [
-      {"min": 1, "max": 9, "score": 1},
-      {"min": 10, "max": 99, "score": 2},
-      {"min": 100, "max": 999, "score": 3},
-      {"min": 1000, "max": 9999, "score": 4},
-      {"min": 10000, "max": null, "score": 5}
+      {"min": 1, "max": 10, "minInclusive": true, "maxExclusive": true, "score": 1},
+      {"min": 10, "max": 100, "minInclusive": true, "maxExclusive": true, "score": 2},
+      {"min": 100, "max": 1000, "minInclusive": true, "maxExclusive": true, "score": 3},
+      {"min": 1000, "max": 10000, "minInclusive": true, "maxExclusive": true, "score": 4},
+      {"min": 10000, "max": null, "minInclusive": true, "maxExclusive": false, "score": 5}
     ],
     "missingPolicy": "UNOBSERVED"
   },
   "impactScopeRules": {
-    "sourceField": "scopeValue",
-    "bands": [
-      {"min": 0.0, "max": 0.20, "score": 1},
-      {"min": 0.20, "max": 0.40, "score": 2},
-      {"min": 0.40, "max": 0.60, "score": 3},
-      {"min": 0.60, "max": 0.80, "score": 4},
-      {"min": 0.80, "max": 1.0, "score": 5}
-    ],
-    "missingPolicy": "UNOBSERVED"
+    "enabledYn": false,
+    "sourceField": null,
+    "bands": [],
+    "missingPolicy": "UNOBSERVED",
+    "pendingReason": "UPSTREAM_SCOPE_FACT_CONTRACT_REQUIRED"
   },
   "impactLikelihoodRules": {
     "sourceField": "probabilityValue",
     "normalization": "ZERO_TO_ONE_OR_PERCENT",
     "bands": [
-      {"min": 0.0, "max": 0.05, "score": 1},
-      {"min": 0.05, "max": 0.20, "score": 2},
-      {"min": 0.20, "max": 0.50, "score": 3},
-      {"min": 0.50, "max": 0.80, "score": 4},
-      {"min": 0.80, "max": 1.0, "score": 5}
+      {"min": 0.0, "max": 0.05, "minInclusive": true, "maxExclusive": true, "score": 1},
+      {"min": 0.05, "max": 0.20, "minInclusive": true, "maxExclusive": true, "score": 2},
+      {"min": 0.20, "max": 0.50, "minInclusive": true, "maxExclusive": true, "score": 3},
+      {"min": 0.50, "max": 0.80, "minInclusive": true, "maxExclusive": true, "score": 4},
+      {"min": 0.80, "max": 1.0, "minInclusive": true, "maxExclusive": false, "score": 5}
     ],
     "missingPolicy": "UNOBSERVED"
   },
@@ -55,7 +51,7 @@
       {"min": 0.001, "max": 0.005, "minInclusive": true, "maxExclusive": true, "score": 2},
       {"min": 0.005, "max": 0.01, "minInclusive": true, "maxExclusive": true, "score": 3},
       {"min": 0.01, "max": 0.03, "minInclusive": true, "maxExclusive": true, "score": 4},
-      {"min": 0.03, "max": null, "minInclusive": true, "score": 5}
+      {"min": 0.03, "max": null, "minInclusive": true, "maxExclusive": false, "score": 5}
     ],
     "missingPolicy": "UNOBSERVED"
   },
@@ -63,11 +59,11 @@
     "sourceField": "probabilityValue",
     "normalization": "ZERO_TO_ONE_OR_PERCENT",
     "bands": [
-      {"min": 0.0, "max": 0.05, "score": 1},
-      {"min": 0.05, "max": 0.20, "score": 2},
-      {"min": 0.20, "max": 0.50, "score": 3},
-      {"min": 0.50, "max": 0.80, "score": 4},
-      {"min": 0.80, "max": 1.0, "score": 5}
+      {"min": 0.0, "max": 0.05, "minInclusive": true, "maxExclusive": true, "score": 1},
+      {"min": 0.05, "max": 0.20, "minInclusive": true, "maxExclusive": true, "score": 2},
+      {"min": 0.20, "max": 0.50, "minInclusive": true, "maxExclusive": true, "score": 3},
+      {"min": 0.50, "max": 0.80, "minInclusive": true, "maxExclusive": true, "score": 4},
+      {"min": 0.80, "max": 1.0, "minInclusive": true, "maxExclusive": false, "score": 5}
     ],
     "missingPolicy": "UNOBSERVED"
   },
@@ -81,9 +77,17 @@
   "eventDedupRules": {
     "mandatoryKeys": ["subIssueCode", "normalizedEventType", "eventDateBucket"],
     "advisoryOnlyFields": ["eventGroupCandidateId"],
-    "mergePolicy": "CANONICAL_FACTOR_ONE",
+    "mergePolicy": "COMPOSITE_PLUS_MATCHING_ADVISORY_HINT",
     "conflictPolicy": "CONFLICTED",
-    "missingMandatoryKeyPolicy": "UNRESOLVED"
+    "missingMandatoryKeyPolicy": "UNRESOLVED",
+    "dateBucketSourcePriority": ["eventDate", "effectiveDate", "deadlineDate"],
+    "dateBucketPrecision": "DAY"
+  },
+  "ratioValueContract": {
+    "normalization": "DECIMAL_RATIO_ONLY",
+    "min": 0.0,
+    "max": 1.0,
+    "outOfRangePolicy": "REJECTED"
   },
   "missingPolicy": {
     "requiredFactorMissing": "UNOBSERVED",

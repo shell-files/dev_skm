@@ -41,6 +41,19 @@ def _resolveNewsProviderKey(result: Mapping[str, Any]) -> str:
     return "unknown"
 
 
+_SIMILARITY_MATCH_ALLOWED_KEYS = frozenset({"issueId", "subIssueNameKr", "score"})
+
+
+def _sanitizeIssueSimilarityMatches(rawMatches) -> list:
+    if not rawMatches:
+        return []
+    sanitized = []
+    for match in rawMatches:
+        if isinstance(match, dict):
+            sanitized.append({k: v for k, v in match.items() if k in _SIMILARITY_MATCH_ALLOWED_KEYS})
+    return sanitized
+
+
 def step0NormalizeMediaFacts(analysisResults: list) -> list[ExtractedFactsV13]:
     facts: list[ExtractedFactsV13] = []
     for result in analysisResults or []:
@@ -63,7 +76,7 @@ def step0NormalizeMediaFacts(analysisResults: list) -> list[ExtractedFactsV13]:
             "providerKey": _resolveNewsProviderKey(result),
             "sourceUrl": result.get("url"),
             "publishedAt": result.get("publishedAt"),
-            "issueSimilarityMatches": result.get("issueSimilarityMatches", []),
+            "issueSimilarityMatches": _sanitizeIssueSimilarityMatches(result.get("issueSimilarityMatches")),
         }
         facts.append(ExtractedFactsV13(
             subIssueCode=str(subIssueCode),

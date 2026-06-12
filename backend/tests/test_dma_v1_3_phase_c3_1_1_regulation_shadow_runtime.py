@@ -118,6 +118,27 @@ def _regPayload(regime="CSRD", applicability="DIRECT_MANDATORY",
     return payloads[0]
 
 
+def _installMediaServiceImportStubs():
+    """Keep service hook tests pure; do not import NLP/native pipeline dependencies."""
+    adapter = types.ModuleType("src.services.medias.adapter")
+    adapter.convertMediaToDmaSignals = lambda pipelineResults: []
+    adapter.step0NormalizeMediaFacts = lambda pipelineResults: []
+    sys.modules["src.services.medias.adapter"] = adapter
+
+    baseline = types.ModuleType("src.services.medias.baseline")
+    baseline.applyMediaBaseline = lambda signals: signals
+    sys.modules["src.services.medias.baseline"] = baseline
+
+    crawler = types.ModuleType("src.services.medias.crawler")
+    crawler.applySavedSignalCounts = lambda sourceBreakdown, savedSignalCountsBySource: sourceBreakdown
+    crawler.crawlNewsArticles = lambda **kwargs: None
+    sys.modules["src.services.medias.crawler"] = crawler
+
+    pipeline = types.ModuleType("src.services.medias.pipeline")
+    pipeline.processMediaPipeline = lambda articles, companyKeywords=None, industryKeywords=None: []
+    sys.modules["src.services.medias.pipeline"] = pipeline
+
+
 def _craftedRegDict():
     """Hand-built serialized payload dict mirroring a valid regulation shadow payload."""
     return {
@@ -546,6 +567,7 @@ class PhaseC311ServiceHookTest(unittest.TestCase):
 
     def setUp(self):
         _resetPolicies()
+        _installMediaServiceImportStubs()
         sys.modules.pop("src.services.medias.service", None)
         self.svc = importlib.import_module("src.services.medias.service")
 
@@ -724,12 +746,16 @@ class PhaseC311StaticGuardTest(unittest.TestCase):
         return [line for line in result.stdout.splitlines() if line.strip()]
 
     def test_49_no_summary_or_rank_calls_in_regulation_path(self):
+        _installMediaServiceImportStubs()
+        sys.modules.pop("src.services.medias.service", None)
         svc = importlib.import_module("src.services.medias.service")
         sources = self._regulationSources() + inspect.getsource(svc.refreshRegulationShadowForRun)
         for banned in ("recalcStage(", "upsertStage(", "recalcFinal(", "updateRanks("):
             self.assertNotIn(banned, sources)
 
     def test_50_no_external_max_in_regulation_path(self):
+        _installMediaServiceImportStubs()
+        sys.modules.pop("src.services.medias.service", None)
         svc = importlib.import_module("src.services.medias.service")
         sources = self._regulationSources() + inspect.getsource(svc.refreshRegulationShadowForRun)
         self.assertNotIn("externalMax", sources)

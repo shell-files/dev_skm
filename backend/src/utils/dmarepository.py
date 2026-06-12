@@ -1510,7 +1510,7 @@ def step4ReplaceMediaNewsShadowBundleTx(
 #   → step2BuildRegulationScreeningPayloads() (pure builder, reused as-is)
 #   → _buildRegulationShadowRows() (row serializer, no DB access)
 #   → step4ReplaceRegulationShadowTracesTx() (replace-active transaction)
-#   → ESG_DMA_SIGNAL_DETAIL (source_step = media_external_regulation_v13_shadow)
+#   → ESG_DMA_SIGNAL_DETAIL (source_step = MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP)
 #
 # NOTE: ESG_DMA_REGULATION__INPUT carries an intentional double underscore between
 # REGULATION and INPUT — it is the real table name, not a typo.
@@ -1695,6 +1695,12 @@ def _buildRegulationShadowRows(
         regime = rawInputs.get("regime")
         if not regime:
             raise ValueError("Regulation Shadow rawInputs.regime is required")
+        expectedChannel = f"regulation_{str(regime).lower()}"
+        if channel != expectedChannel:
+            raise ValueError(
+                f"Regulation Shadow channel/regime mismatch: "
+                f"expected={expectedChannel!r}, got={channel!r}"
+            )
         applicability = rawInputs.get("applicability")
         if not applicability:
             raise ValueError("Regulation Shadow rawInputs.applicability is required")

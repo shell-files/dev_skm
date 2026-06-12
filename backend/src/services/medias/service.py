@@ -15,6 +15,7 @@ from src.services.medias.pipeline import processMediaPipeline
 from src.services.materialities.orchestrator import (
     step0BuildFactTrace,
     step1BuildMediaNewsCanonicalPayloads,
+    step2BuildRegulationScreeningPayloads,
 )
 from src.utils.dmarepository import (
     getMediaCoverage,
@@ -22,6 +23,10 @@ from src.utils.dmarepository import (
     listTopMediaIssues,
     saveSignals,
     step4ReplaceMediaNewsShadowBundleTx,
+    findRegulationRunContext,
+    listApprovedRegulationInputs,
+    listApprovedActiveRegulationMappings,
+    step4ReplaceRegulationShadowTracesTx,
 )
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
 from src.utils.subissuemaster import getSubIssueDisplayName
@@ -118,6 +123,14 @@ def runMediaCrawlAndAnalyze(
         except Exception as shadowError:
             print(f"Warning: media_external.news v1.3 shadow empty-clear failed: {shadowError}")
 
+    # media_external.regulation Shadow refresh — independent of the news crawl result.
+    # Runs exactly once even when the crawl FAILED; a failure here must never break the
+    # legacy media response (warning only).
+    try:
+        refreshRegulationShadowForRun(request.runId)
+    except Exception as shadowError:
+        print(f"Warning: media_external.regulation v1.3 shadow replace failed: {shadowError}")
+
     sourceBreakdown = applySavedSignalCounts(
         crawlResult.sourceBreakdown,
         savedSignalCountsBySource,
@@ -213,6 +226,31 @@ def _replaceMediaNewsShadowFromPipelineResults(runId: int, pipelineResults: list
         factPayloads=factPayloads,
         canonicalPayloads=canonicalPayloads,
     )
+
+
+def refreshRegulationShadowForRun(runId: int) -> int:
+    """
+    Refresh the media_external.regulation Shadow set for a materiality run.
+
+    Independent of the news crawl result. Reads the run's company/year, the APPROVED
+    applicability inputs and the APPROVED + active regime→sub-issue mappings, rebuilds
+    the regulation screening payloads via the pure orchestrator builder, then replaces
+    the active regulation shadow rows within a single transaction.
+
+    Empty approved input or empty active mapping yields payloads=[], which is a valid
+    empty-clear (prior active regulation shadow rows are soft-deleted, nothing inserted).
+    Returns the number of regulation shadow rows persisted.
+    """
+    runContext = findRegulationRunContext(runId)
+    companyId = runContext["companyId"]
+    reportingYear = runContext["reportingYear"]
+
+    approvedInputs = listApprovedRegulationInputs(companyId, reportingYear)
+    approvedMappings = listApprovedActiveRegulationMappings()
+
+    payloads = step2BuildRegulationScreeningPayloads(approvedInputs, approvedMappings)
+
+    return step4ReplaceRegulationShadowTracesTx(runId, payloads)
 
 
 def _isCrawlComplete(crawlResult) -> bool:

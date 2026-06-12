@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import { useNavigate } from "react-router";
 import ApprovalProjectSelectModal from "./mains/modal/ApprovalProjectSelectModal";
 import { useAuth } from "@hooks/AuthContext";
@@ -120,6 +121,7 @@ const Dashboard = () => {
   const { selectedCompany } = useAuth();
   const companyId = selectedCompany?.company_id;
   const companyName = selectedCompany?.company_name || "A_GROUP";
+  const currentYear = useSelector((state) => state.report.currentYear);
 
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [currentProject, setCurrentProject] = useState(MOCK_PROJECTS[0]);
@@ -127,13 +129,13 @@ const Dashboard = () => {
   const [onboardingLoading, setOnboardingLoading] = useState(false);
 
   useEffect(() => {
-    if (!companyId || !currentProject?.reportingYear) return;
+    if (!companyId || !currentYear) return;
     const load = async () => {
       setOnboardingLoading(true);
       try {
         const res = await GET("/onboarding", {
           companyId,
-          reportingYear: currentProject.reportingYear,
+          reportingYear: currentYear,
           cycleType: "POST_DMA_DISCLOSURE",
         });
         const rows = buildOnboardingRows(res?.items);
@@ -145,7 +147,7 @@ const Dashboard = () => {
       }
     };
     load();
-  }, [companyId, currentProject?.reportingYear]);
+  }, [companyId, currentYear]);
 
   const handleSelectProject = (project) => {
     setCurrentProject(project);
@@ -299,9 +301,6 @@ const Dashboard = () => {
               <thead>
                 <tr>
                   <th>이슈</th>
-                  <th>E</th>
-                  <th>S</th>
-                  <th>G</th>
                   <th>전체</th>
                   <th>입력완료</th>
                 </tr>
@@ -310,13 +309,6 @@ const Dashboard = () => {
                 {onboardingRows.map((row, i) => (
                   <tr key={i}>
                     <td>{row.name}</td>
-                    {[row.e, row.s, row.g].map((v, j) => (
-                      <td key={j}>
-                        <span className={`db-onboard-check ${v ? "on" : "off"}`}>
-                          {v ? "✓" : "—"}
-                        </span>
-                      </td>
-                    ))}
                     <td className="db-onboard-count">{row.count}</td>
                     <td className="db-onboard-done" style={{ color: row.doneColor }}>{row.done}</td>
                   </tr>

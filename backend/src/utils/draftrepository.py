@@ -129,8 +129,8 @@ def deleteDraftRows(companyId: int, year: int):
     save("UPDATE ESG_REPORT_DRAFT_NARRATIVE SET delete_yn=1 WHERE company_id=? AND reporting_year=?", (companyId, year))
 
 
-def getMetricTrendRows(companyId: int, metricId: str, baseYear: int) -> list:
-    """지표의 baseYear 이하 연도별 값 조회. KPI_FACT 우선, 없으면 ROLLUP 조회."""
+def getMetricTrendRows(companyId: int, metricId: str, baseYear: int) -> tuple:
+    """지표의 baseYear 이하 연도별 값 조회. KPI_FACT 우선, 없으면 ROLLUP 조회. (rows, isRollup) 반환."""
     sql_kpi = """
         SELECT reporting_year AS year,
                value_numeric  AS valueNumeric,
@@ -145,7 +145,7 @@ def getMetricTrendRows(companyId: int, metricId: str, baseYear: int) -> list:
     """
     rows = findAll(sql_kpi, (companyId, metricId, baseYear))
     if rows:
-        return rows
+        return rows, False
     sql_rollup = """
         SELECT reporting_year        AS year,
                value_numeric         AS valueNumeric,
@@ -158,4 +158,65 @@ def getMetricTrendRows(companyId: int, metricId: str, baseYear: int) -> list:
           AND delete_yn              = 0
         ORDER BY reporting_year ASC
     """
-    return findAll(sql_rollup, (companyId, metricId, baseYear))
+    return findAll(sql_rollup, (companyId, metricId, baseYear)), True
+
+
+def getRollupDetailRow(parentCompanyId: int, metricId: str, year: int) -> dict:
+    """
+    연도 이하 가장 최근 롤업 결과 1건:
+    source_company_values_json + calculation_trace + unit 한 번에 조회.
+    """
+    sql = """
+        SELECT source_company_values_json AS sourceValuesJson,
+               calculation_trace          AS calculationTrace,
+               unit,
+               reporting_year             AS year
+        FROM ESG_GROUP_ROLLUP_RESULT
+        WHERE parent_company_id      = ?
+          AND group_atomic_metric_id = ?
+          AND reporting_year        <= ?
+          AND delete_yn              = 0
+        ORDER BY reporting_year DESC, id DESC
+        LIMIT 1
+    """
+    return findOne(sql, (parentCompanyId, metricId, year))
+
+
+def getCompanyNamesByIds(companyIds: list) -> dict:
+    """company_id 목록 → {companyId: companyName} 맵 조회."""
+    if not companyIds:
+        return {}
+    placeholders = ",".join("?" * len(companyIds))
+    sql = f"""
+        SELECT company_id AS companyId,
+               COALESCE(company_code, CAST(company_id AS CHAR)) AS companyName
+        FROM ESG_COMPANY_PROFILE
+        WHERE company_id IN ({placeholders})
+          AND delete_yn = 0
+    """
+    rows = findAll(sql, tuple(companyIds))
+    return {int(r["companyId"]): r["companyName"] for r in rows}
+
+
+def getSourceMetricRollupRows(parentCompanyId: int, metricIds: list, year: int) -> list:
+    """
+    RECALCULATE fallback: source metric들의 ESG_GROUP_ROLLUP_RESULT를 단일 쿼리로 조회.
+    metricId별 최신 연도 우선 정렬; 호출부에서 first-seen 기준으로 최신 1건씩 사용.
+    반환: [{metricId, sourceValuesJson, unit, year}]
+    """
+    if not metricIds:
+        return []
+    placeholders = ",".join("?" * len(metricIds))
+    sql = f"""
+        SELECT group_atomic_metric_id AS metricId,
+               source_company_values_json AS sourceValuesJson,
+               unit,
+               reporting_year AS year
+        FROM ESG_GROUP_ROLLUP_RESULT
+        WHERE parent_company_id      = ?
+          AND group_atomic_metric_id IN ({placeholders})
+          AND reporting_year        <= ?
+          AND delete_yn              = 0
+        ORDER BY reporting_year DESC, id DESC
+    """
+    return findAll(sql, (parentCompanyId, *metricIds, year))

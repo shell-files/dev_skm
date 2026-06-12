@@ -97,7 +97,7 @@ function buildMetricsFromEdits(adapter, editMetrics, rows) {
 
 const Draft = () => {
   const [currentPid, setCurrentPid] = useState(null);
-  const [metricOpen, setMetricOpen] = useState(true);
+  const [metricOpen, setMetricOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(0); // 현재 보고서 페이지 인덱스
   const [pdfMode, setPdfMode] = useState(false); // PDF 내보내기용 전체 페이지 렌더 모드
   const [editMetricsByPage, setEditMetricsByPage] = useState({}); // { pageKey: { metric_id: 표시값 } }
@@ -126,19 +126,19 @@ const Draft = () => {
   const buildPageMetrics = (pageObj) =>
     buildMetricsFromEdits(pageObj.adapter, editMetricsByPage[pageObj.key], actualMetricRows);
   const buildPageNarrative = (key, subIssueId) => {
-  const t = (editNarrativeByPage[key] || "").trim();
+    const t = (editNarrativeByPage[key] || "").trim();
 
-  const looksLikeTemplate =
-    t.includes("{") && t.includes("}");
+    const looksLikeTemplate =
+      t.includes("{") && t.includes("}");
 
-  const section = subIssueId && aiSections[subIssueId];
+    const section = subIssueId && aiSections[subIssueId];
 
-  if (t && !looksLikeTemplate) {
-    return t;
-  }
+    if (t && !looksLikeTemplate) {
+      return t;
+    }
 
-  return section?.reportText || t || null;
-};
+    return section?.reportText || t || null;
+  };
 
   const getAiMetricIds = (subIssueId) => {
     const section = subIssueId && aiSections[subIssueId];
@@ -235,7 +235,12 @@ const Draft = () => {
             }));
           setMetricTrend(prev => ({
             ...prev,
-            [trackId]: { trend: trend.length > 0 ? trend : null, unit },
+            [trackId]: {
+              trend: trend.length > 0 ? trend : null,
+              unit,
+              isRollup: d.data.isRollup ?? false,
+              breakdown: d.data.breakdown || [],
+            },
           }));
         }
       });
@@ -770,6 +775,8 @@ const Draft = () => {
 
   // ── 근거 추적 패널: 선택된 SR 지표 정보 ──
   const srTrendData = trackId ? (metricTrend[trackId] || null) : null;
+  // metric_id의 atomic 파트가 G로 시작하면 연결(롤업) 지표 (예: E1-06__G0003)
+  const srIsRollup = trackId ? /__G\d/.test(trackId) : false;
   // 현재 페이지 metrics에서 선택 지표의 표시값 조회
   const srCurrentVal = (() => {
     if (!trackId) return null;
@@ -787,11 +794,13 @@ const Draft = () => {
       value: srCurrentVal,
       unit: srTrendData?.unit || null,
       trend: srTrendData?.trend || null,
-      breakdown: null,
+      isRollup: srIsRollup,
+      breakdown: srTrendData?.breakdown?.length > 0 ? srTrendData.breakdown : null,
       formula: null,
       aiDesc: null,
     }
     : null;
+  console.log(srMetric);
 
   return (
     <div className="draft-container">
@@ -833,29 +842,26 @@ const Draft = () => {
                     {aiLoading ? "로딩 중..." : " AI 본문 갱신"}
                   </button>
 
-                  {/* 1. 되돌리기 — 저장된 편집값 전체 삭제 */}
-                  <button className="doc-btn reset-btn" onClick={handleResetEdits}>
-                    ↩ 되돌리기
-                  </button>
+
 
                   {/* 2. 독립된 본문 수정 버튼 (Toggle 형태) */}
                   <button
                     className={`doc-btn ${isEditing ? "editing-active" : ""}`}
                     onClick={() => setIsEditing(!isEditing)}
                   >
-                    {isEditing ? "💾 수정 완료" : "✏️ 본문 수정"}
+                    {isEditing ? " 수정 중" : " 본문 수정"}
                   </button>
 
                   {/* 2. 분리된 파일 내려받기 드롭다운 버튼 */}
                   <div className="save-dropdown-container" ref={dropdownRef}>
                     <button className="doc-btn export-toggle-btn" onClick={() => setExportMenuOpen(!exportMenuOpen)}>
-                      📥 파일 내려받기 <span className="save-dropdown-arrow">▼</span>
+                       파일 내려받기 <span className="save-dropdown-arrow">▼</span>
                     </button>
 
                     {exportMenuOpen && (
                       <ul className="save-dropdown-menu">
-                        <li className="dropdown-item" onClick={() => handleExport("PDF")}>📄 PDF 다운로드</li>
-                        <li className="dropdown-item" onClick={() => handleExport("PPT_NATIVE")}>📊 PPT 다운로드</li>
+                        <li className="dropdown-item" onClick={() => handleExport("PDF")}> PDF 다운로드</li>
+                        <li className="dropdown-item" onClick={() => handleExport("PPT_NATIVE")}> PPT 다운로드</li>
                       </ul>
                     )}
                   </div>
@@ -864,12 +870,12 @@ const Draft = () => {
 
               <div className="doc-content">
 
-                {/* ── 편집 바 (✏️ 수정 모드) — 본문·값 모두 아래 페이지에서 직접 수정 ── */}
+                {/* ── 편집 바 ( 수정 모드) — 본문·값 모두 아래 페이지에서 직접 수정 ── */}
                 {isEditing && (
                   <div className="sr-editor">
                     <div className="sr-editor-bar">
                       <div className="sr-editor-hd">
-                        ✏️ <b>{PAGES[currentPage].subIssueLabel}</b> · {PAGES[currentPage].tabLabel} 수정 중
+                         <b>{PAGES[currentPage].subIssueLabel}</b> · {PAGES[currentPage].tabLabel} 수정 중
                       </div>
                       <div className="sr-editor-actions">
                         {savedAt && (
@@ -877,6 +883,11 @@ const Draft = () => {
                             저장됨 {new Date(savedAt).toLocaleString("ko-KR", { hour: "2-digit", minute: "2-digit", month: "numeric", day: "numeric" })}
                           </span>
                         )}
+                        {/* 1. 되돌리기 — 저장된 편집값 전체 삭제 */}
+                        <button className="doc-btn reset-btn" onClick={handleResetEdits}>
+                           되돌리기
+                        </button>
+                        <button className="sr-editor-save" onClick={handleSaveEdits}> 저장</button>
                         <button
                           className="sr-editor-cancel"
                           onClick={() => {
@@ -885,8 +896,9 @@ const Draft = () => {
                             setEditMetricsByPage(prev => { const n = { ...prev }; delete n[pk]; return n; });
                             setIsEditing(false);
                           }}
-                        >↩ 수정 취소</button>
-                        <button className="sr-editor-save" onClick={handleSaveEdits}>💾 저장</button>
+                        > 취소</button>
+                        
+
                       </div>
                     </div>
                     <div className="sr-editor-hint">
@@ -954,19 +966,36 @@ const Draft = () => {
                   </div>
 
                   {/* 지표 선택 — 이 섹션에서 사용된 모든 metric_id */}
-                  <div className="panel-select-wrap">
-                    <select
-                      className="panel-metric-select"
-                      value={trackId || ""}
-                      onChange={(e) => setTrackId(e.target.value)}
-                    >
-                      {panelMetricIds.map((id) => (
-                        <option key={id} value={id}>
-                          {(SR_FIELD_MAP[id] && SR_FIELD_MAP[id].label) || id}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="panel-select-count">{panelMetricIds.length}개 지표</span>
+                  <div className={`panel-metric-list-wrap${metricOpen ? " open" : ""}`}>
+                    <div className="panel-metric-list-hd" onClick={() => setMetricOpen(v => !v)}>
+                      <span className="panel-metric-list-label">
+                        {trackId
+                          ? ((SR_FIELD_MAP[trackId] && SR_FIELD_MAP[trackId].label) || trackId)
+                          : "지표 선택"}
+                      </span>
+                      <span className="panel-metric-list-right">
+                        <span className="panel-select-count">{panelMetricIds.length}개</span>
+                        <span className="panel-metric-chevron">{metricOpen ? "▲" : "▼"}</span>
+                      </span>
+                    </div>
+                    {metricOpen && (
+                      <div className="panel-metric-list">
+                        {panelMetricIds.map((id) => (
+                          <div
+                            key={id}
+                            className={`panel-metric-item${trackId === id ? " active" : ""}`}
+                            onClick={() => { setTrackId(id); setMetricOpen(false); }}
+                          >
+                            <span className="panel-metric-item-name">
+                              {(SR_FIELD_MAP[id] && SR_FIELD_MAP[id].label) || id}
+                            </span>
+                            {/__G\d/.test(id) && (
+                              <span className="panel-metric-item-badge">연결</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* 선택된 탭 상세 */}
@@ -987,10 +1016,13 @@ const Draft = () => {
                         </div>
                         <div className="metric-row">
                           <span className="metric-row-key">데이터 유형</span>
-                          <span className="metric-row-val">
+                          <span className="metric-row-val" style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                             <span className={`metric-badge ${/__QL/.test(srMetric.metricId) ? "" : "blue"}`}>
                               {/__QL/.test(srMetric.metricId) ? "정성" : "정량"}
                             </span>
+                            {srMetric.breakdown && (
+                              <span className="metric-badge blue" style={{ opacity: 0.75 }}>연결</span>
+                            )}
                           </span>
                         </div>
                         {srMetric.unit && (
@@ -1015,14 +1047,18 @@ const Draft = () => {
                         </div>
                       )}
 
-                      {srMetric.breakdown && srMetric.breakdown.length > 0 && (
+                      {srMetric.breakdown && (
                         <div className="panel-subsection">
-                          <div className="trend-section-title">데이터 구성</div>
+                          <div className="trend-section-title">
+                            구성 법인별 내역
+                            <span className="metric-badge blue" style={{ marginLeft: 6, fontSize: 10 }}>연결</span>
+                          </div>
                           <table className="breakdown-table">
                             <thead>
                               <tr>
-                                <th>구분</th>
-                                <th className="breakdown-val">값{srMetric.unit ? ` (${srMetric.unit})` : ""}</th>
+                                <th>법인</th>
+                                <th className="breakdown-val">값</th>
+                                <th className="breakdown-val">비중</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -1030,6 +1066,7 @@ const Draft = () => {
                                 <tr key={i}>
                                   <td>{b.l}</td>
                                   <td className="breakdown-val">{b.v}</td>
+                                  <td className="breakdown-val">{b.contributionRate != null ? `${b.contributionRate}%` : "—"}</td>
                                 </tr>
                               ))}
                             </tbody>

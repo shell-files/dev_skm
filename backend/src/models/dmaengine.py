@@ -320,7 +320,7 @@ class RegulationApplicabilityInputV13(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    companyId: str
+    companyId: int
     reportingYear: int
     regime: str
     applicability: str
@@ -338,7 +338,7 @@ class RegulationSubIssueMappingSeedV13(BaseModel):
     regime: str
     subIssueCode: str
     mappingReason: str
-    activeYn: bool = True
+    activeYn: bool = False
     reviewStatus: str = "DRAFT"
 
 

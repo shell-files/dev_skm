@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
 import "@styles/benchmarking.css";
 import robot from "@assets/images/robot/robot_repoting_transparent.png";
@@ -344,13 +344,13 @@ const Benchmarking = () => {
 
         <div className="Bench-stepper-row">
           {steps.map((step, index) => (
-            <div key={step.id} style={{ display: "flex", alignItems: "center" }}>
+            <Fragment key={step.id}>
               <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
                 <div className="step-icon-circle">{step.icon}</div>
                 <div style={{ fontSize: "0.8rem", fontWeight: 850 }}>{step.title}</div>
               </div>
               {index < steps.length - 1 && <div className="step-line"></div>}
-            </div>
+            </Fragment>
           ))}
         </div>
       </header>

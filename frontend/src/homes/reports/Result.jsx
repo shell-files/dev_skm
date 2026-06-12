@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
 import Observing from "@assets/icons/result_page/observe.png";
 import Chain from "@assets/icons/result_page/valuechain.png";
@@ -695,13 +695,13 @@ const Result = () => {
 
         <div className="sr-stepper-row">
           {steps.map((step, index) => (
-            <div key={step.id} className="stepper-step-wrap">
+            <Fragment key={step.id}>
               <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
                 <div className="step-icon-circle">{step.icon}</div>
                 <div className="step-title-text">{step.title}</div>
               </div>
               {index < steps.length - 1 && <div className="step-line"></div>}
-            </div>
+            </Fragment>
           ))}
         </div>
       </header>

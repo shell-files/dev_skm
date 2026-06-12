@@ -6,6 +6,7 @@ import DataTab from "./DataTab.jsx";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
 import { useAuth } from "@hooks/AuthContext";
 import ApprovalProjectSelectModal from "./modal/ApprovalProjectSelectModal";
+import PageHeader from "@components/UI/PageHeader";
 import {
   DEFAULT_REPORTING_YEAR,
   clearApprovalProject,
@@ -570,7 +571,12 @@ const ManagerData = () => {
       <div className="manager-content-container">
         <div className="page-header">
           <div className="page-title-area">
-            <h2 className="page-title">ESG 통합 관리</h2>
+            <PageHeader
+              category="ESG 통합 관리"
+              title="ESG 통합 관리"
+              description="연도별 프로젝트, 승인 현황, 데이터 진행 상태를 관리합니다."
+              iconClass="bi-leaf-fill"
+            />
           </div>
         </div>
 

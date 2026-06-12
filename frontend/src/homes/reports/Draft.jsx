@@ -126,19 +126,19 @@ const Draft = () => {
   const buildPageMetrics = (pageObj) =>
     buildMetricsFromEdits(pageObj.adapter, editMetricsByPage[pageObj.key], actualMetricRows);
   const buildPageNarrative = (key, subIssueId) => {
-  const t = (editNarrativeByPage[key] || "").trim();
+    const t = (editNarrativeByPage[key] || "").trim();
 
-  const looksLikeTemplate =
-    t.includes("{") && t.includes("}");
+    const looksLikeTemplate =
+      t.includes("{") && t.includes("}");
 
-  const section = subIssueId && aiSections[subIssueId];
+    const section = subIssueId && aiSections[subIssueId];
 
-  if (t && !looksLikeTemplate) {
-    return t;
-  }
+    if (t && !looksLikeTemplate) {
+      return t;
+    }
 
-  return section?.reportText || t || null;
-};
+    return section?.reportText || t || null;
+  };
 
   const getAiMetricIds = (subIssueId) => {
     const section = subIssueId && aiSections[subIssueId];
@@ -842,29 +842,26 @@ const Draft = () => {
                     {aiLoading ? "로딩 중..." : " AI 본문 갱신"}
                   </button>
 
-                  {/* 1. 되돌리기 — 저장된 편집값 전체 삭제 */}
-                  <button className="doc-btn reset-btn" onClick={handleResetEdits}>
-                    ↩ 되돌리기
-                  </button>
+
 
                   {/* 2. 독립된 본문 수정 버튼 (Toggle 형태) */}
                   <button
                     className={`doc-btn ${isEditing ? "editing-active" : ""}`}
                     onClick={() => setIsEditing(!isEditing)}
                   >
-                    {isEditing ? "💾 수정 완료" : "✏️ 본문 수정"}
+                    {isEditing ? " 수정 중" : " 본문 수정"}
                   </button>
 
                   {/* 2. 분리된 파일 내려받기 드롭다운 버튼 */}
                   <div className="save-dropdown-container" ref={dropdownRef}>
                     <button className="doc-btn export-toggle-btn" onClick={() => setExportMenuOpen(!exportMenuOpen)}>
-                      📥 파일 내려받기 <span className="save-dropdown-arrow">▼</span>
+                       파일 내려받기 <span className="save-dropdown-arrow">▼</span>
                     </button>
 
                     {exportMenuOpen && (
                       <ul className="save-dropdown-menu">
-                        <li className="dropdown-item" onClick={() => handleExport("PDF")}>📄 PDF 다운로드</li>
-                        <li className="dropdown-item" onClick={() => handleExport("PPT_NATIVE")}>📊 PPT 다운로드</li>
+                        <li className="dropdown-item" onClick={() => handleExport("PDF")}> PDF 다운로드</li>
+                        <li className="dropdown-item" onClick={() => handleExport("PPT_NATIVE")}> PPT 다운로드</li>
                       </ul>
                     )}
                   </div>
@@ -873,12 +870,12 @@ const Draft = () => {
 
               <div className="doc-content">
 
-                {/* ── 편집 바 (✏️ 수정 모드) — 본문·값 모두 아래 페이지에서 직접 수정 ── */}
+                {/* ── 편집 바 ( 수정 모드) — 본문·값 모두 아래 페이지에서 직접 수정 ── */}
                 {isEditing && (
                   <div className="sr-editor">
                     <div className="sr-editor-bar">
                       <div className="sr-editor-hd">
-                        ✏️ <b>{PAGES[currentPage].subIssueLabel}</b> · {PAGES[currentPage].tabLabel} 수정 중
+                         <b>{PAGES[currentPage].subIssueLabel}</b> · {PAGES[currentPage].tabLabel} 수정 중
                       </div>
                       <div className="sr-editor-actions">
                         {savedAt && (
@@ -886,6 +883,11 @@ const Draft = () => {
                             저장됨 {new Date(savedAt).toLocaleString("ko-KR", { hour: "2-digit", minute: "2-digit", month: "numeric", day: "numeric" })}
                           </span>
                         )}
+                        {/* 1. 되돌리기 — 저장된 편집값 전체 삭제 */}
+                        <button className="doc-btn reset-btn" onClick={handleResetEdits}>
+                           되돌리기
+                        </button>
+                        <button className="sr-editor-save" onClick={handleSaveEdits}> 저장</button>
                         <button
                           className="sr-editor-cancel"
                           onClick={() => {
@@ -894,8 +896,9 @@ const Draft = () => {
                             setEditMetricsByPage(prev => { const n = { ...prev }; delete n[pk]; return n; });
                             setIsEditing(false);
                           }}
-                        >↩ 수정 취소</button>
-                        <button className="sr-editor-save" onClick={handleSaveEdits}>💾 저장</button>
+                        > 취소</button>
+                        
+
                       </div>
                     </div>
                     <div className="sr-editor-hint">

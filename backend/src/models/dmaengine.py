@@ -320,7 +320,7 @@ class RegulationApplicabilityInputV13(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    companyId: int
+    companyId: int = Field(..., strict=True, gt=0)
     reportingYear: int
     regime: str
     applicability: str

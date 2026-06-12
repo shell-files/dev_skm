@@ -178,6 +178,29 @@ def resolveMediaNewsEventGroup(
                 "MERGED" if (all_non_null and all_same) else "CONFLICTED"
             )
             for i in indices:
+                if dedup_status == "MERGED":
+                    new_dedup = MediaNewsDedupTraceV13(
+                        eventGroupCandidateId=results[i].dedup.eventGroupCandidateId,
+                        confirmedEventGroupKey=confirmedKey,
+                        dedupStatus="MERGED",
+                        ruleTrace=[{
+                            "compositeKey": confirmedKey,
+                            "groupCount": len(indices),
+                            "mergePolicy": "COMPOSITE_PLUS_MATCHING_ADVISORY_HINT",
+                        }],
+                    )
+                else:
+                    new_dedup = MediaNewsDedupTraceV13(
+                        eventGroupCandidateId=results[i].dedup.eventGroupCandidateId,
+                        confirmedEventGroupKey=None,
+                        dedupStatus="CONFLICTED",
+                        ruleTrace=[{
+                            "candidateCompositeKey": confirmedKey,
+                            "groupCount": len(indices),
+                            "mergePolicy": "COMPOSITE_PLUS_MATCHING_ADVISORY_HINT",
+                            "reason": "candidate_hint_missing_or_conflicted",
+                        }],
+                    )
                 results[i] = results[i].model_copy(
                     update={
                         "resolverStatus": (
@@ -185,16 +208,7 @@ def resolveMediaNewsEventGroup(
                             if dedup_status == "CONFLICTED"
                             else results[i].resolverStatus
                         ),
-                        "dedup": MediaNewsDedupTraceV13(
-                            eventGroupCandidateId=results[i].dedup.eventGroupCandidateId,
-                            confirmedEventGroupKey=confirmedKey,
-                            dedupStatus=dedup_status,
-                            ruleTrace=[{
-                                "compositeKey": confirmedKey,
-                                "groupCount": len(indices),
-                                "mergePolicy": "COMPOSITE_PLUS_MATCHING_ADVISORY_HINT",
-                            }],
-                        ),
+                        "dedup": new_dedup,
                     }
                 )
 

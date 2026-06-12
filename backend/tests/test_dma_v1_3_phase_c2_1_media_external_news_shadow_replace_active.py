@@ -351,7 +351,7 @@ class PhaseC21ServiceHookTest(unittest.TestCase):
              patch.object(svc, "saveSignals", side_effect=saveSignalsSideEffect), \
              patch.object(svc, "step0NormalizeMediaFacts", return_value=normalizeReturn) as normMock, \
              patch.object(svc, "step0BuildFactTrace", wraps=svc.step0BuildFactTrace) as traceMock, \
-             patch.object(svc, "step4ReplaceMediaNewsShadowTracesTx",
+             patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx",
                           side_effect=txSideEffect) as txMock, \
              patch("builtins.print") as printMock:
             result = svc.runMediaAnalysis(articles=[], runId=99)
@@ -388,7 +388,7 @@ class PhaseC21ServiceHookTest(unittest.TestCase):
              patch.object(svc, "saveSignals"), \
              patch.object(svc, "step0NormalizeMediaFacts", return_value=normalizedFacts), \
              patch.object(svc, "step0BuildFactTrace", side_effect=capturingBuildFactTrace), \
-             patch.object(svc, "step4ReplaceMediaNewsShadowTracesTx"):
+             patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx"):
             svc.runMediaAnalysis(articles=[], runId=99)
 
         self.assertTrue(all(ch == "media_external" for ch in capturedChannels))
@@ -404,7 +404,7 @@ class PhaseC21ServiceHookTest(unittest.TestCase):
              patch.object(svc, "scoreSignals", return_value=scored), \
              patch.object(svc, "saveSignals"), \
              patch.object(svc, "step0NormalizeMediaFacts", side_effect=RuntimeError("norm fail")), \
-             patch.object(svc, "step4ReplaceMediaNewsShadowTracesTx") as txMock, \
+             patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx") as txMock, \
              patch("builtins.print"):
             result = svc.runMediaAnalysis(articles=[], runId=99)
         txMock.assert_not_called()
@@ -429,7 +429,7 @@ class PhaseC21ServiceHookTest(unittest.TestCase):
              patch.object(svc, "applyMediaBaseline", return_value=[]), \
              patch.object(svc, "scoreSignals", return_value=self._makeScored()), \
              patch.object(svc, "saveSignals", side_effect=RuntimeError("save boom")), \
-             patch.object(svc, "step4ReplaceMediaNewsShadowTracesTx") as txMock:
+             patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx") as txMock:
             with self.assertRaises(RuntimeError):
                 svc.runMediaAnalysis(articles=[], runId=99)
         txMock.assert_not_called()
@@ -442,10 +442,11 @@ class PhaseC21ServiceHookTest(unittest.TestCase):
              patch.object(svc, "applyMediaBaseline", return_value=[]), \
              patch.object(svc, "scoreSignals", return_value=[]), \
              patch.object(svc, "saveSignals"), \
-             patch.object(svc, "step4ReplaceMediaNewsShadowTracesTx") as txMock:
+             patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx") as txMock:
             svc.runMediaAnalysis(articles=[], runId=99)
         txMock.assert_called_once()
         self.assertEqual(txMock.call_args.kwargs["factPayloads"], [])
+        self.assertEqual(txMock.call_args.kwargs["canonicalPayloads"], [])
 
 
 # ── Adapter Scalar Normalization tests ───────────────────────────────────────
@@ -559,7 +560,7 @@ class PhaseC211CrawlEmptyReplaceTest(unittest.TestCase):
              patch.object(svc, "getMediaCoverage", return_value={"coverageStatus": "LOW"}), \
              patch.object(svc, "countMediaSubIssues", return_value=0), \
              patch.object(svc, "listTopMediaIssues", return_value=[]), \
-             patch.object(svc, "step4ReplaceMediaNewsShadowTracesTx",
+             patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx",
                           side_effect=txSideEffect) as txMock, \
              patch("builtins.print") as printMock:
             result = svc.runMediaCrawlAndAnalyze(self._makeRequest())
@@ -577,6 +578,7 @@ class PhaseC211CrawlEmptyReplaceTest(unittest.TestCase):
         _, txMock, _ = self._runCrawlWithPatches(crawlResult)
         txMock.assert_called_once()
         self.assertEqual(txMock.call_args.kwargs["factPayloads"], [])
+        self.assertEqual(txMock.call_args.kwargs["canonicalPayloads"], [])
         self.assertEqual(txMock.call_args.kwargs["runId"], 99)
 
     # 36. articles=[], Source FAILED → TX 미호출
@@ -687,7 +689,7 @@ class PhaseC212PartialCrawlProtectionTest(unittest.TestCase):
              patch.object(svc, "getMediaCoverage", return_value={"coverageStatus": "LOW"}), \
              patch.object(svc, "countMediaSubIssues", return_value=0), \
              patch.object(svc, "listTopMediaIssues", return_value=[]), \
-             patch.object(svc, "step4ReplaceMediaNewsShadowTracesTx") as txMock, \
+             patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx") as txMock, \
              patch("builtins.print"):
             svc.runMediaCrawlAndAnalyze(self._makeRequest())
         return txMock
@@ -762,7 +764,7 @@ class PhaseC212PartialCrawlProtectionTest(unittest.TestCase):
              patch.object(svc, "getMediaCoverage", return_value={"coverageStatus": "LOW"}), \
              patch.object(svc, "countMediaSubIssues", return_value=0), \
              patch.object(svc, "listTopMediaIssues", return_value=[]), \
-             patch.object(svc, "step4ReplaceMediaNewsShadowTracesTx") as txMock:
+             patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx") as txMock:
             svc.runMediaCrawlAndAnalyze(self._makeRequest())
 
         saveMock.assert_called_once_with(

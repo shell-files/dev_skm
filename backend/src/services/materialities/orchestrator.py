@@ -13,9 +13,20 @@ Do not:
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional, Sequence
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
-from src.models.dmaengine import ExtractedFactsV13, ScorePurposeV13, ScreeningTraceV13
+from src.models.dmaengine import (
+    ExtractedFactsV13,
+    MediaNewsDedupTraceV13,
+    MediaNewsEventResolutionTraceV13,
+    ScorePurposeV13,
+    ScreeningTraceV13,
+)
+from src.services.medias.eventresolver import (
+    resolveMediaNewsCanonicalFactors,
+    resolveMediaNewsEventGroup,
+    resolveMediaNewsEventObservation,
+)
 from src.utils import dmaruleregistry, dmascoring
 from src.utils.dmarepository import step4BuildTrace
 
@@ -215,6 +226,145 @@ def step2BuildBenchmarkScreeningPayloads(
     return screeningPayloads
 
 
+def _mediaNewsCandidateFingerprint(candidate) -> tuple:
+    """Deterministic fingerprint of an axis candidate for MERGED consistency check."""
+    if candidate is None:
+        return ()
+    return (
+        getattr(candidate, "polarity", None),
+        getattr(candidate, "scale", None),
+        getattr(candidate, "scope", None),
+        getattr(candidate, "likelihood", None),
+        getattr(candidate, "irremediability", None),
+        getattr(candidate, "timeHorizon", None),
+        getattr(candidate, "explicitNoUrgencyYn", None),
+        getattr(candidate, "magnitude", None),
+    )
+
+
+def _selectMediaNewsCanonicalRows(
+    facts: List[ExtractedFactsV13],
+    resolutions: List[MediaNewsEventResolutionTraceV13],
+) -> List[Tuple[ExtractedFactsV13, MediaNewsEventResolutionTraceV13]]:
+    """
+    Collapse MERGED groups to 1 (fact, resolution) pair per event group.
+    Demotes MERGED groups with inconsistent Candidate fingerprints to CONFLICTED.
+    Non-MERGED resolutions pass through unchanged.
+    """
+    pairs = list(zip(facts, resolutions))
+    output: List[Tuple[ExtractedFactsV13, MediaNewsEventResolutionTraceV13]] = []
+    merged_groups: Dict[str, List[int]] = {}
+
+    for idx, (_, r) in enumerate(pairs):
+        if r.dedup.dedupStatus == "MERGED" and r.dedup.confirmedEventGroupKey is not None:
+            merged_groups.setdefault(r.dedup.confirmedEventGroupKey, []).append(idx)
+        else:
+            output.append(pairs[idx])
+
+    for _key, indices in merged_groups.items():
+        group_pairs = [pairs[i] for i in indices]
+        impact_fps = {_mediaNewsCandidateFingerprint(r.impact) for _, r in group_pairs}
+        fin_fps = {_mediaNewsCandidateFingerprint(r.financial) for _, r in group_pairs}
+
+        if len(impact_fps) <= 1 and len(fin_fps) <= 1:
+            # Consistent — pick representative via deterministic sort
+            def _sort_key(item: tuple, orig_idx: int) -> tuple:
+                fact, r = item
+                conf = fact.classificationConfidence if fact.classificationConfidence is not None else 0.0
+                pub = ""
+                url = ""
+                if fact.evidenceSpans:
+                    span = fact.evidenceSpans[0]
+                    pub = getattr(span, "publishedAt", None) or ""
+                    url = getattr(span, "sourceUrl", None) or ""
+                return (-conf, pub, url, orig_idx)
+
+            ranked = sorted(
+                [(group_pairs[j], indices[j]) for j in range(len(indices))],
+                key=lambda x: _sort_key(x[0], x[1]),
+            )
+            output.append(ranked[0][0])
+        else:
+            # Inconsistent fingerprints → demote to CONFLICTED Audit rows
+            for fact, r in group_pairs:
+                demoted = r.model_copy(
+                    update={
+                        "resolverStatus": "CONFLICTED",
+                        "dedup": MediaNewsDedupTraceV13(
+                            eventGroupCandidateId=r.dedup.eventGroupCandidateId,
+                            confirmedEventGroupKey=None,
+                            dedupStatus="CONFLICTED",
+                            ruleTrace=list(r.dedup.ruleTrace) + [{
+                                "reason": "merged_candidate_fingerprint_mismatch",
+                            }],
+                        ),
+                    }
+                )
+                output.append((fact, demoted))
+
+    return output
+
+
+def step1BuildMediaNewsCanonicalPayloads(
+    extractedFacts: Sequence[ExtractedFactsV13],
+    *,
+    evaluationDate: Optional[str] = None,
+) -> list[dict]:
+    """
+    ExtractedFactsV13 목록 → Canonical Shadow Payload 목록 (DB 접근 없음).
+
+    Steps:
+      1. Registry에서 Resolver / Canonical Policy 조회
+      2. Fact별 resolveMediaNewsEventObservation()
+      3. 전체 Resolution에 resolveMediaNewsEventGroup()
+      4. MERGED 그룹 1건 Collapse / Candidate 불일치 → CONFLICTED 강등
+      5. 안전한 대상만 resolveMediaNewsCanonicalFactors()
+      6. step4BuildTrace()로 Canonical Shadow Payload 생성
+    """
+    resolverPolicy = dmaruleregistry.getPolicy("media_event_resolver_policy")
+    canonicalPolicy = dmaruleregistry.getPolicy("canonical_scoring_policy")
+    ruleVersion = dmaruleregistry.getRuleVersion()
+    configHash = dmaruleregistry.getConfigHash()
+
+    facts = list(extractedFacts)
+    if not facts:
+        return []
+
+    resolutions = [
+        resolveMediaNewsEventObservation(fact, resolverPolicy, evaluationDate=evaluationDate)
+        for fact in facts
+    ]
+    resolutions = resolveMediaNewsEventGroup(resolutions, resolverPolicy)
+
+    canonical_pairs = _selectMediaNewsCanonicalRows(facts, resolutions)
+
+    payloads = []
+    for fact, resolution in canonical_pairs:
+        can_compute = (
+            resolution.dedup.dedupStatus in ("UNIQUE", "MERGED")
+            and resolution.resolverStatus in ("RESOLVED", "PARTIAL")
+        )
+        if can_compute:
+            axes = resolveMediaNewsCanonicalFactors(resolution, canonicalPolicy)
+            axisScores = [score for score in axes.values() if score is not None]
+        else:
+            axisScores = []
+
+        payload = step4BuildTrace(
+            scorePurpose=ScorePurposeV13.CANONICAL_IRO,
+            sourceChannel="media_external",
+            subIssueCode=fact.subIssueCode,
+            extractedFacts=fact,
+            axisScores=axisScores,
+            eventResolutionTrace=resolution,
+            ruleVersion=ruleVersion,
+            configHash=configHash,
+        )
+        payloads.append(payload)
+
+    return payloads
+
+
 def step3RunSelection(items: Sequence[Mapping[str, Any]]) -> dict:
     policy = dmaruleregistry.getPolicy("selection_policy")
     return dmascoring.step3RunSelection(items, policy)
@@ -222,6 +372,7 @@ def step3RunSelection(items: Sequence[Mapping[str, Any]]) -> dict:
 
 __all__ = [
     "step0BuildFactTrace",
+    "step1BuildMediaNewsCanonicalPayloads",
     "step1RunCanonical",
     "step2ResolveBenchmarkObservation",
     "step2BuildBenchmarkScreeningPayloads",

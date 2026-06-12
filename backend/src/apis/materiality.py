@@ -47,9 +47,6 @@ async def get_onboarding_progress(runId: int, userModel=Depends(get_token)):
         if not run:
             raise HTTPException(status_code=404, detail="Materiality run not found")
 
-        company_id = int(run["company_id"])
-        reporting_year = int(run["reporting_year"])
-
         rows = findAll(
             """
             SELECT

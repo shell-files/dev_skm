@@ -161,17 +161,22 @@ def getMetricTrendRows(companyId: int, metricId: str, baseYear: int) -> tuple:
     return findAll(sql_rollup, (companyId, metricId, baseYear)), True
 
 
-def getRollupSourceValuesRow(parentCompanyId: int, metricId: str, year: int) -> dict:
-    """특정 연도 롤업 결과의 source_company_values_json 조회."""
+def getRollupDetailRow(parentCompanyId: int, metricId: str, year: int) -> dict:
+    """
+    연도 이하 가장 최근 롤업 결과 1건:
+    source_company_values_json + calculation_trace + unit 한 번에 조회.
+    """
     sql = """
         SELECT source_company_values_json AS sourceValuesJson,
-               unit
+               calculation_trace          AS calculationTrace,
+               unit,
+               reporting_year             AS year
         FROM ESG_GROUP_ROLLUP_RESULT
         WHERE parent_company_id      = ?
           AND group_atomic_metric_id = ?
-          AND reporting_year         = ?
+          AND reporting_year        <= ?
           AND delete_yn              = 0
-        ORDER BY id DESC
+        ORDER BY reporting_year DESC, id DESC
         LIMIT 1
     """
     return findOne(sql, (parentCompanyId, metricId, year))
@@ -191,3 +196,33 @@ def getCompanyNamesByIds(companyIds: list) -> dict:
     """
     rows = findAll(sql, tuple(companyIds))
     return {int(r["companyId"]): r["companyName"] for r in rows}
+
+
+def getSubsidiaryKpiByMetrics(parentCompanyId: int, metricIds: list, year: int) -> list:
+    """
+    자회사별 여러 지표 KPI_FACT를 단일 쿼리로 조회.
+    metricIds: 조회할 atomic_metric_id 목록 (source metrics 포함).
+    반환: [{companyId, companyName, metricId, valueNumeric, valueText, unit}]
+    """
+    if not metricIds:
+        return []
+    placeholders = ",".join("?" * len(metricIds))
+    sql = f"""
+        SELECT f.company_id       AS companyId,
+               f.atomic_metric_id AS metricId,
+               f.value_numeric    AS valueNumeric,
+               f.value_text       AS valueText,
+               f.unit,
+               COALESCE(p.company_code, CAST(f.company_id AS CHAR)) AS companyName
+        FROM ESG_KPI_FACT f
+        JOIN ESG_COMPANY_ROLLUP_SCOPE s
+          ON s.source_company_id = f.company_id
+         AND s.parent_company_id = ?
+         AND s.delete_yn         = 0
+        LEFT JOIN ESG_COMPANY_PROFILE p
+          ON p.company_id = f.company_id AND p.delete_yn = 0
+        WHERE f.atomic_metric_id IN ({placeholders})
+          AND f.reporting_year   = ?
+          AND f.delete_yn        = 0
+    """
+    return findAll(sql, (parentCompanyId, *metricIds, year))

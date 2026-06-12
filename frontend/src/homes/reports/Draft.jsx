@@ -800,6 +800,7 @@ const Draft = () => {
       aiDesc: null,
     }
     : null;
+  console.log(srMetric);
 
   return (
     <div className="draft-container">

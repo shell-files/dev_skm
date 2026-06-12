@@ -91,26 +91,23 @@ const getStageLabel = (label) => {
   return label;
 };
 
-// materiality results → 선정 이슈 행 (selectedYn: true 필터)
-const buildMaterialityRows = (items = [], nextStep = null) => {
-  console.log(nextStep)
-  const total = nextStep?.requiredMetricCount ?? null;
-  const missing = nextStep?.onboardingMissingCount ?? null;
-  const done = total != null && missing != null ? total - missing : null;
-  const doneColor = done != null && done === total ? "#475569" : "#ef4444";
-
-  return items
+// materiality results + onboarding-progress → 이슈별 행
+const buildMaterialityRows = (matItems = [], progressItems = []) => {
+  console.log(matItems, progressItems);
+  const progressMap = new Map(
+    progressItems.map((p) => [p.subIssueCode, p])
+  );
+  return matItems
     .filter((it) => it.selectedYn)
     .map((it) => {
-      const d = (it.domain || "").toUpperCase();
+      const p = progressMap.get(it.subIssueCode);
+      const total = p?.totalCount ?? null;
+      const done = p?.doneCount ?? null;
       return {
         name: it.displaySubIssueName || it.subIssueCode,
-        e: d.startsWith("E"),
-        s: d.startsWith("S"),
-        g: d.startsWith("G"),
         count: total != null ? `${total}개` : "-",
         done: done != null ? `${done}/${total}` : "-",
-        doneColor,
+        doneColor: done != null && done === total ? "#475569" : "#ef4444",
       };
     });
 };
@@ -134,8 +131,12 @@ const Dashboard = () => {
     const load = async () => {
       setOnboardingLoading(true);
       try {
-        const res = await GET(`/materiality/results/${currentRunId}`);
-        const rows = buildMaterialityRows(res?.items, res?.nextStep);
+        const [matRes, progressRes] = await Promise.all([
+          GET(`/materiality/results/${currentRunId}`),
+          GET(`/materiality/results/${currentRunId}/onboarding-progress`),
+        ]);
+        console.log("[progress] full:", progressRes);
+        const rows = buildMaterialityRows(matRes?.items, progressRes?.items);
         if (rows.length > 0) setOnboardingRows(rows);
       } catch {
         // fallback: mock 유지

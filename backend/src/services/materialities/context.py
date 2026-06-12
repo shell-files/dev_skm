@@ -393,11 +393,11 @@ def applyRankGuards(
 
 # Compatibility wrappers for previous public names
 
-def applyCompanyContextModifiers(runId: int) -> CompanyContextModifierResponseDto:
+def applyCompanyContextModifiers(runId: int, userModel) -> CompanyContextModifierResponseDto:
     return applyModifiers(runId)
 
 
-def getCompanyContextProfile(runId: int) -> CompanyContextProfileResponseDto:
+def getCompanyContextProfile(runId: int, userModel) -> CompanyContextProfileResponseDto:
     return getProfile(runId)
 
 

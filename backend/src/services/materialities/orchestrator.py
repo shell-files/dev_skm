@@ -13,6 +13,7 @@ Do not:
 
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from src.models.dmaengine import (
@@ -277,7 +278,12 @@ def _selectMediaNewsCanonicalRows(
                     span = fact.evidenceSpans[0]
                     pub = getattr(span, "publishedAt", None) or ""
                     url = getattr(span, "sourceUrl", None) or ""
-                return (-conf, pub, url, orig_idx)
+                stableFactKey = json.dumps(
+                    fact.model_dump(mode="json", by_alias=False),
+                    ensure_ascii=False,
+                    sort_keys=True,
+                )
+                return (-conf, pub, url, stableFactKey, orig_idx)
 
             ranked = sorted(
                 [(group_pairs[j], indices[j]) for j in range(len(indices))],

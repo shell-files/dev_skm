@@ -55,7 +55,7 @@ CBAM_SUB = "E_CLIMATE__GHG_SCOPE12_EMISSIONS"
 DPP_SUB = "E_CIRCULARITY__RECYCLING_RECOVERY"
 
 
-def approvedInput(regime="CSRD", applicability="DIRECT_MANDATORY", companyId="A", reportingYear=2026):
+def approvedInput(regime="CSRD", applicability="DIRECT_MANDATORY", companyId=1001, reportingYear=2026):
     return {
         "companyId": companyId,
         "reportingYear": reportingYear,
@@ -159,6 +159,12 @@ class PhaseC31DtoFailFastTest(unittest.TestCase):
         with self.assertRaises(ValidationError):
             RegulationApplicabilityInputV13(**item)
 
+    def test_13_company_id_string_is_rejected(self):
+        item = approvedInput()
+        item["companyId"] = "A_GROUP"
+        with self.assertRaises(ValidationError):
+            RegulationApplicabilityInputV13(**item)
+
 
 class PhaseC31MappingExpansionTest(unittest.TestCase):
     def test_13_approved_input_and_mapping_create_payload(self):
@@ -184,6 +190,11 @@ class PhaseC31MappingExpansionTest(unittest.TestCase):
         mapping["activeYn"] = False
         self.assertEqual(buildPayloads(mappings=[mapping]), [])
 
+    def test_18_omitted_active_mapping_is_excluded(self):
+        mapping = approvedMapping()
+        del mapping["activeYn"]
+        self.assertEqual(buildPayloads(mappings=[mapping]), [])
+
     def test_18_one_regime_expands_to_multiple_sub_issues(self):
         payloads = buildPayloads(mappings=[
             approvedMapping(subIssueCode=CSRD_SUB),
@@ -197,8 +208,8 @@ class PhaseC31MappingExpansionTest(unittest.TestCase):
     def test_19_multiple_regimes_expand_payloads(self):
         payloads = buildPayloads(
             inputs=[
-                approvedInput(regime="CSRD", companyId="A"),
-                approvedInput(regime="CBAM", companyId="A"),
+                approvedInput(regime="CSRD", companyId=1001),
+                approvedInput(regime="CBAM", companyId=1001),
             ],
             mappings=[
                 approvedMapping(regime="CSRD", subIssueCode=CSRD_SUB),
@@ -220,9 +231,9 @@ class PhaseC31MappingExpansionTest(unittest.TestCase):
 
     def test_22_deterministic_sort(self):
         inputs = [
-            approvedInput(regime="DPP", companyId="B", reportingYear=2027),
-            approvedInput(regime="CSRD", companyId="A", reportingYear=2026),
-            approvedInput(regime="CBAM", companyId="A", reportingYear=2026),
+            approvedInput(regime="DPP", companyId=2002, reportingYear=2027),
+            approvedInput(regime="CSRD", companyId=1001, reportingYear=2026),
+            approvedInput(regime="CBAM", companyId=1001, reportingYear=2026),
         ]
         mappings = [
             approvedMapping(regime="DPP", subIssueCode=DPP_SUB),
@@ -268,11 +279,15 @@ class PhaseC31DuplicateAndGuardTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             buildPayloads(mappings=[approvedMapping(subIssueCode="")])
 
-    def test_30_dmascoring_has_no_duplicate_regulation_calculator(self):
+    def test_30_unknown_sub_issue_code_fails_fast(self):
+        with self.assertRaises(ValueError):
+            buildPayloads(mappings=[approvedMapping(subIssueCode="NO_SUCH_SUB_ISSUE")])
+
+    def test_31_dmascoring_has_no_duplicate_regulation_calculator(self):
         source = Path(ROOT, "src/utils/dmascoring.py").read_text(encoding="utf-8")
         self.assertEqual(len(re.findall(r"def step2CalcRegulation\(", source)), 1)
 
-    def test_31_dmarepository_has_no_diff(self):
+    def test_32_dmarepository_has_no_diff(self):
         result = subprocess.run(
             ["git", "diff", "--name-only", "--", "backend/src/utils/dmarepository.py"],
             cwd=REPO,
@@ -282,7 +297,7 @@ class PhaseC31DuplicateAndGuardTest(unittest.TestCase):
         )
         self.assertEqual(result.stdout.strip(), "")
 
-    def test_32_summary_rank_externalmax_not_in_regulation_builder(self):
+    def test_33_summary_rank_externalmax_not_in_regulation_builder(self):
         source = inspect.getsource(orchestrator.step2BuildRegulationScreeningPayloads)
         for banned in (
             "ESG_DMA_SCORE_SUMMARY",
@@ -294,7 +309,7 @@ class PhaseC31DuplicateAndGuardTest(unittest.TestCase):
         ):
             self.assertNotIn(banned, source)
 
-    def test_33_manifest_has_no_diff(self):
+    def test_34_manifest_has_no_diff(self):
         result = subprocess.run(
             ["git", "diff", "--name-only", "--", "backend/src/resources/dma/v1_3_mvp/manifest.json"],
             cwd=REPO,
@@ -304,7 +319,7 @@ class PhaseC31DuplicateAndGuardTest(unittest.TestCase):
         )
         self.assertEqual(result.stdout.strip(), "")
 
-    def test_34_screening_policy_has_no_diff(self):
+    def test_35_screening_policy_has_no_diff(self):
         result = subprocess.run(
             ["git", "diff", "--name-only", "--", "backend/src/resources/dma/v1_3_mvp/screening_policy.json"],
             cwd=REPO,
@@ -314,16 +329,33 @@ class PhaseC31DuplicateAndGuardTest(unittest.TestCase):
         )
         self.assertEqual(result.stdout.strip(), "")
 
-    def test_35_mapping_seed_sub_issues_exist_in_master(self):
+    def test_36_mapping_seed_sub_issues_exist_in_master(self):
         for code in (CSRD_SUB, CBAM_SUB, DPP_SUB):
             self.assertIn(code, subissueMaster)
 
-    def test_36_regulation_remains_media_external_source_type(self):
+    def test_37_regulation_remains_media_external_source_type(self):
         payload = buildPayloads()[0]
         self.assertEqual(payload["sourceChannel"], "media_external")
         raw = payload["screeningTrace"][0]["rawInputs"]
         self.assertEqual(raw["sourceStep"], "media_external")
         self.assertEqual(raw["sourceType"], "regulation")
+
+    def test_38_regime_and_applicability_are_not_hardcoded_in_orchestrator(self):
+        source = Path(ROOT, "src/services/materialities/orchestrator.py").read_text(encoding="utf-8")
+        self.assertNotIn("REGULATION_REGIMES", source)
+        self.assertNotIn("REGULATION_APPLICABILITIES", source)
+
+    def test_39_service_runtime_must_not_call_regulation_screening_directly(self):
+        services = Path(ROOT, "src/services")
+        offenders = []
+        for path in services.rglob("*.py"):
+            relative = path.relative_to(ROOT).as_posix()
+            if relative == "src/services/materialities/orchestrator.py":
+                continue
+            source = path.read_text(encoding="utf-8")
+            if 'step2RunScreening("regulation"' in source or "step2RunScreening('regulation'" in source:
+                offenders.append(relative)
+        self.assertEqual(offenders, [])
 
 
 if __name__ == "__main__":

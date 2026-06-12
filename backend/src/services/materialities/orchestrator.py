@@ -32,15 +32,8 @@ from src.services.medias.eventresolver import (
 )
 from src.utils import dmaruleregistry, dmascoring
 from src.utils.dmarepository import step4BuildTrace
+from src.utils.subissuemaster import subissueMaster
 
-REGULATION_REGIMES = ("CBAM", "CSRD", "DPP")
-REGULATION_APPLICABILITIES = (
-    "DIRECT_MANDATORY",
-    "MATERIAL_VALUE_CHAIN",
-    "MONITORING_ONLY",
-    "NOT_APPLICABLE",
-    "UNKNOWN",
-)
 REGULATION_INPUT_METHODS = ("CONSULTANT_INPUT", "MANUAL", "POLICY_SEED")
 REGULATION_REVIEW_STATUSES = ("APPROVED", "DRAFT", "REVIEWED")
 
@@ -263,6 +256,11 @@ def step2BuildRegulationScreeningPayloads(
     applicabilityInputs: Sequence[RegulationApplicabilityInputV13 | Mapping[str, Any]],
     mappingRows: Sequence[RegulationSubIssueMappingSeedV13 | Mapping[str, Any]],
 ) -> list[dict]:
+    screeningPolicy = dmaruleregistry.getPolicy("screening_policy")
+    regulationPolicy = screeningPolicy.get("regulation")
+    if not isinstance(regulationPolicy, Mapping):
+        raise ValueError("screening_policy.regulation is required")
+
     inputs = [
         item if isinstance(item, RegulationApplicabilityInputV13)
         else RegulationApplicabilityInputV13(**dict(item))
@@ -276,9 +274,10 @@ def step2BuildRegulationScreeningPayloads(
 
     approvedInputs = {}
     for item in inputs:
-        if item.regime not in REGULATION_REGIMES:
+        if item.regime not in regulationPolicy:
             raise ValueError(f"Unknown regulation regime: {item.regime!r}")
-        if item.applicability not in REGULATION_APPLICABILITIES:
+        regimePolicy = regulationPolicy[item.regime]
+        if not isinstance(regimePolicy, Mapping) or item.applicability not in regimePolicy:
             raise ValueError(f"Unknown regulation applicability: {item.applicability!r}")
         if item.inputMethod not in REGULATION_INPUT_METHODS:
             raise ValueError(f"Unknown regulation inputMethod: {item.inputMethod!r}")
@@ -297,12 +296,14 @@ def step2BuildRegulationScreeningPayloads(
     approvedMappingsByRegime: dict[str, list[RegulationSubIssueMappingSeedV13]] = {}
     mappingKeys = set()
     for item in mappings:
-        if item.regime not in REGULATION_REGIMES:
+        if item.regime not in regulationPolicy:
             raise ValueError(f"Unknown regulation mapping regime: {item.regime!r}")
         if item.reviewStatus not in REGULATION_REVIEW_STATUSES:
             raise ValueError(f"Unknown regulation mapping reviewStatus: {item.reviewStatus!r}")
         if not item.subIssueCode:
             raise ValueError("regulation mapping subIssueCode is required")
+        if item.subIssueCode not in subissueMaster:
+            raise ValueError(f"Unknown regulation mapping subIssueCode: {item.subIssueCode!r}")
         key = (item.regime, item.subIssueCode)
         if key in mappingKeys:
             raise ValueError(

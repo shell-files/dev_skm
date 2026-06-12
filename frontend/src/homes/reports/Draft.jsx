@@ -117,6 +117,7 @@ const Draft = () => {
   const [exportMenuOpen, setExportMenuOpen] = useState(false); // 내보내기 드롭다운 상태
 
   const dropdownRef = useRef(null);
+  const previewRef = useRef(null);
   const navigate = useNavigate();
 
   // ── SR 템플릿 데이터 연결 (페이지별 웹 편집 → 미리보기/PDF 동일 반영) ──
@@ -246,6 +247,38 @@ const Draft = () => {
       });
   }, [trackId, companyId, year]);
 
+  // 페이지 이동 시 현재 페이지의 [data-source] 요소만 스캔해 패널 목록 구성
+  useEffect(() => {
+    const container = previewRef.current;
+    if (!container) return;
+    const seen = new Set();
+    container.querySelectorAll("[data-source]").forEach(el => {
+      el.getAttribute("data-source").split(",").forEach(id => {
+        const t = id.trim();
+        if (t && SR_FIELD_MAP[t]) seen.add(t);
+      });
+    });
+    const ids = [...seen];
+    if (ids.length > 0) {
+      setPanelMetricIds(ids);
+      setTrackId(prev => (ids.includes(prev) ? prev : ids[0]));
+    }
+  }, [currentPage]);
+
+  // trackId 변경 시 미리보기에서 해당 [data-source] 요소 하이라이트
+  useEffect(() => {
+    const container = previewRef.current;
+    if (!container) return;
+    container.querySelectorAll("[data-source].tracking-active").forEach(el => {
+      el.classList.remove("tracking-active");
+    });
+    if (!trackId) return;
+    container.querySelectorAll("[data-source]").forEach(el => {
+      const srcs = el.getAttribute("data-source").split(",").map(s => s.trim());
+      if (srcs.includes(trackId)) el.classList.add("tracking-active");
+    });
+  }, [trackId, currentPage]);
+
   // useEffect(() => {
   //   const id = setInterval(() => {
   //     GET("/auth").catch(() => {});
@@ -306,17 +339,12 @@ const Draft = () => {
 
   // ── 본문(오른쪽 페이지)에서 값/토큰 클릭 → 그 자리에서 인라인 편집 ──
   const openInlineEdit = (e) => {
-    // 보기 모드에서 AI 문단(.sr-prose) 클릭 → 전체 aiMetricIds 패널 열기
+    // 보기 모드에서 AI 문단(.sr-prose) 클릭 → 현재 패널의 첫 번째로 이동
     if (!isEditing) {
       const proseEl = e.target.closest(".sr-prose");
       if (proseEl) {
-        const aiIds = getAiMetricIds(PAGES[currentPage].subIssueId) || [];
-        if (aiIds.length > 0) {
-          const keep = trackId && aiIds.includes(trackId) ? trackId : aiIds[0];
-          setPanelMetricIds(aiIds);
-          setTrackId(keep);
-          return;
-        }
+        if (panelMetricIds.length > 0 && !trackId) setTrackId(panelMetricIds[0]);
+        return;
       }
     }
 
@@ -325,14 +353,9 @@ const Draft = () => {
     const src = el.getAttribute("data-source");
     if (!src) return;
 
-    // ── 보기 모드: 근거 추적 패널 열기 ──
+    // ── 보기 모드: 클릭된 지표 선택 (목록은 DOM 스캔으로 이미 구성됨) ──
     if (!isEditing) {
       const clickedId = src.split(",")[0].trim();
-      const aiIds = getAiMetricIds(PAGES[currentPage].subIssueId) || [];
-      const ids = aiIds.length > 0
-        ? (aiIds.includes(clickedId) ? aiIds : [clickedId, ...aiIds])
-        : [clickedId];
-      setPanelMetricIds(ids);
       setTrackId(clickedId);
       return;
     }
@@ -913,6 +936,7 @@ const Draft = () => {
                     데이터는 climateMetrics(adapter) + climateNarrative 로만 구동(더미 없음).
                     subNavItems = 페이지 탭(클릭 시 onSubNavClick → goToPage). */}
                 <div
+                  ref={previewRef}
                   className={"draft-sr-preview" + (isEditing ? " is-editing" : "")}
                   onClick={openInlineEdit}
                 >

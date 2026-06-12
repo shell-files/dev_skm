@@ -170,6 +170,9 @@ class PhaseBAdapterTest(unittest.TestCase):
         self.assertEqual(facts[0].sourceType, "news")
         self.assertEqual(facts[0].rawMetadata["similarityScore"], 0.71)
         self.assertEqual(facts[0].rawMetadata["sourceUrl"], "https://example.test/news")
+        # Provider metadata (C2.0)
+        self.assertEqual(facts[0].rawMetadata["mediaExternalSourceType"], "news")
+        self.assertEqual(facts[0].rawMetadata["providerKey"], "wire")
 
     def test_survey_normalizer_preserves_null_and_skips_unmapped_rows(self):
         from src.services.surveys import adapter

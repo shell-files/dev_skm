@@ -30,9 +30,21 @@
 
 }
 
+.media-main-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 24px 130px;
+    padding-bottom: 180px;
+    display: flex;
+    justify-content: center;
+}
+
 .media-header {
     background: #fff;
     padding: 20px 40px;
+    border-bottom: 1px solid var(--media-border);
     flex-shrink: 0;
     width: 100%;
 }
@@ -45,15 +57,15 @@
 }
 
 .media-input-card {
-    background: #fff;
-    padding: 35px 130px;
-    border-radius: var(--media-radius);
     width: 100%;
-    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.02);
-    text-align: center;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    padding: 32px 0 120px;
+    background: #fff;
+    text-align: center;
+    border-radius: var(--media-radius);
 }
 
 /* 미디어 데이터 수집 카드 세단 그리드 */
@@ -439,7 +451,7 @@
     }
 
     .media-input-card {
-        padding: 28px 40px;
+        padding: 28px 28px 120px;
     }
 
     .robot-view-container {
@@ -479,6 +491,10 @@
     .media-result-dashboard.open {
         height: 500px;
     }
+
+    .media-input-card {
+        padding: 24px 20px 140px;
+    }
 }
 
 /* =========================================================
@@ -486,9 +502,9 @@
 ========================================================= */
 
 @media (max-width: 768px) {
-    .main_page {
+    .media-main-content {
         padding: 16px;
-        padding-bottom: 180px;
+        padding-bottom: 240px;
     }
 
     .media-title {
@@ -507,6 +523,10 @@
 
     .step-box {
         min-width: 80px;
+    }
+
+    .media-input-card {
+        padding: 20px 16px 160px;
     }
 
     .media-input-card .media-card {
@@ -561,12 +581,15 @@
 
     .media-main-content {
         padding: 10px;
-        /* padding-bottom: 10px; */
-        padding-bottom: 80px !important;
+        padding-bottom: 260px;
     }
 
     .media-input-card .media-card {
         padding: 16px 14px;
+    }
+
+    .media-input-card {
+        padding: 18px 12px 180px;
     }
 
     .survey-badge {
@@ -863,9 +886,9 @@
 
 .media-compact-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 420px;
   gap: 22px;
-  align-items: start;
+  align-items: stretch;
   margin-top: 20px;
 }
 
@@ -904,13 +927,16 @@
 }
 
 .media-compact-card {
-  min-height: 188px;
+  height: 310px;
   padding: 20px 22px;
   border-radius: 14px;
   border: 1px solid #e2e8f0;
   background: #fff;
   margin-bottom: 16px;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
 
 .media-press-layout {
@@ -1008,23 +1034,14 @@
   font-weight: 800;
 }
 
-.media-checklist-container {
-  padding: 16px 18px;
-  border-radius: 12px;
-  margin-top: 16px;
-  margin-bottom: 22px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
-}
-
 .media-checklist-title {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 0.9rem;
   font-weight: 800;
-  color: #03A94D;
-  margin-bottom: 10px;
+  color: #1e293b;
+  margin-bottom: 12px;
 }
 
 .media-checklist-grid {
@@ -1033,25 +1050,68 @@
   gap: 12px;
 }
 
-.media-checklist-item {
+.media-checklist-card {
   display: flex;
   align-items: center;
   gap: 7px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.media-checklist-card.done {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.media-checklist-card.pending {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.checklist-card-label {
   font-size: 0.8rem;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.checklist-card-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.checklist-card-badge.done {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.checklist-card-badge.pending {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
 .media-summary-col {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  height: 100%;
 }
 
 .media-summary-card {
+  flex: 1;
   padding: 16px;
   border-radius: 14px;
   background: #fff;
   border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
 }
 
 .media-summary-title {
@@ -1067,11 +1127,12 @@
 .media-summary-row {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
-  padding: 9px 0;
+  padding: 12px 0;
   border-bottom: 1px solid #f1f5f9;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
+  flex: 1;
 }
 .media-summary-row:last-child {
   border-bottom: none;

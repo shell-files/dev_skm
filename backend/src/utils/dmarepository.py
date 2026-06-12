@@ -1516,6 +1516,44 @@ def step4ReplaceMediaNewsShadowBundleTx(
 # REGULATION and INPUT — it is the real table name, not a typo.
 
 
+# STEP 4. Strict DB reader helpers — raise instead of silently returning [] / None on error.
+#
+# The shared findAll / findOne helpers in db.py silently swallow mariadb.Error and return
+# [] / None, which makes a DB failure indistinguishable from a genuine empty result. For the
+# Regulation reader path this is unsafe: an empty reader result drives a Replace-Active
+# Transaction that soft-deletes all existing Regulation Shadow rows. These private helpers
+# raise RuntimeError on any connection or execution failure so the Replace-Active TX is
+# never reached when the DB is unavailable or broken.
+def _findOneRegulationRowOrRaise(sql: str, params=None) -> Optional[dict]:
+    conn = getConn()
+    if conn is None:
+        raise RuntimeError("DB connection is not available for regulation reader")
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(sql, params)
+            return cur.fetchone()
+    except Exception as exc:
+        raise RuntimeError(f"Regulation reader failed: {exc}") from exc
+    finally:
+        if hasattr(conn, "close"):
+            conn.close()
+
+
+def _findAllRegulationRowsOrRaise(sql: str, params=None) -> list[dict]:
+    conn = getConn()
+    if conn is None:
+        raise RuntimeError("DB connection is not available for regulation reader")
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(sql, params)
+            return cur.fetchall() or []
+    except Exception as exc:
+        raise RuntimeError(f"Regulation reader failed: {exc}") from exc
+    finally:
+        if hasattr(conn, "close"):
+            conn.close()
+
+
 # STEP 4. Regulation Run Context Reader. Resolves company/year for a materiality run.
 # Input: runId. Output: dict with runId / companyId / reportingYear camelCase aliases.
 # RuntimeError when the run row is missing (or soft-deleted).
@@ -1529,7 +1567,7 @@ def findRegulationRunContext(runId: int) -> dict:
         WHERE id = ?
           AND delete_yn = 0
     """
-    row = findOne(sql, (runId,))
+    row = _findOneRegulationRowOrRaise(sql, (runId,))
     if not row:
         raise RuntimeError(f"ESG_MATERIALITY_RUN row not found for runId={runId}")
     return row
@@ -1559,7 +1597,7 @@ def listApprovedRegulationInputs(
           AND delete_yn = 0
         ORDER BY regime
     """
-    return findAll(sql, (companyId, reportingYear)) or []
+    return _findAllRegulationRowsOrRaise(sql, (companyId, reportingYear))
 
 
 # STEP 4. APPROVED + active Regulation Sub-Issue Mapping Reader (first-pass filter).
@@ -1580,7 +1618,7 @@ def listApprovedActiveRegulationMappings() -> list[dict]:
           AND delete_yn = 0
         ORDER BY regime, sub_issue_code
     """
-    return findAll(sql) or []
+    return _findAllRegulationRowsOrRaise(sql)
 
 
 def _buildRegulationShadowRows(

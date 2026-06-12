@@ -1,13 +1,15 @@
 """
-DMA v1.3 MVP — Phase C3.1.1 media_external.regulation Shadow Runtime Wiring Tests.
+DMA v1.3 MVP — Phase C3.1.1 + C3.1.1.1 Micro Patch
+media_external.regulation Shadow Runtime Wiring Tests.
 
-54 tests across 6 sections:
-  §13.1  Namespace / Schema Guard   (#01-04)
-  §13.2  Repository Reader          (#05-13)
-  §13.3  Regulation Shadow Serializer (#14-27)
-  §13.4  Replace-Active Transaction (#28-39)
-  §13.5  Service Hook               (#40-48)
-  §13.6  Static Guard               (#49-54)
+60 tests across 6 sections + §13.2.1 Reader Fail-Closed:
+  §13.1  Namespace / Schema Guard       (#01-04)
+  §13.2  Repository Reader              (#05-13)
+  §13.2.1 Reader Fail-Closed Patch     (#55-60)  ← C3.1.1.1 Micro Patch
+  §13.3  Regulation Shadow Serializer   (#14-27)
+  §13.4  Replace-Active Transaction     (#28-39)
+  §13.5  Service Hook                   (#40-48)
+  §13.6  Static Guard                   (#49-54)
 
 Pure unit tests. No live DB, Docker, Redis, Kafka, or external API is exercised —
 DB access is faked with mock connections/cursors and readers are patched.
@@ -250,7 +252,8 @@ class PhaseC311NamespaceGuardTest(unittest.TestCase):
 
 class PhaseC311ReaderTest(unittest.TestCase):
 
-    def _captureFindOne(self, return_value):
+    def _captureStrictOne(self, return_value):
+        """Capture helper for _findOneRegulationRowOrRaise (strict run-context reader)."""
         captured = {}
 
         def fake(sql, params=None):
@@ -260,7 +263,8 @@ class PhaseC311ReaderTest(unittest.TestCase):
 
         return captured, fake
 
-    def _captureFindAll(self, return_value):
+    def _captureStrictAll(self, return_value):
+        """Capture helper for _findAllRegulationRowsOrRaise (strict list readers)."""
         captured = {}
 
         def fake(sql, params=None):
@@ -271,10 +275,10 @@ class PhaseC311ReaderTest(unittest.TestCase):
         return captured, fake
 
     def test_05_run_context_camelcase_alias(self):
-        captured, fake = self._captureFindOne(
+        captured, fake = self._captureStrictOne(
             {"runId": RUN_ID, "companyId": 1001, "reportingYear": 2026}
         )
-        with patch("src.utils.dmarepository.findOne", side_effect=fake):
+        with patch("src.utils.dmarepository._findOneRegulationRowOrRaise", side_effect=fake):
             result = repo.findRegulationRunContext(RUN_ID)
         self.assertEqual(result["companyId"], 1001)
         self.assertEqual(result["reportingYear"], 2026)
@@ -284,29 +288,29 @@ class PhaseC311ReaderTest(unittest.TestCase):
         self.assertEqual(captured["params"], (RUN_ID,))
 
     def test_06_run_context_missing_row_raises_runtime_error(self):
-        _, fake = self._captureFindOne(None)
-        with patch("src.utils.dmarepository.findOne", side_effect=fake):
+        _, fake = self._captureStrictOne(None)
+        with patch("src.utils.dmarepository._findOneRegulationRowOrRaise", side_effect=fake):
             with self.assertRaises(RuntimeError) as ctx:
                 repo.findRegulationRunContext(RUN_ID)
         self.assertIn("not found", str(ctx.exception))
 
     def test_07_input_reader_approved_only_sql(self):
-        captured, fake = self._captureFindAll([])
-        with patch("src.utils.dmarepository.findAll", side_effect=fake):
+        captured, fake = self._captureStrictAll([])
+        with patch("src.utils.dmarepository._findAllRegulationRowsOrRaise", side_effect=fake):
             repo.listApprovedRegulationInputs(1001, 2026)
         self.assertIn("review_status = 'APPROVED'", captured["sql"])
         self.assertIn(INPUT_TABLE, captured["sql"])
         self.assertEqual(captured["params"], (1001, 2026))
 
     def test_08_input_reader_delete_yn_zero_sql(self):
-        captured, fake = self._captureFindAll([])
-        with patch("src.utils.dmarepository.findAll", side_effect=fake):
+        captured, fake = self._captureStrictAll([])
+        with patch("src.utils.dmarepository._findAllRegulationRowsOrRaise", side_effect=fake):
             repo.listApprovedRegulationInputs(1001, 2026)
         self.assertIn("delete_yn = 0", captured["sql"])
 
     def test_09_input_reader_camelcase_alias(self):
-        captured, fake = self._captureFindAll([])
-        with patch("src.utils.dmarepository.findAll", side_effect=fake):
+        captured, fake = self._captureStrictAll([])
+        with patch("src.utils.dmarepository._findAllRegulationRowsOrRaise", side_effect=fake):
             repo.listApprovedRegulationInputs(1001, 2026)
         for alias in ("company_id AS companyId", "reporting_year AS reportingYear",
                       "input_method AS inputMethod", "source_document_ref AS sourceDocumentRef",
@@ -314,27 +318,27 @@ class PhaseC311ReaderTest(unittest.TestCase):
             self.assertIn(alias, captured["sql"])
 
     def test_10_mapping_reader_approved_only_sql(self):
-        captured, fake = self._captureFindAll([])
-        with patch("src.utils.dmarepository.findAll", side_effect=fake):
+        captured, fake = self._captureStrictAll([])
+        with patch("src.utils.dmarepository._findAllRegulationRowsOrRaise", side_effect=fake):
             repo.listApprovedActiveRegulationMappings()
         self.assertIn("review_status = 'APPROVED'", captured["sql"])
         self.assertIn(MAP_TABLE, captured["sql"])
 
     def test_11_mapping_reader_active_yn_sql(self):
-        captured, fake = self._captureFindAll([])
-        with patch("src.utils.dmarepository.findAll", side_effect=fake):
+        captured, fake = self._captureStrictAll([])
+        with patch("src.utils.dmarepository._findAllRegulationRowsOrRaise", side_effect=fake):
             repo.listApprovedActiveRegulationMappings()
         self.assertIn("active_yn = 1", captured["sql"])
 
     def test_12_mapping_reader_delete_yn_zero_sql(self):
-        captured, fake = self._captureFindAll([])
-        with patch("src.utils.dmarepository.findAll", side_effect=fake):
+        captured, fake = self._captureStrictAll([])
+        with patch("src.utils.dmarepository._findAllRegulationRowsOrRaise", side_effect=fake):
             repo.listApprovedActiveRegulationMappings()
         self.assertIn("delete_yn = 0", captured["sql"])
 
     def test_13_mapping_reader_deterministic_order_by(self):
-        captured, fake = self._captureFindAll([])
-        with patch("src.utils.dmarepository.findAll", side_effect=fake):
+        captured, fake = self._captureStrictAll([])
+        with patch("src.utils.dmarepository._findAllRegulationRowsOrRaise", side_effect=fake):
             repo.listApprovedActiveRegulationMappings()
         self.assertIn("ORDER BY regime, sub_issue_code", captured["sql"])
 
@@ -754,6 +758,77 @@ class PhaseC311StaticGuardTest(unittest.TestCase):
             source = (ROOT / rel).read_text(encoding="utf-8")
             self.assertNotIn("eval(", source)
             self.assertNotIn("exec(", source)
+
+
+# =========================================================
+# §13.2.1  Reader Fail-Closed Patch  (#55-60)
+# Phase C3.1.1.1 Micro Patch — verifies that DB errors in the Regulation
+# Readers raise RuntimeError instead of silently returning [], which would
+# drive an unintended Replace-Active TX that wipes the existing Shadow Set.
+# =========================================================
+
+class _FailCursor:
+    """Mock cursor whose execute() always raises — simulates a broken DB connection."""
+
+    def execute(self, sql, params=None):
+        raise RuntimeError("Simulated cursor execute failure")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        pass
+
+
+class _FailConn:
+    """Mock connection that returns a failing cursor."""
+
+    def cursor(self, **kwargs):
+        return _FailCursor()
+
+    def close(self):
+        pass
+
+
+class PhaseC311ReaderFailClosedTest(unittest.TestCase):
+    """Verifies that Regulation Reader DB failures raise RuntimeError (fail-closed)."""
+
+    def test_55_input_reader_none_conn_raises_runtime_error(self):
+        # getConn() returning None must raise — NOT silently return [].
+        with patch("src.utils.dmarepository.getConn", return_value=None):
+            with self.assertRaises(RuntimeError) as ctx:
+                repo.listApprovedRegulationInputs(1001, 2026)
+        self.assertIn("not available", str(ctx.exception))
+
+    def test_56_mapping_reader_none_conn_raises_runtime_error(self):
+        with patch("src.utils.dmarepository.getConn", return_value=None):
+            with self.assertRaises(RuntimeError) as ctx:
+                repo.listApprovedActiveRegulationMappings()
+        self.assertIn("not available", str(ctx.exception))
+
+    def test_57_input_reader_execute_failure_raises_runtime_error(self):
+        # cursor.execute() raising must propagate as RuntimeError — NOT return [].
+        with patch("src.utils.dmarepository.getConn", return_value=_FailConn()):
+            with self.assertRaises(RuntimeError) as ctx:
+                repo.listApprovedRegulationInputs(1001, 2026)
+        self.assertIn("reader failed", str(ctx.exception).lower())
+
+    def test_58_mapping_reader_execute_failure_raises_runtime_error(self):
+        with patch("src.utils.dmarepository.getConn", return_value=_FailConn()):
+            with self.assertRaises(RuntimeError) as ctx:
+                repo.listApprovedActiveRegulationMappings()
+        self.assertIn("reader failed", str(ctx.exception).lower())
+
+    def test_59_normal_empty_input_result_returns_empty_list(self):
+        # A genuine empty DB result (0 rows, no error) must return [] without raising.
+        with patch("src.utils.dmarepository._findAllRegulationRowsOrRaise", return_value=[]):
+            result = repo.listApprovedRegulationInputs(1001, 2026)
+        self.assertEqual(result, [])
+
+    def test_60_normal_empty_mapping_result_returns_empty_list(self):
+        with patch("src.utils.dmarepository._findAllRegulationRowsOrRaise", return_value=[]):
+            result = repo.listApprovedActiveRegulationMappings()
+        self.assertEqual(result, [])
 
 
 if __name__ == "__main__":

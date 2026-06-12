@@ -163,7 +163,7 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                 <div className="nav-scroll-area" ref={scrollRef}>
                     <div className="nav-group">
                         <div className="nav-item" onClick={handleGoHome}>
-                            <span>대시보드</span>
+                            <span>HOME</span>
                         </div>
                     </div>
                     

@@ -911,6 +911,11 @@ MEDIA_EXTERNAL_NEWS_V13_SHADOW_SOURCE_STEP = "media_external_news_v13_shadow"
 MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP = (
     "media_external_news_v13_canonical_shadow"
 )
+# media_external.regulation Shadow namespace SSOT.
+# Regulation stays a media_external internal source type (regulation), never a top-level stage.
+MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP = (
+    "media_external_regulation_v13_shadow"
+)
 
 _SHADOW_INSERT_SQL = """
     INSERT INTO ESG_DMA_SIGNAL_DETAIL (
@@ -1497,6 +1502,262 @@ def step4ReplaceMediaNewsShadowBundleTx(
             conn.close()
 
 
+# =========================================================
+# STEP 4. media_external.regulation Shadow Runtime
+# =========================================================
+# Regulation Applicability Input + Approved Active Mapping
+#   → APPROVED-only Repository Reader
+#   → step2BuildRegulationScreeningPayloads() (pure builder, reused as-is)
+#   → _buildRegulationShadowRows() (row serializer, no DB access)
+#   → step4ReplaceRegulationShadowTracesTx() (replace-active transaction)
+#   → ESG_DMA_SIGNAL_DETAIL (source_step = media_external_regulation_v13_shadow)
+#
+# NOTE: ESG_DMA_REGULATION__INPUT carries an intentional double underscore between
+# REGULATION and INPUT — it is the real table name, not a typo.
+
+
+# STEP 4. Regulation Run Context Reader. Resolves company/year for a materiality run.
+# Input: runId. Output: dict with runId / companyId / reportingYear camelCase aliases.
+# RuntimeError when the run row is missing (or soft-deleted).
+def findRegulationRunContext(runId: int) -> dict:
+    sql = """
+        SELECT
+            id AS runId,
+            company_id AS companyId,
+            reporting_year AS reportingYear
+        FROM ESG_MATERIALITY_RUN
+        WHERE id = ?
+          AND delete_yn = 0
+    """
+    row = findOne(sql, (runId,))
+    if not row:
+        raise RuntimeError(f"ESG_MATERIALITY_RUN row not found for runId={runId}")
+    return row
+
+
+# STEP 4. APPROVED-only Regulation Applicability Input Reader (first-pass filter).
+# Input: companyId, reportingYear. Output: APPROVED, non-deleted rows as camelCase dicts.
+# DRAFT / REVIEWED and delete_yn=1 are excluded here; the pure builder re-validates fail-closed.
+def listApprovedRegulationInputs(
+    companyId: int,
+    reportingYear: int,
+) -> list[dict]:
+    sql = """
+        SELECT
+            company_id AS companyId,
+            reporting_year AS reportingYear,
+            regime,
+            applicability,
+            input_method AS inputMethod,
+            source_document_ref AS sourceDocumentRef,
+            review_status AS reviewStatus,
+            reviewer_comment AS reviewerComment
+        FROM ESG_DMA_REGULATION__INPUT
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND review_status = 'APPROVED'
+          AND delete_yn = 0
+        ORDER BY regime
+    """
+    return findAll(sql, (companyId, reportingYear)) or []
+
+
+# STEP 4. APPROVED + active Regulation Sub-Issue Mapping Reader (first-pass filter).
+# Output: APPROVED, active_yn=1, non-deleted mapping rows as camelCase dicts.
+# source_document_ref is not a DTO field, so it is intentionally omitted from the builder input.
+# activeYn / reviewStatus are kept so the pure builder can re-check fail-closed.
+def listApprovedActiveRegulationMappings() -> list[dict]:
+    sql = """
+        SELECT
+            regime,
+            sub_issue_code AS subIssueCode,
+            mapping_reason AS mappingReason,
+            active_yn AS activeYn,
+            review_status AS reviewStatus
+        FROM ESG_DMA_REGULATION_SUB_ISSUE_MAP
+        WHERE review_status = 'APPROVED'
+          AND active_yn = 1
+          AND delete_yn = 0
+        ORDER BY regime, sub_issue_code
+    """
+    return findAll(sql) or []
+
+
+def _buildRegulationShadowRows(
+    runId: int,
+    payloads: Sequence[Dict[str, Any]],
+) -> list[tuple]:
+    """Row-serialization SSOT for media_external.regulation Shadow INSERT. No DB access.
+
+    Validates each Regulation Screening Payload and maps it to a _SHADOW_INSERT_SQL tuple.
+    UNKNOWN applicability yields impact/financial = None; NOT_APPLICABLE yields 0.0/0.0 —
+    the calculator already encodes this distinction in the screening trace signals, and the
+    None vs 0.0 difference must be preserved end-to-end.
+    """
+    rows = []
+    for payload in payloads:
+        payloadJson = step4WriteTrace(payload, asJson=True)
+        payloadData = json.loads(payloadJson)
+
+        if payloadData.get("scorePurpose") != "PRESURVEY_SCREENING":
+            raise ValueError(
+                f"Regulation Shadow scorePurpose must be 'PRESURVEY_SCREENING', "
+                f"got {payloadData.get('scorePurpose')!r}"
+            )
+        if payloadData.get("sourceChannel") != "media_external":
+            raise ValueError(
+                f"Regulation Shadow sourceChannel must be 'media_external', "
+                f"got {payloadData.get('sourceChannel')!r}"
+            )
+        subIssueCode = payloadData.get("subIssueCode")
+        if not subIssueCode:
+            raise ValueError("subIssueCode is required for Regulation Shadow trace")
+
+        screeningTrace = payloadData.get("screeningTrace")
+        if not isinstance(screeningTrace, list):
+            raise ValueError("screeningTrace is required for Regulation Shadow trace")
+        if len(screeningTrace) != 1:
+            raise ValueError(
+                f"Regulation Shadow requires exactly 1 screeningTrace, got {len(screeningTrace)}"
+            )
+        trace = screeningTrace[0]
+        if not isinstance(trace, dict):
+            raise ValueError("Regulation Shadow screeningTrace[0] must be a dict")
+
+        channel = trace.get("channel")
+        if not (isinstance(channel, str) and channel.startswith("regulation_")):
+            raise ValueError(
+                f"Regulation Shadow screeningTrace channel must start with 'regulation_', "
+                f"got {channel!r}"
+            )
+
+        rawInputs = trace.get("rawInputs")
+        if not isinstance(rawInputs, dict):
+            raise ValueError("Regulation Shadow rawInputs is required")
+        if rawInputs.get("sourceStep") != "media_external":
+            raise ValueError(
+                f"Regulation Shadow rawInputs.sourceStep must be 'media_external', "
+                f"got {rawInputs.get('sourceStep')!r}"
+            )
+        if rawInputs.get("sourceType") != "regulation":
+            raise ValueError(
+                f"Regulation Shadow rawInputs.sourceType must be 'regulation', "
+                f"got {rawInputs.get('sourceType')!r}"
+            )
+        companyId = rawInputs.get("companyId")
+        if not isinstance(companyId, int) or isinstance(companyId, bool) or companyId <= 0:
+            raise ValueError(
+                f"Regulation Shadow rawInputs.companyId must be a positive int, got {companyId!r}"
+            )
+        reportingYear = rawInputs.get("reportingYear")
+        if not isinstance(reportingYear, int) or isinstance(reportingYear, bool):
+            raise ValueError(
+                f"Regulation Shadow rawInputs.reportingYear must be an int, got {reportingYear!r}"
+            )
+        regime = rawInputs.get("regime")
+        if not regime:
+            raise ValueError("Regulation Shadow rawInputs.regime is required")
+        applicability = rawInputs.get("applicability")
+        if not applicability:
+            raise ValueError("Regulation Shadow rawInputs.applicability is required")
+
+        # UNKNOWN → None / None, NOT_APPLICABLE → 0.0 / 0.0 (passed through from the trace).
+        rows.append((
+            runId,
+            None,
+            regime,
+            subIssueCode,
+            MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP,
+            "regulation",
+            trace.get("impactSignal"),
+            trace.get("financialSignal"),
+            None,
+            payloadJson,
+        ))
+    return rows
+
+
+def step4ReplaceRegulationShadowTracesTx(
+    runId: int,
+    payloads: Sequence[Dict[str, Any]],
+) -> int:
+    """
+    Replace-Active Transaction for media_external.regulation Shadow rows.
+
+    Serializes all rows before opening a DB connection, then within a single
+    transaction: row-locks the run, soft-deletes the regulation shadow namespace,
+    inserts the new rows, verifies the active COUNT(*), and commits. Any failure
+    triggers ROLLBACK, preserving the prior active regulation shadow set.
+
+    payloads=[] is a valid empty-clear result — the transaction still runs,
+    soft-deletes the prior active rows, inserts nothing, verifies COUNT(*)==0,
+    and commits. Returns the number of rows inserted.
+    """
+    # Serialize before acquiring DB connection — Serializer failure must not call getConn().
+    rows = _buildRegulationShadowRows(runId, payloads)
+
+    conn = getConn()
+    if conn is None:
+        raise RuntimeError(
+            "DB connection is not available for regulation shadow replace transaction"
+        )
+    try:
+        conn.autocommit = False
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? FOR UPDATE",
+                (runId,),
+            )
+            lockRow = cur.fetchone()
+            if not lockRow:
+                raise RuntimeError(f"ESG_MATERIALITY_RUN row not found for runId={runId}")
+
+            cur.execute(
+                """
+                UPDATE ESG_DMA_SIGNAL_DETAIL
+                SET delete_yn = 1
+                WHERE esg_materiality_run_id = ?
+                  AND source_step = ?
+                  AND delete_yn = 0
+                """,
+                (runId, MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP),
+            )
+
+            if rows:
+                cur.executemany(_SHADOW_INSERT_SQL, rows)
+
+            # One Sub-Issue can map to multiple regimes (CSRD + CBAM); a plain COUNT(*)
+            # preserves the regime trace. A distinct-collapse over sub_issue_code would drop
+            # that trace and is intentionally NOT used here.
+            cur.execute(
+                """
+                SELECT COUNT(*) AS row_count
+                FROM ESG_DMA_SIGNAL_DETAIL
+                WHERE esg_materiality_run_id = ?
+                  AND source_step = ?
+                  AND delete_yn = 0
+                """,
+                (runId, MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP),
+            )
+            verifyRow = cur.fetchone() or {}
+            rowCount = int(verifyRow.get("row_count") or 0)
+            if rowCount != len(rows):
+                raise RuntimeError(
+                    f"Regulation shadow count check failed: "
+                    f"expected={len(rows)}, row_count={rowCount}"
+                )
+
+        conn.commit()
+        return len(rows)
+    except Exception:
+        if hasattr(conn, "rollback"):
+            conn.rollback()
+        raise
+    finally:
+        if hasattr(conn, "close"):
+            conn.close()
+
+
 # STEP 4. scoring_payload_json 값을 읽어 v1.3 payload dict로 반환한다.
 # Input: scoring_payload_json 값 (str | dict | None).
 # Output: 정규화된 v1.3 payload dict 또는 None (legacy / 빈 값).
@@ -1627,6 +1888,7 @@ __all__ = [
     "BENCHMARK_V13_SCREENING_SHADOW_SOURCE_STEP",
     "MEDIA_EXTERNAL_NEWS_V13_SHADOW_SOURCE_STEP",
     "MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP",
+    "MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP",
     "isLegacyPayload",
     "step4BuildTrace",
     "step4WriteTrace",
@@ -1635,6 +1897,12 @@ __all__ = [
     "step4ReplaceBenchmarkShadowTracesTx",
     "step4ReplaceMediaNewsShadowTracesTx",
     "step4ReplaceMediaNewsShadowBundleTx",
+    # media_external.regulation Shadow Runtime
+    "findRegulationRunContext",
+    "listApprovedRegulationInputs",
+    "listApprovedActiveRegulationMappings",
+    # _buildRegulationShadowRows is intentionally omitted — private serializer
+    "step4ReplaceRegulationShadowTracesTx",
     "step4ReadTrace",
     "step4UpdateTrace",
     "appendFactorTrace",

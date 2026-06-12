@@ -299,15 +299,15 @@ class PhaseC31DuplicateAndGuardTest(unittest.TestCase):
         source = Path(ROOT, "src/utils/dmascoring.py").read_text(encoding="utf-8")
         self.assertEqual(len(re.findall(r"def step2CalcRegulation\(", source)), 1)
 
-    def test_32_dmarepository_has_no_diff(self):
-        result = subprocess.run(
-            ["git", "diff", "--name-only", "--", "backend/src/utils/dmarepository.py"],
-            cwd=REPO,
-            text=True,
-            capture_output=True,
-            check=True,
-        )
-        self.assertEqual(result.stdout.strip(), "")
+    def test_32_dmarepository_has_no_duplicate_regulation_calculator(self):
+        # Phase C3.1.1 intentionally adds the regulation Shadow readers / serializer /
+        # writer to dmarepository.py, so the original "no diff" guard no longer holds.
+        # The invariant that must still hold (foundation §1.3): the repository never
+        # re-implements the regulation calculator — rule-card scoring stays in
+        # dmascoring.step2CalcRegulation and is reused via the orchestrator builder.
+        source = Path(ROOT, "src/utils/dmarepository.py").read_text(encoding="utf-8")
+        self.assertNotIn("def step2CalcRegulation", source)
+        self.assertNotIn("step2CalcRegulation(", source)
 
     def test_33_summary_rank_externalmax_not_in_regulation_builder(self):
         source = inspect.getsource(orchestrator.step2BuildRegulationScreeningPayloads)

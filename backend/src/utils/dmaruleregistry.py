@@ -195,8 +195,12 @@ def _validateBandSection(section: Mapping[str, Any], section_name: str, must_hav
             raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] score must be in 0..5")
         if "minInclusive" not in band:
             raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] missing 'minInclusive'")
+        if not isinstance(band["minInclusive"], bool):
+            raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] minInclusive must be bool")
         if "maxExclusive" not in band:
             raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] missing 'maxExclusive'")
+        if not isinstance(band["maxExclusive"], bool):
+            raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] maxExclusive must be bool")
         lo = band.get("min")
         hi = band.get("max")
         if lo is not None and not isinstance(lo, (int, float)):
@@ -205,6 +209,19 @@ def _validateBandSection(section: Mapping[str, Any], section_name: str, must_hav
             raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] max must be numeric or null")
         if lo is not None and hi is not None and lo > hi:
             raise DmaRuleValidationError(f"media_event_resolver_policy: {section_name}.bands[{idx}] min > max (reversed order)")
+    # Contiguity / overlap between consecutive bands
+    for idx in range(len(bands) - 1):
+        hi = bands[idx].get("max")
+        lo_next = bands[idx + 1].get("min")
+        if hi is not None and lo_next is not None:
+            if hi < lo_next:
+                raise DmaRuleValidationError(
+                    f"media_event_resolver_policy: {section_name}.bands[{idx}]->[{idx+1}] gap (max={hi} < min={lo_next})"
+                )
+            if hi > lo_next:
+                raise DmaRuleValidationError(
+                    f"media_event_resolver_policy: {section_name}.bands[{idx}]->[{idx+1}] overlap (max={hi} > min={lo_next})"
+                )
 
 
 def validateMediaEventResolverPolicy(policy: Mapping[str, Any]) -> None:
@@ -267,16 +284,35 @@ def validateMediaEventResolverPolicy(policy: Mapping[str, Any]) -> None:
               "missingMandatoryKeyPolicy", "dateBucketSourcePriority", "dateBucketPrecision"):
         if k not in dedup:
             raise DmaRuleValidationError(f"media_event_resolver_policy: eventDedupRules missing '{k}'")
-    unknown_keys = set(dedup["mandatoryKeys"]) - _KNOWN_DEDUP_MANDATORY_KEYS
-    if unknown_keys:
+    if set(dedup["mandatoryKeys"]) != _KNOWN_DEDUP_MANDATORY_KEYS:
         raise DmaRuleValidationError(
-            f"media_event_resolver_policy: eventDedupRules.mandatoryKeys unknown keys: {sorted(unknown_keys)}"
+            f"media_event_resolver_policy: eventDedupRules.mandatoryKeys must be exactly {sorted(_KNOWN_DEDUP_MANDATORY_KEYS)}"
+        )
+    if dedup["mergePolicy"] != "COMPOSITE_PLUS_MATCHING_ADVISORY_HINT":
+        raise DmaRuleValidationError(
+            "media_event_resolver_policy: eventDedupRules.mergePolicy must be 'COMPOSITE_PLUS_MATCHING_ADVISORY_HINT'"
+        )
+    if dedup["conflictPolicy"] != "CONFLICTED":
+        raise DmaRuleValidationError(
+            "media_event_resolver_policy: eventDedupRules.conflictPolicy must be 'CONFLICTED'"
+        )
+    if dedup["dateBucketPrecision"] != "DAY":
+        raise DmaRuleValidationError(
+            "media_event_resolver_policy: eventDedupRules.dateBucketPrecision must be 'DAY'"
         )
 
     rv = policy["ratioValueContract"]
     for k in ("normalization", "min", "max", "outOfRangePolicy"):
         if k not in rv:
             raise DmaRuleValidationError(f"media_event_resolver_policy: ratioValueContract missing '{k}'")
+    if rv["normalization"] != "DECIMAL_RATIO_ONLY":
+        raise DmaRuleValidationError(
+            "media_event_resolver_policy: ratioValueContract.normalization must be 'DECIMAL_RATIO_ONLY'"
+        )
+    if rv["outOfRangePolicy"] != "REJECTED":
+        raise DmaRuleValidationError(
+            "media_event_resolver_policy: ratioValueContract.outOfRangePolicy must be 'REJECTED'"
+        )
 
     mp = policy["missingPolicy"]
     if "requiredFactorMissing" not in mp:
@@ -311,7 +347,7 @@ def _canonicalJson(obj: Any) -> str:
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
-# STEP 0. Compute SHA-256 hash over the 5 policy files (manifest excluded).
+# STEP 0. Compute SHA-256 hash over the 6 policy files (manifest excluded).
 # Input: policy dict keyed by filename.
 # Output: 'sha256:<hexdigest>' string.
 def computeConfigHash(policies: Mapping[str, Any]) -> str:

@@ -1,13 +1,14 @@
 """
-DMA v1.3 MVP — Phase C2.3.1 Guard / Policy Hardening Tests.
+DMA v1.3 MVP — Phase C2.3.1 Guard / Policy Hardening + C2.3.2 Micro Patch Tests.
 
-36 tests across 6 sections:
+45 tests across 7 sections:
   16.1  Policy / Registry          (8 tests,  #01-08)
   16.2  Probability Boundary       (7 tests,  #09-15)
   16.3  ratioValue Contract        (5 tests,  #16-20)
   16.4  Dedup Date Priority        (4 tests,  #21-24)
   16.5  Dedup Guard                (8 tests,  #25-32)
   16.6  DTO / Guard                (4 tests,  #33-36)
+  16.7  Conflict Propagation + Semantic Validator (9 tests, #37-45)
 
 Pure unit tests. No live DB, no runtime side-effects.
 """
@@ -400,3 +401,118 @@ class PhaseC231DtoGuardTest(unittest.TestCase):
         axes = resolveMediaNewsCanonicalFactors(resolution, canonical_policy)
         self.assertIsNone(axes["impact"])
         self.assertIsNone(axes["financial"])
+
+
+# =========================================================
+# 16.7  Conflict Propagation + Semantic Validator  (#37-45)
+# =========================================================
+
+class PhaseC232PropagationTest(unittest.TestCase):
+    """P0: Dedup CONFLICTED must propagate to resolverStatus and block Canonical."""
+
+    def setUp(self):
+        self.policy = _loadResolverPolicy()
+        self.canonicalPolicy = _loadCanonicalPolicy()
+
+    # 37. Dedup CONFLICTED → resolverStatus=CONFLICTED AND Canonical both axes None
+    def test_37_dedup_conflict_propagates_and_blocks_canonical(self):
+        # Two RESOLVED resolutions with same composite key but different candidateIds
+        r1 = MediaNewsEventResolutionTraceV13(
+            resolverStatus="RESOLVED",
+            subIssueCode="E_CLI_001",
+            normalizedEventType="FINE",
+            eventDateBucket="2026-03-15",
+            dedup=MediaNewsDedupTraceV13(
+                eventGroupCandidateId="grp-1",
+                dedupStatus="UNRESOLVED",
+            ),
+        )
+        r2 = MediaNewsEventResolutionTraceV13(
+            resolverStatus="RESOLVED",
+            subIssueCode="E_CLI_001",
+            normalizedEventType="FINE",
+            eventDateBucket="2026-03-15",
+            dedup=MediaNewsDedupTraceV13(
+                eventGroupCandidateId="grp-2",
+                dedupStatus="UNRESOLVED",
+            ),
+        )
+        result = resolveMediaNewsEventGroup([r1, r2], self.policy)
+
+        # dedup.dedupStatus → CONFLICTED
+        self.assertEqual(result[0].dedup.dedupStatus, "CONFLICTED")
+        self.assertEqual(result[1].dedup.dedupStatus, "CONFLICTED")
+
+        # resolverStatus must also be CONFLICTED (P0 propagation)
+        self.assertEqual(result[0].resolverStatus, "CONFLICTED")
+        self.assertEqual(result[1].resolverStatus, "CONFLICTED")
+
+        # Canonical blocked for both
+        for r in result:
+            axes = resolveMediaNewsCanonicalFactors(r, self.canonicalPolicy)
+            self.assertIsNone(axes["impact"])
+            self.assertIsNone(axes["financial"])
+
+
+class PhaseC232SemanticValidatorTest(unittest.TestCase):
+    """P1: Semantic value enforcement in validateMediaEventResolverPolicy."""
+
+    def setUp(self):
+        self.good = _loadResolverPolicy()
+
+    # 38. mandatoryKeys=[] (빈 배열) → DmaRuleValidationError
+    def test_38_mandatory_keys_empty_raises(self):
+        bad = copy.deepcopy(self.good)
+        bad["eventDedupRules"]["mandatoryKeys"] = []
+        with self.assertRaises(reg.DmaRuleValidationError):
+            reg.validateMediaEventResolverPolicy(bad)
+
+    # 39. mergePolicy 잘못된 값 → DmaRuleValidationError
+    def test_39_wrong_merge_policy_raises(self):
+        bad = copy.deepcopy(self.good)
+        bad["eventDedupRules"]["mergePolicy"] = "COMPOSITE_ONLY"
+        with self.assertRaises(reg.DmaRuleValidationError):
+            reg.validateMediaEventResolverPolicy(bad)
+
+    # 40. conflictPolicy 잘못된 값 → DmaRuleValidationError
+    def test_40_wrong_conflict_policy_raises(self):
+        bad = copy.deepcopy(self.good)
+        bad["eventDedupRules"]["conflictPolicy"] = "OVERRIDE"
+        with self.assertRaises(reg.DmaRuleValidationError):
+            reg.validateMediaEventResolverPolicy(bad)
+
+    # 41. dateBucketPrecision != DAY → DmaRuleValidationError
+    def test_41_wrong_date_bucket_precision_raises(self):
+        bad = copy.deepcopy(self.good)
+        bad["eventDedupRules"]["dateBucketPrecision"] = "MONTH"
+        with self.assertRaises(reg.DmaRuleValidationError):
+            reg.validateMediaEventResolverPolicy(bad)
+
+    # 42. ratioValueContract.normalization 잘못된 값 → DmaRuleValidationError
+    def test_42_wrong_ratio_normalization_raises(self):
+        bad = copy.deepcopy(self.good)
+        bad["ratioValueContract"]["normalization"] = "ZERO_TO_ONE_OR_PERCENT"
+        with self.assertRaises(reg.DmaRuleValidationError):
+            reg.validateMediaEventResolverPolicy(bad)
+
+    # 43. ratioValueContract.outOfRangePolicy 잘못된 값 → DmaRuleValidationError
+    def test_43_wrong_out_of_range_policy_raises(self):
+        bad = copy.deepcopy(self.good)
+        bad["ratioValueContract"]["outOfRangePolicy"] = "CLIP"
+        with self.assertRaises(reg.DmaRuleValidationError):
+            reg.validateMediaEventResolverPolicy(bad)
+
+    # 44. band minInclusive가 bool이 아닌 경우 → DmaRuleValidationError
+    def test_44_band_min_inclusive_non_bool_raises(self):
+        bad = copy.deepcopy(self.good)
+        bad["impactLikelihoodRules"]["bands"][0]["minInclusive"] = 1  # int, not bool
+        with self.assertRaises(reg.DmaRuleValidationError):
+            reg.validateMediaEventResolverPolicy(bad)
+
+    # 45. band overlap (이전 max > 다음 min) → DmaRuleValidationError
+    def test_45_band_overlap_raises(self):
+        bad = copy.deepcopy(self.good)
+        # Make band[0].max > band[1].min  (0.10 > 0.05)
+        bad["impactLikelihoodRules"]["bands"][0]["max"] = 0.10
+        with self.assertRaises(reg.DmaRuleValidationError):
+            reg.validateMediaEventResolverPolicy(bad)

@@ -139,6 +139,74 @@ const Media = () => {
   const [selectedReg, setSelectedReg] = useState([]);
   const [selectedInstitutions, setSelectedInstitutions] = useState([]);
 
+  // KIS Modal State
+  const [isKisModalOpen, setIsKisModalOpen] = useState(false);
+  const [kisData, setKisData] = useState({
+    company: "A_GROUP",
+    provider: "KIS",
+    analysisType: "재무 위험지표 Export",
+    baseYear: "2025",
+    indicators: [
+      { id: 1, name: "부채비율", y2023: "138.0", y2024: "152.5", y2025: "166.2", unit: "%" },
+      { id: 2, name: "이자보상배율", y2023: "5.2", y2024: "3.7", y2025: "2.9", unit: "x" },
+      { id: 3, name: "영업이익률", y2023: "8.1", y2024: "6.4", y2025: "5.1", unit: "%" }
+    ]
+  });
+
+  const handleKisDataChange = (field, value) => {
+    setKisData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleKisIndicatorChange = (id, year, value) => {
+    setKisData(prev => ({
+      ...prev,
+      indicators: prev.indicators.map(ind => 
+        ind.id === id ? { ...ind, [year]: value } : ind
+      )
+    }));
+  };
+  
+  const handleKisSubmit = () => {
+    setIsKisModalOpen(false);
+    if (!selectedInstitutions.includes("kis")) {
+      setSelectedInstitutions(prev => [...prev, "kis"]);
+    }
+  };
+
+  // KCGS Modal State
+  const [isKcgsModalOpen, setIsKcgsModalOpen] = useState(false);
+  const [kcgsData, setKcgsData] = useState({
+    company: "A_GROUP",
+    provider: "KCGS",
+    analysisType: "ESG 등급 추이",
+    inputBasis: "최근 공표 기준 3개년",
+    grades: [
+      { year: "2023", total: "B+", e: "B+", s: "B", g: "A" },
+      { year: "2024", total: "B+", e: "B", s: "B+", g: "A" },
+      { year: "2025", total: "A", e: "A", s: "B+", g: "A" }
+    ]
+  });
+
+  const handleKcgsDataChange = (field, value) => {
+    setKcgsData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleKcgsGradeChange = (year, field, value) => {
+    setKcgsData(prev => ({
+      ...prev,
+      grades: prev.grades.map(grade => 
+        grade.year === year ? { ...grade, [field]: value } : grade
+      )
+    }));
+  };
+  
+  const handleKcgsSubmit = () => {
+    setIsKcgsModalOpen(false);
+    if (!selectedInstitutions.includes("kcgs")) {
+      setSelectedInstitutions(prev => [...prev, "kcgs"]);
+    }
+  };
+
   const [status, setStatus] = useState({
     press: "ready",
     reg: "ready",
@@ -277,6 +345,14 @@ const Media = () => {
   };
 
   const toggleInst = (key) => {
+    if (key === "kis" && !selectedInstitutions.includes("kis")) {
+      setIsKisModalOpen(true);
+      return;
+    }
+    if (key === "kcgs" && !selectedInstitutions.includes("kcgs")) {
+      setIsKcgsModalOpen(true);
+      return;
+    }
     setSelectedInstitutions(prev =>
       prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
     );
@@ -733,6 +809,164 @@ const Media = () => {
             </div>
           )}
         </div>
+
+        {isKisModalOpen && (
+          <div className="media-modal-overlay">
+            <div className="media-modal-content">
+              <div className="media-modal-header">
+                <button className="media-modal-close" onClick={() => setIsKisModalOpen(false)}>✕</button>
+                <h3 className="media-modal-title">한국신용평가 입력</h3>
+              </div>
+              
+              <div className="media-modal-body">
+                <div className="media-modal-section">
+                  <div className="media-modal-section-title">1. 기본 정보</div>
+                  <div className="media-modal-grid">
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">회사</label>
+                      <input type="text" className="media-modal-input" value={kisData.company} onChange={(e) => handleKisDataChange("company", e.target.value)} />
+                    </div>
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">제공기관</label>
+                      <input type="text" className="media-modal-input" value={kisData.provider} readOnly />
+                    </div>
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">분석 유형</label>
+                      <select className="media-modal-select" value={kisData.analysisType} onChange={(e) => handleKisDataChange("analysisType", e.target.value)}>
+                        <option value="재무 위험지표 Export">재무 위험지표 Export</option>
+                      </select>
+                    </div>
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">기준연도</label>
+                      <input type="number" className="media-modal-input" value={kisData.baseYear} onChange={(e) => handleKisDataChange("baseYear", e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="media-modal-section">
+                  <div className="media-modal-section-title">2. 재무 위험지표 입력</div>
+                  <table className="media-modal-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "25%", textAlign: "left", paddingLeft: "16px" }}>지표명</th>
+                        <th>2023</th>
+                        <th>2024</th>
+                        <th>2025</th>
+                        <th style={{ width: "15%" }}>단위</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {kisData.indicators.map(ind => (
+                        <tr key={ind.id}>
+                          <td style={{ textAlign: "left", fontWeight: "600", color: "#475569", paddingLeft: "16px" }}>{ind.name}</td>
+                          <td><input type="number" step="0.1" className="media-table-input" value={ind.y2023} onChange={(e) => handleKisIndicatorChange(ind.id, "y2023", e.target.value)} /></td>
+                          <td><input type="number" step="0.1" className="media-table-input" value={ind.y2024} onChange={(e) => handleKisIndicatorChange(ind.id, "y2024", e.target.value)} /></td>
+                          <td><input type="number" step="0.1" className="media-table-input" value={ind.y2025} onChange={(e) => handleKisIndicatorChange(ind.id, "y2025", e.target.value)} /></td>
+                          <td className="media-table-unit">{ind.unit}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="media-modal-footer">
+                <button className="media-modal-btn cancel" onClick={() => setIsKisModalOpen(false)}>취소</button>
+                <button className="media-modal-btn draft">임시저장</button>
+                <button className="media-modal-btn submit" onClick={handleKisSubmit}>입력 완료</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isKcgsModalOpen && (
+          <div className="media-modal-overlay">
+            <div className="media-modal-content">
+              <div className="media-modal-header">
+                <button className="media-modal-close" onClick={() => setIsKcgsModalOpen(false)}>✕</button>
+                <h3 className="media-modal-title">한국ESG기준원 입력</h3>
+                <p className="media-modal-subtitle">KCGS ESG 등급 추이</p>
+              </div>
+              
+              <div className="media-modal-body">
+                <div className="media-modal-section">
+                  <div className="media-modal-section-title">1. 기본 정보</div>
+                  <div className="media-modal-grid">
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">회사</label>
+                      <input type="text" className="media-modal-input" value={kcgsData.company} onChange={(e) => handleKcgsDataChange("company", e.target.value)} />
+                    </div>
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">제공기관</label>
+                      <input type="text" className="media-modal-input" value={kcgsData.provider} readOnly />
+                    </div>
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">분석 유형</label>
+                      <select className="media-modal-select" value={kcgsData.analysisType} onChange={(e) => handleKcgsDataChange("analysisType", e.target.value)}>
+                        <option value="ESG 등급 추이">ESG 등급 추이</option>
+                      </select>
+                    </div>
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">입력 기준</label>
+                      <select className="media-modal-select" value={kcgsData.inputBasis} onChange={(e) => handleKcgsDataChange("inputBasis", e.target.value)}>
+                        <option value="최근 공표 기준 3개년">최근 공표 기준 3개년</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="media-modal-section">
+                  <div className="media-modal-section-title">2. 등급 입력</div>
+                  <table className="media-modal-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "20%", paddingLeft: "16px" }}>평가연도</th>
+                        <th style={{ width: "20%" }}>종합</th>
+                        <th style={{ width: "20%" }}>E</th>
+                        <th style={{ width: "20%" }}>S</th>
+                        <th style={{ width: "20%" }}>G</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {kcgsData.grades.map(grade => (
+                        <tr key={grade.year}>
+                          <td style={{ fontWeight: "600", color: "#475569", paddingLeft: "16px" }}>{grade.year}</td>
+                          <td>
+                            <select className="media-table-select" value={grade.total} onChange={(e) => handleKcgsGradeChange(grade.year, "total", e.target.value)}>
+                              {["S", "A+", "A", "B+", "B", "C", "D"].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                          </td>
+                          <td>
+                            <select className="media-table-select" value={grade.e} onChange={(e) => handleKcgsGradeChange(grade.year, "e", e.target.value)}>
+                              {["S", "A+", "A", "B+", "B", "C", "D"].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                          </td>
+                          <td>
+                            <select className="media-table-select" value={grade.s} onChange={(e) => handleKcgsGradeChange(grade.year, "s", e.target.value)}>
+                              {["S", "A+", "A", "B+", "B", "C", "D"].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                          </td>
+                          <td>
+                            <select className="media-table-select" value={grade.g} onChange={(e) => handleKcgsGradeChange(grade.year, "g", e.target.value)}>
+                              {["S", "A+", "A", "B+", "B", "C", "D"].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="reflect-note" style={{ marginTop: "12px", color: "#16a34a", fontSize: "0.85rem", paddingLeft: "16px" }}>ⓘ 최신연도 등급과 직전연도 비교를 기준으로 추세 보정값이 계산됩니다.</div>
+                </div>
+              </div>
+
+              <div className="media-modal-footer">
+                <button className="media-modal-btn cancel" onClick={() => setIsKcgsModalOpen(false)}>취소</button>
+                <button className="media-modal-btn draft">임시저장</button>
+                <button className="media-modal-btn submit" onClick={handleKcgsSubmit}>입력 완료</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

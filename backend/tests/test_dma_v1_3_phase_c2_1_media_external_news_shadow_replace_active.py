@@ -520,5 +520,129 @@ class PhaseC21GuardTest(unittest.TestCase):
         self.assertEqual(manifest["capabilities"]["mediaEventCanonicalAdapter"], "CONFIG_PENDING")
 
 
+# ── C2.1.1 Crawl 빈 결과 처리 테스트 ─────────────────────────────────────────
+
+class PhaseC211CrawlEmptyReplaceTest(unittest.TestCase):
+    def setUp(self):
+        dmaruleregistry.resetDmaRulesForTest()
+        import importlib
+        sys.modules.pop("src.services.medias.service", None)
+        self._service = importlib.import_module("src.services.medias.service")
+
+        from src.services.medias.crawler import CrawlExecutionResult
+        from src.models.media import MediaSourceBreakdown, MediaCrawlerError, MediaNewsCrawlAnalyzeRequest
+        self._CrawlExecutionResult = CrawlExecutionResult
+        self._MediaSourceBreakdown = MediaSourceBreakdown
+        self._MediaCrawlerError = MediaCrawlerError
+        self._Request = MediaNewsCrawlAnalyzeRequest
+
+    def _makeRequest(self):
+        return self._Request(
+            runId=99,
+            sources=["impacton"],
+            dateFrom="2026-06-01",
+            dateTo="2026-06-11",
+        )
+
+    def _makeSuccessBreakdown(self, source="impacton"):
+        return self._MediaSourceBreakdown(
+            sourceKey=source, sourceLabel="임팩트온",
+            requestedYn=True, executedYn=True,
+            collectedCount=0, filteredCount=0, savedSignalCount=0,
+            status="SUCCESS", errorMessage=None,
+        )
+
+    def _runCrawlWithPatches(self, crawlResult, txSideEffect=None):
+        svc = self._service
+        with patch.object(svc, "crawlNewsArticles", return_value=crawlResult), \
+             patch.object(svc, "applySavedSignalCounts", return_value=[]), \
+             patch.object(svc, "getMediaCoverage", return_value={"coverageStatus": "LOW"}), \
+             patch.object(svc, "countMediaSubIssues", return_value=0), \
+             patch.object(svc, "listTopMediaIssues", return_value=[]), \
+             patch.object(svc, "step4ReplaceMediaNewsShadowTracesTx",
+                          side_effect=txSideEffect) as txMock, \
+             patch("builtins.print") as printMock:
+            result = svc.runMediaCrawlAndAnalyze(self._makeRequest())
+        return result, txMock, printMock
+
+    # 35. articles=[], 모든 Source SUCCESS, errors=[] → TX factPayloads=[] 호출
+    def test_normal_empty_crawl_calls_shadow_tx_with_empty_payloads(self):
+        crawlResult = self._CrawlExecutionResult(
+            requestedSources=["impacton"],
+            allowedSources=["impacton"],
+            sourceBreakdown=[self._makeSuccessBreakdown()],
+            articles=[],
+            errors=[],
+        )
+        _, txMock, _ = self._runCrawlWithPatches(crawlResult)
+        txMock.assert_called_once()
+        self.assertEqual(txMock.call_args.kwargs["factPayloads"], [])
+        self.assertEqual(txMock.call_args.kwargs["runId"], 99)
+
+    # 36. articles=[], Source FAILED → TX 미호출
+    def test_failed_crawl_skips_shadow_tx(self):
+        crawlResult = self._CrawlExecutionResult(
+            requestedSources=["impacton"],
+            allowedSources=["impacton"],
+            sourceBreakdown=[self._MediaSourceBreakdown(
+                sourceKey="impacton", sourceLabel="임팩트온",
+                requestedYn=True, executedYn=True,
+                collectedCount=0, filteredCount=0, savedSignalCount=0,
+                status="FAILED", errorMessage="network error",
+            )],
+            articles=[],
+            errors=[self._MediaCrawlerError(sourceKey="impacton", message="network error")],
+        )
+        _, txMock, _ = self._runCrawlWithPatches(crawlResult)
+        txMock.assert_not_called()
+
+    # 37. articles=[], Source PARTIAL_FAILED → TX 미호출
+    def test_partial_failed_crawl_skips_shadow_tx(self):
+        crawlResult = self._CrawlExecutionResult(
+            requestedSources=["impacton"],
+            allowedSources=["impacton"],
+            sourceBreakdown=[self._MediaSourceBreakdown(
+                sourceKey="impacton", sourceLabel="임팩트온",
+                requestedYn=True, executedYn=True,
+                collectedCount=5, filteredCount=0, savedSignalCount=0,
+                status="PARTIAL_FAILED", errorMessage="dateParseFailedCount=3",
+            )],
+            articles=[],
+            errors=[self._MediaCrawlerError(sourceKey="impacton", message="dateParseFailedCount=3")],
+        )
+        _, txMock, _ = self._runCrawlWithPatches(crawlResult)
+        txMock.assert_not_called()
+
+    # 38. allowedSources=[] → TX 미호출 (모든 Source 거부됨)
+    def test_empty_allowed_sources_skips_shadow_tx(self):
+        crawlResult = self._CrawlExecutionResult(
+            requestedSources=["impacton"],
+            allowedSources=[],
+            sourceBreakdown=[],
+            articles=[],
+            errors=[],
+        )
+        _, txMock, _ = self._runCrawlWithPatches(crawlResult)
+        txMock.assert_not_called()
+
+    # 39. Empty Replace TX 실패 → Crawl 응답 유지, Warning 출력
+    def test_empty_replace_tx_failure_keeps_crawl_response(self):
+        crawlResult = self._CrawlExecutionResult(
+            requestedSources=["impacton"],
+            allowedSources=["impacton"],
+            sourceBreakdown=[self._makeSuccessBreakdown()],
+            articles=[],
+            errors=[],
+        )
+        result, _, printMock = self._runCrawlWithPatches(
+            crawlResult,
+            txSideEffect=RuntimeError("tx boom"),
+        )
+        self.assertIsNotNone(result)
+        self.assertEqual(result.runId, 99)
+        warnings = [c[0][0] for c in printMock.call_args_list if c[0]]
+        self.assertTrue(any("shadow empty-clear failed" in w for w in warnings))
+
+
 if __name__ == "__main__":
     unittest.main()

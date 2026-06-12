@@ -56,12 +56,7 @@ def runMediaAnalysis(
         saveSignals(runId=runId, signals=scoredSignals, fileId=None, sourceTitle="Media Analysis")
 
     try:
-        shadowFacts = step0NormalizeMediaFacts(pipelineResults)
-        factPayloads = [
-            step0BuildFactTrace(extractedFact=fact, sourceChannel="media_external")
-            for fact in shadowFacts
-        ]
-        step4ReplaceMediaNewsShadowTracesTx(runId=runId, factPayloads=factPayloads)
+        _replaceMediaNewsShadowFromPipelineResults(runId=runId, pipelineResults=pipelineResults)
     except Exception as shadowError:
         print(f"Warning: media_external.news v1.3 shadow replace failed: {shadowError}")
 
@@ -110,6 +105,11 @@ def runMediaCrawlAndAnalyze(
             industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
         )
         savedSignalCountsBySource = _countSavedSignalsBySource(scoredSignals)
+    elif _isCrawlNormalEmpty(crawlResult):
+        try:
+            _replaceMediaNewsShadowFromPipelineResults(runId=request.runId, pipelineResults=[])
+        except Exception as shadowError:
+            print(f"Warning: media_external.news v1.3 shadow empty-clear failed: {shadowError}")
 
     sourceBreakdown = applySavedSignalCounts(
         crawlResult.sourceBreakdown,
@@ -186,6 +186,23 @@ def _safeFloatOrNone(value):
 
 def _score10(score05):
     return round(score05 * SCORE_UI_MULTIPLIER, 2) if score05 is not None else None
+
+
+def _replaceMediaNewsShadowFromPipelineResults(runId: int, pipelineResults: list) -> None:
+    shadowFacts = step0NormalizeMediaFacts(pipelineResults)
+    factPayloads = [
+        step0BuildFactTrace(extractedFact=fact, sourceChannel="media_external")
+        for fact in shadowFacts
+    ]
+    step4ReplaceMediaNewsShadowTracesTx(runId=runId, factPayloads=factPayloads)
+
+
+def _isCrawlNormalEmpty(crawlResult) -> bool:
+    if not crawlResult.allowedSources:
+        return False
+    if crawlResult.errors:
+        return False
+    return all(item.status == "SUCCESS" for item in crawlResult.sourceBreakdown)
 
 
 def _parseRequestDate(value: str, fieldName: str) -> date:

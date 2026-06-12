@@ -235,7 +235,12 @@ const Draft = () => {
             }));
           setMetricTrend(prev => ({
             ...prev,
-            [trackId]: { trend: trend.length > 0 ? trend : null, unit },
+            [trackId]: {
+              trend: trend.length > 0 ? trend : null,
+              unit,
+              isRollup: d.data.isRollup ?? false,
+              breakdown: d.data.breakdown || [],
+            },
           }));
         }
       });
@@ -770,6 +775,8 @@ const Draft = () => {
 
   // ── 근거 추적 패널: 선택된 SR 지표 정보 ──
   const srTrendData = trackId ? (metricTrend[trackId] || null) : null;
+  // metric_id의 atomic 파트가 G로 시작하면 연결(롤업) 지표 (예: E1-06__G0003)
+  const srIsRollup = trackId ? /__G\d/.test(trackId) : false;
   // 현재 페이지 metrics에서 선택 지표의 표시값 조회
   const srCurrentVal = (() => {
     if (!trackId) return null;
@@ -787,7 +794,8 @@ const Draft = () => {
       value: srCurrentVal,
       unit: srTrendData?.unit || null,
       trend: srTrendData?.trend || null,
-      breakdown: null,
+      isRollup: srIsRollup,
+      breakdown: srTrendData?.breakdown?.length > 0 ? srTrendData.breakdown : null,
       formula: null,
       aiDesc: null,
     }
@@ -987,10 +995,13 @@ const Draft = () => {
                         </div>
                         <div className="metric-row">
                           <span className="metric-row-key">데이터 유형</span>
-                          <span className="metric-row-val">
+                          <span className="metric-row-val" style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                             <span className={`metric-badge ${/__QL/.test(srMetric.metricId) ? "" : "blue"}`}>
                               {/__QL/.test(srMetric.metricId) ? "정성" : "정량"}
                             </span>
+                            {srMetric.isRollup && (
+                              <span className="metric-badge blue" style={{ opacity: 0.75 }}>연결</span>
+                            )}
                           </span>
                         </div>
                         {srMetric.unit && (
@@ -1015,25 +1026,34 @@ const Draft = () => {
                         </div>
                       )}
 
-                      {srMetric.breakdown && srMetric.breakdown.length > 0 && (
+                      {srMetric.isRollup && (
                         <div className="panel-subsection">
-                          <div className="trend-section-title">데이터 구성</div>
-                          <table className="breakdown-table">
-                            <thead>
-                              <tr>
-                                <th>구분</th>
-                                <th className="breakdown-val">값{srMetric.unit ? ` (${srMetric.unit})` : ""}</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {srMetric.breakdown.map((b, i) => (
-                                <tr key={i}>
-                                  <td>{b.l}</td>
-                                  <td className="breakdown-val">{b.v}</td>
+                          <div className="trend-section-title">
+                            구성 법인별 내역
+                            <span className="metric-badge blue" style={{ marginLeft: 6, fontSize: 10 }}>연결</span>
+                          </div>
+                          {srMetric.breakdown && srMetric.breakdown.length > 0 ? (
+                            <table className="breakdown-table">
+                              <thead>
+                                <tr>
+                                  <th>법인</th>
+                                  <th className="breakdown-val">값</th>
+                                  <th className="breakdown-val">비중</th>
                                 </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                              </thead>
+                              <tbody>
+                                {srMetric.breakdown.map((b, i) => (
+                                  <tr key={i}>
+                                    <td>{b.l}</td>
+                                    <td className="breakdown-val">{b.v}</td>
+                                    <td className="breakdown-val">{b.contributionRate != null ? `${b.contributionRate}%` : "—"}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          ) : (
+                            <div className="ai-desc-box muted">[미집계 데이터]</div>
+                          )}
                         </div>
                       )}
 

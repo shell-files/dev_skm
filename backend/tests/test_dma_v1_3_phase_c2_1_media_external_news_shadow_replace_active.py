@@ -644,5 +644,99 @@ class PhaseC211CrawlEmptyReplaceTest(unittest.TestCase):
         self.assertTrue(any("shadow empty-clear failed" in w for w in warnings))
 
 
+# ── C2.1.2 Non-empty Partial Crawl Shadow Protection ─────────────────────────
+
+class PhaseC212PartialCrawlProtectionTest(unittest.TestCase):
+    def setUp(self):
+        dmaruleregistry.resetDmaRulesForTest()
+        import importlib
+        sys.modules.pop("src.services.medias.service", None)
+        self._service = importlib.import_module("src.services.medias.service")
+
+        from src.services.medias.crawler import CrawlExecutionResult
+        from src.models.media import MediaSourceBreakdown, MediaCrawlerError, MediaNewsCrawlAnalyzeRequest
+        self._CrawlExecutionResult = CrawlExecutionResult
+        self._MediaSourceBreakdown = MediaSourceBreakdown
+        self._MediaCrawlerError = MediaCrawlerError
+        self._Request = MediaNewsCrawlAnalyzeRequest
+
+    def _makeRequest(self):
+        return self._Request(runId=99, sources=["impacton", "esgeconomy"],
+                             dateFrom="2026-06-01", dateTo="2026-06-11")
+
+    def _makeBreakdown(self, source, status, error=None):
+        return self._MediaSourceBreakdown(
+            sourceKey=source, sourceLabel=source,
+            requestedYn=True, executedYn=True,
+            collectedCount=5 if status != "FAILED" else 0,
+            filteredCount=5 if status == "SUCCESS" else 0,
+            savedSignalCount=0,
+            status=status,
+            errorMessage=error,
+        )
+
+    def _runCrawlWithPatches(self, crawlResult):
+        svc = self._service
+        with patch.object(svc, "crawlNewsArticles", return_value=crawlResult), \
+             patch.object(svc, "processMediaPipeline", return_value=[buildNewsResult()]), \
+             patch.object(svc, "convertMediaToDmaSignals", return_value=[]), \
+             patch.object(svc, "applyMediaBaseline", return_value=[]), \
+             patch.object(svc, "scoreSignals", return_value=[]), \
+             patch.object(svc, "saveSignals"), \
+             patch.object(svc, "applySavedSignalCounts", return_value=[]), \
+             patch.object(svc, "getMediaCoverage", return_value={"coverageStatus": "LOW"}), \
+             patch.object(svc, "countMediaSubIssues", return_value=0), \
+             patch.object(svc, "listTopMediaIssues", return_value=[]), \
+             patch.object(svc, "step4ReplaceMediaNewsShadowTracesTx") as txMock, \
+             patch("builtins.print"):
+            svc.runMediaCrawlAndAnalyze(self._makeRequest())
+        return txMock
+
+    # 40. 기사 존재 + 모든 Source SUCCESS → Shadow Replace 호출
+    def test_articles_with_all_success_calls_shadow_replace(self):
+        crawlResult = self._CrawlExecutionResult(
+            requestedSources=["impacton", "esgeconomy"],
+            allowedSources=["impacton", "esgeconomy"],
+            sourceBreakdown=[
+                self._makeBreakdown("impacton", "SUCCESS"),
+                self._makeBreakdown("esgeconomy", "SUCCESS"),
+            ],
+            articles=[buildNewsResult()],
+            errors=[],
+        )
+        txMock = self._runCrawlWithPatches(crawlResult)
+        txMock.assert_called_once()
+
+    # 41. 기사 존재 + 일부 Source FAILED → Legacy 저장 유지, Shadow Replace 미호출
+    def test_articles_with_failed_source_skips_shadow_replace(self):
+        crawlResult = self._CrawlExecutionResult(
+            requestedSources=["impacton", "esgeconomy"],
+            allowedSources=["impacton", "esgeconomy"],
+            sourceBreakdown=[
+                self._makeBreakdown("impacton", "SUCCESS"),
+                self._makeBreakdown("esgeconomy", "FAILED", error="network error"),
+            ],
+            articles=[buildNewsResult()],
+            errors=[self._MediaCrawlerError(sourceKey="esgeconomy", message="network error")],
+        )
+        txMock = self._runCrawlWithPatches(crawlResult)
+        txMock.assert_not_called()
+
+    # 42. 기사 존재 + 일부 Source PARTIAL_FAILED → Legacy 저장 유지, Shadow Replace 미호출
+    def test_articles_with_partial_failed_source_skips_shadow_replace(self):
+        crawlResult = self._CrawlExecutionResult(
+            requestedSources=["impacton", "esgeconomy"],
+            allowedSources=["impacton", "esgeconomy"],
+            sourceBreakdown=[
+                self._makeBreakdown("impacton", "SUCCESS"),
+                self._makeBreakdown("esgeconomy", "PARTIAL_FAILED", error="dateParseFailedCount=2"),
+            ],
+            articles=[buildNewsResult()],
+            errors=[self._MediaCrawlerError(sourceKey="esgeconomy", message="dateParseFailedCount=2")],
+        )
+        txMock = self._runCrawlWithPatches(crawlResult)
+        txMock.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -410,6 +410,17 @@
 /* 추적 가능 요소 커서 */
 .sr-page [data-source] { cursor: pointer; }
 
+/* 데이터 추적 하이라이트 — 깔끔한 링 + 글로우 */
+[data-source].tracking-active {
+  box-shadow: 0 0 0 2.5px #03A94D, 0 0 0 5px rgba(3, 169, 77, 0.18);
+  border-radius: 5px;
+  animation: trackFadeIn 0.18s ease forwards;
+}
+@keyframes trackFadeIn {
+  from { box-shadow: 0 0 0 0 rgba(3, 169, 77, 0), 0 0 0 0 rgba(3, 169, 77, 0); }
+  to   { box-shadow: 0 0 0 2.5px #03A94D, 0 0 0 5px rgba(3, 169, 77, 0.18); }
+}
+
 /* 패널 지표 선택 (접이식 리스트) */
 .panel-select-count { font-size:10.5px; font-weight:700; color:#94a3b8; white-space:nowrap; }
 .panel-metric-list-wrap { border-bottom:1px solid #e8edf3; background:#f8fafc; position:relative; }

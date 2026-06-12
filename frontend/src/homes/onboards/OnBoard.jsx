@@ -12,6 +12,7 @@ import SubsidiaryTransferModal from "./modal/SubsidiaryTransferModal";
 import RollupSummaryPanel from "./RollupSummaryPanel";
 import RollupInboxPanel from "./RollupInboxPanel";
 import MetricAssignmentModal from "./modal/MetricAssignmentModal";
+import PageHeader from '@components/UI/PageHeader';
 import {
   calculateMetricStatus,
   calculateProfileStats,
@@ -213,13 +214,13 @@ const OnboardingStatCards = ({ stats }) => {
   const getPercent = (count) => Math.round((count / total) * 100);
 
   return (
-    <div style={{ display: 'flex', gap: '24px', background: '#ffffff', padding: '12px 24px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+    <div className="ob1-stat-cards-inner" style={{ display: 'flex', gap: '24px', background: '#ffffff', padding: '12px 24px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingRight: '24px' }}>
         <span style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: '600', marginBottom: '4px' }}>전체 지표</span>
         <span style={{ fontSize: '1.25rem', color: '#0f172a', fontWeight: '700' }}>{stats.totalCount || 0}</span>
       </div>
       <div style={{ width: '1px', background: '#e2e8f0' }} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px', justifyContent: 'center' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
           <span style={{ color: '#64748b', fontWeight: '600' }}>입력 완료</span>
           <span style={{ color: '#16a34a', fontWeight: '700' }}>{completed}</span>
@@ -228,7 +229,7 @@ const OnboardingStatCards = ({ stats }) => {
           <div style={{ height: '100%', width: `${getPercent(completed)}%`, background: '#16a34a' }} />
         </div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px', justifyContent: 'center' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
           <span style={{ color: '#64748b', fontWeight: '600' }}>진행 중</span>
           <span style={{ color: '#f97316', fontWeight: '700' }}>{inProgress}</span>
@@ -237,7 +238,7 @@ const OnboardingStatCards = ({ stats }) => {
           <div style={{ height: '100%', width: `${getPercent(inProgress)}%`, background: '#f97316' }} />
         </div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px', justifyContent: 'center' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
           <span style={{ color: '#64748b', fontWeight: '600' }}>미입력</span>
           <span style={{ color: '#94a3b8', fontWeight: '700' }}>{notStarted}</span>
@@ -590,9 +591,9 @@ const OnBoard = () => {
   const reportingYearQuery = useSelector((state) => state.report.currentYear);
   const cycleTypeQuery = searchParams.get("cycleType");
   const reportingYear = reportingYearQuery ? parseInt(reportingYearQuery, 10) : null;
-  useEffect(()=> {
+  useEffect(() => {
     console.log(reportingYearQuery);
-  },[cycleTypeQuery]);
+  }, [cycleTypeQuery]);
 
   const viewMode = searchParams.get("mode") === "ROLLUP_RESPONSE" ? "ROLLUP_RESPONSE" : "MY_PROJECT";
   const batchIdQuery = searchParams.get("batchId");
@@ -658,10 +659,10 @@ const OnBoard = () => {
       selfAssignedYn: isEmployeeViewer
         ? true
         : (
-            item.assigneeUserId != null &&
-            currentUserId != null &&
-            Number(item.assigneeUserId) === Number(currentUserId)
-          ),
+          item.assigneeUserId != null &&
+          currentUserId != null &&
+          Number(item.assigneeUserId) === Number(currentUserId)
+        ),
     }));
 
     return flattened;
@@ -777,7 +778,7 @@ const OnBoard = () => {
         return;
       }
 
-      if(reportingYear === null) return;
+      if (reportingYear === null) return;
 
       const workflowRes = await dispatch(
         fetchCurrentWorkflow({ companyId, reportingYear })
@@ -1177,33 +1178,62 @@ const OnBoard = () => {
         marginBottom: '24px',
         boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <h1 className="ob1-title" style={{ margin: 0, fontSize: '1.25rem' }}>온보딩 [{viewMode === "ROLLUP_RESPONSE" ? "요청 대응" : basisLabel}]</h1>
-          {(() => {
-            const statusInfo = getStatusInfo(g0ProfileStatus);
-            const total = profileStats.totalCount || 1;
-            const percent = Math.round((profileStats.completedCount / total) * 100);
-            return (
-              <span className={`ob1-status-pill ${statusInfo.cls}`} style={{ fontSize: '14px', padding: '6px 12px' }}>
-                진행률 {percent}% · {statusInfo.label}
-              </span>
-            );
-          })()}
-          {viewMode === "ROLLUP_RESPONSE" && isRollupResponseReadOnly && (
-            <span className="ob1-status-pill" style={{ fontSize: '14px', padding: '6px 12px', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' }}>
-              Read-only history
-            </span>
-          )}
-          <button
-            type="button"
-            style={{ padding: '6px 12px', fontSize: '14px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: 'pointer', color: '#374151', fontWeight: '500' }}
-            onClick={handleOpenApprovalProjectModal}
-          >
-            프로젝트 변경
-          </button>
+
+        {/* 왼쪽 그룹: 제목 */}
+        <div className="ob1-header-left" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <PageHeader
+            category="온보딩 단계"
+            title={`온보딩 [${viewMode === "ROLLUP_RESPONSE" ? "요청 대응" : basisLabel}]`}
+            iconClass={viewMode === "ROLLUP_RESPONSE" ? "bi-chat-left-text-fill" : "bi-diagram-3-fill"}
+          />
+
+          {/* 구분선 */}
+          <div style={{ width: '1px', height: '48px', background: '#e2e8f0', flexShrink: 0 }} />
+
+          {/* 현재 상태 + 프로젝트 변경 */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px', flexShrink: 0 }}>
+            {(() => {
+              const statusInfo = getStatusInfo(g0ProfileStatus);
+              const total = profileStats.totalCount || 1;
+              const percent = Math.round((profileStats.completedCount / total) * 100);
+              const r = 9;
+              const circ = 2 * Math.PI * r;
+              const dash = (percent / 100) * circ;
+              return (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f0fdf4', border: '1px solid #d1fae5', borderRadius: '20px', padding: '5px 12px' }}>
+                    <svg width="20" height="20" viewBox="0 0 20 20" style={{ flexShrink: 0 }}>
+                      <circle cx="10" cy="10" r={r} fill="none" stroke="#d1fae5" strokeWidth="2.5" />
+                      <circle cx="10" cy="10" r={r} fill="none" stroke="#16a34a" strokeWidth="2.5"
+                        strokeDasharray={`${dash} ${circ}`}
+                        strokeLinecap="round"
+                        transform="rotate(-90 10 10)"
+                      />
+                    </svg>
+                    <span style={{ color: '#15803d', fontWeight: '600', fontSize: '13px' }}>진행률 {percent}% · {statusInfo.label}</span>
+                  </div>
+                  {viewMode === "ROLLUP_RESPONSE" && isRollupResponseReadOnly && (
+                    <div style={{ fontSize: '11px', color: '#94a3b8', padding: '2px 8px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px' }}>Read-only</div>
+                  )}
+                  <button
+                    type="button"
+                    style={{ padding: '5px 12px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: 'pointer', color: '#374151', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px', width: '100%', justifyContent: 'center' }}
+                    onClick={handleOpenApprovalProjectModal}
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 2v6h-6" /><path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                      <path d="M3 22v-6h6" /><path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                    </svg>
+                    프로젝트 변경
+                  </button>
+                </>
+              );
+            })()}
+          </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+        {/* 오른쪽: StatCards + CTA */}
+        <div className="ob1-stat-cards-wrap" style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
           <OnboardingStatCards stats={profileStats} />
           {!isNoRunWorkflow(displayWorkflow) && viewMode === "MY_PROJECT" && !canManageRollup && (
             <OnboardingWorkflowCta
@@ -1251,6 +1281,7 @@ const OnBoard = () => {
             </div>
           )}
         </div>
+
       </div>
 
       {viewMode === "ROLLUP_RESPONSE" && !batchIdQuery ? (

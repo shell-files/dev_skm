@@ -897,9 +897,10 @@ def getLatestReportRunByMaterialityRun(runId: int) -> dict:
 # - step4UpdateTrace
 # - appendFactorTrace
 #
-# Phase C append-only shadow persistence:
-# - listBenchmarkShadowObservationRows
-# - step4SaveBenchmarkShadowTraces
+# Phase C shadow persistence:
+# - legacy append-only writer (test compatibility only): step4SaveBenchmarkShadowTraces
+# - active runtime writer (replace-active transaction): step4ReplaceBenchmarkShadowTracesTx
+# - audit/debug read: listBenchmarkShadowObservationRows
 #
 # Legacy payloads are NEVER auto-migrated, their scores NEVER reused, NEVER overwritten.
 
@@ -1087,6 +1088,8 @@ def listBenchmarkShadowObservationRows(runId: int) -> list[dict]:
     return findAll(sql, (runId, BENCHMARK_V13_SHADOW_SOURCE_STEP))
 
 
+# LEGACY TEST COMPATIBILITY ONLY — do not call from runtime code.
+# Runtime shadow persistence uses step4ReplaceBenchmarkShadowTracesTx.
 def step4SaveBenchmarkShadowTraces(
     runId: int,
     payloads: Sequence[Dict[str, Any]],
@@ -1130,12 +1133,22 @@ def step4ReplaceBenchmarkShadowTracesTx(
       6. COMMIT on success, ROLLBACK on any failure
     Returns total rows inserted.
     """
+    # Pre-DB validation — fail before opening any connection
+    if expectedScreeningCount <= 0:
+        raise ValueError("expectedScreeningCount must be greater than zero")
+    if len(screeningPayloads) != expectedScreeningCount:
+        raise ValueError(
+            f"screeningPayloads count mismatch: "
+            f"expected={expectedScreeningCount}, got={len(screeningPayloads)}"
+        )
+
     factRows = _buildBenchmarkShadowRows(runId, factPayloads, "fact") if factPayloads else []
     screeningRows = _buildBenchmarkShadowRows(runId, screeningPayloads, "screening") if screeningPayloads else []
 
     conn = getConn()
     if conn is None:
         raise RuntimeError("DB connection is not available for benchmark shadow replace transaction")
+    conn.autocommit = False
     try:
         with conn.cursor(dictionary=True) as cur:
             cur.execute(
@@ -1327,7 +1340,7 @@ __all__ = [
     "step4BuildTrace",
     "step4WriteTrace",
     "listBenchmarkShadowObservationRows",
-    "step4SaveBenchmarkShadowTraces",
+    # step4SaveBenchmarkShadowTraces is intentionally omitted — test compatibility only
     "step4ReplaceBenchmarkShadowTracesTx",
     "step4ReadTrace",
     "step4UpdateTrace",

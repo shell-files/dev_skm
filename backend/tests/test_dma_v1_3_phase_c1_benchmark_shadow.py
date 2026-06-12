@@ -194,6 +194,8 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
         self.assertLess(source.index("saveSignals("), source.index("step4ReplaceBenchmarkShadowTracesTx("))
         self.assertIn("Warning: Benchmark v1.3 shadow", source)
         self.assertNotIn("benchmark_v13_shadow", source)
+        # Legacy append-only writer must NOT be imported in runtime service
+        self.assertNotIn("step4SaveBenchmarkShadowTraces", source)
 
     def test_transaction_failure_keeps_legacy_success_response(self):
         service = self.loadService()
@@ -253,6 +255,44 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
                     asyncio.run(service.findSr(fileFindModel, userModel))
 
         writer.assert_not_called()
+
+    def test_fact_build_failure_skips_replace_transaction(self):
+        service = self.loadService()
+        finalResult = {
+            "status": True,
+            "data": [{"fileName": "a.pdf", "result": [{"subIssueCode": "G0-02"}]}],
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "a.pdf").write_text("pdf", encoding="utf-8")
+            service.settings.file_dir = tmp
+            fileFindModel = SimpleNamespace(
+                file=["a.pdf"], page="SR", esgMaterialityRunId=99, sourceType="leader_sr", sourceStep="benchmark"
+            )
+            userModel = SimpleNamespace(id=7)
+            with patch.object(service, "findOne", return_value={
+                "id": 17, "origin": "A", "file_name": "a.pdf", "type": "leader_sr", "company_name": "C",
+            }), patch.object(service, "gemini", AsyncMock(return_value=finalResult)), patch.object(
+                service, "convertToDmaSignals", return_value=[]
+            ), patch.object(service, "scoreSignals", return_value=[]), patch.object(
+                service, "saveSignals", return_value=None
+            ), patch.object(
+                service, "step0NormalizeBenchmarkFacts", side_effect=RuntimeError("fact build exploded")
+            ), patch.object(service, "step4ReplaceBenchmarkShadowTracesTx") as txWriter, patch(
+                "builtins.print"
+            ) as printed:
+                response = asyncio.run(service.findSr(fileFindModel, userModel))
+
+        # Legacy response succeeds — shadow failure is isolated
+        self.assertTrue(response["status"])
+        # Replace Transaction must be skipped when fact build fails
+        txWriter.assert_not_called()
+        # Warning must be emitted
+        warning_messages = [call[0][0] for call in printed.call_args_list if call[0]]
+        self.assertTrue(
+            any("shadow replace skipped" in m for m in warning_messages),
+            f"Expected 'shadow replace skipped' warning, got: {warning_messages}",
+        )
 
     def test_replace_transaction_runs_once_per_request_after_multiple_files(self):
         service = self.loadService()

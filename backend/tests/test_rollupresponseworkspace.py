@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 
 from src.utils.onboardingscoperepository import ensureRollupResponseWorkspaceTx
 
-@patch("src.utils.rolluprepository.resolveExternalEntitySourceAtomicIdsByMetricTx")
+@patch("src.utils.rollupscoperepository.resolveExternalEntitySourceAtomicIdsByMetricTx")
 def test_ensure_rollup_response_workspace_tx(mock_resolve):
     # Setup mock
     mock_resolve.return_value = ["M1"]
@@ -59,7 +59,7 @@ def test_ensure_rollup_response_workspace_tx(mock_resolve):
             
     assert found_insert
 
-@patch("src.utils.rolluprepository.resolveExternalEntitySourceAtomicIdsByMetricTx")
+@patch("src.utils.rollupscoperepository.resolveExternalEntitySourceAtomicIdsByMetricTx")
 def test_ensure_rollup_response_workspace_dma_precheck(mock_resolve):
     mock_resolve.return_value = ["G0-02"]
     
@@ -96,7 +96,7 @@ def test_ensure_rollup_response_workspace_dma_precheck(mock_resolve):
             
     assert found_insert
 
-@patch("src.utils.rolluprepository.resolveExternalEntitySourceAtomicIdsByMetricTx")
+@patch("src.utils.rollupscoperepository.resolveExternalEntitySourceAtomicIdsByMetricTx")
 def test_ensure_rollup_response_workspace_force_approval_policy(mock_resolve):
     # Snapshot Source Atomic 5개 -> Workspace approval policy 강제 적용 (APPROVAL_POLICY_PROMOTE_TO_KPI_FACT_AND_ROLLUP)
     mock_resolve.return_value = ["A1", "A2", "A3", "A4", "A5"]
@@ -135,7 +135,7 @@ def test_ensure_rollup_response_workspace_force_approval_policy(mock_resolve):
             pass
     assert found_insert
 
-@patch("src.utils.rolluprepository.resolveExternalEntitySourceAtomicIdsByMetricTx")
+@patch("src.utils.rollupscoperepository.resolveExternalEntitySourceAtomicIdsByMetricTx")
 def test_ensure_rollup_response_workspace_missing_source(mock_resolve):
     # Snapshot Source Atomic 없음 -> ROLLUP_RESPONSE_MISSING_SOURCE_ATOMIC_IDS
     mock_resolve.return_value = []

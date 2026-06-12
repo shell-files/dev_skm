@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import ApprovalProjectSelectModal from "./mains/modal/ApprovalProjectSelectModal";
+import { useAuth } from "@hooks/AuthContext";
+import { GET } from "@utils/Network";
 import "@styles/dashboard.css";
 
 const MOCK_PROJECTS = [
@@ -87,10 +89,63 @@ const getStageLabel = (label) => {
   return label;
 };
 
+// approvalStatus 기준 "입력 완료" 판단
+const DONE_STATUSES = new Set(["SUBMITTED", "REVIEWED", "APPROVED"]);
+
+// API 응답 items → 서브이슈별 행 집계
+const buildOnboardingRows = (items = []) => {
+  const map = new Map();
+  for (const item of items) {
+    const key = item.subIssueName || item.subIssueCode || item.metricId;
+    if (!map.has(key)) map.set(key, { name: key, e: false, s: false, g: false, total: 0, done: 0 });
+    const row = map.get(key);
+    const domain = (item.issueDomain || "").toUpperCase();
+    if (domain === "E") row.e = true;
+    if (domain === "S") row.s = true;
+    if (domain === "G") row.g = true;
+    row.total++;
+    if (DONE_STATUSES.has((item.approvalStatus || "").toUpperCase())) row.done++;
+  }
+  return Array.from(map.values()).map((r) => ({
+    name: r.name,
+    e: r.e, s: r.s, g: r.g,
+    count: `${r.total}개`,
+    done: `${r.done}/${r.total}`,
+    doneColor: r.done === r.total ? "#475569" : "#ef4444",
+  }));
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { selectedCompany } = useAuth();
+  const companyId = selectedCompany?.company_id;
+  const companyName = selectedCompany?.company_name || "A_GROUP";
+
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [currentProject, setCurrentProject] = useState(MOCK_PROJECTS[0]);
+  const [onboardingRows, setOnboardingRows] = useState(ONBOARDING_ROWS);
+  const [onboardingLoading, setOnboardingLoading] = useState(false);
+
+  useEffect(() => {
+    if (!companyId || !currentProject?.reportingYear) return;
+    const load = async () => {
+      setOnboardingLoading(true);
+      try {
+        const res = await GET("/onboarding", {
+          companyId,
+          reportingYear: currentProject.reportingYear,
+          cycleType: "POST_DMA_DISCLOSURE",
+        });
+        const rows = buildOnboardingRows(res?.items);
+        if (rows.length > 0) setOnboardingRows(rows);
+      } catch {
+        // fallback: 목 데이터 유지
+      } finally {
+        setOnboardingLoading(false);
+      }
+    };
+    load();
+  }, [companyId, currentProject?.reportingYear]);
 
   const handleSelectProject = (project) => {
     setCurrentProject(project);
@@ -99,12 +154,6 @@ const Dashboard = () => {
 
   return (
     <div id="dashboard_page">
-
-      {/* ── 페이지 헤더 ── */}
-      <section className="db-header">
-        <h1>ESG 통합 관리 대시보드</h1>
-      </section>
-
       {/* ── 현재 프로젝트 배너 ── */}
       <section className="db-project-banner">
         <div>
@@ -113,7 +162,7 @@ const Dashboard = () => {
             {currentProject.reportingYear} 지속가능경영보고서
           </h2>
           <p className="db-project-meta">
-            A_GROUP · {getBasisLabel(currentProject.reportBasisType)} · {getProjectStatusLabel(currentProject.runStatus)}
+            {companyName} · {getBasisLabel(currentProject.reportBasisType)} · {getProjectStatusLabel(currentProject.runStatus)}
           </p>
         </div>
 
@@ -241,57 +290,44 @@ const Dashboard = () => {
               전체 보기 →
             </button>
           </div>
-          <table className="db-onboard-table">
-            <thead>
-              <tr>
-                <th>이슈</th>
-                <th>E</th>
-                <th>S</th>
-                <th>G</th>
-                <th>지표 수</th>
-                <th>완료</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ONBOARDING_ROWS.map((row, i) => (
-                <tr key={i}>
-                  <td>{row.name}</td>
-                  {[row.e, row.s, row.g].map((v, j) => (
-                    <td key={j}>
-                      <span className={`db-onboard-check ${v ? "on" : "off"}`}>
-                        {v ? "✓" : "—"}
-                      </span>
-                    </td>
-                  ))}
-                  <td className="db-onboard-count">{row.count}</td>
-                  <td className="db-onboard-done" style={{ color: row.doneColor }}>{row.done}</td>
+          {onboardingLoading ? (
+            <div style={{ padding: "24px 0", textAlign: "center", fontSize: "0.82rem", color: "#94a3b8" }}>
+              지표 불러오는 중...
+            </div>
+          ) : (
+            <table className="db-onboard-table">
+              <thead>
+                <tr>
+                  <th>이슈</th>
+                  <th>E</th>
+                  <th>S</th>
+                  <th>G</th>
+                  <th>전체</th>
+                  <th>입력완료</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {onboardingRows.map((row, i) => (
+                  <tr key={i}>
+                    <td>{row.name}</td>
+                    {[row.e, row.s, row.g].map((v, j) => (
+                      <td key={j}>
+                        <span className={`db-onboard-check ${v ? "on" : "off"}`}>
+                          {v ? "✓" : "—"}
+                        </span>
+                      </td>
+                    ))}
+                    <td className="db-onboard-count">{row.count}</td>
+                    <td className="db-onboard-done" style={{ color: row.doneColor }}>{row.done}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </section>
 
-      {/* ── 플랫폼 활용 팁 배너 ── */}
-      <section className="db-tip-banner">
-        <div className="db-tip-icon">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.2">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" strokeWidth="3" strokeLinecap="round" />
-          </svg>
-        </div>
-        <strong className="db-tip-label">플랫폼 활용 팁</strong>
-        <div className="db-tip-list">
-          {[
-            "정확한 데이터 입력이 신뢰도 높은 보고서의 시작입니다.",
-            "DMA 분석으로 핵심 이슈의 우선순위를 확인하세요.",
-            "승인 워크플로우를 통해 협업 효율을 높이세요.",
-          ].map((tip, i) => (
-            <span key={i} className="db-tip-item">• {tip}</span>
-          ))}
-        </div>
-      </section>
+      
 
       {/* ── 프로젝트 선택 모달 ── */}
       <ApprovalProjectSelectModal

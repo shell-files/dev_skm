@@ -816,3 +816,167 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* =========================================================================
+   반응형 Responsive
+========================================================================= */
+
+/* ── Tablet (≤ 1200px) ─────────────────────────────────── */
+@media (max-width: 1200px) {
+  #ob1-page {
+    padding: 12px 16px;
+  }
+
+  /* 헤더 카드: 간격 줄이기 */
+  .ob1-header-card {
+    padding: 14px 18px !important;
+    gap: 16px !important;
+  }
+
+  /* StatCards: minWidth 축소 */
+  .ob1-stat-col {
+    min-width: 90px !important;
+  }
+
+  /* 사이드바 숨김 시작 */
+  .ob1-sidebar-panel {
+    width: 200px;
+    min-width: 200px;
+  }
+}
+
+/* ── Mobile Large (≤ 992px) ────────────────────────────── */
+@media (max-width: 992px) {
+  #ob1-page {
+    padding: 10px 12px;
+  }
+
+  /* 헤더 카드: 세로 스택으로 전환 */
+  .ob1-header-card {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    padding: 14px 16px !important;
+  }
+
+  /* 왼쪽 그룹도 전체 폭 */
+  .ob1-header-left {
+    width: 100%;
+  }
+
+  /* StatCards: 전체 폭, 스크롤 가능 */
+  .ob1-stat-cards-wrap {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  /* StatCards 컨테이너 */
+  .ob1-stat-cards-inner {
+    gap: 16px !important;
+    padding: 10px 16px !important;
+    flex-wrap: nowrap;
+  }
+
+  .ob1-stat-col {
+    min-width: 80px !important;
+  }
+
+  /* 콘텐츠 레이아웃: 사이드바 아래로 */
+  .ob1-content-layout {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .ob1-sidebar-panel {
+    width: 100%;
+    min-width: unset;
+  }
+
+  /* 사이드바 메뉴 가로 스크롤 */
+  .ob1-sidebar-menu {
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 4px;
+  }
+
+  .ob1-sidebar-menu-item {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+/* ── Mobile (≤ 768px) ──────────────────────────────────── */
+@media (max-width: 768px) {
+  #ob1-page {
+    padding: 8px 10px;
+  }
+
+  .ob1-header-card {
+    padding: 12px 14px !important;
+    gap: 10px !important;
+    border-radius: 6px !important;
+  }
+
+  /* StatCards: 더 작게 */
+  .ob1-stat-cards-inner {
+    padding: 8px 12px !important;
+    gap: 12px !important;
+  }
+
+  .ob1-stat-col {
+    min-width: 70px !important;
+  }
+
+  /* CTA 버튼: 전체 폭 */
+  .ob1-btn-cta {
+    width: 100%;
+    font-size: 0.9rem;
+    padding: 10px 16px;
+  }
+
+  /* 테이블 폰트 축소 */
+  .ob1-table th,
+  .ob1-table td {
+    font-size: 0.78rem;
+    padding: 6px 10px;
+  }
+
+  /* 빈 상태 */
+  .ob1-empty-state {
+    padding: 32px 16px;
+  }
+
+  /* CTA 컨테이너 */
+  .ob1-cta-container {
+    padding: 12px 16px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ── Small Mobile (≤ 480px) ────────────────────────────── */
+@media (max-width: 480px) {
+  #ob1-page {
+    padding: 6px 8px;
+  }
+
+  .ob1-header-card {
+    padding: 10px 12px !important;
+  }
+
+  .ob1-stat-cards-inner {
+    gap: 10px !important;
+  }
+
+  .ob1-table th,
+  .ob1-table td {
+    font-size: 0.72rem;
+    padding: 5px 8px;
+  }
+
+  .ob1-sidebar-title {
+    font-size: 0.85rem;
+  }
+}
+

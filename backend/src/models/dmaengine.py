@@ -315,6 +315,33 @@ class ScreeningTraceV13(BaseModel):
     rawInputs: Dict[str, Any] = Field(default_factory=dict, alias="raw_inputs")
 
 
+class RegulationApplicabilityInputV13(BaseModel):
+    """Company/year-specific manual regulation applicability input."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    companyId: str
+    reportingYear: int
+    regime: str
+    applicability: str
+    inputMethod: str = "MANUAL"
+    sourceDocumentRef: Optional[str] = None
+    reviewStatus: str = "DRAFT"
+    reviewerComment: Optional[str] = None
+
+
+class RegulationSubIssueMappingSeedV13(BaseModel):
+    """Draft mapping seed proposal from regulation regime to a sub-issue."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    regime: str
+    subIssueCode: str
+    mappingReason: str
+    activeYn: bool = True
+    reviewStatus: str = "DRAFT"
+
+
 class AggregationTraceV13(BaseModel):
     """Sub-issue axis aggregation trace. MAX over sources; offsetting forbidden."""
 

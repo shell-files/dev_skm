@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
-import ApprovalProjectSelectModal from "./mains/modal/ApprovalProjectSelectModal";
+import ApprovalProjectSelectModal from "@mains/modal/ApprovalProjectSelectModal";
 import { useAuth } from "@hooks/AuthContext";
 import { GET } from "@utils/Network";
 import { setCurruntYear, setMaterialityRunId } from "@stores/reportSlice";
@@ -93,7 +93,7 @@ const getStageLabel = (label) => {
 
 // materiality results + onboarding-progress → 이슈별 행
 const buildMaterialityRows = (matItems = [], progressItems = []) => {
-  console.log(matItems, progressItems);
+  // console.log(matItems, progressItems);
   const progressMap = new Map(
     progressItems.map((p) => [p.subIssueCode, p])
   );
@@ -135,7 +135,7 @@ const Dashboard = () => {
           GET(`/materiality/results/${currentRunId}`),
           GET(`/materiality/results/${currentRunId}/onboarding-progress`),
         ]);
-        console.log("[progress] full:", progressRes);
+        // console.log("[progress] full:", progressRes);
         const rows = buildMaterialityRows(matRes?.items, progressRes?.items);
         if (rows.length > 0) setOnboardingRows(rows);
       } catch {

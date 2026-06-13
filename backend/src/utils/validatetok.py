@@ -1,14 +1,19 @@
 from src.utils.tokenset import decryptFromJwe, refreshAccessToken
-from src.utils.rediscl import getTokenRedis, setTokenRedis, delTokenRedis, getCompanyRedis, delCompanyRedis, setCompanyRedis
+from src.utils.rediscl import getTokenRedis, setTokenRedis, delTokenRedis, getCompanyRedis, delCompanyRedis, setCompanyRedis, setRotatedTokenRedis, getRotatedTokenRedis
 from src.utils.db import findOne, save
 from src.models.model import ResponseModel
 
 def validateToken(currentUuid: str):
     try:
+        # 0. 다른 동시 요청이 이미 이 UUID를 갱신했는지 먼저 확인 (Race Condition 방지)
+        rotatedRes = getRotatedTokenRedis(currentUuid)
+        if rotatedRes.get("status"):
+            newUuid = rotatedRes["newUuid"]
+            return ResponseModel(True, "성공적으로 조회하였습니다.", {"uuid": newUuid, "is_updated": True})
+
         # 1. Redis에서 현재 UUID로 액세스 토큰 조회
         redisRes = getTokenRedis(currentUuid)
 
-        # [방어 코드] 만약 다른 요청이 이미 토큰을 갱신해서 구 UUID가 삭제 중이거나 없을 때
         if not redisRes or not redisRes.get("status"):
             return ResponseModel(False, "세션이 존재하지 않습니다. 다시 로그인 해주세요.")
 
@@ -43,13 +48,13 @@ def validateToken(currentUuid: str):
             # 동시 다발적 요청이 전부 처리될 수 있도록 신규 UUID를 먼저 등록합니다.
             setTokenRedis(newUuid, newAccessToken)
             setCompanyRedis(newUuid, int(companyRedis["companyId"]))
-            
-            # 구 UUID 데이터 삭제 (★중요: 만약 rediscl에 expire 기능이 있다면 5~10초 유예를 주면 완벽합니다)
-            # 여기서는 즉시 지우더라도 신규 토큰 등록이 완료된 후 순차 처리되게 배치합니다.
+
+            # 구 UUID → 신 UUID 매핑을 30초간 Redis에 보존 (동시 요청 Race Condition 방지)
+            # 이후 도착하는 동시 요청들이 DB 조회 없이 신 UUID를 바로 받아 처리됨
+            setRotatedTokenRedis(currentUuid, newUuid, 30)
             delTokenRedis(currentUuid)
             delCompanyRedis(currentUuid)
 
-            # 결과에 새로 발급된 uuid임을 명시하는 플래그(is_updated)를 함께 주면 프론트나 라우터에서 처리하기 좋습니다.
             return ResponseModel(True, "성공적으로 조회하였습니다.", {"uuid": newUuid, "is_updated": True})
 
         # --- [CASE: 액세스 토큰이 아직 유효함] ---

@@ -25,34 +25,28 @@ function ProductSafetyPage(props) {
 
   return (
     <SRChrome {...props}>
-      {/* AI 생성 문단 */}
-      <Narrative
-        narrativeText={narrativeText}
-        template={TEMPLATE}
-        metrics={metrics}
-        mode={mode}
-        metricIds={aiMetricIds}
-        onNarrativeChange={props.onNarrativeChange}
-      />
-
-      {/* ── KPI 스트립 ── */}
-      <div className="sr-kpis">
-        <div className="sr-kpi">
-          <div className="kl">필드액션 건수</div>
-          <div className="kv" data-source="AP-S-01__G0001">{mt(metrics, "AP-S-01__G0001", mode)}</div>
-          <div className="kd flat">연결 기준</div>
+      {/* 문단 + CAP 완료율 게이지 나란히 */}
+      <div className="sr-cols">
+        <div className="c-main">
+          <Narrative
+            narrativeText={narrativeText}
+            template={TEMPLATE}
+            metrics={metrics}
+            mode={mode}
+            metricIds={aiMetricIds}
+            onNarrativeChange={props.onNarrativeChange}
+          />
         </div>
-        <div className="sr-kpi">
-          <div className="kl">리콜 건수</div>
-          <div className="kv" data-source="AP-S-01__G0002">{mt(metrics, "AP-S-01__G0002", mode)}</div>
-          <div className="kd flat">자발적 포함</div>
-        </div>
-        <div className="sr-kpi">
-          <div className="kl">CAP 완료율</div>
-          <div className="kv" data-source="AP-S-01__G0005">{mt(metrics, "AP-S-01__G0005", mode)}</div>
-          <div className="kd up">시정조치 이행</div>
-          <div className="sr-track" style={{ marginTop: 5 }}>
-            <div className="sr-fill" style={{ width: `${fillPct}%` }} />
+        <div className="c-side">
+          <div className="sr-gauge">
+            <div className="gl">제품안전 CAP 완료율</div>
+            <div className="gv" data-source="AP-S-01__G0005">
+              {mt(metrics, "AP-S-01__G0005", mode)}
+            </div>
+            <div className="sr-track">
+              <div className="sr-fill" style={{ width: `${fillPct}%` }} />
+            </div>
+            <div className="sr-gx"><span>0%</span><span>100%</span></div>
           </div>
         </div>
       </div>
@@ -84,21 +78,9 @@ function ProductSafetyPage(props) {
           </div>
         </div>
 
-        {/* 우: CAP 게이지 + 수치 */}
+        {/* 우: 안전 사고 수치 */}
         <div className="c-side">
-          <div className="sr-gauge">
-            <div className="gl">제품안전 CAP 완료율</div>
-            <div className="gv" data-source="AP-S-01__G0005">
-              {mt(metrics, "AP-S-01__G0005", mode)}
-            </div>
-            <div className="sr-track">
-              <div className="sr-fill" style={{ width: `${fillPct}%` }} />
-            </div>
-            <div className="sr-gx"><span>0%</span><span>100%</span></div>
-          </div>
-
-          {/* 안전 사고 수치 */}
-          <div className="sr-panel" style={{ marginTop: 12, padding: "12px 14px" }}>
+          <div className="sr-panel" style={{ padding: "12px 14px" }}>
             <div className="sr-stat">
               <span className="l">
                 필드액션 건수<br />

@@ -480,13 +480,20 @@ def step2BuildKcgsPillarBoostPayloads(
     return payloads
 
 
+_EXTERNAL_MAX_EXPECTED_SOURCE_TYPE: dict[str, str] = {
+    MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP: "news",
+    MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP: "regulation",
+    MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP: "agency",
+}
+
+
 def step2BuildMediaExternalMaxPayloads(
     rows: Sequence[Mapping[str, Any]],
 ) -> list[dict]:
     """
     Build External MAX Audit Shadow payloads from eligible media shadow rows.
-    Eligible: news canonical + regulation shadow only.
-    Excluded: news fact, KCGS, KIS, legacy rows → ValueError.
+    Eligible: news canonical, regulation shadow, KCGS domain signal.
+    Excluded: news fact, KIS (CAPABILITY_PENDING), legacy rows → ValueError.
     None → UNOBSERVED (never coerced to 0.0). Output sorted by subIssueCode ASC.
     """
     from collections import defaultdict
@@ -514,6 +521,13 @@ def step2BuildMediaExternalMaxPayloads(
             raise ValueError(
                 f"External MAX ineligible sourceStep: {sourceStep!r}. "
                 f"Eligible: news_canonical, regulation, and kcgs domain signal only."
+            )
+
+        expectedSourceType = _EXTERNAL_MAX_EXPECTED_SOURCE_TYPE[sourceStep]
+        if row.get("sourceType") != expectedSourceType:
+            raise ValueError(
+                f"External MAX sourceType mismatch for sourceStep={sourceStep!r}: "
+                f"expected {expectedSourceType!r}, got {row.get('sourceType')!r}"
             )
 
         rawImpact = row.get("impactSignal")

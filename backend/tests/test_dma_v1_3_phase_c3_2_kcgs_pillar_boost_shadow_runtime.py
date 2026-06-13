@@ -692,12 +692,12 @@ class KcgsReaderTxServiceTest(unittest.TestCase):
         service = importlib.import_module("src.services.medias.service")
         self.assertNotIn("refreshKcgsShadowForRun", inspect.getsource(service.runMediaAnalysis))
 
-    def test_83_crawl_hook_keeps_regulation_and_kcgs_independent(self):
+    def test_83_crawl_hook_gates_external_max_on_source_refresh(self):
         _installMediaServiceImportStubs()
         service = importlib.import_module("src.services.medias.service")
         source = inspect.getsource(service.runMediaCrawlAndAnalyze)
         self.assertLess(source.index("refreshRegulationShadowForRun"), source.index("refreshKcgsShadowForRun"))
-        self.assertIn("Warning: media_external.agency.kcgs", source)
+        self.assertIn("externalMax summary update aborted", source)
 
 
 class KcgsStaticInventoryTest(unittest.TestCase):

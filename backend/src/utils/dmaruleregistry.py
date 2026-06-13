@@ -389,10 +389,14 @@ def validateKcgsScreeningPolicy(policy: Mapping[str, Any]) -> None:
         )
     if kcgs.get("overallGradeTraceOnlyYn") is not True:
         raise DmaRuleValidationError("screening_policy.kcgs.overallGradeTraceOnlyYn must be true")
-    if kcgs.get("externalMaxEligibleYn") is not False:
-        raise DmaRuleValidationError("screening_policy.kcgs.externalMaxEligibleYn must be false")
-    if kcgs.get("top20BoostOnlyYn") is not True:
-        raise DmaRuleValidationError("screening_policy.kcgs.top20BoostOnlyYn must be true")
+    if kcgs.get("externalMaxEligibleYn") is not True:
+        raise DmaRuleValidationError("screening_policy.kcgs.externalMaxEligibleYn must be true")
+    if kcgs.get("top20BoostOnlyYn") is not False:
+        raise DmaRuleValidationError("screening_policy.kcgs.top20BoostOnlyYn must be false")
+    if kcgs.get("axisMode") != "SYMMETRIC_DOMAIN_SIGNAL":
+        raise DmaRuleValidationError(
+            "screening_policy.kcgs.axisMode must be 'SYMMETRIC_DOMAIN_SIGNAL'"
+        )
     if kcgs.get("directCanonicalFinalAllowedYn") is not False:
         raise DmaRuleValidationError("screening_policy.kcgs.directCanonicalFinalAllowedYn must be false")
 

@@ -394,8 +394,8 @@ class PhaseC21ServiceHookTest(unittest.TestCase):
         self.assertTrue(all(ch == "media_external" for ch in capturedChannels))
         self.assertGreater(len(capturedChannels), 0)
 
-    # 18. Normalize 실패 → Replace TX 미호출, Legacy scoredSignals 반환 유지
-    def test_normalize_failure_skips_tx_keeps_legacy_result(self):
+    # 18. Normalize 실패 → RuntimeError 전파, Replace TX 미호출
+    def test_normalize_failure_propagates_as_runtime_error(self):
         svc = self._service
         scored = self._makeScored()
         with patch.object(svc, "processMediaPipeline", return_value=[]), \
@@ -404,22 +404,19 @@ class PhaseC21ServiceHookTest(unittest.TestCase):
              patch.object(svc, "scoreSignals", return_value=scored), \
              patch.object(svc, "saveSignals"), \
              patch.object(svc, "step0NormalizeMediaFacts", side_effect=RuntimeError("norm fail")), \
-             patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx") as txMock, \
-             patch("builtins.print"):
-            result = svc.runMediaAnalysis(articles=[], runId=99)
+             patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx") as txMock:
+            with self.assertRaises(RuntimeError):
+                svc.runMediaAnalysis(articles=[], runId=99)
         txMock.assert_not_called()
-        self.assertEqual(result, scored)
 
-    # 19. Replace TX 실패 → Warning 출력, Legacy scoredSignals 반환 유지
-    def test_tx_failure_prints_warning_and_keeps_legacy_result(self):
+    # 19. Replace TX 실패 → RuntimeError 전파 (complete crawl shadow replace 실패)
+    def test_tx_failure_propagates_as_runtime_error(self):
         scored = self._makeScored()
-        result, _, _, _, printMock = self._runWithPatches(
-            scoredReturn=scored,
-            txSideEffect=RuntimeError("tx boom"),
-        )
-        self.assertEqual(result, scored)
-        warnings = [c[0][0] for c in printMock.call_args_list if c[0]]
-        self.assertTrue(any("shadow replace failed" in w for w in warnings))
+        with self.assertRaises(RuntimeError):
+            self._runWithPatches(
+                scoredReturn=scored,
+                txSideEffect=RuntimeError("tx boom"),
+            )
 
     # 20. Legacy saveSignals 실패 → Replace TX 미호출, 기존 실패 유지
     def test_legacy_save_failure_skips_shadow_tx(self):
@@ -527,6 +524,7 @@ class PhaseC211CrawlEmptyReplaceTest(unittest.TestCase):
     def setUp(self):
         dmaruleregistry.resetDmaRulesForTest()
         import importlib
+        sys.modules.pop("src.services.medias.crawler", None)
         sys.modules.pop("src.services.medias.service", None)
         self._service = importlib.import_module("src.services.medias.service")
 
@@ -560,6 +558,9 @@ class PhaseC211CrawlEmptyReplaceTest(unittest.TestCase):
              patch.object(svc, "getMediaCoverage", return_value={"coverageStatus": "LOW"}), \
              patch.object(svc, "countMediaSubIssues", return_value=0), \
              patch.object(svc, "listTopMediaIssues", return_value=[]), \
+             patch.object(svc, "refreshRegulationShadowForRun", return_value=0), \
+             patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
+             patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0), \
              patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx",
                           side_effect=txSideEffect) as txMock, \
              patch("builtins.print") as printMock:
@@ -627,8 +628,8 @@ class PhaseC211CrawlEmptyReplaceTest(unittest.TestCase):
         _, txMock, _ = self._runCrawlWithPatches(crawlResult)
         txMock.assert_not_called()
 
-    # 39. Empty Replace TX 실패 → Crawl 응답 유지, Warning 출력
-    def test_empty_replace_tx_failure_keeps_crawl_response(self):
+    # 39. Empty Replace TX 실패 → RuntimeError 전파 (complete crawl empty-clear 실패)
+    def test_empty_replace_tx_failure_propagates_as_runtime_error(self):
         crawlResult = self._CrawlExecutionResult(
             requestedSources=["impacton"],
             allowedSources=["impacton"],
@@ -636,14 +637,11 @@ class PhaseC211CrawlEmptyReplaceTest(unittest.TestCase):
             articles=[],
             errors=[],
         )
-        result, _, printMock = self._runCrawlWithPatches(
-            crawlResult,
-            txSideEffect=RuntimeError("tx boom"),
-        )
-        self.assertIsNotNone(result)
-        self.assertEqual(result.runId, 99)
-        warnings = [c[0][0] for c in printMock.call_args_list if c[0]]
-        self.assertTrue(any("shadow empty-clear failed" in w for w in warnings))
+        with self.assertRaises(RuntimeError):
+            self._runCrawlWithPatches(
+                crawlResult,
+                txSideEffect=RuntimeError("tx boom"),
+            )
 
 
 # ── C2.1.2 Non-empty Partial Crawl Shadow Protection ─────────────────────────
@@ -652,6 +650,7 @@ class PhaseC212PartialCrawlProtectionTest(unittest.TestCase):
     def setUp(self):
         dmaruleregistry.resetDmaRulesForTest()
         import importlib
+        sys.modules.pop("src.services.medias.crawler", None)
         sys.modules.pop("src.services.medias.service", None)
         self._service = importlib.import_module("src.services.medias.service")
 
@@ -689,6 +688,9 @@ class PhaseC212PartialCrawlProtectionTest(unittest.TestCase):
              patch.object(svc, "getMediaCoverage", return_value={"coverageStatus": "LOW"}), \
              patch.object(svc, "countMediaSubIssues", return_value=0), \
              patch.object(svc, "listTopMediaIssues", return_value=[]), \
+             patch.object(svc, "refreshRegulationShadowForRun", return_value=0), \
+             patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
+             patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0), \
              patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx") as txMock, \
              patch("builtins.print"):
             svc.runMediaCrawlAndAnalyze(self._makeRequest())

@@ -32,7 +32,12 @@ from src.services.medias.eventresolver import (
     resolveMediaNewsEventObservation,
 )
 from src.utils import dmaruleregistry, dmascoring
-from src.utils.dmarepository import step4BuildTrace
+from src.utils.dmarepository import (
+    step4BuildTrace,
+    MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP,
+    MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP,
+    MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP,
+)
 from src.utils.subissuemaster import subissueMaster
 
 REGULATION_INPUT_METHODS = ("CONSULTANT_INPUT", "MANUAL", "POLICY_SEED")
@@ -156,12 +161,13 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
         latestGrade = str(payload.get("latestGrade") or payload["grade"])
         state = dmascoring.step2CalcKcgs(latestGrade, str(payload["trend"]), screeningPolicy)
         subIssueBoost = dmascoring.step2CalcKcgsBoost(state["pillarSignal"], screeningPolicy)
-        # KCGS pillar movement is not an axis score. Preserve it only as a Top20 boost hint.
+        # KCGS pillar movement is a symmetric E/S/G domain-level media_external signal.
+        # It participates in external MAX but is not added again at Top20.
         trace = ScreeningTraceV13(
-            channel="kcgs_pillar_boost",
+            channel="kcgs_pillar_domain_signal",
             scorePurpose=ScorePurposeV13.PRESURVEY_SCREENING,
-            impactSignal=None,
-            financialSignal=None,
+            impactSignal=state["pillarSignal"],
+            financialSignal=state["pillarSignal"],
             status=state["status"],
             capability=dmaruleregistry.getCapability("kcgsPillarSignal"),
             rawInputs={
@@ -188,6 +194,7 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
                 "overallGradeTraceOnlyYn": kcgsPolicy["overallGradeTraceOnlyYn"],
                 "externalMaxEligibleYn": kcgsPolicy["externalMaxEligibleYn"],
                 "top20BoostOnlyYn": kcgsPolicy["top20BoostOnlyYn"],
+                "axisMode": kcgsPolicy["axisMode"],
                 "directCanonicalFinalAllowedYn": kcgsPolicy["directCanonicalFinalAllowedYn"],
             },
         )
@@ -203,7 +210,11 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
             for item in payload["signals"]
         ]
         trace = dmascoring.step2CalcExternalMax(signals, screeningPolicy)
-        return buildPayload(trace)
+        return buildPayload(
+            trace,
+            subIssueCode=payload.get("subIssueCode"),
+            sourceChannel="media_external",
+        )
 
     if normalizedChannel == "surveyOverlay":
         surveyPolicy = dmaruleregistry.getPolicy("survey_policy")
@@ -469,6 +480,99 @@ def step2BuildKcgsPillarBoostPayloads(
     return payloads
 
 
+_EXTERNAL_MAX_EXPECTED_SOURCE_TYPE: dict[str, str] = {
+    MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP: "news",
+    MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP: "regulation",
+    MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP: "agency",
+}
+
+
+def step2BuildMediaExternalMaxPayloads(
+    rows: Sequence[Mapping[str, Any]],
+) -> list[dict]:
+    """
+    Build External MAX Audit Shadow payloads from eligible media shadow rows.
+    Eligible: news canonical, regulation shadow, KCGS domain signal.
+    Excluded: news fact, KIS (CAPABILITY_PENDING), legacy rows → ValueError.
+    None → UNOBSERVED (never coerced to 0.0). Output sorted by subIssueCode ASC.
+    """
+    from collections import defaultdict
+
+    groups: dict[str, list[ScreeningTraceV13]] = defaultdict(list)
+
+    for row in rows:
+        if not isinstance(row, Mapping):
+            raise ValueError(f"External MAX row must be a Mapping, got {type(row)!r}")
+        subIssueCode = row.get("subIssueCode")
+        if not subIssueCode:
+            raise ValueError("subIssueCode is required for External MAX payload")
+        if subIssueCode not in subissueMaster:
+            raise ValueError(f"Unknown subIssueCode for External MAX: {subIssueCode!r}")
+
+        sourceStep = row.get("sourceStep")
+        if sourceStep == MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP:
+            channel = "news_canonical"
+        elif sourceStep == MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP:
+            rawLabel = str(row.get("rawIssueLabel") or "").lower()
+            channel = f"regulation_{rawLabel}"
+        elif sourceStep == MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP:
+            channel = "kcgs_pillar_domain_signal"
+        else:
+            raise ValueError(
+                f"External MAX ineligible sourceStep: {sourceStep!r}. "
+                f"Eligible: news_canonical, regulation, and kcgs domain signal only."
+            )
+
+        expectedSourceType = _EXTERNAL_MAX_EXPECTED_SOURCE_TYPE[sourceStep]
+        if row.get("sourceType") != expectedSourceType:
+            raise ValueError(
+                f"External MAX sourceType mismatch for sourceStep={sourceStep!r}: "
+                f"expected {expectedSourceType!r}, got {row.get('sourceType')!r}"
+            )
+
+        rawImpact = row.get("impactSignal")
+        rawFinancial = row.get("financialSignal")
+        impactSignal = None if rawImpact is None else float(rawImpact)
+        financialSignal = None if rawFinancial is None else float(rawFinancial)
+        status = (
+            dmascoring.STATUS_OBSERVED
+            if (impactSignal is not None or financialSignal is not None)
+            else dmascoring.STATUS_UNOBSERVED
+        )
+
+        if sourceStep == MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP:
+            rawInputs: dict[str, Any] = {
+                "sourceStep": sourceStep,
+                "sourceType": "agency",
+                "providerKey": "kcgs",
+                "sourceRowId": row.get("id"),
+                "rawIssueLabel": row.get("rawIssueLabel"),
+            }
+        else:
+            rawInputs = {"sourceStep": sourceStep}
+
+        trace = ScreeningTraceV13(
+            channel=channel,
+            scorePurpose=ScorePurposeV13.PRESURVEY_SCREENING,
+            impactSignal=impactSignal,
+            financialSignal=financialSignal,
+            status=status,
+            rawInputs=rawInputs,
+        )
+        groups[subIssueCode].append(trace)
+
+    payloads = []
+    for subIssueCode in sorted(groups.keys()):
+        traces = groups[subIssueCode]
+        payload = step2RunScreening("externalMax", {
+            "subIssueCode": subIssueCode,
+            "signals": traces,
+        })
+        payloads.append(payload)
+
+    return payloads
+
+
 def _mediaNewsCandidateFingerprint(candidate) -> tuple:
     """Deterministic fingerprint of an axis candidate for MERGED consistency check."""
     if candidate is None:
@@ -625,6 +729,7 @@ __all__ = [
     "step2ResolveBenchmarkObservation",
     "step2BuildBenchmarkScreeningPayloads",
     "step2BuildKcgsPillarBoostPayloads",
+    "step2BuildMediaExternalMaxPayloads",
     "step2BuildRegulationScreeningPayloads",
     "step2RunScreening",
     "step3RunSelection",

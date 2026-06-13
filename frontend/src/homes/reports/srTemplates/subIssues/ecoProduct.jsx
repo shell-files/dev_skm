@@ -25,37 +25,40 @@ function EcoProductPage(props) {
 
   return (
     <SRChrome {...props}>
-      {/* AI 생성 문단 */}
-      <Narrative
-        narrativeText={narrativeText}
-        template={TEMPLATE}
-        metrics={metrics}
-        mode={mode}
-        metricIds={aiMetricIds}
-        onNarrativeChange={props.onNarrativeChange}
-      />
-
-      {/* ── KPI 스트립 (4개) ── */}
-      <div className="sr-kpis">
-        <div className="sr-kpi">
-          <div className="kl">친환경 제품 매출액</div>
-          <div className="kv" data-source="AP-E-06__G0001">{mt(metrics, "AP-E-06__G0001", mode)}</div>
-          <div className="kd up">연결 기준</div>
+      {/* 문단 + 친환경 제품 매출액 KPI 나란히 */}
+      <div className="sr-cols">
+        <div className="c-main">
+          <Narrative
+            narrativeText={narrativeText}
+            template={TEMPLATE}
+            metrics={metrics}
+            mode={mode}
+            metricIds={aiMetricIds}
+            onNarrativeChange={props.onNarrativeChange}
+          />
         </div>
-        <div className="sr-kpi">
-          <div className="kl">매출 대비 친환경 비중</div>
-          <div className="kv" data-source="AP-E-06__G0003">{mt(metrics, "AP-E-06__G0003", mode)}</div>
-          <div className="kd up">친환경 포트폴리오</div>
-        </div>
-        <div className="sr-kpi">
-          <div className="kl">제품 사용 회피 배출량</div>
-          <div className="kv" data-source="AP-E-06__G0004">{mt(metrics, "AP-E-06__G0004", mode)}</div>
-          <div className="kd down">사용 단계 기여</div>
-        </div>
-        <div className="sr-kpi">
-          <div className="kl">사회적 비용 절감</div>
-          <div className="kv" data-source="AP-E-06__G0005">{mt(metrics, "AP-E-06__G0005", mode)}</div>
-          <div className="kd up">탄소비용 환산</div>
+        <div className="c-side">
+          <div className="sr-panel" style={{ padding: "16px 14px" }}>
+            <div className="sr-stat hl">
+              <span className="l">
+                친환경 제품 매출액<br />
+                <small>연결 기준</small>
+              </span>
+              <span className="v" data-source="AP-E-06__G0001">
+                {mt(metrics, "AP-E-06__G0001", mode)}
+              </span>
+            </div>
+            <div style={{ marginTop: 10, borderTop: "1px solid var(--panel-line)", paddingTop: 10 }}>
+              <div style={{ fontSize: 9.5, color: "var(--muted)", marginBottom: 4 }}>매출 대비 친환경 비중</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "var(--brand)" }}
+                data-source="AP-E-06__G0003">
+                {mt(metrics, "AP-E-06__G0003", mode)}
+              </div>
+              <div className="sr-track" style={{ marginTop: 6 }}>
+                <div className="sr-fill" style={{ width: `${fillPct}%` }} />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

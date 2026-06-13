@@ -8,7 +8,7 @@ import { Narrative, mt, num, buildMetricsMap } from "../core/srHelpers";
 const TEMPLATE =
   "연결 임직원 수는 총 {S1-02__G0001}이며, 이들을 대상으로 한 1인당 평균 교육시간은 {S3-02__G0002}이었습니다. " +
   "또한 핵심 직무 교육 달성률은 {S3-02__G0003}를 기록하였습니다.";
-
+  
 const metricFields = [
   { id: "S1-02__G0001",  label: "연결 임직원 수" },
   { id: "S3-02__G0002",  label: "1인당 교육시간" },

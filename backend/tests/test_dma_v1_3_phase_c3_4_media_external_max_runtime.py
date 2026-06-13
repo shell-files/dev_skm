@@ -865,11 +865,18 @@ class ExternalMaxStaticInventoryTest(unittest.TestCase):
             ["git", "diff", "--name-only", "--", "backend/src/apis", "frontend", "*.sql"],
             cwd=REPO,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             capture_output=True,
             check=False,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.strip(), "")
+        # survey.py is intentionally modified in C4.0 — exclude it from guard
+        changed = [
+            f for f in (result.stdout or "").strip().splitlines()
+            if "survey.py" not in f
+        ]
+        self.assertEqual(changed, [])
 
     def test_93_kis_namespace_absent_from_eligible_sql(self):
         capture = {}
@@ -1011,7 +1018,8 @@ class ExternalMaxGateTest(unittest.TestCase):
              patch.object(svc, "runMediaAnalysis", return_value=[]), \
              patch.object(svc, "refreshRegulationShadowForRun", return_value=0), \
              patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
-             patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0) as ext_max:
+             patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0) as ext_max, \
+             patch.object(svc, "ensureSurveyFormForRun", return_value=None):
             svc.runMediaCrawlAndAnalyze(self._request())
         ext_max.assert_called_once_with(RUN_ID)
 

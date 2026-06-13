@@ -440,7 +440,8 @@ class BenchMarkingJsxApiContractTest(unittest.TestCase):
         self.assertNotIn("USE_DUMMY = true", _jsx())
 
     def test_vite_benchmark_dummy_env_flag(self):
-        self.assertIn("VITE_BENCHMARK_DUMMY", _jsx())
+        # VITE_BENCHMARK_DUMMY was removed in Phase 2 dummy cleanup
+        self.assertNotIn("VITE_BENCHMARK_DUMMY", _jsx())
 
     def test_use_selector_current_run_id(self):
         src = _jsx()

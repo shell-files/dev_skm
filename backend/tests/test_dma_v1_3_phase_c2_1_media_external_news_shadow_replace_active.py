@@ -561,6 +561,7 @@ class PhaseC211CrawlEmptyReplaceTest(unittest.TestCase):
              patch.object(svc, "refreshRegulationShadowForRun", return_value=0), \
              patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
              patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0), \
+             patch.object(svc, "ensureSurveyFormForRun", return_value=None), \
              patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx",
                           side_effect=txSideEffect) as txMock, \
              patch("builtins.print") as printMock:
@@ -691,6 +692,7 @@ class PhaseC212PartialCrawlProtectionTest(unittest.TestCase):
              patch.object(svc, "refreshRegulationShadowForRun", return_value=0), \
              patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
              patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0), \
+             patch.object(svc, "ensureSurveyFormForRun", return_value=None), \
              patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx") as txMock, \
              patch("builtins.print"):
             svc.runMediaCrawlAndAnalyze(self._makeRequest())

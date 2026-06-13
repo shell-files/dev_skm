@@ -36,6 +36,7 @@ from src.utils.dmarepository import (
 )
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
 from src.utils.subissuemaster import getSubIssueDisplayName
+from src.services.surveys.formservice import ensureSurveyFormForRun
 
 
 MVP_DEMO_COMPANY_KEYWORDS = ["현대자동차"]
@@ -148,6 +149,7 @@ def runMediaCrawlAndAnalyze(
             )
         # media_external External MAX Shadow + Summary + Final + Rank — critical path.
         refreshMediaExternalMaxForRun(request.runId)
+        ensureSurveyFormForRun(request.runId)
 
     sourceBreakdown = applySavedSignalCounts(
         crawlResult.sourceBreakdown,

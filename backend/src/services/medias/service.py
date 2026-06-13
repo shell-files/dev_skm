@@ -71,10 +71,7 @@ def runMediaAnalysis(
         saveSignals(runId=runId, signals=scoredSignals, fileId=None, sourceTitle="Media Analysis")
 
     if shadowReplaceYn:
-        try:
-            _replaceMediaNewsShadowFromPipelineResults(runId=runId, pipelineResults=pipelineResults)
-        except Exception as shadowError:
-            print(f"Warning: media_external.news v1.3 shadow replace failed: {shadowError}")
+        _replaceMediaNewsShadowFromPipelineResults(runId=runId, pipelineResults=pipelineResults)
 
     return scoredSignals
 
@@ -124,14 +121,11 @@ def runMediaCrawlAndAnalyze(
         )
         savedSignalCountsBySource = _countSavedSignalsBySource(scoredSignals)
     elif crawlCompleteYn:
-        try:
-            _replaceMediaNewsShadowFromPipelineResults(runId=request.runId, pipelineResults=[])
-        except Exception as shadowError:
-            print(f"Warning: media_external.news v1.3 shadow empty-clear failed: {shadowError}")
+        # Complete crawl with no articles — empty-clear is critical path.
+        # Failure propagates; External MAX must not run against a stale news shadow.
+        _replaceMediaNewsShadowFromPipelineResults(runId=request.runId, pipelineResults=[])
 
-    # Refresh Regulation and KCGS source shadows — both gate External MAX.
-    # If either fails the External MAX step is aborted to prevent snapshot mixing
-    # (stale Regulation or KCGS combined with fresh news canonical in one summary update).
+    # Refresh Regulation and KCGS source shadows — run regardless of crawl result.
     _shadowRefreshErrors: list[tuple[str, Exception]] = []
 
     try:
@@ -144,16 +138,16 @@ def runMediaCrawlAndAnalyze(
     except Exception as _exc:
         _shadowRefreshErrors.append(("kcgs", _exc))
 
-    if _shadowRefreshErrors:
-        raise RuntimeError(
-            "media_external source refresh failed; externalMax summary update aborted: "
-            + "; ".join(f"{k}: {v}" for k, v in _shadowRefreshErrors)
-        )
-
-    # media_external External MAX Shadow + Summary + Final + Rank — critical path.
-    # Runs only when all source shadows are up-to-date.
-    # Failure propagates as RuntimeError; success response must not be returned on failure.
-    refreshMediaExternalMaxForRun(request.runId)
+    # External MAX is gated on news canonical freshness (crawlCompleteYn).
+    # Partial/failed crawl: skip External MAX; existing Summary/Final/Rank preserved unchanged.
+    if crawlCompleteYn:
+        if _shadowRefreshErrors:
+            raise RuntimeError(
+                "media_external source refresh failed; externalMax summary update aborted: "
+                + "; ".join(f"{k}: {v}" for k, v in _shadowRefreshErrors)
+            )
+        # media_external External MAX Shadow + Summary + Final + Rank — critical path.
+        refreshMediaExternalMaxForRun(request.runId)
 
     sourceBreakdown = applySavedSignalCounts(
         crawlResult.sourceBreakdown,

@@ -719,8 +719,8 @@ class PhaseC24ServiceHookTest(unittest.TestCase):
             runMediaAnalysis(articles=[], runId=1, shadowReplaceYn=False)
             mock_tx.assert_not_called()
 
-    # --- Shadow TX exception is swallowed by runMediaAnalysis (#45) ---
-    def test_45_shadow_exception_is_swallowed(self):
+    # --- Shadow TX exception propagates from runMediaAnalysis (#45) ---
+    def test_45_shadow_replace_exception_propagates(self):
         from src.services.medias.service import runMediaAnalysis
 
         with patch("src.services.medias.service.processMediaPipeline", return_value=[]), \
@@ -729,9 +729,8 @@ class PhaseC24ServiceHookTest(unittest.TestCase):
              patch("src.services.medias.service.scoreSignals", return_value=[]), \
              patch("src.services.medias.service._replaceMediaNewsShadowFromPipelineResults",
                    side_effect=RuntimeError("TX kaboom")):
-            # Must not raise
-            result = runMediaAnalysis(articles=[], runId=1, shadowReplaceYn=True)
-            self.assertEqual(result, [])
+            with self.assertRaises(RuntimeError):
+                runMediaAnalysis(articles=[], runId=1, shadowReplaceYn=True)
 
     # --- step1BuildMediaNewsCanonicalPayloads failure propagates from _replaceMediaNewsShadowFromPipelineResults (#46) ---
     def test_46_canonical_build_failure_propagates(self):

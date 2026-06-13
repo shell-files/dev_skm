@@ -63,6 +63,28 @@ def delTokenRedis(uuid: str):
         return {"status": False}
 
 
+def setRotatedTokenRedis(oldUuid: str, newUuid: str, seconds: int = 30):
+    """토큰 갱신 시 구 UUID → 신 UUID 매핑을 저장한다 (동시 요청 Race Condition 방지용)."""
+    try:
+        client1.set(f"rotated:{oldUuid}", newUuid, ex=seconds)
+        return {"status": True}
+    except Exception as e:
+        print(f"Error setting rotated key: {e}")
+        return {"status": False}
+
+
+def getRotatedTokenRedis(oldUuid: str):
+    """구 UUID가 이미 갱신된 경우 신 UUID를 반환한다."""
+    try:
+        result = client1.get(f"rotated:{oldUuid}")
+        if result:
+            return {"status": True, "newUuid": result}
+        return {"status": False}
+    except Exception as e:
+        print(f"Error getting rotated key: {e}")
+        return {"status": False}
+
+
 def setPasswordRedis(tempPwd: str, email: str):
     try:
         client2.set(tempPwd, email)

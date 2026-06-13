@@ -920,6 +920,9 @@ MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP = (
 MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP = (
     "media_external_agency_kcgs_v13_shadow"
 )
+MEDIA_EXTERNAL_V13_EXTERNAL_MAX_SHADOW_SOURCE_STEP = (
+    "media_external_v13_external_max_shadow"
+)
 
 _SHADOW_INSERT_SQL = """
     INSERT INTO ESG_DMA_SIGNAL_DETAIL (
@@ -1872,18 +1875,41 @@ def _buildKcgsShadowRows(
         trace = screeningTrace[0]
         if not isinstance(trace, dict):
             raise ValueError("KCGS Shadow screeningTrace[0] must be a dict")
-        if trace.get("channel") != "kcgs_pillar_boost":
+        if trace.get("channel") != "kcgs_pillar_domain_signal":
             raise ValueError(
-                f"KCGS Shadow channel must be 'kcgs_pillar_boost', got {trace.get('channel')!r}"
+                f"KCGS Shadow channel must be 'kcgs_pillar_domain_signal', got {trace.get('channel')!r}"
             )
-        if trace.get("impactSignal") is not None:
-            raise ValueError("KCGS Shadow impactSignal must be None")
-        if trace.get("financialSignal") is not None:
-            raise ValueError("KCGS Shadow financialSignal must be None")
+        impactSignal = trace.get("impactSignal")
+        financialSignal = trace.get("financialSignal")
+        if isinstance(impactSignal, bool) or not isinstance(impactSignal, (int, float)):
+            raise ValueError(
+                f"KCGS Shadow impactSignal must be numeric, got {impactSignal!r}"
+            )
+        if isinstance(financialSignal, bool) or not isinstance(financialSignal, (int, float)):
+            raise ValueError(
+                f"KCGS Shadow financialSignal must be numeric, got {financialSignal!r}"
+            )
 
         rawInputs = trace.get("rawInputs")
         if not isinstance(rawInputs, dict):
             raise ValueError("KCGS Shadow rawInputs is required")
+        pillarSignalRaw = rawInputs.get("pillarSignal")
+        if (
+            isinstance(pillarSignalRaw, bool)
+            or not isinstance(pillarSignalRaw, (int, float))
+            or float(impactSignal) != float(pillarSignalRaw)
+        ):
+            raise ValueError(
+                f"KCGS Shadow impactSignal must equal rawInputs.pillarSignal "
+                f"(SYMMETRIC_DOMAIN_SIGNAL), got impactSignal={impactSignal!r}, "
+                f"pillarSignal={pillarSignalRaw!r}"
+            )
+        if float(financialSignal) != float(pillarSignalRaw):
+            raise ValueError(
+                f"KCGS Shadow financialSignal must equal rawInputs.pillarSignal "
+                f"(SYMMETRIC_DOMAIN_SIGNAL), got financialSignal={financialSignal!r}, "
+                f"pillarSignal={pillarSignalRaw!r}"
+            )
         if rawInputs.get("sourceStep") != "media_external":
             raise ValueError(
                 f"KCGS Shadow rawInputs.sourceStep must be 'media_external', "
@@ -1921,10 +1947,12 @@ def _buildKcgsShadowRows(
             raise ValueError(
                 f"KCGS Shadow rawInputs.subIssueBoost must be numeric in 0..1, got {subIssueBoost!r}"
             )
-        if rawInputs.get("externalMaxEligibleYn") is not False:
-            raise ValueError("KCGS Shadow rawInputs.externalMaxEligibleYn must be false")
-        if rawInputs.get("top20BoostOnlyYn") is not True:
-            raise ValueError("KCGS Shadow rawInputs.top20BoostOnlyYn must be true")
+        if rawInputs.get("externalMaxEligibleYn") is not True:
+            raise ValueError("KCGS Shadow rawInputs.externalMaxEligibleYn must be true")
+        if rawInputs.get("top20BoostOnlyYn") is not False:
+            raise ValueError("KCGS Shadow rawInputs.top20BoostOnlyYn must be false")
+        if rawInputs.get("axisMode") != "SYMMETRIC_DOMAIN_SIGNAL":
+            raise ValueError("KCGS Shadow rawInputs.axisMode must be 'SYMMETRIC_DOMAIN_SIGNAL'")
         if rawInputs.get("directCanonicalFinalAllowedYn") is not False:
             raise ValueError("KCGS Shadow rawInputs.directCanonicalFinalAllowedYn must be false")
 
@@ -1935,8 +1963,8 @@ def _buildKcgsShadowRows(
             subIssueCode,
             MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP,
             "agency",
-            None,
-            None,
+            trace.get("impactSignal"),
+            trace.get("financialSignal"),
             None,
             payloadJson,
         ))
@@ -2004,6 +2032,339 @@ def step4ReplaceKcgsShadowTracesTx(
 
         conn.commit()
         return len(rows)
+    except Exception:
+        if hasattr(conn, "rollback"):
+            conn.rollback()
+        raise
+    finally:
+        if hasattr(conn, "close"):
+            conn.close()
+
+
+# =========================================================
+# STEP 4. media_external External MAX Shadow Runtime
+# =========================================================
+
+
+def listExternalMaxEligibleMediaRows(runId: int) -> list[dict]:
+    """
+    Read External MAX eligible shadow rows for a run.
+    Eligible:
+      - news canonical shadow
+      - regulation screening shadow
+      - KCGS domain signal shadow
+    Excluded: news fact shadow, KIS (CAPABILITY_PENDING), legacy rows.
+    Uses _findAllRegulationRowsOrRaise (fail-closed; RuntimeError on any failure).
+    """
+    sql = """
+        SELECT
+            id,
+            sub_issue_code AS subIssueCode,
+            raw_issue_label AS rawIssueLabel,
+            source_step AS sourceStep,
+            source_type AS sourceType,
+            impact_score AS impactSignal,
+            financial_score AS financialSignal,
+            scoring_payload_json AS scoringPayloadJson
+        FROM ESG_DMA_SIGNAL_DETAIL
+        WHERE esg_materiality_run_id = ?
+          AND source_step IN (?, ?, ?)
+          AND delete_yn = 0
+        ORDER BY sub_issue_code, source_step, id
+    """
+    return _findAllRegulationRowsOrRaise(
+        sql,
+        (
+            runId,
+            MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP,
+            MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP,
+            MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP,
+        ),
+    )
+
+
+def _buildMediaExternalMaxShadowRows(
+    runId: int,
+    payloads: Sequence[Dict[str, Any]],
+) -> list[tuple]:
+    """Row-serialization SSOT for External MAX Audit Shadow INSERT. No DB access."""
+    rows = []
+    for payload in payloads:
+        payloadJson = step4WriteTrace(payload, asJson=True)
+        payloadData = json.loads(payloadJson)
+
+        if payloadData.get("scorePurpose") != "PRESURVEY_SCREENING":
+            raise ValueError(
+                f"External MAX Shadow scorePurpose must be 'PRESURVEY_SCREENING', "
+                f"got {payloadData.get('scorePurpose')!r}"
+            )
+        if payloadData.get("sourceChannel") != "media_external":
+            raise ValueError(
+                f"External MAX Shadow sourceChannel must be 'media_external', "
+                f"got {payloadData.get('sourceChannel')!r}"
+            )
+        subIssueCode = payloadData.get("subIssueCode")
+        if not subIssueCode:
+            raise ValueError("subIssueCode is required for External MAX Shadow trace")
+        if subIssueCode not in subissueMaster:
+            raise ValueError(f"Unknown External MAX Shadow subIssueCode: {subIssueCode!r}")
+
+        screeningTrace = payloadData.get("screeningTrace")
+        if not isinstance(screeningTrace, list):
+            raise ValueError("screeningTrace is required for External MAX Shadow trace")
+        if len(screeningTrace) != 1:
+            raise ValueError(
+                f"External MAX Shadow requires exactly 1 screeningTrace, got {len(screeningTrace)}"
+            )
+        trace = screeningTrace[0]
+        if not isinstance(trace, dict):
+            raise ValueError("External MAX Shadow screeningTrace[0] must be a dict")
+        if trace.get("channel") != "external_screening_max":
+            raise ValueError(
+                f"External MAX Shadow channel must be 'external_screening_max', "
+                f"got {trace.get('channel')!r}"
+            )
+        rawInputs = trace.get("rawInputs")
+        if not isinstance(rawInputs, dict):
+            raise ValueError("External MAX Shadow rawInputs is required")
+        if rawInputs.get("additiveYn") is not False:
+            raise ValueError("External MAX Shadow rawInputs.additiveYn must be false")
+
+        rows.append((
+            runId,
+            None,
+            "external_screening_max",
+            subIssueCode,
+            MEDIA_EXTERNAL_V13_EXTERNAL_MAX_SHADOW_SOURCE_STEP,
+            "external_max",
+            trace.get("impactSignal"),
+            trace.get("financialSignal"),
+            None,
+            payloadJson,
+        ))
+    return rows
+
+
+def step4ReplaceMediaExternalMaxShadowAndSummaryTx(
+    runId: int,
+    payloads: Sequence[Dict[str, Any]],
+) -> int:
+    """
+    Replace-Active Transaction: External MAX Shadow + Summary + Final + Rank.
+
+    Pre-DB: serializes shadow rows and validates no duplicate subIssueCodes.
+    TX (single atomic block):
+      1. getConn / autocommit=False
+      2. ESG_MATERIALITY_RUN row lock
+      3. Soft-delete existing External MAX shadow (namespace-only)
+      4. INSERT new External MAX shadow rows
+      5. NULL clear Summary media_external_* for this run
+      6. UPSERT Summary media_external_* per payload
+      7. Read all Summary rows for this run
+      8. Recalculate final_* via calcFinal() for each sub-issue
+      9. NULL clear rank_no
+      10. Re-rank non-null final_score rows (DESC final_score, ASC sub_issue_code)
+      11. Verify shadow COUNT(*)
+      12. Verify Summary observed count
+      13. COMMIT / close
+
+    payloads=[] is a valid empty-clear: clears shadow + summary, recalcs final/rank,
+    and commits. Any failure triggers ROLLBACK preserving the prior state.
+    Returns the number of shadow rows inserted.
+    """
+    # Pre-DB: serialize shadow rows (validates all payloads before DB touch)
+    shadowRows = _buildMediaExternalMaxShadowRows(runId, payloads)
+
+    # Pre-DB: derive summary data and validate no duplicate subIssueCodes
+    seenCodes: set[str] = set()
+    summaryRows: list[tuple] = []
+    for payload in payloads:
+        subIssueCode = str(payload.get("subIssueCode") or "")
+        if subIssueCode in seenCodes:
+            raise ValueError(
+                f"Duplicate subIssueCode in External MAX payloads: {subIssueCode!r}"
+            )
+        seenCodes.add(subIssueCode)
+        traces = payload.get("screeningTrace") or []
+        tr = traces[0] if traces else {}
+        impactSignal = tr.get("impactSignal") if isinstance(tr, dict) else None
+        financialSignal = tr.get("financialSignal") if isinstance(tr, dict) else None
+        summaryRows.append((runId, subIssueCode, impactSignal, financialSignal))
+
+    conn = getConn()
+    if conn is None:
+        raise RuntimeError(
+            "DB connection is not available for External MAX shadow+summary replace transaction"
+        )
+    try:
+        conn.autocommit = False
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? FOR UPDATE",
+                (runId,),
+            )
+            lockRow = cur.fetchone()
+            if not lockRow:
+                raise RuntimeError(f"ESG_MATERIALITY_RUN row not found for runId={runId}")
+
+            cur.execute(
+                """
+                UPDATE ESG_DMA_SIGNAL_DETAIL
+                SET delete_yn = 1
+                WHERE esg_materiality_run_id = ?
+                  AND source_step = ?
+                  AND delete_yn = 0
+                """,
+                (runId, MEDIA_EXTERNAL_V13_EXTERNAL_MAX_SHADOW_SOURCE_STEP),
+            )
+
+            if shadowRows:
+                cur.executemany(_SHADOW_INSERT_SQL, shadowRows)
+
+            cur.execute(
+                """
+                UPDATE ESG_DMA_SCORE_SUMMARY
+                SET
+                    media_external_impact_score = NULL,
+                    media_external_financial_score = NULL
+                WHERE esg_materiality_run_id = ?
+                """,
+                (runId,),
+            )
+
+            if summaryRows:
+                cur.executemany(
+                    """
+                    INSERT INTO ESG_DMA_SCORE_SUMMARY (
+                        esg_materiality_run_id,
+                        sub_issue_code,
+                        media_external_impact_score,
+                        media_external_financial_score
+                    )
+                    VALUES (?, ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE
+                        media_external_impact_score = VALUES(media_external_impact_score),
+                        media_external_financial_score = VALUES(media_external_financial_score)
+                    """,
+                    summaryRows,
+                )
+
+            cur.execute(
+                """
+                SELECT
+                    sub_issue_code,
+                    benchmark_impact_score,
+                    benchmark_financial_score,
+                    media_external_impact_score,
+                    media_external_financial_score,
+                    survey_impact_score,
+                    survey_financial_score,
+                    context_impact_modifier,
+                    context_financial_modifier
+                FROM ESG_DMA_SCORE_SUMMARY
+                WHERE esg_materiality_run_id = ?
+                ORDER BY sub_issue_code
+                """,
+                (runId,),
+            )
+            summaryAllRows = cur.fetchall() or []
+
+            for row in summaryAllRows:
+                finalScore = calcFinal(
+                    subIssueCode=str(row.get("sub_issue_code") or ""),
+                    surveyImpact=safeFloatOrNone(row.get("survey_impact_score")),
+                    surveyFinancial=safeFloatOrNone(row.get("survey_financial_score")),
+                    benchmarkImpact=safeFloatOrNone(row.get("benchmark_impact_score")),
+                    benchmarkFinancial=safeFloatOrNone(row.get("benchmark_financial_score")),
+                    mediaImpact=safeFloatOrNone(row.get("media_external_impact_score")),
+                    mediaFinancial=safeFloatOrNone(row.get("media_external_financial_score")),
+                    contextImpactModifier=clampContextModifier(row.get("context_impact_modifier")),
+                    contextFinancialModifier=clampContextModifier(row.get("context_financial_modifier")),
+                )
+                cur.execute(
+                    """
+                    UPDATE ESG_DMA_SCORE_SUMMARY
+                    SET final_impact_score = ?,
+                        final_financial_score = ?,
+                        final_score = ?
+                    WHERE esg_materiality_run_id = ?
+                      AND sub_issue_code = ?
+                    """,
+                    (
+                        finalScore.finalImpactScore,
+                        finalScore.finalFinancialScore,
+                        finalScore.finalScore,
+                        runId,
+                        row.get("sub_issue_code"),
+                    ),
+                )
+
+            cur.execute(
+                "UPDATE ESG_DMA_SCORE_SUMMARY SET rank_no = NULL WHERE esg_materiality_run_id = ?",
+                (runId,),
+            )
+
+            cur.execute(
+                """
+                SELECT id
+                FROM ESG_DMA_SCORE_SUMMARY
+                WHERE esg_materiality_run_id = ?
+                  AND final_score IS NOT NULL
+                ORDER BY final_score DESC, sub_issue_code ASC
+                """,
+                (runId,),
+            )
+            rankRows = cur.fetchall() or []
+            for idx, rankRow in enumerate(rankRows):
+                cur.execute(
+                    "UPDATE ESG_DMA_SCORE_SUMMARY SET rank_no = ? WHERE id = ?",
+                    (idx + 1, rankRow["id"]),
+                )
+
+            cur.execute(
+                """
+                SELECT COUNT(*) AS row_count
+                FROM ESG_DMA_SIGNAL_DETAIL
+                WHERE esg_materiality_run_id = ?
+                  AND source_step = ?
+                  AND delete_yn = 0
+                """,
+                (runId, MEDIA_EXTERNAL_V13_EXTERNAL_MAX_SHADOW_SOURCE_STEP),
+            )
+            verifyRow = cur.fetchone() or {}
+            rowCount = int(verifyRow.get("row_count") or 0)
+            if rowCount != len(shadowRows):
+                raise RuntimeError(
+                    f"External MAX shadow count check failed: "
+                    f"expected={len(shadowRows)}, row_count={rowCount}"
+                )
+
+            cur.execute(
+                """
+                SELECT COUNT(*) AS observed_count
+                FROM ESG_DMA_SCORE_SUMMARY
+                WHERE esg_materiality_run_id = ?
+                  AND (
+                    media_external_impact_score IS NOT NULL
+                    OR media_external_financial_score IS NOT NULL
+                  )
+                """,
+                (runId,),
+            )
+            obsRow = cur.fetchone() or {}
+            observedCount = int(obsRow.get("observed_count") or 0)
+            expectedObserved = sum(
+                1 for _, _, imp, fin in summaryRows
+                if imp is not None or fin is not None
+            )
+            if observedCount != expectedObserved:
+                raise RuntimeError(
+                    f"External MAX summary observed count check failed: "
+                    f"expected={expectedObserved}, observed_count={observedCount}"
+                )
+
+        conn.commit()
+        return len(shadowRows)
     except Exception:
         if hasattr(conn, "rollback"):
             conn.rollback()
@@ -2142,6 +2503,7 @@ __all__ = [
     "MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP",
     "MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP",
     "MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP",
+    "MEDIA_EXTERNAL_V13_EXTERNAL_MAX_SHADOW_SOURCE_STEP",
     "isLegacyPayload",
     "step4BuildTrace",
     "step4WriteTrace",
@@ -2158,8 +2520,12 @@ __all__ = [
     "step4ReplaceRegulationShadowTracesTx",
     # media_external.agency.kcgs Shadow Runtime
     "listApprovedKcgsGradeInputs",
-    # _buildKcgsShadowRows is intentionally omitted ??private serializer
+    # _buildKcgsShadowRows is intentionally omitted — private serializer
     "step4ReplaceKcgsShadowTracesTx",
+    # media_external External MAX Shadow Runtime
+    "listExternalMaxEligibleMediaRows",
+    # _buildMediaExternalMaxShadowRows is intentionally omitted — private serializer
+    "step4ReplaceMediaExternalMaxShadowAndSummaryTx",
     "step4ReadTrace",
     "step4UpdateTrace",
     "appendFactorTrace",

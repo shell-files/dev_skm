@@ -149,7 +149,11 @@ const Benchmarking = () => {
     stopBenchmarkPolling();
     benchmarkPollTimerRef.current = setInterval(async () => {
       const dto = await fetchBenchmarkWorkflowStatus(runId);
-      if (!dto) return;
+      if (!dto) {
+        benchmarkWorkflowErrorRef.current = "벤치마킹 분석 상태 조회에 실패했습니다.";
+        stopBenchmarkPolling();
+        return;
+      }
 
       setProgress((prev) => Math.max(prev, dto.progressPercent));
 
@@ -157,7 +161,7 @@ const Benchmarking = () => {
         stopBenchmarkPolling();
         if (dto.overallStatus === "FAILED") {
           benchmarkWorkflowErrorRef.current =
-            dto.errorMessage || "벤치마킹 분析에 실패했습니다.";
+            dto.errorMessage || "벤치마킹 분석에 실패했습니다.";
         }
       }
     }, 1000);
@@ -166,8 +170,8 @@ const Benchmarking = () => {
   useEffect(() => () => stopBenchmarkPolling(), []);
 
   const steps = [
-    { id: 1, title: "벤치마킹 분析", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
-    { id: 2, title: "미디어 분析", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><polyline points="5,13 8,10 11,12 14,8 19,6" /></svg>, path: "/media" },
+    { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
+    { id: 2, title: "미디어 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><polyline points="5,13 8,10 11,12 14,8 19,6" /></svg>, path: "/media" },
     { id: 3, title: "이해관계자 설문", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" /><line x1="13" y1="11" x2="16" y2="11" /><line x1="13" y1="16" x2="16" y2="16" /></svg>, path: "/survey" },
     { id: 4, title: "전체 결과", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="20" x2="21" y2="20" /><line x1="3" y1="4" x2="3" y2="20" /><rect x="5" y="13" width="3" height="7" /><rect x="10" y="10" width="3" height="10" /><rect x="15" y="8" width="3" height="12" /><circle cx="19" cy="4" r="3" /><polyline points="17.5,4 18.5,5 21,2.5" /></svg>, path: "/result" },
     { id: 5, title: "보고서 초안", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>, path: "/draft" },
@@ -317,7 +321,7 @@ const Benchmarking = () => {
     setShowResult(false);
     setProgress(0);
     setIsAnalyzing(true);
-    showDefaultAlert("분析 시작", "AI 벤치마킹 분析이 시작되었습니다.", "success");
+    showDefaultAlert("분석 시작", "AI 벤치마킹 분석이 시작되었습니다.", "success");
 
     if (USE_DUMMY) {
       setProgress(100);
@@ -355,13 +359,16 @@ const Benchmarking = () => {
       }
 
       if (!analyzeResponse || analyzeResponse.status === false) {
-        throw new Error(analyzeResponse?.message || "벤치마킹 분析에 실패했습니다.");
+        throw new Error(analyzeResponse?.message || "벤치마킹 분석에 실패했습니다.");
       }
 
       const finalWorkflow = await fetchBenchmarkWorkflowStatus(runId);
 
-      if (finalWorkflow && finalWorkflow.overallStatus === "FAILED") {
-        throw new Error(finalWorkflow.errorMessage || "벤치마킹 분析에 실패했습니다.");
+      if (!finalWorkflow) {
+        throw new Error("벤치마킹 분석 상태를 확인할 수 없습니다.");
+      }
+      if (finalWorkflow.overallStatus !== "COMPLETED") {
+        throw new Error(finalWorkflow.errorMessage || "벤치마킹 분석이 완료되지 않았습니다.");
       }
 
       stopBenchmarkPolling();
@@ -380,7 +387,7 @@ const Benchmarking = () => {
     } catch (err) {
       console.error(err);
       stopBenchmarkPolling();
-      showDefaultAlert("분析 오류", err.message || "벤치마킹 분析 중 오류가 발생했습니다.", "error");
+      showDefaultAlert("분석 오류", err.message || "벤치마킹 분석 중 오류가 발생했습니다.", "error");
       setIsAnalyzing(false);
       setShowResult(false);
     }
@@ -464,9 +471,9 @@ const Benchmarking = () => {
 
       <main className="Bench-main-content">
         <div className="Bench-input-card" style={{ marginBottom: "50px" }}>
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px" }}>벤치마킹 분析</h2>
+          <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px" }}>벤치마킹 분석</h2>
           <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "4px" }}>
-            산업군 리더 기업들의 공시 지표를 수집하고 우리 기업과의 격차 분析을 시작합니다.
+            산업군 리더 기업들의 공시 지표를 수집하고 우리 기업과의 격차 분석을 시작합니다.
           </p>
 
           <div className="Bench-upload-section-grid">
@@ -475,14 +482,14 @@ const Benchmarking = () => {
             {renderUploadGroup("sub", "자사", "회사이름 필수 입력")}
           </div>
 
-          <button className="Bench-btn" id="bench-btn" onClick={runAnalysis}>실시간 AI 분析 시작</button>
+          <button className="Bench-btn" id="bench-btn" onClick={runAnalysis}>실시간 AI 분석 시작</button>
         </div>
       </main>
 
       <div className={`dashboard-result-dashboard ${dashboardOpen ? "open " : ""}`} id="dashboard">
         <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen)}>
           <div className="handle-pill">
-            {isAnalyzing ? "AI 분析 진행 중..." : showResult ? "분析 완료 - 결과 요약 확인" : "실시간 분析 대기 중"}
+            {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인" : "실시간 분석 대기 중"}
           </div>
         </div>
         <div className={`robot-view-container ${isAnalyzing ? "analyzing" : ""} ${showResult ? "showing-result" : ""}`}>
@@ -496,7 +503,7 @@ const Benchmarking = () => {
                 </div>
               </div>
               <h3 style={{ fontSize: "1.2rem", fontWeight: 850, margin: "0 0 4px 0" }}>
-                {isAnalyzing ? "벤치마킹 분析 진행 중..." : "분析 준비가 완료되었습니다"}
+                {isAnalyzing ? "벤치마킹 분석 진행 중..." : "분석 준비가 완료되었습니다"}
               </h3>
               {isAnalyzing && (
                 <div className="progress-section">
@@ -504,7 +511,7 @@ const Benchmarking = () => {
                     <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
                   </div>
                   <div style={{ marginTop: "6px", fontWeight: 900, fontSize: "0.85rem", color: "var(--Bench-primary)" }}>
-                    {progress}% 분析 중
+                    {progress}% 분석 중
                   </div>
                 </div>
               )}
@@ -524,7 +531,7 @@ const Benchmarking = () => {
                 <div className="result-stat-card">
                   <div className="stat-icon-wrap">📋</div>
                   <div>
-                    <div className="stat-label">분析보고서</div>
+                    <div className="stat-label">분석보고서</div>
                     <div className="stat-value">{displayData.stats.reports}개</div>
                     <div className="stat-sub">
                       리더 {displayData.stats.leaderCount} · 피어 {displayData.stats.peerCount} · 자사 {displayData.stats.ownCount}

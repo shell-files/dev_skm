@@ -10,71 +10,10 @@ import {
 
 import { GET, POST_FORM, PUT } from "@utils/Network";
 
-const USE_DUMMY =
-  import.meta.env.DEV &&
-  import.meta.env.VITE_BENCHMARK_DUMMY === "true";
-
 const BENCHMARK_GROUP_CONFIG = {
   leader: { fileType: "Leader", label: "리더" },
   peer:   { fileType: "Peer",   label: "피어" },
   sub:    { fileType: "Own",    label: "자사" },
-};
-
-// 온톨로지 사전 구조에 맞춘 실전형 더미 데이터 세트 (총 20개 로우 샘플)
-const DUMMY_DB_RESULTS = [
-  { domain: "E", selected_issue: "기후변화·온실가스", selected_sub_issue: "회사의 기후변화 대응 거버넌스, 온실가스(GHG) 산정체계 및 인벤토리 구축, 배출계수 적용을 설명하는 문장.", type: "leader" },
-  { domain: "E", selected_issue: "기후변화·온실가스", selected_sub_issue: "회사의 기후변화 대응 거버넌스, 온실가스(GHG) 산정체계 및 인벤토리 구축, 배출계수 적용을 설명하는 문장.", type: "peer" },
-  { domain: "E", selected_issue: "수자원·폐수 관리", selected_sub_issue: "취수량 저감 및 취수원 리스크 관리, 공정 내 용수 재활용률 확대, 자원 순환 체계 수립 현황을 설명하는 문장.", type: "leader" },
-  { domain: "E", selected_issue: "폐기물·자원순환", selected_sub_issue: "사업장 폐기물 총량 관리, 폐기물 매립 제로(ZWTL) 인증 획득 및 순환 자원 전환 노력을 설명하는 문장.", type: "leader" },
-  { domain: "E", selected_issue: "폐기물·자원순환", selected_sub_issue: "사업장 폐기물 총량 관리, 폐기물 매립 제로(ZWTL) 인증 획득 및 순환 자원 전환 노력을 설명하는 문장.", type: "peer" },
-  { domain: "E", selected_issue: "폐기물·자원순환", selected_sub_issue: "사업장 폐기물 총량 관리, 폐기물 매립 제로(ZWTL) 인증 획득 및 순환 자원 전환 노력을 설명하는 문장.", type: "sub" },
-  { domain: "E", selected_issue: "친환경 제품·Eco-Design", selected_sub_issue: "제품 설계 단계의 환경성 검토, 친환경 인증 원부자재 도입 및 Eco-Design 프로세스를 설명하는 문장.", type: "peer" },
-  { domain: "S", selected_issue: "안전보건 보장", selected_sub_issue: "안전보건 경영시스템(ISO 45001) 인증 및 전사 재해율 관리, 유해 위험요인 상시 발굴 체계를 설명하는 문장.", type: "leader" },
-  { domain: "S", selected_issue: "안전보건 보장", selected_sub_issue: "안전보건 경영시스템(ISO 45001) 인증 및 전사 재해율 관리, 유해 위험요인 상시 발굴 체계를 설명하는 문장.", type: "peer" },
-  { domain: "S", selected_issue: "안전보건 보장", selected_sub_issue: "안전보건 경영시스템(ISO 45001) 인증 및 전사 재해율 관리, 유해 위험요인 상시 발굴 체계를 설명하는 문장.", type: "sub" },
-  { domain: "S", selected_issue: "공급망 ESG 관리", selected_sub_issue: "협력사 ESG 행동규범 제정, 서면 및 실사 평가 프로세스 구축, 공급망 지속가능성 리스크 실사 대응을 설명하는 문장.", type: "leader" },
-  { domain: "S", selected_issue: "공급망 ESG 관리", selected_sub_issue: "협력사 ESG 행동규범 제정, 서면 및 실사 평가 프로세스 구축, 공급망 지속가능성 리스크 실사 대응을 설명하는 문장.", type: "peer" },
-  { domain: "S", selected_issue: "인권 경영 체계", selected_sub_issue: "UNGP 기준 인권정책 선언, 전사 인권 영향평가 실시 및 인권침해 고충처리 채널 활성화를 설명하는 문장.", type: "leader" },
-  { domain: "S", selected_issue: "정보보안·개인정보", selected_sub_issue: "정보보호 관리체계(ISMS-P, ISO 27001) 운영, 개인정보 유출 방지 시스템 및 보안 사고 모니터링을 설명하는 문장.", type: "leader" },
-  { domain: "S", selected_issue: "정보보안·개인정보", selected_sub_issue: "정보보호 관리체계(ISMS-P, ISO 27001) 운영, 개인정보 유출 방지 시스템 및 보안 사고 모니터링을 설명하는 문장.", type: "peer" },
-  { domain: "S", selected_issue: "정보보안·개인정보", selected_sub_issue: "정보보호 관리체계(ISMS-P, ISO 27001) 운영, 개인정보 유출 방지 시스템 및 보안 사고 모니터링을 설명하는 문장.", type: "sub" },
-  { domain: "G", selected_issue: "이사회 구성 및 독립성", selected_sub_issue: "이사회 내 사외이사 구성 비율, 이사회 의장과 CEO 분리 여부, 사외이사 후보추천위 독립성을 설명하는 문장.", type: "leader" },
-  { domain: "G", selected_issue: "이사회 구성 및 독립성", selected_sub_issue: "이사회 내 사외이사 구성 비율, 이사회 의장과 CEO 분리 여부, 사외이사 후보추천위 독립성을 설명하는 문장.", type: "peer" },
-  { domain: "G", selected_issue: "이사회 구성 및 독립성", selected_sub_issue: "이사회 내 사외이사 구성 비율, 이사회 의장과 CEO 분리 여부, 사외이사 후보추천위 독립성을 설명하는 문장.", type: "sub" },
-  { domain: "G", selected_issue: "윤리·준법경영 시스템", selected_sub_issue: "부패방지 경영시스템(ISO 37001) 운영, 임직원 윤리강령 준수 서약, 내부고발제도 활성화를 설명하는 문장.", type: "leader" },
-  { domain: "G", selected_issue: "윤리·준법경영 시스템", selected_sub_issue: "부패방지 경영시스템(ISO 37001) 운영, 임직원 윤리강령 준수 서약, 내부고발제도 활성화를 설명하는 문장.", type: "peer" },
-  { domain: "G", selected_issue: "윤리·준법경영 시스템", selected_sub_issue: "부패방지 경영시스템(ISO 37001) 운영, 임직원 윤리강령 준수 서약, 내부고발제도 활성화를 설명하는 문장.", type: "sub" },
-];
-
-const DUMMY_RESULT_DASHBOARD = {
-  stats: {
-    reports: 24,
-    leaderCount: 8,
-    peerCount: 8,
-    ownCount: 8,
-    identifiedIssues: 10,
-    commonIssues: 19,
-    blindSpots: 9,
-  },
-  topIssues: [
-    { rank: 1, name: "기후변화·온실가스", impact: 9.2, financial: 8.7 },
-    { rank: 2, name: "수자원·폐수 관리", impact: 8.6, financial: 7.9 },
-    { rank: 3, name: "폐기물·자원순환", impact: 8.1, financial: 7.6 },
-    { rank: 4, name: "친환경 제품·Eco-Design", impact: 7.8, financial: 7.3 },
-    { rank: 5, name: "공급망 ESG 관리", impact: 7.4, financial: 6.8 },
-  ],
-  commonIssues: [
-    { name: "기후변화·온실가스", leader: true, peer: true, own: true },
-    { name: "폐기물·자원순환", leader: true, peer: true, own: true },
-    { name: "제품안전·품질", leader: true, peer: true, own: true },
-    { name: "공급망 ESG 관리", leader: true, peer: true, own: true },
-    { name: "공급망 ESG 관리", leader: true, peer: true, own: true },
-  ],
-  blindSpots: [
-    { title: "생물다양성 영향 관리", desc: "생물다양성 리스크·영향 평가 및 관리 체계가 보고서에서 상대적으로 낮게 다뤄지고 있습니다." },
-    { title: "인권 실사 및 관리", desc: "인권 실사 프로세스 및 고충처리 체계에 대한 정보가 상대적으로 부족합니다." },
-    { title: "ESG 데이터 관리 체계", desc: "ESG 데이터 수집·관리·검증 체계의 고도화 및 거버넌스 정보가 미흡합니다." },
-  ],
 };
 
 const mapBenchmarkResultToDashboard = (dto) => ({
@@ -125,7 +64,6 @@ const Benchmarking = () => {
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [showResult, setShowResult] = useState(false);
 
-  const [rawRows, setRawRows] = useState([]);
   const [dashboardData, setDashboardData] = useState(null);
 
   const particleRef = useRef(null);
@@ -183,27 +121,6 @@ const Benchmarking = () => {
     if (isAnalyzing) return;
     if (index === activeIndex) return;
     navigate(steps[index].path);
-  };
-
-  const getGroupedIssues = () => {
-    const map = {};
-    rawRows.forEach((row) => {
-      const key = row.selected_issue;
-      if (!map[key]) {
-        map[key] = {
-          title: row.selected_issue,
-          category: row.domain || "E",
-          sentence: row.selected_sub_issue || "정의된 서브 이슈 문장이 없습니다.",
-          leader: false,
-          peer: false,
-          sub: false,
-        };
-      }
-      if (row.type === "leader") map[key].leader = true;
-      if (row.type === "peer") map[key].peer = true;
-      if (row.type === "sub") map[key].sub = true;
-    });
-    return Object.values(map);
   };
 
   const handleCompanyNameChange = (group, value) => {
@@ -323,15 +240,6 @@ const Benchmarking = () => {
     setIsAnalyzing(true);
     showDefaultAlert("분석 시작", "AI 벤치마킹 분석이 시작되었습니다.", "success");
 
-    if (USE_DUMMY) {
-      setProgress(100);
-      setIsAnalyzing(false);
-      setRawRows(DUMMY_DB_RESULTS);
-      setDashboardData(DUMMY_RESULT_DASHBOARD);
-      setShowResult(true);
-      return;
-    }
-
     try {
       setProgress(5);
 
@@ -450,8 +358,7 @@ const Benchmarking = () => {
     );
   };
 
-  const processedIssues = getGroupedIssues();
-  const displayData = dashboardData ?? DUMMY_RESULT_DASHBOARD;
+  const displayData = dashboardData;
 
   return (
     <div className="Bench-container">
@@ -523,7 +430,7 @@ const Benchmarking = () => {
                   [AI 벤치마킹 이슈 도출 및 Gap Analysis]
                 </strong>
                 <p style={{ margin: "8px 0 0", color: "#334155", fontWeight: 500, lineHeight: 1.5 }}>
-                  보고서(SR) 교차 파싱 결과 <strong>{processedIssues.length}개</strong>의 핵심 이슈가 식별되었습니다. 자사의 누락(Gap) 요소를 보완하여 최적의 초안 요건을 빌드하세요.
+                  보고서(SR) 교차 파싱 결과 <strong>{displayData.stats.identifiedIssues}개</strong>의 핵심 이슈가 식별되었습니다. 자사의 누락(Gap) 요소를 보완하여 최적의 초안 요건을 빌드하세요.
                 </p>
               </div>
 

@@ -6,6 +6,7 @@ import { useAuth } from '@hooks/AuthContext.jsx';
 import "@styles/reportBasisSelectModal.css";
 import {
   DEFAULT_REPORTING_YEAR,
+  normalizeReportingYear,
   probeCurrentWorkflow,
   resumeReportWorkflow,
   startReportWorkflow,
@@ -61,7 +62,9 @@ const ReportBasisSelectModal = ({
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [selected, setSelected] = useState("ENTITY");
-  const [selectedYear, setSelectedYear] = useState(reportingYear);
+  const [selectedYear, setSelectedYear] = useState(
+    normalizeReportingYear(reportingYear)
+  );
   const [workflowStatus, setWorkflowStatus] = useState(null);
   const [currentRunId, setCurrentRunId] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -76,7 +79,7 @@ const ReportBasisSelectModal = ({
       statusCacheRef.current = {};
       return;
     }
-    setSelectedYear(reportingYear);
+    setSelectedYear(normalizeReportingYear(reportingYear));
     setSelected("ENTITY");
     setWorkflowStatus(null);
     setCurrentRunId(null);
@@ -86,9 +89,10 @@ const ReportBasisSelectModal = ({
   useEffect(() => {
     if (!isOpen || !companyId) return;
 
-    if (statusCacheRef.current[selectedYear]) {
-      setWorkflowStatus(statusCacheRef.current[selectedYear].status);
-      setCurrentRunId(statusCacheRef.current[selectedYear].runId);
+    const cacheKey = normalizeReportingYear(selectedYear);
+    if (statusCacheRef.current[cacheKey]) {
+      setWorkflowStatus(statusCacheRef.current[cacheKey].status);
+      setCurrentRunId(statusCacheRef.current[cacheKey].runId);
       return;
     }
 
@@ -106,12 +110,12 @@ const ReportBasisSelectModal = ({
         if (res?.status === false || res?.success === false || !res?.data) {
           setError(res?.error?.message || "워크플로우 조회에 실패했습니다.");
         } else if (res?.data?.workflowStep === "NO_RUN") {
-          statusCacheRef.current[selectedYear] = { status: "NO_RUN", runId: null };
+          statusCacheRef.current[normalizeReportingYear(selectedYear)] = { status: "NO_RUN", runId: null };
           setWorkflowStatus("NO_RUN");
           setCurrentRunId(null);
         } else {
           const runId = res?.data?.runId ?? null;
-          statusCacheRef.current[selectedYear] = { status: "EXISTS", runId };
+          statusCacheRef.current[normalizeReportingYear(selectedYear)] = { status: "EXISTS", runId };
           setWorkflowStatus("EXISTS");
           setCurrentRunId(runId);
         }
@@ -193,7 +197,7 @@ const ReportBasisSelectModal = ({
       const res = await dispatch(
         startReportWorkflow({
           companyId,
-          reportingYear: selectedYear,
+          reportingYear: normalizeReportingYear(selectedYear),
           reportBasisType: selected,
         })
       ).unwrap();
@@ -206,7 +210,7 @@ const ReportBasisSelectModal = ({
       }
       dispatch(setMaterialityRunId(currentRunId));
 
-      dispatch(setCurruntYear(selectedYear));
+      dispatch(setCurruntYear(normalizeReportingYear(selectedYear)));
 
       setIsBasisModalOpen(false);
       onClose();
@@ -233,9 +237,9 @@ const ReportBasisSelectModal = ({
               </label>
               <select
                 id="reportingYearSelect"
-                value={selectedYear}
+                value={normalizeReportingYear(selectedYear)}
                 onChange={(e) => {
-                  const newYear = Number(e.target.value);
+                  const newYear = normalizeReportingYear(e.target.value);
                   setSelectedYear(newYear);
                   setSelected("ENTITY");
                   setError(null);

@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "ruleVersion": "dma-rule-v1.3-mvp",
+  "scorePurpose": "CANONICAL_IRO",
+  "impact": {
+    "negative": {
+      "weights": {"scale": 0.30, "scope": 0.25, "likelihood": 0.20, "irremediability": 0.15, "urgency": 0.10},
+      "required": ["scale", "likelihood"],
+      "optional": ["scope", "irremediability", "urgency"]
+    },
+    "positive": {
+      "weights": {"scale": 0.35, "scope": 0.30, "likelihood": 0.25, "urgency": 0.10},
+      "required": ["scale", "likelihood"],
+      "optional": ["scope", "urgency"]
+    }
+  },
+  "financial": {
+    "risk": {
+      "weights": {"magnitude": 0.45, "likelihood": 0.35, "urgency": 0.20},
+      "required": ["magnitude"],
+      "optional": ["likelihood", "urgency"]
+    },
+    "opportunity": {
+      "weights": {"magnitude": 0.55, "likelihood": 0.25, "urgency": 0.20},
+      "required": ["magnitude"],
+      "optional": ["likelihood", "urgency"]
+    },
+    "ratioMissingPolicy": "UNOBSERVED"
+  },
+  "urgency": {"short": 5, "mid": 3, "long": 1, "explicitNoUrgency": 0, "missingEvidence": "UNOBSERVED"},
+  "financialMagnitudeRatioBands": [
+    {"min": 0.0, "max": 0.001, "minInclusive": false, "maxExclusive": true, "score": 1},
+    {"min": 0.001, "max": 0.005, "minInclusive": true, "maxExclusive": true, "score": 2},
+    {"min": 0.005, "max": 0.01, "minInclusive": true, "maxExclusive": true, "score": 3},
+    {"min": 0.01, "max": 0.03, "minInclusive": true, "maxExclusive": true, "score": 4},
+    {"min": 0.03, "max": null, "minInclusive": true, "score": 5}
+  ],
+  "missingPolicy": {
+    "requiredMissing": "AXIS_UNOBSERVED",
+    "optionalMissing": "REWEIGHT_OBSERVED",
+    "explicitZeroObservedYn": true,
+    "missingAsZeroForbiddenYn": true
+  },
+  "subIssueAggregation": {"impact": "MAX", "financial": "MAX", "offsettingAllowedYn": false},
+  "scoreScale": {"min": 0.0, "max": 5.0, "uiMultiplier": 2},
+  "contextModifier": {"mvpEnabledYn": false, "impact": 0.0, "financial": 0.0}
+}

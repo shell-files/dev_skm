@@ -16,6 +16,7 @@ from src.services.materialities.orchestrator import (
     step0BuildFactTrace,
     step1BuildMediaNewsCanonicalPayloads,
     step2BuildKcgsPillarBoostPayloads,
+    step2BuildMediaExternalMaxPayloads,
     step2BuildRegulationScreeningPayloads,
 )
 from src.utils.dmarepository import (
@@ -30,6 +31,8 @@ from src.utils.dmarepository import (
     listApprovedActiveRegulationMappings,
     step4ReplaceKcgsShadowTracesTx,
     step4ReplaceRegulationShadowTracesTx,
+    listExternalMaxEligibleMediaRows,
+    step4ReplaceMediaExternalMaxShadowAndSummaryTx,
 )
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
 from src.utils.subissuemaster import getSubIssueDisplayName
@@ -134,12 +137,16 @@ def runMediaCrawlAndAnalyze(
     except Exception as shadowError:
         print(f"Warning: media_external.regulation v1.3 shadow replace failed: {shadowError}")
 
-    # media_external.agency.kcgs Shadow refresh ??independent of the news crawl result.
+    # media_external.agency.kcgs Shadow refresh — independent of the news crawl result.
     # KCGS is trace-only metadata for pillar boost; it is not an externalMax or summary input.
     try:
         refreshKcgsShadowForRun(request.runId)
     except Exception as shadowError:
         print(f"Warning: media_external.agency.kcgs v1.3 shadow replace failed: {shadowError}")
+
+    # media_external External MAX Shadow + Summary + Final + Rank — critical path.
+    # Failure propagates as RuntimeError; success response must not be returned on failure.
+    refreshMediaExternalMaxForRun(request.runId)
 
     sourceBreakdown = applySavedSignalCounts(
         crawlResult.sourceBreakdown,
@@ -261,6 +268,20 @@ def refreshRegulationShadowForRun(runId: int) -> int:
     payloads = step2BuildRegulationScreeningPayloads(approvedInputs, approvedMappings)
 
     return step4ReplaceRegulationShadowTracesTx(runId, payloads)
+
+
+def refreshMediaExternalMaxForRun(runId: int) -> int:
+    """
+    Refresh the External MAX Shadow, Summary, Final, and Rank for a materiality run.
+    Reads eligible shadow rows (news canonical + regulation only), builds External MAX
+    Audit payloads via the pure orchestrator builder, then replaces the active External
+    MAX shadow and updates Summary / Final / Rank within a single transaction.
+    Critical path: any failure raises RuntimeError; success response must not be returned.
+    Returns the number of External MAX shadow rows persisted.
+    """
+    rows = listExternalMaxEligibleMediaRows(runId)
+    payloads = step2BuildMediaExternalMaxPayloads(rows)
+    return step4ReplaceMediaExternalMaxShadowAndSummaryTx(runId, payloads)
 
 
 def refreshKcgsShadowForRun(runId: int) -> int:

@@ -39,6 +39,9 @@
 
 /* body */
 .sr-body{padding:14px 14mm 0 14mm;flex:1 1 auto;position:relative;display:flex;flex-direction:column;}
+/* 마지막 콘텐츠 섹션: 화면에서는 내용 크기대로, PDF에서만 남은 공간 흡수 */
+.sr-last{flex:none;}
+@media print{.sr-last{flex:1;}}
 .sr-ghost{position:absolute;left:13mm;top:9px;font-size:44px;font-weight:900;color:#eef5f1;letter-spacing:1px;z-index:0;}
 .sr-head{display:flex;align-items:flex-end;justify-content:space-between;position:relative;z-index:1;}
 .sr-eyebrow{font-size:10px;letter-spacing:4px;color:var(--sage);font-weight:700;}
@@ -151,6 +154,9 @@ table.sr-tbl.nums tbody td:not(:first-child){white-space:nowrap;}
     page-break-after:always; break-after:page;}
   .sr-page:last-child{page-break-after:auto;break-after:auto;}
   .sr-page,.sr-page *{ -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+  /* clip-path 는 Puppeteer PDF에서 렌더링이 불안정 — 인쇄 시 제거하고 라운드 박스로 대체 */
+  .sr-chev,.sr-chev:first-child{clip-path:none !important;-webkit-clip-path:none !important;border-radius:3px;}
+  .sr-last{flex:1;}
 }
 
 /* ============================================================

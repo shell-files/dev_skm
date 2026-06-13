@@ -225,7 +225,7 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
                 service, "step2BuildBenchmarkScreeningPayloads", return_value=[]
             ), patch.object(
                 service, "step4ReplaceBenchmarkShadowTracesTx", side_effect=RuntimeError("tx failed")
-            ) as writer:
+            ) as writer, patch.object(service, "upsertDmaWorkflowStatus"):
                 with self.assertRaises(RuntimeError):
                     asyncio.run(service.findSr(fileFindModel, userModel))
 
@@ -251,7 +251,8 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
                 service, "convertToDmaSignals", return_value=[]
             ), patch.object(service, "scoreSignals", return_value=[]), patch.object(
                 service, "saveSignals", side_effect=RuntimeError("legacy failed")
-            ), patch.object(service, "step4ReplaceBenchmarkShadowTracesTx") as writer:
+            ), patch.object(service, "step4ReplaceBenchmarkShadowTracesTx") as writer, \
+               patch.object(service, "upsertDmaWorkflowStatus"):
                 with self.assertRaises(Exception):
                     asyncio.run(service.findSr(fileFindModel, userModel))
 
@@ -280,7 +281,8 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
                 service, "saveSignals", return_value=None
             ), patch.object(
                 service, "step0NormalizeBenchmarkFacts", side_effect=RuntimeError("fact build exploded")
-            ), patch.object(service, "step4ReplaceBenchmarkShadowTracesTx") as txWriter:
+            ), patch.object(service, "step4ReplaceBenchmarkShadowTracesTx") as txWriter, \
+               patch.object(service, "upsertDmaWorkflowStatus"):
                 with self.assertRaises(RuntimeError):
                     asyncio.run(service.findSr(fileFindModel, userModel))
 
@@ -319,7 +321,7 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
                 service, "step2BuildBenchmarkScreeningPayloads", return_value=[buildPayload()]
             ) as buildScreening, patch.object(
                 service, "step4ReplaceBenchmarkShadowTracesTx", return_value=3
-            ) as txWriter:
+            ) as txWriter, patch.object(service, "upsertDmaWorkflowStatus"):
                 response = asyncio.run(service.findSr(fileFindModel, userModel))
 
         self.assertTrue(response["status"])

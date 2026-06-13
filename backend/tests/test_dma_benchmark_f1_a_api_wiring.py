@@ -130,6 +130,8 @@ def _runFindSr(fileFindModel, userModel, patches):
         Path(tmp, "abc.pdf").write_text("pdf", encoding="utf-8")
         service.settings.file_dir = tmp
 
+        upsert_mock = patches.get("upsertDmaWorkflowStatus", MagicMock())
+
         with patch_object(service, "findOne", find_one_mock), \
              patch_object(service, "gemini", gemini_mock), \
              patch_object(service, "save", save_mock), \
@@ -138,6 +140,7 @@ def _runFindSr(fileFindModel, userModel, patches):
              patch_object(service, "step0BuildFactTrace", build_fact_mock), \
              patch_object(service, "step2BuildBenchmarkScreeningPayloads", screening_mock), \
              patch_object(service, "step4ReplaceBenchmarkShadowTracesTx", tx_mock), \
+             patch_object(service, "upsertDmaWorkflowStatus", upsert_mock), \
              patch_object(service, "dmaruleregistry") as mockRegistry, \
              patch_object(service, "subissueMaster",
                          {"E-01": {"materiality_issue_pool_yn": "Y"}}):
@@ -470,8 +473,9 @@ class BenchMarkingJsxApiContractTest(unittest.TestCase):
         self.assertIn("자사", src)
 
     def test_no_interval_fake_progress(self):
+        # F1-B introduces setInterval for real workflow polling (not fake progress)
         src = _jsx()
-        self.assertNotIn("setInterval", src)
+        self.assertIn("setInterval", src)  # polling interval added in F1-B
 
     def test_progress_checkpoint_5(self):
         self.assertIn("setProgress(5)", _jsx())
@@ -479,8 +483,9 @@ class BenchMarkingJsxApiContractTest(unittest.TestCase):
     def test_progress_checkpoint_15(self):
         self.assertIn("setProgress(15)", _jsx())
 
-    def test_progress_checkpoint_50(self):
-        self.assertIn("setProgress(50)", _jsx())
+    def test_progress_checkpoint_50_removed_in_f1b(self):
+        # F1-B removed the fake 50% checkpoint; polling drives progress instead
+        self.assertNotIn("setProgress(50)", _jsx())
 
     def test_progress_checkpoint_100(self):
         self.assertIn("setProgress(100)", _jsx())

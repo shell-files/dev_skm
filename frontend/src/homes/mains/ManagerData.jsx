@@ -6,6 +6,7 @@ import DataTab from "./DataTab.jsx";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
 import { useAuth } from "@hooks/AuthContext";
 import ApprovalProjectSelectModal from "./modal/ApprovalProjectSelectModal";
+import PageHeader from "@components/UI/PageHeader";
 import {
   DEFAULT_REPORTING_YEAR,
   clearApprovalProject,
@@ -430,7 +431,7 @@ const ManagerData = () => {
       if (isRollupResponseApproval && !approvalBatchId) {
         showDefaultAlert(
           "오류",
-          "ROLLUP_RESPONSE Batch 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
+          "데이터 요청 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
           "error"
         );
         return false;
@@ -474,7 +475,7 @@ const ManagerData = () => {
     if (isRollupResponseApproval && !approvalBatchId) {
       showDefaultAlert(
         "오류",
-        "ROLLUP_RESPONSE Batch 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
+        "데이터 요청 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
         "error"
       );
       return false;
@@ -516,7 +517,7 @@ const ManagerData = () => {
     if (isRollupResponseApproval && !approvalBatchId) {
       showDefaultAlert(
         "오류",
-        "ROLLUP_RESPONSE Batch 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
+        "데이터 요청 정보가 없습니다. 받은 요청함에서 다시 진입해 주세요.",
         "error"
       );
       return false;
@@ -570,7 +571,12 @@ const ManagerData = () => {
       <div className="manager-content-container">
         <div className="page-header">
           <div className="page-title-area">
-            <h2 className="page-title">ESG 통합 관리</h2>
+            <PageHeader
+              category="ESG 통합 관리"
+              title="ESG 통합 관리"
+              description="연도별 프로젝트, 승인 현황, 데이터 진행 상태를 관리합니다."
+              iconClass="bi-leaf-fill"
+            />
           </div>
         </div>
 
@@ -681,7 +687,7 @@ const ManagerData = () => {
           <div className="manager-data-tab-container">
             {!hasValidRollupApprovalContext ? (
               <div className="ob1-empty-state">
-                <p className="ob1-empty-title">ROLLUP_RESPONSE Batch 정보가 없습니다.</p>
+                <p className="ob1-empty-title">데이터 요청 정보가 없습니다.</p>
                 <p className="ob1-empty-desc">받은 요청함에서 다시 진입해 주세요.</p>
               </div>
             ) : (

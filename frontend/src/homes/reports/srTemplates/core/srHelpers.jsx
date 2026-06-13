@@ -2,7 +2,105 @@
 // srHelpers.jsx — metric 접근/포맷/narrative 조합 공통 유틸 (순수 JS)
 // 의존성: react 만 사용 (차트 라이브러리 없음)
 // ============================================================
+
+/**
+ * 단일 metric 값. 화면 렌더는 항상 displayValue 기준, 계산은 value 기준.
+ * @typedef {Object} MetricValue
+ * @property {number|string|null} value        원천 값(숫자/문자). 차트 스케일·계산용
+ * @property {string} displayValue             표시값 ("112,500 tCO2eq")
+ * @property {string} [unit]                   "tCO2eq" | "%" | "년"
+ * @property {"QL"|"QN"|"DERIVED"|"REFERENCE"} [sourceType]
+ * @property {"DRAFT"|"PENDING"|"APPROVED"|"REJECTED"|"MISSING"} [status]
+ * @property {string} [label]
+ * @property {string} [atomicMetricId]
+ */
+
+/**
+ * metric_id → MetricValue 맵
+ * @typedef {Object.<string, MetricValue>} MetricsMap
+ */
+
+/**
+ * @typedef {Object} NavItem
+ * @property {string} key
+ * @property {string} label
+ * @property {boolean} [active]
+ */
+
+/**
+ * @typedef {Object} ClimatePageProps
+ * @property {MetricsMap} metrics                필수
+ * @property {string} [narrativeText]            있으면 우선, 없으면 buildNarrative
+ * @property {string} [template]                 기본 NARRATIVE_TEMPLATE_CLIMATE
+ * @property {"render"|"placeholder"} [mode]
+ * @property {boolean} [highlight]               본문 수치 강조(기본 true)
+ * @property {NavItem[]} [navItems]
+ * @property {{label:string,active?:boolean}[]} [subNavItems]
+ * @property {string} [sectionLabel]
+ * @property {string} [ghost]
+ * @property {string} pageTitle
+ * @property {string} [pageTitleEn]
+ * @property {number|string} [pageNumber]
+ * @property {string[]} [footnotes]
+ * @property {string} [sourceNote]
+ * @property {string} [tag]
+ */
+
 import React from "react";
+
+/** KRW 단위 → 억 원 변환 (소수점 1자리, 불필요한 .0 제거) */
+function krwToUk(n) {
+  const uk = n / 100_000_000;
+  return uk % 1 === 0
+    ? uk.toLocaleString("ko-KR")
+    : uk.toLocaleString("ko-KR", { maximumFractionDigits: 1 });
+}
+
+/**
+ * 범용 adapter: metricRows(API) → MetricsMap
+ * 모든 서브이슈 파일에서 import해서 adapter로 사용
+ * - 단위가 KRW이면 1억 단위로 변환하여 표시 (unit → "억 원")
+ */
+export function buildMetricsMap(metricRows = []) {
+  const map = {};
+  if (!Array.isArray(metricRows)) return map;
+  for (const row of metricRows) {
+    if (!row) continue;
+    const id = row.metricId ?? row.metric_id ?? row.atomicMetricId ?? row.atomic_metric_id;
+    if (!id) continue;
+    const isKrw = (row.unit ?? "").toUpperCase() === "KRW";
+    let displayValue;
+    if (row.displayValue != null && String(row.displayValue).trim() !== "") {
+      displayValue = row.displayValue;
+    } else if (row.valueNumeric != null && !Number.isNaN(Number(row.valueNumeric))) {
+      const n = Number(row.valueNumeric);
+      displayValue = isKrw
+        ? `${krwToUk(n)} 억 원`
+        : `${n.toLocaleString("en-US")}${row.unit ? ` ${row.unit}` : ""}`;
+    } else if (row.valueText != null && String(row.valueText).trim() !== "") {
+      displayValue = String(row.valueText);
+    } else {
+      displayValue = "—";
+    }
+    let value = null;
+    if (typeof row.valueNumeric === "number") value = row.valueNumeric;
+    else if (row.valueNumeric != null) {
+      const n = parseFloat(String(row.valueNumeric).replace(/[^0-9.\-]/g, ""));
+      value = Number.isNaN(n) ? null : n;
+    } else {
+      value = row.value ?? null;
+    }
+    map[id] = {
+      value,
+      displayValue,
+      unit: isKrw ? "억 원" : row.unit,
+      sourceType: row.sourceType ?? row.source_type,
+      status: row.status,
+      label: row.label,
+    };
+  }
+  return map;
+}
 
 /** 기후목표·전환계획 기본 narrative 템플릿 (option B: 값으로 문장 조합) */
 export const NARRATIVE_TEMPLATE_CLIMATE =
@@ -122,8 +220,17 @@ export function splitNarrative(template) {
     .filter((n) => n.token || n.text);
 }
 
-/** 정적 본문(보기/PDF): 토큰 값은 .sr-fig 로 강조, 미입력 토큰은 .empty */
-export function NarrativeStatic({ template, metrics }) {
+/**
+ * 정적 본문(보기/PDF):
+ *  - {token} 형식이 있으면 토큰 기반 강조 렌더링
+ *  - 없으면(AI 생성 텍스트) metricIds 를 이용해 highlightFigures 로 수치 강조
+ */
+export function NarrativeStatic({ template, metrics, metricIds = [] }) {
+  const hasTokens = /\{[^}]+\}/.test(template || "");
+  if (!hasTokens && metricIds.length > 0 && template) {
+    const nodes = highlightFigures(template, metrics, metricIds);
+    return <div className="sr-prose"><p>{nodes}</p></div>;
+  }
   const nodes = splitNarrative(template);
   return (
     <div className="sr-prose">
@@ -192,12 +299,12 @@ export function EditableNarrative({ template, metrics, onChange }) {
 
 /** 본문 렌더 컴포넌트 (A/B 공통) */
 export function Narrative({
-  narrativeText, template, metrics, mode = "render", onNarrativeChange,
+  narrativeText, template, metrics, mode = "render", onNarrativeChange, metricIds = [],
 }) {
-  // 커스텀 본문(토큰 포함 템플릿)이 있으면 우선, 없으면 기본 템플릿
+  // AI 생성 본문이 있으면 우선, 없으면 기본 템플릿({token} 방식)
   const tpl = (narrativeText && narrativeText.trim()) ? narrativeText : template;
   if (mode === "edit") {
     return <EditableNarrative template={tpl} metrics={metrics} onChange={onNarrativeChange} />;
   }
-  return <NarrativeStatic template={tpl} metrics={metrics} />;
+  return <NarrativeStatic template={tpl} metrics={metrics} metricIds={metricIds} />;
 }

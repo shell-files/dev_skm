@@ -16,6 +16,7 @@ from src.services.materialities.service import (
     getBenchmarkResult,
     getMaterialityResults,
     getMediaResult,
+    getOnboardingProgress,
     getSelectionProcess,
     getSurveyResult,
 )
@@ -29,6 +30,16 @@ router = APIRouter(tags=["materiality"])
 async def get_dma_results(runId: int, userModel=Depends(get_token)):
     try:
         return getMaterialityResults(runId)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/results/{runId}/onboarding-progress", summary="이슈별 온보딩 입력 진행 현황 (Dashboard용)")
+async def get_onboarding_progress(runId: int, userModel=Depends(get_token)):
+    try:
+        return getOnboardingProgress(runId)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -64,7 +75,7 @@ async def get_survey_result(runId: int, userModel=Depends(get_token)):
 )
 async def get_selection_process(runId: int, userModel=Depends(get_token)):
     try:
-        return getSelectionProcess(runId)
+        return getSelectionProcess(runId, userModel)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -76,7 +87,7 @@ async def get_selection_process(runId: int, userModel=Depends(get_token)):
 )
 async def apply_company_context_modifiers(runId: int, userModel=Depends(get_token)):
     try:
-        return applyCompanyContextModifiers(runId)
+        return applyCompanyContextModifiers(runId, userModel)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -88,6 +99,6 @@ async def apply_company_context_modifiers(runId: int, userModel=Depends(get_toke
 )
 async def get_company_context_profile(runId: int, userModel=Depends(get_token)):
     try:
-        return getCompanyContextProfile(runId)
+        return getCompanyContextProfile(runId, userModel)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

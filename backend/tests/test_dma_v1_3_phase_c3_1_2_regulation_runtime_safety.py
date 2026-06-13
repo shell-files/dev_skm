@@ -679,11 +679,17 @@ class PhaseC312ServiceHookTest(unittest.TestCase):
 
     def test_104_regulation_refresh_failure_aborts_external_max(self):
         svc = self.svc
-        crawl = self._crawlResult()
+        crawl = self._crawlResult(
+            articles=["article"],
+            allowedSources=["naver"],
+            sourceBreakdown=[types.SimpleNamespace(status="SUCCESS")],
+        )
         deps = self._patchResponseDeps(svc)
         with patch.object(svc, "crawlNewsArticles", return_value=crawl), \
              deps[0], deps[1], deps[2], deps[3], \
+             patch.object(svc, "runMediaAnalysis", return_value=[]), \
              patch.object(svc, "refreshRegulationShadowForRun", side_effect=RuntimeError("broken")), \
+             patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
              patch.object(svc, "refreshMediaExternalMaxForRun") as ext_max:
             with self.assertRaises(RuntimeError):
                 svc.runMediaCrawlAndAnalyze(self._request())
@@ -691,10 +697,15 @@ class PhaseC312ServiceHookTest(unittest.TestCase):
 
     def test_105_kcgs_refresh_failure_aborts_external_max(self):
         svc = self.svc
-        crawl = self._crawlResult()
+        crawl = self._crawlResult(
+            articles=["article"],
+            allowedSources=["naver"],
+            sourceBreakdown=[types.SimpleNamespace(status="SUCCESS")],
+        )
         deps = self._patchResponseDeps(svc)
         with patch.object(svc, "crawlNewsArticles", return_value=crawl), \
              deps[0], deps[1], deps[2], deps[3], \
+             patch.object(svc, "runMediaAnalysis", return_value=[]), \
              patch.object(svc, "refreshRegulationShadowForRun", return_value=0), \
              patch.object(svc, "refreshKcgsShadowForRun", side_effect=RuntimeError("kcgs broken")), \
              patch.object(svc, "refreshMediaExternalMaxForRun") as ext_max:

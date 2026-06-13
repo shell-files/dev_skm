@@ -8,12 +8,12 @@ const IS_DUMMY = true;
 
 // 정적 데이터 정의 (컴포넌트 외부에 두어 불필요한 재렌더링 방지)
 const STEPS = [
-    { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
-    { id: 2, title: "미디어 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><polyline points="5,13 8,10 11,12 14,8 19,6" /></svg>, path: "/media" },
-    { id: 3, title: "이해관계자 설문", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" /><line x1="13" y1="11" x2="16" y2="11" /><line x1="13" y1="16" x2="16" y2="16" /></svg>, path: "/survey" },
-    { id: 4, title: "전체 결과", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="20" x2="21" y2="20" /><line x1="3" y1="4" x2="3" y2="20" /><rect x="5" y="13" width="3" height="7" /><rect x="10" y="10" width="3" height="10" /><rect x="15" y="8" width="3" height="12" /><circle cx="19" cy="4" r="3" /><polyline points="17.5,4 18.5,5 21,2.5" /></svg>, path: "/result" },
-    { id: 5, title: "보고서 초안", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>, path: "/draft" },
-  ];
+  { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
+  { id: 2, title: "미디어 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><polyline points="5,13 8,10 11,12 14,8 19,6" /></svg>, path: "/media" },
+  { id: 3, title: "이해관계자 설문", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" /><line x1="13" y1="11" x2="16" y2="11" /><line x1="13" y1="16" x2="16" y2="16" /></svg>, path: "/survey" },
+  { id: 4, title: "전체 결과", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="20" x2="21" y2="20" /><line x1="3" y1="4" x2="3" y2="20" /><rect x="5" y="13" width="3" height="7" /><rect x="10" y="10" width="3" height="10" /><rect x="15" y="8" width="3" height="12" /><circle cx="19" cy="4" r="3" /><polyline points="17.5,4 18.5,5 21,2.5" /></svg>, path: "/result" },
+  { id: 5, title: "보고서 초안", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>, path: "/draft" },
+];
 
 const DASHBOARD_MOCK_DATA = {
   stats: {
@@ -81,13 +81,13 @@ const REFLECT_METHODS = [
 const REGULATION_SOURCES = [
   { key: "CBAM", label: "CBAM", desc: "EU 탄소국경조정제도" },
   { key: "CSRD", label: "CSRD", desc: "EU 기업 지속가능성 공시지침\nESRS 기준 포함" },
-  { key: "DPP",  label: "DPP",  desc: "EU 디지털 제품 여권" },
+  { key: "DPP", label: "DPP", desc: "EU 디지털 제품 여권" },
 ];
 
 // 전문기관 설정: 현재 Rule Logic이 존재하는 KCGS와 KIS만 선택 가능하다. Sustainalytics/MSCI 제거.
 const INSTITUTION_OPTIONS = [
   { key: "kcgs", label: "한국ESG기준원", desc: "KCGS ESG 등급 추이\nPre-Survey Boost" },
-  { key: "kis",  label: "한국신용평가",   desc: "자동차산업 평가방법론\nFinancial Resilience Screening" },
+  { key: "kis", label: "한국신용평가", desc: "자동차산업 평가방법론\nFinancial Resilience Screening" },
 ];
 
 // ── Tab Icon SVG Components ──
@@ -160,12 +160,12 @@ const Media = () => {
   const handleKisIndicatorChange = (id, year, value) => {
     setKisData(prev => ({
       ...prev,
-      indicators: prev.indicators.map(ind => 
+      indicators: prev.indicators.map(ind =>
         ind.id === id ? { ...ind, [year]: value } : ind
       )
     }));
   };
-  
+
   const handleKisSubmit = () => {
     setIsKisModalOpen(false);
     if (!selectedInstitutions.includes("kis")) {
@@ -194,12 +194,12 @@ const Media = () => {
   const handleKcgsGradeChange = (year, field, value) => {
     setKcgsData(prev => ({
       ...prev,
-      grades: prev.grades.map(grade => 
+      grades: prev.grades.map(grade =>
         grade.year === year ? { ...grade, [field]: value } : grade
       )
     }));
   };
-  
+
   const handleKcgsSubmit = () => {
     setIsKcgsModalOpen(false);
     if (!selectedInstitutions.includes("kcgs")) {
@@ -403,7 +403,7 @@ const Media = () => {
 
             <div className="media-compact-workspace" style={{ width: "100%", textAlign: "left" }}>
               {/* 좌측 패널 */}
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
                 <div className="media-compact-tabs">
                   {[
                     { key: "press", label: "언론 채널", icon: TabIcons.press },
@@ -432,7 +432,7 @@ const Media = () => {
                     <div className="media-press-layout">
                       <div className="form-group">
                         <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", fontWeight: 700, color: "#475569", marginBottom: "6px" }}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
                           1. 수집 언론사명
                         </label>
                         <select className="media-compact-input" onChange={addPress} defaultValue="">
@@ -454,7 +454,7 @@ const Media = () => {
 
                       <div className="form-group">
                         <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", fontWeight: 700, color: "#475569", marginBottom: "6px" }}>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                           2. 수집 희망 기간
                         </label>
                         <div className="media-press-date-row">
@@ -477,7 +477,7 @@ const Media = () => {
                   <div className="media-compact-card">
                     <div className="form-group">
                       <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", fontWeight: 700, color: "#475569", marginBottom: "8px" }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
                         1. 규제 기관 출처 선택
                         <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 400 }}>(복수 선택 가능)</span>
                       </label>
@@ -513,7 +513,7 @@ const Media = () => {
                   <div className="media-compact-card">
                     <div className="form-group">
                       <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", fontWeight: 700, color: "#475569", marginBottom: "8px" }}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 2 7 22 7"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="22" x2="21" y2="22" /><line x1="6" y1="18" x2="6" y2="11" /><line x1="10" y1="18" x2="10" y2="11" /><line x1="14" y1="18" x2="14" y2="11" /><line x1="18" y1="18" x2="18" y2="11" /><polygon points="12 2 2 7 22 7" /></svg>
                         1. 평가 기관 선택
                         <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 400 }}>(복수 선택 가능)</span>
                       </label>
@@ -544,37 +544,38 @@ const Media = () => {
                   </div>
                 )}
 
-                {/* 체크리스트 */}
-                <div className="media-checklist-wrapper" style={{ marginTop: "16px", marginBottom: "22px" }}>
+                {/* 체크리스트 및 CTA 버튼 */}
+                <div className="media-checklist-wrapper" style={{ marginTop: "auto", marginBottom: "0" }}>
                   <div className="media-checklist-title">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><polyline points="9,11 10.5,12.5 13,10"/><polyline points="9,16 10.5,17.5 13,15"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" /></svg>
                     분석 준비 체크리스트
                   </div>
-                  <div className="media-checklist-grid">
-                    {[
-                      { label: "언론사 선택", done: selectedPress.length > 0 },
-                      { label: "수집 기간 설정", done: !!(formData.pressStartDate && formData.pressEndDate) },
-                      { label: "규제 데이터 소스", done: regulationReady },
-                      { label: "전문 평가기관 선택", done: institutionReady },
-                    ].map(item => (
-                      <div key={item.label} className={`media-checklist-card ${item.done ? "done" : "pending"}`}>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={item.done ? "#03A94D" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        <span className="checklist-card-label" style={{ color: item.done ? "#1e293b" : "#94a3b8" }}>{item.label}</span>
-                        <span className={`checklist-card-badge ${item.done ? "done" : "pending"}`}>
-                          {item.done ? "완료" : "설정 필요"}
-                        </span>
-                      </div>
-                    ))}
+                  <div style={{ display: "flex", gap: "12px", alignItems: "stretch" }}>
+                    <div className="media-checklist-grid" style={{ flex: 1 }}>
+                      {[
+                        { label: "언론사 선택", done: selectedPress.length > 0 },
+                        { label: "수집 기간 설정", done: !!(formData.pressStartDate && formData.pressEndDate) },
+                        { label: "규제 데이터 소스", done: regulationReady },
+                        { label: "전문 평가기관 선택", done: institutionReady },
+                      ].map(item => (
+                        <div key={item.label} className={`media-checklist-card ${item.done ? "done" : "pending"}`}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={item.done ? "#03A94D" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          <span className="checklist-card-label" style={{ color: item.done ? "#1e293b" : "#94a3b8" }}>{item.label}</span>
+                          <span className={`checklist-card-badge ${item.done ? "done" : "pending"}`}>
+                            {item.done ? "완료" : "설정 필요"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* CTA 버튼 (체크리스트 바로 우측) */}
+                    <div className="media-cta-wrapper" style={{ margin: 0, display: "flex", alignItems: "stretch" }}>
+                      <button className="Bench-btn" onClick={startMediaCollection} style={{ margin: 0, height: "100%", padding: "0 24px", whiteSpace: "nowrap" }}>
+                        실시간 AI 분석 시작
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                {/* CTA 버튼 (체크리스트 바로 아래) */}
-                <div className="media-cta-wrapper">
-                  <button className="Bench-btn" onClick={startMediaCollection}>
-                    실시간 AI 분석 시작
-                  </button>
                 </div>
               </div>
 
@@ -582,7 +583,7 @@ const Media = () => {
               <div className="media-summary-col">
                 <div className="media-summary-card">
                   <div className="media-summary-title">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /></svg>
                     선택 요약
                   </div>
                   <div className="media-summary-row">
@@ -616,10 +617,10 @@ const Media = () => {
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
                     미디어 분석 진행 상태
                   </div>
-                  
+
                   <div className="media-summary-row">
                     <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontWeight: 600 }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={(isAnalyzing || showResult) ? "#03A94D" : (pressReady && regulationReady && institutionReady ? "#03A94D" : "#94a3b8")} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={(isAnalyzing || showResult) ? "#03A94D" : (pressReady && regulationReady && institutionReady ? "#03A94D" : "#94a3b8")} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       준비 단계
                     </span>
                     <span style={{ fontWeight: 700, color: (isAnalyzing || showResult) ? "#15803d" : (pressReady && regulationReady && institutionReady ? "#15803d" : "#94a3b8") }}>
@@ -629,7 +630,7 @@ const Media = () => {
 
                   <div className="media-summary-row">
                     <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontWeight: 600 }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={status.press === "complete" ? "#03A94D" : status.press === "ing" ? "#0284c7" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={status.press === "complete" ? "#03A94D" : status.press === "ing" ? "#0284c7" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       기사 수집 단계
                     </span>
                     <span style={{ fontWeight: 700, color: status.press === "complete" ? "#15803d" : status.press === "ing" ? "#0284c7" : "#94a3b8" }}>
@@ -639,7 +640,7 @@ const Media = () => {
 
                   <div className="media-summary-row">
                     <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontWeight: 600 }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={status.reg === "complete" ? "#03A94D" : status.reg === "ing" ? "#0284c7" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={status.reg === "complete" ? "#03A94D" : status.reg === "ing" ? "#0284c7" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       규제 분석 상태
                     </span>
                     <span style={{ fontWeight: 700, color: status.reg === "complete" ? "#15803d" : status.reg === "ing" ? "#0284c7" : "#94a3b8" }}>
@@ -649,7 +650,7 @@ const Media = () => {
 
                   <div className="media-summary-row">
                     <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontWeight: 600 }}>
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={status.expert === "complete" ? "#03A94D" : status.expert === "ing" ? "#0284c7" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={status.expert === "complete" ? "#03A94D" : status.expert === "ing" ? "#0284c7" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                       전문 평가기관 분석 상태
                     </span>
                     <span style={{ fontWeight: 700, color: status.expert === "complete" ? "#15803d" : status.expert === "ing" ? "#0284c7" : "#94a3b8" }}>
@@ -817,7 +818,7 @@ const Media = () => {
                 <button className="media-modal-close" onClick={() => setIsKisModalOpen(false)}>✕</button>
                 <h3 className="media-modal-title">한국신용평가 입력</h3>
               </div>
-              
+
               <div className="media-modal-body">
                 <div className="media-modal-section">
                   <div className="media-modal-section-title">1. 기본 정보</div>
@@ -887,7 +888,7 @@ const Media = () => {
                 <h3 className="media-modal-title">한국ESG기준원 입력</h3>
                 <p className="media-modal-subtitle">KCGS ESG 등급 추이</p>
               </div>
-              
+
               <div className="media-modal-body">
                 <div className="media-modal-section">
                   <div className="media-modal-section-title">1. 기본 정보</div>

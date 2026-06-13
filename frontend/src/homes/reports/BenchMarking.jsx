@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState, Fragment } from "react";
+import { useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
+import { useSelector } from "react-redux";
 import "@styles/benchmarking.css";
 import robot from "@assets/images/robot/robot_repoting_transparent.png";
 import {
@@ -7,9 +8,17 @@ import {
   showConfirmAlert,
 } from "@components/UI/ServiceAlert";
 
-import { POST } from "@utils/Network";
+import { GET, POST_FORM, PUT } from "@utils/Network";
 
-const USE_DUMMY = true; // true: 더미 모드, false: 실제 API 연동 모드
+const USE_DUMMY =
+  import.meta.env.DEV &&
+  import.meta.env.VITE_BENCHMARK_DUMMY === "true";
+
+const BENCHMARK_GROUP_CONFIG = {
+  leader: { fileType: "Leader", label: "리더" },
+  peer:   { fileType: "Peer",   label: "피어" },
+  sub:    { fileType: "Own",    label: "자사" },
+};
 
 // 온톨로지 사전 구조에 맞춘 실전형 더미 데이터 세트 (총 20개 로우 샘플)
 const DUMMY_DB_RESULTS = [
@@ -20,7 +29,6 @@ const DUMMY_DB_RESULTS = [
   { domain: "E", selected_issue: "폐기물·자원순환", selected_sub_issue: "사업장 폐기물 총량 관리, 폐기물 매립 제로(ZWTL) 인증 획득 및 순환 자원 전환 노력을 설명하는 문장.", type: "peer" },
   { domain: "E", selected_issue: "폐기물·자원순환", selected_sub_issue: "사업장 폐기물 총량 관리, 폐기물 매립 제로(ZWTL) 인증 획득 및 순환 자원 전환 노력을 설명하는 문장.", type: "sub" },
   { domain: "E", selected_issue: "친환경 제품·Eco-Design", selected_sub_issue: "제품 설계 단계의 환경성 검토, 친환경 인증 원부자재 도입 및 Eco-Design 프로세스를 설명하는 문장.", type: "peer" },
-
   { domain: "S", selected_issue: "안전보건 보장", selected_sub_issue: "안전보건 경영시스템(ISO 45001) 인증 및 전사 재해율 관리, 유해 위험요인 상시 발굴 체계를 설명하는 문장.", type: "leader" },
   { domain: "S", selected_issue: "안전보건 보장", selected_sub_issue: "안전보건 경영시스템(ISO 45001) 인증 및 전사 재해율 관리, 유해 위험요인 상시 발굴 체계를 설명하는 문장.", type: "peer" },
   { domain: "S", selected_issue: "안전보건 보장", selected_sub_issue: "안전보건 경영시스템(ISO 45001) 인증 및 전사 재해율 관리, 유해 위험요인 상시 발굴 체계를 설명하는 문장.", type: "sub" },
@@ -30,7 +38,6 @@ const DUMMY_DB_RESULTS = [
   { domain: "S", selected_issue: "정보보안·개인정보", selected_sub_issue: "정보보호 관리체계(ISMS-P, ISO 27001) 운영, 개인정보 유출 방지 시스템 및 보안 사고 모니터링을 설명하는 문장.", type: "leader" },
   { domain: "S", selected_issue: "정보보안·개인정보", selected_sub_issue: "정보보호 관리체계(ISMS-P, ISO 27001) 운영, 개인정보 유출 방지 시스템 및 보안 사고 모니터링을 설명하는 문장.", type: "peer" },
   { domain: "S", selected_issue: "정보보안·개인정보", selected_sub_issue: "정보보호 관리체계(ISMS-P, ISO 27001) 운영, 개인정보 유출 방지 시스템 및 보안 사고 모니터링을 설명하는 문장.", type: "sub" },
-
   { domain: "G", selected_issue: "이사회 구성 및 독립성", selected_sub_issue: "이사회 내 사외이사 구성 비율, 이사회 의장과 CEO 분리 여부, 사외이사 후보추천위 독립성을 설명하는 문장.", type: "leader" },
   { domain: "G", selected_issue: "이사회 구성 및 독립성", selected_sub_issue: "이사회 내 사외이사 구성 비율, 이사회 의장과 CEO 분리 여부, 사외이사 후보추천위 독립성을 설명하는 문장.", type: "peer" },
   { domain: "G", selected_issue: "이사회 구성 및 독립성", selected_sub_issue: "이사회 내 사외이사 구성 비율, 이사회 의장과 CEO 분리 여부, 사외이사 후보추천위 독립성을 설명하는 문장.", type: "sub" },
@@ -44,13 +51,11 @@ const DUMMY_RESULT_DASHBOARD = {
     reports: 24,
     leaderCount: 8,
     peerCount: 8,
-    subcount: 8,
+    ownCount: 8,
     identifiedIssues: 10,
     commonIssues: 19,
     blindSpots: 9,
-  }
-  ,
-  // 패널1: 벤치마킹 Top 이슈 점수
+  },
   topIssues: [
     { rank: 1, name: "기후변화·온실가스", impact: 9.2, financial: 8.7 },
     { rank: 2, name: "수자원·폐수 관리", impact: 8.6, financial: 7.9 },
@@ -58,25 +63,51 @@ const DUMMY_RESULT_DASHBOARD = {
     { rank: 4, name: "친환경 제품·Eco-Design", impact: 7.8, financial: 7.3 },
     { rank: 5, name: "공급망 ESG 관리", impact: 7.4, financial: 6.8 },
   ],
-  // 패널2: 공통 선정 이슈
   commonIssues: [
-    { name: "기후변화·온실가스", leader: true, peer: true, sub: true },
-    { name: "폐기물·자원순환", leader: true, peer: true, sub: true },
-    { name: "제품안전·품질", leader: true, peer: true, sub: true },
-    { name: "공급망 ESG 관리", leader: true, peer: true, sub: true },
-    { name: "공급망 ESG 관리", leader: true, peer: true, sub: true },
+    { name: "기후변화·온실가스", leader: true, peer: true, own: true },
+    { name: "폐기물·자원순환", leader: true, peer: true, own: true },
+    { name: "제품안전·품질", leader: true, peer: true, own: true },
+    { name: "공급망 ESG 관리", leader: true, peer: true, own: true },
+    { name: "공급망 ESG 관리", leader: true, peer: true, own: true },
   ],
-  // 패널3: 자사 Blind Spot
   blindSpots: [
     { title: "생물다양성 영향 관리", desc: "생물다양성 리스크·영향 평가 및 관리 체계가 보고서에서 상대적으로 낮게 다뤄지고 있습니다." },
     { title: "인권 실사 및 관리", desc: "인권 실사 프로세스 및 고충처리 체계에 대한 정보가 상대적으로 부족합니다." },
     { title: "ESG 데이터 관리 체계", desc: "ESG 데이터 수집·관리·검증 체계의 고도화 및 거버넌스 정보가 미흡합니다." },
   ],
-}
+};
 
-
+const mapBenchmarkResultToDashboard = (dto) => ({
+  stats: {
+    reports: dto.summary?.analyzedReportCount ?? 0,
+    leaderCount: dto.summary?.leaderReportCount ?? 0,
+    peerCount: dto.summary?.peerReportCount ?? 0,
+    ownCount: dto.summary?.ownReportCount ?? 0,
+    identifiedIssues: dto.summary?.identifiedIssueCount ?? 0,
+    commonIssues: dto.summary?.commonIssueCount ?? 0,
+    blindSpots: dto.summary?.blindSpotCount ?? 0,
+  },
+  topIssues: (dto.topIssues || []).map((item) => ({
+    rank: item.rankNo,
+    name: item.displaySubIssueName || item.subIssueCode,
+    impact: item.benchmarkImpactScore10 ?? item.benchmarkImpactScore05 ?? 0,
+    financial: item.benchmarkFinancialScore10 ?? item.benchmarkFinancialScore05 ?? 0,
+  })),
+  commonIssues: (dto.commonIssues || []).map((item) => ({
+    name: item.displaySubIssueName || item.subIssueCode,
+    leader: Boolean(item.leaderObserved),
+    peer: Boolean(item.peerObserved),
+    own: Boolean(item.ownObserved),
+  })),
+  blindSpots: (dto.blindSpotIssues || []).map((item) => ({
+    title: item.displaySubIssueName || item.subIssueCode,
+    desc: item.summary || "리더·피어 보고서 대비 자사 보고서에서 관측되지 않은 이슈입니다.",
+  })),
+});
 
 const Benchmarking = () => {
+  const currentRunId = useSelector((state) => state.report.currentRunId);
+
   const [fileStorage, setFileStorage] = useState({
     leader: [],
     peer: [],
@@ -95,7 +126,7 @@ const Benchmarking = () => {
   const [showResult, setShowResult] = useState(false);
 
   const [rawRows, setRawRows] = useState([]);
-  const [dashboardData, setDashobardData] = useState(DUMMY_RESULT_DASHBOARD);
+  const [dashboardData, setDashboardData] = useState(null);
 
   const particleRef = useRef(null);
   const navigate = useNavigate();
@@ -116,39 +147,8 @@ const Benchmarking = () => {
     navigate(steps[index].path);
   };
 
-
-  useEffect(() => {
-    let interval;
-
-    if (isAnalyzing) {
-      interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setIsAnalyzing(false);
-            setShowResult(true);
-
-            if (USE_DUMMY) {
-              setRawRows(DUMMY_DB_RESULTS);
-            }
-
-            return 100;
-          }
-          return prev + 2;
-        });
-      }, 30);
-    }
-
-    return () => clearInterval(interval);
-  }, [isAnalyzing]);
-
-  /**
-   * DB 로우 데이터를selected_issue 기준으로 압축 결합하는 로직
-   * subIssueSentence(문장)를 framework 매핑 항목으로 치환하여 병합합니다.
-   */
   const getGroupedIssues = () => {
     const map = {};
-
     rawRows.forEach((row) => {
       const key = row.selected_issue;
       if (!map[key]) {
@@ -161,21 +161,15 @@ const Benchmarking = () => {
           sub: false,
         };
       }
-
       if (row.type === "leader") map[key].leader = true;
       if (row.type === "peer") map[key].peer = true;
       if (row.type === "sub") map[key].sub = true;
     });
-
     return Object.values(map);
   };
 
-
   const handleCompanyNameChange = (group, value) => {
-    setCompanyNames((prev) => ({
-      ...prev,
-      [group]: value,
-    }));
+    setCompanyNames((prev) => ({ ...prev, [group]: value }));
   };
 
   const handleFileChange = (e, groupKey) => {
@@ -183,12 +177,10 @@ const Benchmarking = () => {
     if (newFiles.length === 0) return;
 
     const totalCount = fileStorage[groupKey].length + newFiles.length;
-
     if (totalCount > 3) {
       showDefaultAlert(
         "파일 업로드 제한",
-        `3개년치(3개) 파일만 등록할 수 있습니다.<br/>
-        현재 등록된 파일 수: ${fileStorage[groupKey].length}개`,
+        `3개년치(3개) 파일만 등록할 수 있습니다.<br/>현재 등록된 파일 수: ${fileStorage[groupKey].length}개`,
         "warning"
       );
       e.target.value = "";
@@ -199,22 +191,19 @@ const Benchmarking = () => {
       if (file.name.split(".").pop().toLowerCase() !== "pdf") {
         showDefaultAlert(
           "파일 형식 오류",
-          `오직 PDF 형식의 문서만 업로드 가능합니다.<br/>
-          대상 파일: ${file.name}`,
+          `오직 PDF 형식의 문서만 업로드 가능합니다.<br/>대상 파일: ${file.name}`,
           "error"
         );
         e.target.value = "";
         return;
       }
-
       const isDuplicate = fileStorage[groupKey].some(
         (existingFile) => existingFile.name === file.name
       );
       if (isDuplicate) {
         showDefaultAlert(
           "중복 파일 오류",
-          `이미 업로드된 파일입니다.<br/>
-          대상 파일: ${file.name}`,
+          `이미 업로드된 파일입니다.<br/>대상 파일: ${file.name}`,
           "error"
         );
         e.target.value = "";
@@ -236,8 +225,46 @@ const Benchmarking = () => {
     }));
   };
 
+  const uploadBenchmarkGroup = async (groupKey) => {
+    const group = BENCHMARK_GROUP_CONFIG[groupKey];
+    const files = fileStorage[groupKey] || [];
+
+    if (files.length !== 3) {
+      throw new Error(`${group.label} 보고서 PDF 3개를 등록해주세요.`);
+    }
+
+    const companyName = String(companyNames[groupKey] || "").trim();
+    if (!companyName) {
+      throw new Error(`${group.label} 기업명을 입력해주세요.`);
+    }
+
+    const formData = new FormData();
+    files.forEach((file) => { formData.append("file", file); });
+    formData.append("fileType", group.fileType);
+    formData.append("companyName", companyName);
+    formData.append("page", "SR");
+
+    const response = await POST_FORM("/benchmk", formData);
+    if (!response || response.status === false) {
+      throw new Error(response?.message || `${group.label} 업로드에 실패했습니다.`);
+    }
+
+    const storedFiles = response.data?.files || [];
+    if (storedFiles.length !== files.length) {
+      throw new Error(`${group.label} 업로드 파일 수가 일치하지 않습니다.`);
+    }
+
+    return storedFiles.map((item) => item.fileName);
+  };
+
   const runAnalysis = async () => {
     if (isAnalyzing) return;
+
+    const runId = Number(currentRunId);
+    if (!Number.isInteger(runId) || runId <= 0) {
+      showDefaultAlert("프로젝트 선택 필요", "현재 보고서 프로젝트를 먼저 선택해주세요.", "warning");
+      return;
+    }
 
     if (!companyNames.leader.trim() || !companyNames.peer.trim() || !companyNames.sub.trim()) {
       showDefaultAlert("입력 오류", "모든 그룹의 회사 이름을 입력해주세요.", "warning");
@@ -255,23 +282,55 @@ const Benchmarking = () => {
     setIsAnalyzing(true);
     showDefaultAlert("분석 시작", "AI 벤치마킹 분석이 시작되었습니다.", "success");
 
-    if (!USE_DUMMY) {
-      try {
-        const response = await POST("skm", "/api/v1/benchmark/analyze", {
-          companyNames,
-          files: fileStorage,
-        });
-        if (response && response.status !== false) {
-          setRawRows(response.data || []);
-          // [병합-추가/백엔드 TODO] 통계카드 + 3패널 데이터도 응답에서 주입.
-          //   응답이 DUMMY_RESULT_DASHBOARD와 같은 형태라면 아래 한 줄이면 됨:
-          // setDashboardData(response.data.dashboard);
-        } else {
-          showDefaultAlert("데이터 분석 오류", "네트워크 통신 중 에러가 발생했습니다.", "error");
-        }
-      } catch (err) {
-        console.error(err);
+    if (USE_DUMMY) {
+      setProgress(100);
+      setIsAnalyzing(false);
+      setRawRows(DUMMY_DB_RESULTS);
+      setDashboardData(DUMMY_RESULT_DASHBOARD);
+      setShowResult(true);
+      return;
+    }
+
+    try {
+      setProgress(5);
+
+      const uploadedFileNames = [];
+      for (const groupKey of ["leader", "peer", "sub"]) {
+        const storedNames = await uploadBenchmarkGroup(groupKey);
+        uploadedFileNames.push(...storedNames);
       }
+
+      setProgress(15);
+
+      const analyzeResponse = await PUT("/benchmk", {
+        file: uploadedFileNames,
+        page: "SR",
+        esgMaterialityRunId: runId,
+        sourceStep: "benchmark",
+      });
+
+      if (!analyzeResponse || analyzeResponse.status === false) {
+        throw new Error(analyzeResponse?.message || "벤치마킹 분석에 실패했습니다.");
+      }
+
+      setProgress(50);
+
+      const resultResponse = await GET(`/materiality/benchmark/${runId}`);
+
+      if (!resultResponse || resultResponse.status === false) {
+        throw new Error(resultResponse?.message || "벤치마킹 결과 조회에 실패했습니다.");
+      }
+
+      const dto = resultResponse.data ?? resultResponse;
+      setDashboardData(mapBenchmarkResultToDashboard(dto));
+      setProgress(100);
+      setIsAnalyzing(false);
+      setShowResult(true);
+    } catch (err) {
+      console.error(err);
+      showDefaultAlert("분석 오류", err.message || "벤치마킹 분석 중 오류가 발생했습니다.", "error");
+      setIsAnalyzing(false);
+      setShowResult(false);
     }
   };
 
@@ -280,7 +339,6 @@ const Benchmarking = () => {
     const companyName = companyNames[groupKey] || "회사이름";
 
     return (
-
       <div className="upload-group-container" id={`group-${groupKey}`}>
         <div className="upload-group-badge">{label}</div>
 
@@ -292,7 +350,6 @@ const Benchmarking = () => {
             value={companyNames[groupKey]}
             onChange={(e) => handleCompanyNameChange(groupKey, e.target.value)}
           />
-
           <label className="inline-upload-btn">
             업로드
             <input
@@ -317,7 +374,6 @@ const Benchmarking = () => {
                     업로드 파일 : {file.name}
                   </div>
                 </div>
-
                 <button
                   className="file-cancel-btn"
                   onClick={async () => {
@@ -336,12 +392,11 @@ const Benchmarking = () => {
   };
 
   const processedIssues = getGroupedIssues();
+  const displayData = dashboardData ?? DUMMY_RESULT_DASHBOARD;
 
   return (
     <div className="Bench-container">
       <header className="Bench-header">
-        {/* <h1 className="Bench-title">지속가능경영보고서 AI 자동 생성</h1> */}
-
         <div className="Bench-stepper-row">
           {steps.map((step, index) => (
             <Fragment key={step.id}>
@@ -365,20 +420,19 @@ const Benchmarking = () => {
           <div className="Bench-upload-section-grid">
             {renderUploadGroup("leader", "리더", "회사이름 필수 입력")}
             {renderUploadGroup("peer", "피어", "회사이름 필수 입력")}
-            {renderUploadGroup("sub", "자회사", "회사이름 필수 입력")}
+            {renderUploadGroup("sub", "자사", "회사이름 필수 입력")}
           </div>
 
-          <button className="Bench-btn" id="bench-btn" onClick={runAnalysis}> 실시간 AI 분석 시작</button>
+          <button className="Bench-btn" id="bench-btn" onClick={runAnalysis}>실시간 AI 분석 시작</button>
         </div>
       </main>
 
-      <div className={`dashboard-result-dashboard ${dashboardOpen ? "open " : ""}`} id="dashboard" >
+      <div className={`dashboard-result-dashboard ${dashboardOpen ? "open " : ""}`} id="dashboard">
         <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen)}>
-          <div className="handle-pill" >
+          <div className="handle-pill">
             {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인" : "실시간 분석 대기 중"}
           </div>
         </div>
-        {/* [병합-수정] showResult일 때 showing-result 클래스 부여 → 결과 길어지면 내부 스크롤 (CSS와 연동) */}
         <div className={`robot-view-container ${isAnalyzing ? "analyzing" : ""} ${showResult ? "showing-result" : ""}`}>
           <div id="particle-field" className="particle-field" ref={particleRef}></div>
 
@@ -410,19 +464,18 @@ const Benchmarking = () => {
                   [AI 벤치마킹 이슈 도출 및 Gap Analysis]
                 </strong>
                 <p style={{ margin: "8px 0 0", color: "#334155", fontWeight: 500, lineHeight: 1.5 }}>
-                  보고서(SR) 교차 파싱 결과 <strong>{processedIssues.length}개</strong>의 핵심 이슈가 식별되었습니다. 자회사의 누락(Gap) 요소를 보완하여 최적의 초안 요건을 빌드하세요.
+                  보고서(SR) 교차 파싱 결과 <strong>{processedIssues.length}개</strong>의 핵심 이슈가 식별되었습니다. 자사의 누락(Gap) 요소를 보완하여 최적의 초안 요건을 빌드하세요.
                 </p>
               </div>
 
-              {/* 통계 카드 4개 */}
               <div className="result-stats-row">
                 <div className="result-stat-card">
                   <div className="stat-icon-wrap">📋</div>
                   <div>
-                    <div className="stat-label"> 분석보고서</div>
-                    <div className="stat-value">{dashboardData.stats.reports}개</div>
+                    <div className="stat-label">분석보고서</div>
+                    <div className="stat-value">{displayData.stats.reports}개</div>
                     <div className="stat-sub">
-                      리더 {dashboardData.stats.leaderCount} · 피어 {dashboardData.stats.peerCount} · 자회사 {dashboardData.stats.subcount}
+                      리더 {displayData.stats.leaderCount} · 피어 {displayData.stats.peerCount} · 자사 {displayData.stats.ownCount}
                     </div>
                   </div>
                 </div>
@@ -431,29 +484,28 @@ const Benchmarking = () => {
                   <div className="stat-icon-wrap">≡</div>
                   <div>
                     <div className="stat-label">식별 이슈</div>
-                    <div className="stat-value">{dashboardData.stats.identifiedIssues}개</div>
-                  </div>
-                </div>
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap">👥</div>
-                  <div>
-                    <div className="stat-label"> 공통 이슈</div>
-                    <div className="stat-value">{dashboardData.stats.commonIssues}개</div>
+                    <div className="stat-value">{displayData.stats.identifiedIssues}개</div>
                   </div>
                 </div>
 
+                <div className="result-stat-card">
+                  <div className="stat-icon-wrap">👥</div>
+                  <div>
+                    <div className="stat-label">공통 이슈</div>
+                    <div className="stat-value">{displayData.stats.commonIssues}개</div>
+                  </div>
+                </div>
 
                 <div className="result-stat-card">
                   <div className="stat-icon-wrap">🎯</div>
                   <div>
                     <div className="stat-label">자사 Blind Spot</div>
-                    <div className="stat-value">{dashboardData.stats.blindSpots}개</div>
+                    <div className="stat-value">{displayData.stats.blindSpots}개</div>
                   </div>
                 </div>
               </div>
-              {/* 하단 3패널 (Top 이슈 점수 / 공통 선정 이슈 / Blind Spot) */}
+
               <div className="result-panels-row">
-                {/* 패널1: 벤치마킹 Top 이슈 점수 */}
                 <div className="result-panel">
                   <div className="panel-header-row">
                     <span className="panel-title">벤치마킹 Top 이슈 점수</span>
@@ -464,7 +516,7 @@ const Benchmarking = () => {
                       <tr><th>순위</th><th>Sub Issue</th><th>Impact</th><th>Financial</th></tr>
                     </thead>
                     <tbody>
-                      {dashboardData.topIssues.map((item) => (
+                      {displayData.topIssues.map((item) => (
                         <tr key={item.rank}>
                           <td>{item.rank}</td>
                           <td>{item.name}</td>
@@ -476,7 +528,6 @@ const Benchmarking = () => {
                   </table>
                 </div>
 
-                {/* 패널2: 공통 선정 이슈 */}
                 <div className="result-panel">
                   <div className="panel-header-row">
                     <span className="panel-title">공통 선정 이슈</span>
@@ -487,26 +538,25 @@ const Benchmarking = () => {
                       <tr><th>Sub Issue</th><th>리더</th><th>피어</th><th>자사</th></tr>
                     </thead>
                     <tbody>
-                      {dashboardData.commonIssues.map((item, index) => (
+                      {displayData.commonIssues.map((item, index) => (
                         <tr key={index}>
                           <td>{item.name}</td>
                           <td>{item.leader && <span className="chk">✓</span>}</td>
                           <td>{item.peer && <span className="chk">✓</span>}</td>
-                          <td>{item.sub && <span className="chk">✓</span>}</td>
+                          <td>{item.own && <span className="chk">✓</span>}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
 
-                {/* 패널3: 자사 Blind Spot */}
                 <div className="result-panel">
                   <div className="panel-header-row">
                     <span className="panel-title">자사 Blind Spot</span>
                     <span className="panel-info-btn">ⓘ</span>
                   </div>
                   <ul className="blind-spot-list">
-                    {dashboardData.blindSpots.map((item, index) => (
+                    {displayData.blindSpots.map((item, index) => (
                       <li key={index}>
                         <div className="blind-spot-title">{item.title}</div>
                         <p className="blind-spot-desc">{item.desc}</p>
@@ -521,6 +571,6 @@ const Benchmarking = () => {
       </div>
     </div>
   );
-}
+};
 
 export default Benchmarking;

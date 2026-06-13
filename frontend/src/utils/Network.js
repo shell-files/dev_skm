@@ -47,5 +47,18 @@ export const PUT = (url, data) =>
 export const PATCH = (url, data) => 
   request({ ...initConfig(), method: 'PATCH', url, data });
 
-export const DELETE = (url) => 
+export const DELETE = (url) =>
   request({ ...initConfig(), method: 'DELETE', url });
+
+export const POST_FORM = (url, formData) => {
+  const config = initConfig();
+  const headers = { ...(config.headers || {}) };
+  delete headers["Content-Type"];
+  return request({
+    ...config,
+    headers,
+    method: "POST",
+    url,
+    data: formData,
+  });
+};

@@ -150,7 +150,6 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
     
     # 결과(BENCHMK TABLE)DB 저장
     if finalResult:
-        shadowFactBuildFailedYn = False
         factPayloads = []
         for item in finalResult["data"]:
             if item == None:
@@ -197,30 +196,27 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
                             sourceChannel="benchmark",
                         ))
                 except Exception as shadowError:
-                    shadowFactBuildFailedYn = True
-                    print(f"Warning: Benchmark v1.3 shadow fact build failed: {shadowError}")
+                    raise RuntimeError(f"Benchmark v1.3 shadow fact build failed: {shadowError}") from shadowError
+            except RuntimeError:
+                raise
             except Exception as e:
-                raise Exception(f"{dbFileName} 파일 분석 후 DB 저장 중 오류가 발생했습니다: {e}")
+                raise Exception(f"{dbFileName} 파일 분析 후 DB 저장 중 오류가 발생했습니다: {e}")
 
-        # Fact Build 실패 시 기존 활성 Shadow Set 보호 — Replace Transaction 전체 Skip
-        if shadowFactBuildFailedYn:
-            print("Warning: Benchmark v1.3 shadow replace skipped because fact build failed")
-        else:
-            # 모든 Legacy 파일 저장 성공 후 Shadow Replace Transaction 요청당 1회 실행
-            try:
-                universeSubIssueCodes = [
-                    code for code, meta in subissueMaster.items()
-                    if meta.get("materiality_issue_pool_yn") == "Y"
-                ]
-                screeningPayloads = step2BuildBenchmarkScreeningPayloads(factPayloads, universeSubIssueCodes)
-                step4ReplaceBenchmarkShadowTracesTx(
-                    runId=fileFindModel.esgMaterialityRunId,
-                    factPayloads=factPayloads,
-                    screeningPayloads=screeningPayloads,
-                    expectedScreeningCount=len(universeSubIssueCodes),
-                )
-            except Exception as shadowError:
-                print(f"Warning: Benchmark v1.3 shadow replace transaction failed: {shadowError}")
+        # 모든 Legacy 파일 저장 성공 후 Shadow Replace Transaction 요청당 1회 실행
+        try:
+            universeSubIssueCodes = [
+                code for code, meta in subissueMaster.items()
+                if meta.get("materiality_issue_pool_yn") == "Y"
+            ]
+            screeningPayloads = step2BuildBenchmarkScreeningPayloads(factPayloads, universeSubIssueCodes)
+            step4ReplaceBenchmarkShadowTracesTx(
+                runId=fileFindModel.esgMaterialityRunId,
+                factPayloads=factPayloads,
+                screeningPayloads=screeningPayloads,
+                expectedScreeningCount=len(universeSubIssueCodes),
+            )
+        except Exception as shadowError:
+            raise RuntimeError(f"Benchmark v1.3 shadow replace transaction failed: {shadowError}") from shadowError
 
         return ResponseModel(True, "분석이 성공적으로 완료되었습니다.", finalResult)
            

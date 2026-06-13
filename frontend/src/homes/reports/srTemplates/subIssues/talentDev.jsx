@@ -140,7 +140,7 @@ function TalentDevPage(props) {
       </div>
 
       {/* ── 교육 운영 방식 / 인재 전략 방향 — flex:1 로 남은 세로 공간 흡수 ── */}
-      <div style={{ display: "flex", gap: 11, marginTop: 11, flex: 1, minHeight: 60, alignItems: "stretch" }}>
+      <div className="sr-last" style={{ display: "flex", gap: 11, marginTop: 11, minHeight: 60, alignItems: "stretch" }}>
         <div style={{
           flex: 1, background: "var(--tint)", border: "1px solid var(--line)",
           borderRadius: 6, padding: "12px 14px",

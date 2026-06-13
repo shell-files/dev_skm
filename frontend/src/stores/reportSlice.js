@@ -155,14 +155,12 @@ const initialState = {
     data: null,
   },
   currentRunId: null,
-  currentYear: (() => {
-    const stored = localStorage.getItem("currentYear");
-    if (stored == null) return null;
-    const year = Number(stored);
-    return Number.isInteger(year) && year >= 2000 && year <= 2100 ? year : null;
-  })(),
+  currentYear: localStorage.getItem("currentYear"),
+  currentRunId: localStorage.getItem("currentRunId"),
   generateReportStatus: { loading: false, data: null, error: null },
   reportData: null,
+  materialityResults: null,
+  materialitySelectionProcess: null,
   loading: {
     workflow: false,
     onboarding: false,
@@ -189,6 +187,8 @@ const initialState = {
     initializePostDmaDisclosureScope: false,
     fetchActiveRollupBatch: false,
     ensureRollupResponseWorkspace: false,
+    materialityResults: false,
+    materialitySelectionProcess: false,
   },
 
   error: {
@@ -217,6 +217,8 @@ const initialState = {
     initializePostDmaDisclosureScope: null,
     fetchActiveRollupBatch: null,
     ensureRollupResponseWorkspace: null,
+    materialityResults: null,
+    materialitySelectionProcess: null,
   },
 };
 
@@ -798,6 +800,39 @@ export const generateReport = createAsyncThunk(
   }
 );
 
+// ── DMA Result API ───────────────────────────────────────────────
+// GET /materiality/results/{runId}  : DMA 통합 결과 조회
+export const fetchMaterialityResults = createAsyncThunk(
+  "report/fetchMaterialityResults",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(
+        await GET(`/materiality/results/${runId}`)
+      );
+      return rejectIfFailed(res, rejectWithValue, "DMA 결과 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({ status: false, message: "DMA 결과 조회 중 오류가 발생했습니다." });
+    }
+  }
+);
+
+// GET /materiality/selection-process/{runId}  : 후보군→최종 선정 과정 조회
+export const fetchMaterialitySelectionProcess = createAsyncThunk(
+  "report/fetchMaterialitySelectionProcess",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(
+        await GET(`/materiality/selection-process/${runId}`)
+      );
+      return rejectIfFailed(res, rejectWithValue, "선정 과정 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({ status: false, message: "선정 과정 조회 중 오류가 발생했습니다." });
+    }
+  }
+);
+
 const setPending = (state, key) => {
   state.loading[key] = true;
   state.error[key] = null;
@@ -833,6 +868,10 @@ const reportSlice = createSlice({
       const normalized = normalizeReportingYear(action.payload);
       localStorage.setItem("currentYear", normalized);
       state.currentYear = normalized;
+    },
+    setMaterialityRunId: (state, action) => {
+      localStorage.setItem("currentRunId", action.payload);
+      state.currentRunId = action.payload ?? null;
     },
 
     setActiveBatchId: (state, action) => {
@@ -1214,6 +1253,30 @@ const reportSlice = createSlice({
       state.generateReportStatus.loading = false;
       state.generateReportStatus.error = action.payload;
     });
+
+    builder
+      .addCase(fetchMaterialityResults.pending, (state) => setPending(state, "materialityResults"))
+      .addCase(fetchMaterialityResults.fulfilled, (state, action) => {
+        state.loading.materialityResults = false;
+        state.error.materialityResults = null;
+        state.materialityResults = dataOf(action.payload);
+      })
+      .addCase(fetchMaterialityResults.rejected, (state, action) => {
+        setRejected(state, "materialityResults", action);
+        state.materialityResults = null;
+      });
+
+    builder
+      .addCase(fetchMaterialitySelectionProcess.pending, (state) => setPending(state, "materialitySelectionProcess"))
+      .addCase(fetchMaterialitySelectionProcess.fulfilled, (state, action) => {
+        state.loading.materialitySelectionProcess = false;
+        state.error.materialitySelectionProcess = null;
+        state.materialitySelectionProcess = dataOf(action.payload);
+      })
+      .addCase(fetchMaterialitySelectionProcess.rejected, (state, action) => {
+        setRejected(state, "materialitySelectionProcess", action);
+        state.materialitySelectionProcess = null;
+      });
   },
 });
 
@@ -1225,6 +1288,7 @@ export const {
   selectApprovalProject,
   setActiveBatchId,
   setCurruntYear,
+  setMaterialityRunId,
   setReportParams,
 } = reportSlice.actions;
 

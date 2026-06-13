@@ -1,0 +1,118 @@
+.skm-page-title-content {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.skm-page-title-icon-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.skm-page-title-bar {
+  width: 4px;
+  height: 48px;
+  background-color: #1b5e20;
+  border-radius: 4px;
+}
+
+.skm-page-title-circle {
+  width: 56px;
+  height: 56px;
+  background-color: #e8f5e9;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1b5e20;
+  font-size: 24px;
+}
+
+.skm-page-title-text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skm-page-title-category {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1b5e20;
+}
+
+.skm-page-title-heading {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.skm-page-title-description {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* ── Tablet (≤ 1200px) ─────────────────────────────────── */
+@media (max-width: 1200px) {
+  .skm-page-title-heading {
+    font-size: 1.45rem;
+  }
+  .skm-page-title-circle {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+  .skm-page-title-bar {
+    height: 40px;
+  }
+}
+
+/* ── Mobile Large (≤ 992px) ────────────────────────────── */
+@media (max-width: 992px) {
+  .skm-page-title-content {
+    gap: 16px;
+  }
+  .skm-page-title-heading {
+    font-size: 1.25rem;
+  }
+  .skm-page-title-circle {
+    width: 40px;
+    height: 40px;
+    font-size: 17px;
+  }
+  .skm-page-title-bar {
+    height: 36px;
+  }
+  .skm-page-title-icon-wrapper {
+    gap: 10px;
+  }
+}
+
+/* ── Mobile (≤ 768px) ──────────────────────────────────── */
+@media (max-width: 768px) {
+  .skm-page-title-content {
+    gap: 12px;
+  }
+  .skm-page-title-heading {
+    font-size: 1.1rem;
+  }
+  .skm-page-title-category {
+    font-size: 0.75rem;
+  }
+  .skm-page-title-circle {
+    width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+  .skm-page-title-bar {
+    height: 30px;
+    width: 3px;
+  }
+  .skm-page-title-description {
+    font-size: 0.8rem;
+  }
+}

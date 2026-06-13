@@ -11,6 +11,7 @@ import {
   resumeReportWorkflow,
   startReportWorkflow,
   setCurruntYear,
+  setMaterialityRunId
 } from "@stores/reportSlice";
 
 // Card illustrations
@@ -174,7 +175,10 @@ const ReportBasisSelectModal = ({
         return;
       }
 
-      dispatch(setCurruntYear(normalizeReportingYear(selectedYear)));
+      dispatch(setMaterialityRunId(currentRunId));
+      console.log(currentRunId)
+
+      dispatch(setCurruntYear(selectedYear));
       onClose();
       navigate('/onb');
       return;
@@ -204,6 +208,7 @@ const ReportBasisSelectModal = ({
         setLoading(false);
         return;
       }
+      dispatch(setMaterialityRunId(currentRunId));
 
       dispatch(setCurruntYear(normalizeReportingYear(selectedYear)));
 

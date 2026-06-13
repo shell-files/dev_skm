@@ -1,14 +1,18 @@
 // srTemplates/registry.js
 // ── 서브이슈 레지스트리 ──
 // 모든 서브이슈 모듈을 여기서 모은다. 새 서브이슈 추가 = import 한 줄 + 배열에 추가.
-import climateTarget from "./subIssues/climateTarget";
-// import supplyChain from "./subIssues/supplyChain";   // 예: 새 서브이슈
-// import humanCapital from "./subIssues/humanCapital";
+import climateTarget from "./subIssues/climateTarget.jsx";
+import supplyChain from "./subIssues/supplyChain.jsx";
+import talentDev from "./subIssues/talentDev.jsx";
+import ecoProduct from "./subIssues/ecoProduct.jsx";
+import productSafety from "./subIssues/productSafety.jsx";
 
 export const subIssues = [
   climateTarget,
-  // supplyChain,
-  // humanCapital,
+  supplyChain,
+  talentDev,
+  ecoProduct,
+  productSafety,
 ];
 
 // id 로 서브이슈 모듈 조회

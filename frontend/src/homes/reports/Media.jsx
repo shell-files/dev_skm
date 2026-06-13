@@ -4,10 +4,7 @@ import "@styles/media.css";
 import robot from "@assets/images/robot/robot_media_t.png";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 
-
-
 const IS_DUMMY = true;
-
 
 // 정적 데이터 정의 (컴포넌트 외부에 두어 불필요한 재렌더링 방지)
 const STEPS = [
@@ -80,26 +77,135 @@ const REFLECT_METHODS = [
   }
 ];
 
+// 규제 기관 Source 정의: CBAM / CSRD / DPP만 사용한다. CSRS/ESRD는 사용 금지.
+const REGULATION_SOURCES = [
+  { key: "CBAM", label: "CBAM", desc: "EU 탄소국경조정제도" },
+  { key: "CSRD", label: "CSRD", desc: "EU 기업 지속가능성 공시지침\nESRS 기준 포함" },
+  { key: "DPP",  label: "DPP",  desc: "EU 디지털 제품 여권" },
+];
+
+// 전문기관 설정: 현재 Rule Logic이 존재하는 KCGS와 KIS만 선택 가능하다. Sustainalytics/MSCI 제거.
+const INSTITUTION_OPTIONS = [
+  { key: "kcgs", label: "한국ESG기준원", desc: "KCGS ESG 등급 추이\nPre-Survey Boost" },
+  { key: "kis",  label: "한국신용평가",   desc: "자동차산업 평가방법론\nFinancial Resilience Screening" },
+];
+
+// ── Tab Icon SVG Components ──
+const TabIcons = {
+  press: (color) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+    </svg>
+  ),
+  regulation: (color) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+    </svg>
+  ),
+  institution: (color) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="3" y1="22" x2="21" y2="22" />
+      <line x1="6" y1="18" x2="6" y2="11" />
+      <line x1="10" y1="18" x2="10" y2="11" />
+      <line x1="14" y1="18" x2="14" y2="11" />
+      <line x1="18" y1="18" x2="18" y2="11" />
+      <polygon points="12 2 2 7 22 7" />
+    </svg>
+  ),
+};
+
 const Media = () => {
   const navigate = useNavigate();
   const particleRef = useRef(null);
-  const timerRef = useRef(null); // 분석용 타이머 Ref 선언
+  const timerRef = useRef(null);
 
-  const activeIndex = 1; // 미디어 분석 활성화
+  const activeIndex = 1;
 
   // --- 상태 관리 (States) ---
+  const [activeSourceTab, setActiveSourceTab] = useState("press");
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [progress, setProgress] = useState(0);
   const [loadingTitle, setLoadingTitle] = useState("미디어 수집 현황 대기 중");
   const [loadingDesc, setLoadingDesc] = useState("상단의 수집 시작 버튼을 누르면 실시간 크롤링 및 파싱이 가동됩니다.");
+
   const [selectedPress, setSelectedPress] = useState([]);
   const [selectedReg, setSelectedReg] = useState([]);
-  const [selectedAge, setSelectedAge] = useState([]);
+  const [selectedInstitutions, setSelectedInstitutions] = useState([]);
+
+  // KIS Modal State
+  const [isKisModalOpen, setIsKisModalOpen] = useState(false);
+  const [kisData, setKisData] = useState({
+    company: "A_GROUP",
+    provider: "KIS",
+    analysisType: "재무 위험지표 Export",
+    baseYear: "2025",
+    indicators: [
+      { id: 1, name: "부채비율", y2023: "138.0", y2024: "152.5", y2025: "166.2", unit: "%" },
+      { id: 2, name: "이자보상배율", y2023: "5.2", y2024: "3.7", y2025: "2.9", unit: "x" },
+      { id: 3, name: "영업이익률", y2023: "8.1", y2024: "6.4", y2025: "5.1", unit: "%" }
+    ]
+  });
+
+  const handleKisDataChange = (field, value) => {
+    setKisData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleKisIndicatorChange = (id, year, value) => {
+    setKisData(prev => ({
+      ...prev,
+      indicators: prev.indicators.map(ind => 
+        ind.id === id ? { ...ind, [year]: value } : ind
+      )
+    }));
+  };
   
+  const handleKisSubmit = () => {
+    setIsKisModalOpen(false);
+    if (!selectedInstitutions.includes("kis")) {
+      setSelectedInstitutions(prev => [...prev, "kis"]);
+    }
+  };
 
+  // KCGS Modal State
+  const [isKcgsModalOpen, setIsKcgsModalOpen] = useState(false);
+  const [kcgsData, setKcgsData] = useState({
+    company: "A_GROUP",
+    provider: "KCGS",
+    analysisType: "ESG 등급 추이",
+    inputBasis: "최근 공표 기준 3개년",
+    grades: [
+      { year: "2023", total: "B+", e: "B+", s: "B", g: "A" },
+      { year: "2024", total: "B+", e: "B", s: "B+", g: "A" },
+      { year: "2025", total: "A", e: "A", s: "B+", g: "A" }
+    ]
+  });
 
+  const handleKcgsDataChange = (field, value) => {
+    setKcgsData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleKcgsGradeChange = (year, field, value) => {
+    setKcgsData(prev => ({
+      ...prev,
+      grades: prev.grades.map(grade => 
+        grade.year === year ? { ...grade, [field]: value } : grade
+      )
+    }));
+  };
+  
+  const handleKcgsSubmit = () => {
+    setIsKcgsModalOpen(false);
+    if (!selectedInstitutions.includes("kcgs")) {
+      setSelectedInstitutions(prev => [...prev, "kcgs"]);
+    }
+  };
 
   const [status, setStatus] = useState({
     press: "ready",
@@ -108,18 +214,10 @@ const Media = () => {
   });
 
   const [formData, setFormData] = useState({
-    pressKeyword: "",
-    regOrg: "",
-    expertOrg: "",
     pressStartDate: "",
     pressEndDate: "",
-    regStartDate: "",
-    regEndDate: "",
-    expertStartDate: "",
-    expertEndDate: "",
   });
 
-  // --- 컴포넌트 언마운트 시 타이머 클리어 예방 조치 ---
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -145,7 +243,6 @@ const Media = () => {
     return () => clearInterval(interval);
   }, [isAnalyzing]);
 
-  // --- 애니메이션 파티클 버블 효과 생성 함수 ---
   const createParticles = () => {
     if (!particleRef.current) return;
     particleRef.current.innerHTML = "";
@@ -177,29 +274,38 @@ const Media = () => {
     navigate(STEPS[index].path);
   };
 
-  // --- 실시간 AI 분석 가동 프로세스 핸들러 ---
   const startMediaCollection = () => {
     if (isAnalyzing) return;
 
-    // 데이터 유효성 검사 (Validation)
     if (selectedPress.length === 0) {
-      showDefaultAlert("입력 오류", "언론사명 또는 키워드를 입력해주세요.", "warning");
+      showDefaultAlert("입력 오류", "수집 언론사를 선택해주세요.", "warning");
+      return;
+    }
+    if (!formData.pressStartDate) {
+      showDefaultAlert("입력 오류", "수집 시작일을 선택해주세요.", "warning");
+      return;
+    }
+    if (!formData.pressEndDate) {
+      showDefaultAlert("입력 오류", "수집 종료일을 선택해주세요.", "warning");
+      return;
+    }
+    if (formData.pressStartDate > formData.pressEndDate) {
+      showDefaultAlert("입력 오류", "수집 시작일이 종료일보다 늦습니다.", "warning");
       return;
     }
     if (selectedReg.length === 0) {
       showDefaultAlert("입력 오류", "규제 기관을 선택해주세요.", "warning");
       return;
     }
-    if (selectedAge.length === 0) {
-      showDefaultAlert("입력 오류", "평가 기관을 선택해주세요.", "warning");
+    if (selectedInstitutions.length === 0) {
+      showDefaultAlert("입력 오류", "전문 평가기관을 선택해주세요.", "warning");
       return;
     }
 
-    // 수집 애니메이션 및 대시보드 상태 가동
     setIsAnalyzing(true);
     setDashboardOpen(true);
     setShowResult(false);
-    createParticles(); // 파티클 실시간 재생성
+    createParticles();
 
     setStatus({
       press: "ing",
@@ -220,50 +326,52 @@ const Media = () => {
     if (type === "complete") return "수집완료";
   };
 
-
   const addPress = (e) => {
     const val = e.target.value;
     if (val && !selectedPress.includes(val)) {
       setSelectedPress(prev => [...prev, val]);
     }
-    e.target.value = ""; // 선택 후 드롭다운 초기화
+    e.target.value = "";
   };
 
   const removePress = (name) => {
     setSelectedPress(prev => prev.filter(p => p !== name));
   };
 
-  const addReg = (e) => {
-    const val = e.target.value;
-    if (val && !selectedReg.includes(val)) {
-      setSelectedReg(prev => [...prev, val]);
+  const toggleReg = (key) => {
+    setSelectedReg(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
+  const toggleInst = (key) => {
+    if (key === "kis" && !selectedInstitutions.includes("kis")) {
+      setIsKisModalOpen(true);
+      return;
     }
-    e.target.value = "";
-  };
-
-  const removeReg = (name) => {
-    setSelectedReg(prev => prev.filter(p => p !== name));
-  };
-
-  const addAge = (e) => {
-    const val = e.target.value;
-    if (val && !selectedAge.includes(val)) {
-      setSelectedAge(prev => [...prev, val]);
+    if (key === "kcgs" && !selectedInstitutions.includes("kcgs")) {
+      setIsKcgsModalOpen(true);
+      return;
     }
-    e.target.value = "";
+    setSelectedInstitutions(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
   };
 
-  const removeAge = (name) => {
-    setSelectedAge(prev => prev.filter(p => p !== name));
-  };
+  const pressReady = selectedPress.length > 0 && formData.pressStartDate && formData.pressEndDate;
+  const regulationReady = selectedReg.length > 0;
+  const institutionReady = selectedInstitutions.length > 0;
+
   const today = new Date().toISOString().split("T")[0];
+
+  const pressLabelMap = { impacton: "임팩트온", esgeconomy: "ESG경제" };
+  const institutionLabelMap = {};
+  INSTITUTION_OPTIONS.forEach(opt => { institutionLabelMap[opt.key] = opt.label; });
 
   return (
     <>
       <div className="media-container">
-        {/* --- STEPPER HEADER --- */}
         <header className="media-header">
-          
           <div className="media-stepper-row">
             {STEPS.map((step, index) => (
               <Fragment key={step.id}>
@@ -281,208 +389,292 @@ const Media = () => {
           </div>
         </header>
 
-        {/* --- FILTERS SETUP INPUT CARD --- */}
-        <main className="main-content">
+        <main className="media-main-content">
+          {/* 전체 콘텐츠를 감싸고, 중앙 정렬 & 최대 너비 부여 */}
           <div className="media-input-card">
-            <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px", color: "#0f172a" }}>
-              미디어 및 기관별 필터 수집 설정
-            </h2>
-            <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "10px", lineHeight: 1.5 }}>
-              언론사 뉴스, 정부 규제 데이터 및 ESG 전문기관의 평가 피드를 동기화하여 부정 위험성 및 공시 트렌드를 실시간 모니터링합니다.
-            </p>
-
-            <div className="media-setup-grid">
-              {/* 카드 1: 언론 채널 */}
-              <div className="media-card">
-                <div className="media-badge">언론 채널</div>
-                <div className="form-group" style={{ marginTop: "8px" }}>
-                  <label>수집 언론사명</label>
-                  <select className="media-select" onChange={addPress} defaultValue="">
-                    <option value="">언론사 선택</option>
-                    <option value="임팩트온">임팩트온</option>
-                    <option value="ESG 경제">ESG 경제</option>
-                  </select>
-                  {selectedPress.length > 0 && (
-                    <div style={{
-                      display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px"
-                    }}>
-                      {selectedPress.map((name) => (
-                        <span key={name} style={{
-                          display: "inline-flex", alignItems: "center", gap: "4px",
-                          padding: "3px 10px", background: "#f0fdf4",
-                          border: "1px solid #bbf7d0", borderRadius: "20px",
-                          fontSize: "0.78rem", fontWeight: 700, color: "#16a34a",
-                        }}>
-                          {name}
-                          <button
-                            onClick={() => removePress(name)}
-                            style={{
-                              background: "none", border: "none", cursor: "pointer",
-                              color: "#94a3b8", fontSize: "0.75rem", padding: "0",
-                              lineHeight: 1,
-                            }}
-                          >✕</button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                </div>
-                <div className="form-group">
-                  <label>수집 희망 기간</label>
-                  <div className="date-range-group">
-                    {/* 시작 날짜 - 2023-01-01 이후만 선택 가능 */}
-                    <input type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" max={today} />
-                    <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
-                    <input type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} min="2023-01-01" max={today} />
-                  </div>
-                </div>
-                <div className="status-container">
-                  <span className="status-label">현재 상태</span>
-                  <span className={`status-badge ${status.press}`}>{getStatusText(status.press)}</span>
-                </div>
-              </div>
-
-              {/* 카드 2: 규제 기관 */}
-              <div className="media-card">
-                <div className="media-badge">규제 기관</div>
-                <div className="form-group" style={{ marginTop: "8px" }}>
-                  <label>정부 및 규제 데이터 소스</label>
-                  <select className="media-select" onChange={addReg} defaultValue="">
-                    <option value="">규제 기관 선택</option>
-                    <option value="CBAM"> CBAM</option>
-                    <option value="CSRS">CSRS</option>
-                    <option value="ESRD">ESRD</option>
-                    <option value="DPP">DPP</option>
-                  </select>
-                  {selectedReg.length > 0 && (
-                    <div style={{
-                      display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px"
-                    }}>
-                      {selectedReg.map((name) => (
-                        <span key={name} style={{
-                          display: "inline-flex", alignItems: "center", gap: "4px",
-                          padding: "3px 10px", background: "#f0fdf4",
-                          border: "1px solid #bbf7d0", borderRadius: "20px",
-                          fontSize: "0.78rem", fontWeight: 700, color: "#16a34a",
-                        }}>
-                          {name}
-                          <button
-                            onClick={() => removeReg(name)}
-                            style={{
-                              background: "none", border: "none", cursor: "pointer",
-                              color: "#94a3b8", fontSize: "0.75rem", padding: "0",
-                              lineHeight: 1,
-                            }}
-                          >✕</button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* <div className="form-group">
-                <label>대상 규제 제정 기간</label>
-                <div className="date-range-group">
-                  <input type="date" name="regStartDate" value={formData.regStartDate} onChange={handleChange} min="2023-01-01" />
-                  <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
-                  <input type="date" name="regEndDate" value={formData.regEndDate} onChange={handleChange} max={new Date().toISOString().split("T")[0]}/>
-                </div>
-              </div> */}
-                <div className="status-container">
-                  <span className="status-label">현재 상태</span>
-                  <span className={`status-badge ${status.reg}`}>{getStatusText(status.reg)}</span>
-                </div>
-              </div>
-
-              {/* 카드 3: 전문 평가기관 */}
-              <div className="media-card">
-                <div className="media-badge">전문 평가기관</div>
-                <div className="form-group" style={{ marginTop: "8px" }}>
-                  <label>ESG 외부 평가/리서치 기관</label>
-                  <select className="media-select" onChange={addAge} defaultValue="">
-                    <option value="">평가 기관 선택</option>
-                    <option value="MSCI">MSCI</option>
-                    <option value="Sustainalytics">Sustainalytics</option>
-                    <option value="한국ESG기준원">한국ESG기준원</option>
-                  </select>
-                  {selectedAge.length > 0 && (
-                    <div style={{
-                      display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px"
-                    }}>
-                      {selectedAge.map((name) => (
-                        <span key={name} style={{
-                          display: "inline-flex", alignItems: "center", gap: "4px",
-                          padding: "3px 10px", background: "#f0fdf4",
-                          border: "1px solid #bbf7d0", borderRadius: "20px",
-                          fontSize: "0.78rem", fontWeight: 700, color: "#16a34a",
-                        }}>
-                          {name}
-                          <button
-                            onClick={() => removeAge(name)}
-                            style={{
-                              background: "none", border: "none", cursor: "pointer",
-                              color: "#94a3b8", fontSize: "0.75rem", padding: "0",
-                              lineHeight: 1,
-                            }}
-                          >✕</button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                </div>
-                <div className="form-group">
-                  <label>리포트 공시 기간</label>
-                  <div className="date-range-group">
-                    <input type="number" name="expertStartDate" value={formData.expertStartDate} onChange={handleChange} min="2020" max={new Date().getFullYear()} placeholder="시작 연도" style={{ width: "90px", padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "0.85rem" }} />
-                    <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>~</span>
-                    <input type="number" name="expertEndDate" value={formData.expertEndDate} onChange={handleChange} min="2020" max={new Date().getFullYear()} placeholder="종료 연도" style={{ width: "90px", padding: "6px 8px", border: "1px solid #e2e8f0", borderRadius: "8px", fontSize: "0.85rem" }} />
-                  </div>
-                </div>
-                <div className="status-container">
-                  <span className="status-label">현재 상태</span>
-                  <span className={`status-badge ${status.expert}`}>{getStatusText(status.expert)}</span>
-                </div>
-              </div>
+            <div style={{ marginBottom: "18px" }}>
+              <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px", color: "#0f172a" }}>
+                미디어 및 기관별 필터 수집 설정
+              </h2>
+              <p style={{ color: "#64748b", fontSize: "0.9rem", margin: 0, lineHeight: 1.5 }}>
+                언론사 뉴스, 정부 규제 데이터 및 ESG 전문기관의 평가 피드를 동기화하여 부정 위험성 및 공시 트렌드를 실시간 모니터링합니다.
+              </p>
             </div>
 
-            <div className="action-container">
-              <button className="media-btn" onClick={startMediaCollection} style={{ marginBottom: "50px" }}>
-                실시간 AI 분석 시작
-              </button>
+            <div className="media-compact-workspace" style={{ width: "100%", textAlign: "left" }}>
+              {/* 좌측 패널 */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div className="media-compact-tabs">
+                  {[
+                    { key: "press", label: "언론 채널", icon: TabIcons.press },
+                    { key: "regulation", label: "규제 기관", icon: TabIcons.regulation },
+                    { key: "institution", label: "전문 평가기관", icon: TabIcons.institution },
+                  ].map(tab => {
+                    const isActive = activeSourceTab === tab.key;
+                    const color = isActive ? "#03A94D" : "#94a3b8";
+                    return (
+                      <button
+                        key={tab.key}
+                        type="button"
+                        className={`media-compact-tab ${isActive ? "active" : ""}`}
+                        onClick={() => setActiveSourceTab(tab.key)}
+                      >
+                        {tab.icon(color)}
+                        {tab.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 언론 채널 폼 */}
+                {activeSourceTab === "press" && (
+                  <div className="media-compact-card">
+                    <div className="media-press-layout">
+                      <div className="form-group">
+                        <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", fontWeight: 700, color: "#475569", marginBottom: "6px" }}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                          1. 수집 언론사명
+                        </label>
+                        <select className="media-compact-input" onChange={addPress} defaultValue="">
+                          <option value="">언론사 선택</option>
+                          <option value="impacton">임팩트온</option>
+                          <option value="esgeconomy">ESG경제</option>
+                        </select>
+                        {selectedPress.length > 0 && (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
+                            {selectedPress.map((key) => (
+                              <span key={key} style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "3px 10px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "20px", fontSize: "0.78rem", fontWeight: 700, color: "#16a34a" }}>
+                                {pressLabelMap[key] || key}
+                                <button onClick={() => removePress(key)} style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: "0.75rem", padding: "0", lineHeight: 1 }}>✕</button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="form-group">
+                        <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", fontWeight: 700, color: "#475569", marginBottom: "6px" }}>
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                          2. 수집 희망 기간
+                        </label>
+                        <div className="media-press-date-row">
+                          <input className="media-compact-input" type="date" name="pressStartDate" value={formData.pressStartDate} onChange={handleChange} min="2023-01-01" max={today} />
+                          <span style={{ color: "#94a3b8", fontSize: "0.8rem", textAlign: "center" }}>~</span>
+                          <input className="media-compact-input" type="date" name="pressEndDate" value={formData.pressEndDate} onChange={handleChange} min="2023-01-01" max={today} />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="status-container" style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px dashed #e2e8f0" }}>
+                      <span className="status-label">현재 상태</span>
+                      <span className={`status-badge ${status.press}`}>{getStatusText(status.press)}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* 규제 기관 폼 */}
+                {activeSourceTab === "regulation" && (
+                  <div className="media-compact-card">
+                    <div className="form-group">
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", fontWeight: 700, color: "#475569", marginBottom: "8px" }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                        1. 규제 기관 출처 선택
+                        <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 400 }}>(복수 선택 가능)</span>
+                      </label>
+                      <div className="media-toggle-grid-3">
+                        {REGULATION_SOURCES.map(src => {
+                          const isSelected = selectedReg.includes(src.key);
+                          return (
+                            <div
+                              key={src.key}
+                              className={`media-toggle-card ${isSelected ? "active" : ""}`}
+                              onClick={() => toggleReg(src.key)}
+                            >
+                              <span className="media-toggle-card-label">{src.label}</span>
+                              <span className="media-toggle-card-desc" style={{ whiteSpace: "pre-line" }}>{src.desc}</span>
+                              {isSelected && <span className="media-toggle-check">✓</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="status-container" style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px dashed #e2e8f0" }}>
+                      <span className="status-label">현재 상태</span>
+                      <span className={`status-badge ${regulationReady ? "complete" : "ready"}`}>
+                        {regulationReady ? "규제 선택 완료" : "규제 선택 대기"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* 전문 평가기관 폼 */}
+                {activeSourceTab === "institution" && (
+                  <div className="media-compact-card">
+                    <div className="form-group">
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.82rem", fontWeight: 700, color: "#475569", marginBottom: "8px" }}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 2 7 22 7"/></svg>
+                        1. 평가 기관 선택
+                        <span style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 400 }}>(복수 선택 가능)</span>
+                      </label>
+                      <div className="media-toggle-grid-2">
+                        {INSTITUTION_OPTIONS.map(src => {
+                          const isSelected = selectedInstitutions.includes(src.key);
+                          return (
+                            <div
+                              key={src.key}
+                              className={`media-toggle-card ${isSelected ? "active" : ""}`}
+                              onClick={() => toggleInst(src.key)}
+                            >
+                              <span className="media-toggle-card-label">{src.label}</span>
+                              <span className="media-toggle-card-desc" style={{ whiteSpace: "pre-line" }}>{src.desc}</span>
+                              {isSelected && <span className="media-toggle-check">✓</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="status-container" style={{ marginTop: "auto", paddingTop: "12px", borderTop: "1px dashed #e2e8f0" }}>
+                      <span className="status-label">현재 상태</span>
+                      <span className={`status-badge ${institutionReady ? "complete" : "ready"}`}>
+                        {institutionReady ? "기관 선택 완료" : "기관 선택 대기"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* 체크리스트 */}
+                <div className="media-checklist-wrapper" style={{ marginTop: "16px", marginBottom: "22px" }}>
+                  <div className="media-checklist-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><polyline points="9,11 10.5,12.5 13,10"/><polyline points="9,16 10.5,17.5 13,15"/></svg>
+                    분석 준비 체크리스트
+                  </div>
+                  <div className="media-checklist-grid">
+                    {[
+                      { label: "언론사 선택", done: selectedPress.length > 0 },
+                      { label: "수집 기간 설정", done: !!(formData.pressStartDate && formData.pressEndDate) },
+                      { label: "규제 데이터 소스", done: regulationReady },
+                      { label: "전문 평가기관 선택", done: institutionReady },
+                    ].map(item => (
+                      <div key={item.label} className={`media-checklist-card ${item.done ? "done" : "pending"}`}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={item.done ? "#03A94D" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        <span className="checklist-card-label" style={{ color: item.done ? "#1e293b" : "#94a3b8" }}>{item.label}</span>
+                        <span className={`checklist-card-badge ${item.done ? "done" : "pending"}`}>
+                          {item.done ? "완료" : "설정 필요"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* CTA 버튼 (체크리스트 바로 아래) */}
+                <div className="media-cta-wrapper">
+                  <button className="Bench-btn" onClick={startMediaCollection}>
+                    실시간 AI 분석 시작
+                  </button>
+                </div>
+              </div>
+
+              {/* 우측 패널 */}
+              <div className="media-summary-col">
+                <div className="media-summary-card">
+                  <div className="media-summary-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/></svg>
+                    선택 요약
+                  </div>
+                  <div className="media-summary-row">
+                    <span style={{ color: "#64748b", fontWeight: 600 }}>언론 채널</span>
+                    <span style={{ color: "#1e293b", fontWeight: 700 }}>
+                      {selectedPress.length > 0 ? selectedPress.map(k => pressLabelMap[k] || k).join(", ") : <span style={{ color: "#94a3b8" }}>미선택</span>}
+                    </span>
+                  </div>
+                  <div className="media-summary-row">
+                    <span style={{ color: "#64748b", fontWeight: 600 }}>수집 기간</span>
+                    <span style={{ color: "#1e293b", fontWeight: 700 }}>
+                      {formData.pressStartDate && formData.pressEndDate ? `${formData.pressStartDate} ~ ${formData.pressEndDate}` : <span style={{ color: "#94a3b8" }}>미설정</span>}
+                    </span>
+                  </div>
+                  <div className="media-summary-row">
+                    <span style={{ color: "#64748b", fontWeight: 600 }}>규제 기관</span>
+                    <span style={{ color: "#1e293b", fontWeight: 700, display: "flex", flexWrap: "wrap", gap: "4px", justifyContent: "flex-end" }}>
+                      {selectedReg.length > 0 ? selectedReg.map(k => <span key={k} style={{ padding: "2px 8px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "10px", fontSize: "0.72rem", color: "#16a34a" }}>{k}</span>) : <span style={{ color: "#94a3b8" }}>미선택</span>}
+                    </span>
+                  </div>
+                  <div className="media-summary-row">
+                    <span style={{ color: "#64748b", fontWeight: 600 }}>전문 평가기관</span>
+                    <span style={{ color: "#1e293b", fontWeight: 700, display: "flex", flexWrap: "wrap", gap: "4px", justifyContent: "flex-end" }}>
+                      {selectedInstitutions.length > 0 ? selectedInstitutions.map(k => <span key={k} style={{ padding: "2px 8px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "10px", fontSize: "0.72rem", color: "#16a34a" }}>{institutionLabelMap[k] || k}</span>) : <span style={{ color: "#94a3b8" }}>미선택</span>}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="media-summary-card">
+                  <div className="media-summary-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                    미디어 분석 진행 상태
+                  </div>
+                  
+                  <div className="media-summary-row">
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontWeight: 600 }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={(isAnalyzing || showResult) ? "#03A94D" : (pressReady && regulationReady && institutionReady ? "#03A94D" : "#94a3b8")} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      준비 단계
+                    </span>
+                    <span style={{ fontWeight: 700, color: (isAnalyzing || showResult) ? "#15803d" : (pressReady && regulationReady && institutionReady ? "#15803d" : "#94a3b8") }}>
+                      {(isAnalyzing || showResult) ? "완료" : (pressReady && regulationReady && institutionReady ? "준비 완료" : "대기 중")}
+                    </span>
+                  </div>
+
+                  <div className="media-summary-row">
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontWeight: 600 }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={status.press === "complete" ? "#03A94D" : status.press === "ing" ? "#0284c7" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      기사 수집 단계
+                    </span>
+                    <span style={{ fontWeight: 700, color: status.press === "complete" ? "#15803d" : status.press === "ing" ? "#0284c7" : "#94a3b8" }}>
+                      {status.press === "complete" ? "완료" : status.press === "ing" ? "수집 중" : "대기 중"}
+                    </span>
+                  </div>
+
+                  <div className="media-summary-row">
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontWeight: 600 }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={status.reg === "complete" ? "#03A94D" : status.reg === "ing" ? "#0284c7" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      규제 분석 상태
+                    </span>
+                    <span style={{ fontWeight: 700, color: status.reg === "complete" ? "#15803d" : status.reg === "ing" ? "#0284c7" : "#94a3b8" }}>
+                      {status.reg === "complete" ? "완료" : status.reg === "ing" ? "분석 중" : "대기 중"}
+                    </span>
+                  </div>
+
+                  <div className="media-summary-row">
+                    <span style={{ display: "flex", alignItems: "center", gap: "6px", color: "#475569", fontWeight: 600 }}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={status.expert === "complete" ? "#03A94D" : status.expert === "ing" ? "#0284c7" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      전문 평가기관 분석 상태
+                    </span>
+                    <span style={{ fontWeight: 700, color: status.expert === "complete" ? "#15803d" : status.expert === "ing" ? "#0284c7" : "#94a3b8" }}>
+                      {status.expert === "complete" ? "완료" : status.expert === "ing" ? "분석 중" : "대기 중"}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </main>
 
+        {/* ── 기존 Bottom Result Dashboard (유지) ── */}
         <div className={`media-result-dashboard ${dashboardOpen ? "open" : ""} ${showResult ? "result-expanded" : ""}`}>
-
-          {/* 핸들 버튼 - 항상 표시 */}
-          <div
-            className="dashboard-handle"
-            onClick={() => setDashboardOpen(!dashboardOpen)}
-            style={{ cursor: "pointer" }}
-          >
+          <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen)}>
             <div className={`handle-pill ${showResult ? "complete" : ""}`}>
-              {isAnalyzing
-                ? "AI 파이프라인 수집 가동 중..."
-                : showResult
-                  ? "분석 완료 - 결과 요약 확인 (클릭)"
-                  : "실시간 분석 대기 중"}
+              {isAnalyzing ? "AI 파이프라인 수집 가동 중..." : showResult ? "분석 완료 - 결과 요약 확인 (클릭)" : "실시간 분석 대기 중"}
             </div>
           </div>
-
-          {/* 대시보드 내용 - 분석 중이거나 결과 있을 때만 렌더링 */}
           {(dashboardOpen || isAnalyzing || showResult) && (
             <div className={`robot-view-container ${showResult ? "showing-result" : ""}`}>
-              {/* 가동 애니메이션 파티클 필드 */}
               <div id="particle-field" ref={particleRef}></div>
+              {!showResult && <img src={robot} className="robot-media-main-img" alt="마스코트 로봇" />}
               {!showResult && (
-                <img src={robot} className="robot-media-main-img" alt="마스코트 로봇" style={{ alignSelf: "center" }} />
-              )}
-              {/* 수집 대기 및 로딩 중 안내판 */}
-              {!showResult && (
-                <div style={{ textAlign: "center" }}>
+                <div style={{ textAlign: "center", zIndex: 3 }}>
                   <h3 style={{ fontSize: "1.1rem", fontWeight: 850, margin: "0 0 4px 0" }}>{loadingTitle}</h3>
                   <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>{loadingDesc}</p>
                   {isAnalyzing && (
@@ -497,11 +689,8 @@ const Media = () => {
                   )}
                 </div>
               )}
-
-              {/* AI 분석 완료 후 노출될 데이터 레이아웃 영역 */}
               {showResult && (
-                <div className="result-layout-content" style={{ width: "100%" }}>
-                  {/* 결과 배너 */}
+                <div className="result-layout-content" style={{ width: "100%", zIndex: 3 }}>
                   <div className="result-banner" style={{ background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                     <div className="result-banner-left">
                       <div className="result-banner-title" style={{ textAlign: "center", alignSelf: "center" }}>
@@ -512,16 +701,7 @@ const Media = () => {
                         외부 시그널 기반의 주요 서브이슈를 도출했습니다.
                       </p>
                     </div>
-                    {/* 로봇 이미지 우측 배치 */}
-                    {/* <img
-                      src={robot}
-                      alt="마스코트 로봇"
-                      style={{ height: "120px", width: "auto", flexShrink: 0, marginLeft: "16px" }}
-                    /> */}
                   </div>
-
-                  {/* 통계 카드 4개 */}
-
                   <div className="result-stats-row">
                     <div className="result-stat-card">
                       <div className="stat-icon-wrap">📰</div>
@@ -555,10 +735,7 @@ const Media = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* 하단 3패널 */}
                   <div className="result-panels-row">
-                    {/* 패널1: Source 별 반영 현황 */}
                     <div className="result-panel">
                       <div className="panel-header-row">
                         <span className="panel-title">Source 별 반영 현황</span>
@@ -582,17 +759,13 @@ const Media = () => {
                         </tbody>
                       </table>
                     </div>
-
-                    {/* 패널2: 미디어 TOP 이슈 점수 */}
                     <div className="result-panel">
                       <div className="panel-header-row">
                         <span className="panel-title">미디어 TOP 이슈 점수</span>
                         <span className="panel-info-btn">ⓘ</span>
                       </div>
                       <table className="issue-table">
-                        <thead>
-
-                        </thead>
+                        <thead></thead>
                         <tbody>
                           {DASHBOARD_MOCK_DATA.topIssues.map((item) => (
                             <tr key={item.rank}>
@@ -601,16 +774,12 @@ const Media = () => {
                               <td>{item.impact}</td>
                               <td>{item.financial}</td>
                               <td>{item.source}</td>
-                              <td>
-
-                              </td>
+                              <td></td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-
-                    {/* 패널3: 반영 방식 안내 */}
                     <div className="result-panel">
                       <div className="panel-header-row">
                         <span className="panel-title">반영 방식 안내</span>
@@ -630,8 +799,6 @@ const Media = () => {
                       <div className="reflect-note">ⓘ 향후 MSCI·S&P·EcoVadis 등 외부 평가기관 자료 확장 가능</div>
                     </div>
                   </div>
-
-                  {/* 다음 단계 알림 가이드 가이드바 */}
                   {STEPS[activeIndex + 1] && (
                     <div style={{ textAlign: "center", marginTop: "25px", color: "#64748b", fontSize: "0.9rem" }}>
                       다음 단계 가이드: <strong>{STEPS[activeIndex + 1].title}</strong> 진행이 가능합니다.
@@ -642,9 +809,167 @@ const Media = () => {
             </div>
           )}
         </div>
+
+        {isKisModalOpen && (
+          <div className="media-modal-overlay">
+            <div className="media-modal-content">
+              <div className="media-modal-header">
+                <button className="media-modal-close" onClick={() => setIsKisModalOpen(false)}>✕</button>
+                <h3 className="media-modal-title">한국신용평가 입력</h3>
+              </div>
+              
+              <div className="media-modal-body">
+                <div className="media-modal-section">
+                  <div className="media-modal-section-title">1. 기본 정보</div>
+                  <div className="media-modal-grid">
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">회사</label>
+                      <input type="text" className="media-modal-input" value={kisData.company} onChange={(e) => handleKisDataChange("company", e.target.value)} />
+                    </div>
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">제공기관</label>
+                      <input type="text" className="media-modal-input" value={kisData.provider} readOnly />
+                    </div>
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">분석 유형</label>
+                      <select className="media-modal-select" value={kisData.analysisType} onChange={(e) => handleKisDataChange("analysisType", e.target.value)}>
+                        <option value="재무 위험지표 Export">재무 위험지표 Export</option>
+                      </select>
+                    </div>
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">기준연도</label>
+                      <input type="number" className="media-modal-input" value={kisData.baseYear} onChange={(e) => handleKisDataChange("baseYear", e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="media-modal-section">
+                  <div className="media-modal-section-title">2. 재무 위험지표 입력</div>
+                  <table className="media-modal-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "25%", textAlign: "left", paddingLeft: "16px" }}>지표명</th>
+                        <th>2023</th>
+                        <th>2024</th>
+                        <th>2025</th>
+                        <th style={{ width: "15%" }}>단위</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {kisData.indicators.map(ind => (
+                        <tr key={ind.id}>
+                          <td style={{ textAlign: "left", fontWeight: "600", color: "#475569", paddingLeft: "16px" }}>{ind.name}</td>
+                          <td><input type="number" step="0.1" className="media-table-input" value={ind.y2023} onChange={(e) => handleKisIndicatorChange(ind.id, "y2023", e.target.value)} /></td>
+                          <td><input type="number" step="0.1" className="media-table-input" value={ind.y2024} onChange={(e) => handleKisIndicatorChange(ind.id, "y2024", e.target.value)} /></td>
+                          <td><input type="number" step="0.1" className="media-table-input" value={ind.y2025} onChange={(e) => handleKisIndicatorChange(ind.id, "y2025", e.target.value)} /></td>
+                          <td className="media-table-unit">{ind.unit}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="media-modal-footer">
+                <button className="media-modal-btn cancel" onClick={() => setIsKisModalOpen(false)}>취소</button>
+                <button className="media-modal-btn draft">임시저장</button>
+                <button className="media-modal-btn submit" onClick={handleKisSubmit}>입력 완료</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isKcgsModalOpen && (
+          <div className="media-modal-overlay">
+            <div className="media-modal-content">
+              <div className="media-modal-header">
+                <button className="media-modal-close" onClick={() => setIsKcgsModalOpen(false)}>✕</button>
+                <h3 className="media-modal-title">한국ESG기준원 입력</h3>
+                <p className="media-modal-subtitle">KCGS ESG 등급 추이</p>
+              </div>
+              
+              <div className="media-modal-body">
+                <div className="media-modal-section">
+                  <div className="media-modal-section-title">1. 기본 정보</div>
+                  <div className="media-modal-grid">
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">회사</label>
+                      <input type="text" className="media-modal-input" value={kcgsData.company} onChange={(e) => handleKcgsDataChange("company", e.target.value)} />
+                    </div>
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">제공기관</label>
+                      <input type="text" className="media-modal-input" value={kcgsData.provider} readOnly />
+                    </div>
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">분석 유형</label>
+                      <select className="media-modal-select" value={kcgsData.analysisType} onChange={(e) => handleKcgsDataChange("analysisType", e.target.value)}>
+                        <option value="ESG 등급 추이">ESG 등급 추이</option>
+                      </select>
+                    </div>
+                    <div className="media-modal-field">
+                      <label className="media-modal-label">입력 기준</label>
+                      <select className="media-modal-select" value={kcgsData.inputBasis} onChange={(e) => handleKcgsDataChange("inputBasis", e.target.value)}>
+                        <option value="최근 공표 기준 3개년">최근 공표 기준 3개년</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="media-modal-section">
+                  <div className="media-modal-section-title">2. 등급 입력</div>
+                  <table className="media-modal-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "20%", paddingLeft: "16px" }}>평가연도</th>
+                        <th style={{ width: "20%" }}>종합</th>
+                        <th style={{ width: "20%" }}>E</th>
+                        <th style={{ width: "20%" }}>S</th>
+                        <th style={{ width: "20%" }}>G</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {kcgsData.grades.map(grade => (
+                        <tr key={grade.year}>
+                          <td style={{ fontWeight: "600", color: "#475569", paddingLeft: "16px" }}>{grade.year}</td>
+                          <td>
+                            <select className="media-table-select" value={grade.total} onChange={(e) => handleKcgsGradeChange(grade.year, "total", e.target.value)}>
+                              {["S", "A+", "A", "B+", "B", "C", "D"].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                          </td>
+                          <td>
+                            <select className="media-table-select" value={grade.e} onChange={(e) => handleKcgsGradeChange(grade.year, "e", e.target.value)}>
+                              {["S", "A+", "A", "B+", "B", "C", "D"].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                          </td>
+                          <td>
+                            <select className="media-table-select" value={grade.s} onChange={(e) => handleKcgsGradeChange(grade.year, "s", e.target.value)}>
+                              {["S", "A+", "A", "B+", "B", "C", "D"].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                          </td>
+                          <td>
+                            <select className="media-table-select" value={grade.g} onChange={(e) => handleKcgsGradeChange(grade.year, "g", e.target.value)}>
+                              {["S", "A+", "A", "B+", "B", "C", "D"].map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="reflect-note" style={{ marginTop: "12px", color: "#16a34a", fontSize: "0.85rem", paddingLeft: "16px" }}>ⓘ 최신연도 등급과 직전연도 비교를 기준으로 추세 보정값이 계산됩니다.</div>
+                </div>
+              </div>
+
+              <div className="media-modal-footer">
+                <button className="media-modal-btn cancel" onClick={() => setIsKcgsModalOpen(false)}>취소</button>
+                <button className="media-modal-btn draft">임시저장</button>
+                <button className="media-modal-btn submit" onClick={handleKcgsSubmit}>입력 완료</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
-
   );
 }
+
 export default Media;

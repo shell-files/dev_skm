@@ -321,6 +321,8 @@
 .doc-page-info { font-size:12px; color:#64748b; font-weight:600; white-space:nowrap; }
 .doc-btn { display:flex; align-items:center; gap:5px; padding:6px 14px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; font-size:12px; font-weight:600; color:#475569; cursor:pointer; font-family:inherit; }
 .doc-btn:hover{background:#f8fafc;}
+.doc-btn.reset-btn{border-color:#fca5a5;color:#dc2626;}
+.doc-btn.reset-btn:hover{background:#fef2f2;}
 .doc-btn-more { padding:6px 10px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; font-size:14px; color:#475569; cursor:pointer; }
 
 /* Document scroll */
@@ -404,6 +406,43 @@
 .related-para-link{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#f8fafc;border-radius:8px;cursor:pointer;border:1px solid #e2e8f0;}
 .related-para-label{font-size:12px;font-weight:700;color:#03A94D;}
 .related-para-btn{font-size:11px;color:#64748b;font-weight:600;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 10px;cursor:pointer;font-family:inherit;}
+
+/* 추적 가능 요소 커서 */
+.sr-page [data-source] { cursor: pointer; }
+
+/* 데이터 추적 하이라이트 — 깔끔한 링 + 글로우 */
+[data-source].tracking-active {
+  box-shadow: 0 0 0 2.5px #03A94D, 0 0 0 5px rgba(3, 169, 77, 0.18);
+  border-radius: 5px;
+  animation: trackFadeIn 0.18s ease forwards;
+}
+@keyframes trackFadeIn {
+  from { box-shadow: 0 0 0 0 rgba(3, 169, 77, 0), 0 0 0 0 rgba(3, 169, 77, 0); }
+  to   { box-shadow: 0 0 0 2.5px #03A94D, 0 0 0 5px rgba(3, 169, 77, 0.18); }
+}
+
+/* 패널 지표 선택 (접이식 리스트) */
+.panel-select-count { font-size:10.5px; font-weight:700; color:#94a3b8; white-space:nowrap; }
+.panel-metric-list-wrap { border-bottom:1px solid #e8edf3; background:#f8fafc; position:relative; }
+.panel-metric-list-hd { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; cursor:pointer; user-select:none; border:1px solid #d1d5db; border-radius:8px; margin:8px 12px; background:#fff; transition:border-color .15s, box-shadow .15s; }
+.panel-metric-list-wrap.open .panel-metric-list-hd { border-color:#03A94D; box-shadow:0 0 0 2px rgba(3,169,77,.12); border-bottom-left-radius:0; border-bottom-right-radius:0; margin-bottom:0; }
+.panel-metric-list-label { font-size:12px; font-weight:600; color:#1e293b; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.panel-metric-list-right { display:flex; align-items:center; gap:6px; flex-shrink:0; }
+.panel-metric-chevron { font-size:9px; color:#94a3b8; }
+.panel-metric-list { display:flex; flex-direction:column; max-height:200px; overflow-y:auto; padding:4px 8px 8px; gap:2px; border:1px solid #03A94D; border-top:none; border-radius:0 0 8px 8px; margin:0 12px 8px; background:#fff; box-shadow:0 4px 12px rgba(0,0,0,.08); }
+.panel-metric-item { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:7px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; color:#475569; transition:background .12s, color .12s; }
+.panel-metric-item:hover { background:#f0fdf4; color:#1e293b; }
+.panel-metric-item.active { background:#03A94D; color:#fff; }
+.panel-metric-item-name { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.panel-metric-item-badge { font-size:9.5px; font-weight:700; padding:1px 6px; border-radius:20px; flex-shrink:0; }
+.panel-metric-item:not(.active) .panel-metric-item-badge { background:#dbeafe; color:#2563eb; }
+.panel-metric-item.active .panel-metric-item-badge { background:rgba(255,255,255,.25); color:#fff; }
+.panel-tab-body { padding:14px 18px; display:flex; flex-direction:column; gap:10px; }
+.metric-rows-block { border:1px solid #e2e8f0; border-radius:10px; overflow:hidden; padding:10px 14px; display:flex; flex-direction:column; gap:6px; background:#f8fafc; }
+
+/* 단일 통합 PDF 목차 */
+.pdf-toc-si-group { margin-bottom:12px; }
+.pdf-toc-si-header { font-size:11px; font-weight:800; color:#34805c; text-transform:uppercase; letter-spacing:.5px; padding:6px 6px 4px; }
 
 /* Status bar */
 .draft-statusbar{height:40px;background:#fff;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;}

@@ -25,6 +25,7 @@ from src.models.materiality import (
     SurveyTopIssueDto,
     TopIssueDto,
 )
+from src.utils.db import findAll, findOne
 from src.utils.dmaaggregator import getCoverageStatus
 from src.utils.dmarepository import (
     countObservedSubIssues,
@@ -344,7 +345,7 @@ def getSurveyResult(runId: int) -> SurveyResponseDto:
     )
 
 
-def getSelectionProcess(runId: int) -> SelectionProcessResponseDto:
+def getSelectionProcess(runId: int, userModel) -> SelectionProcessResponseDto:
     rows = listResults(runId)
     selectedContext = _resolveSelectedContext(runId, rows)
     items = [_buildResultItem(row, selectedContext["selectedCodes"]) for row in rows]
@@ -383,6 +384,53 @@ def getSelectionProcess(runId: int) -> SelectionProcessResponseDto:
         selectedIssues=selectedIssues,
         excludedIssues=excludedIssues,
     )
+
+
+def getOnboardingProgress(runId: int) -> dict:
+    run = findOne(
+        "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? AND delete_yn = 0",
+        (runId,),
+    )
+    if not run:
+        raise ValueError(f"Materiality run not found: {runId}")
+
+    rows = findAll(
+        """
+        SELECT
+            sub.sub_issue_code,
+            COALESCE(sub_master.sub_issue_name_kr, '기타') AS sub_issue_name,
+            COUNT(DISTINCT master.atomic_metric_id)        AS total_count,
+            COUNT(DISTINCT CASE
+                WHEN fact.atomic_metric_id   IS NOT NULL
+                  OR rollup.group_atomic_metric_id IS NOT NULL
+                THEN master.atomic_metric_id
+            END)                                           AS done_count
+        FROM ESG_MATERIALITY_SELECTED_SUB_ISSUE sub
+        LEFT JOIN ESG_SUB_ISSUE_MASTER sub_master
+            ON sub.sub_issue_code = sub_master.sub_issue_code
+        LEFT JOIN ESG_ATOMIC_METRIC_MASTER master
+            ON sub.sub_issue_code = master.sub_issue_code
+        LEFT JOIN ESG_KPI_FACT fact
+            ON master.atomic_metric_id = fact.atomic_metric_id
+        LEFT JOIN ESG_GROUP_ROLLUP_RESULT rollup
+            ON master.atomic_metric_id = rollup.group_atomic_metric_id
+        WHERE sub.esg_materiality_run_id = ?
+        GROUP BY sub.sub_issue_code, sub_master.sub_issue_name_kr
+        ORDER BY sub.selected_rank_no ASC
+        """,
+        (runId,),
+    )
+
+    items = [
+        {
+            "subIssueCode": r["sub_issue_code"],
+            "subIssueName": r["sub_issue_name"],
+            "totalCount": int(r["total_count"] or 0),
+            "doneCount": int(r["done_count"] or 0),
+        }
+        for r in (rows or [])
+    ]
+    return {"runId": runId, "items": items}
 
 
 def _buildResultItem(row: dict, selectedCodes: list[str]) -> MaterialityResultItemDto:

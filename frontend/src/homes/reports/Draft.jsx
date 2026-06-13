@@ -155,9 +155,6 @@ const Draft = () => {
 
   useEffect(() => {
     if (!reportData) {
-      // navigate('/result');
-      console.log("데이터 없음")
-      console.log(selectedCompany.company_id, year)
       return;
     }
   }, [reportData]);
@@ -248,6 +245,7 @@ const Draft = () => {
   }, [trackId, companyId, year]);
 
   // 페이지 이동 시 현재 페이지의 [data-source] 요소만 스캔해 패널 목록 구성
+  // trackId는 리셋 — 패널은 사용자가 직접 클릭할 때만 열린다
   useEffect(() => {
     const container = previewRef.current;
     if (!container) return;
@@ -258,11 +256,8 @@ const Draft = () => {
         if (t && SR_FIELD_MAP[t]) seen.add(t);
       });
     });
-    const ids = [...seen];
-    if (ids.length > 0) {
-      setPanelMetricIds(ids);
-      setTrackId(prev => (ids.includes(prev) ? prev : ids[0]));
-    }
+    setPanelMetricIds([...seen]);
+    setTrackId(null);
   }, [currentPage]);
 
   // trackId 변경 시 미리보기에서 해당 [data-source] 요소 하이라이트
@@ -823,7 +818,6 @@ const Draft = () => {
       aiDesc: null,
     }
     : null;
-  console.log(srMetric);
 
   return (
     <div className="draft-container">
@@ -981,7 +975,7 @@ const Draft = () => {
 
 
             {/* 우측 데이터 추적 패널 */}
-            <div className={`draft-panel ${panelMetricIds.length > 0 && !isEditing ? "open" : ""}`} id="draftPanel">
+            <div className={`draft-panel ${panelMetricIds.length > 0 && trackId && !isEditing ? "open" : ""}`} id="draftPanel">
               {panelMetricIds.length > 0 ? (
                 <div className="panel-inner">
                   <div className="panel-hd">

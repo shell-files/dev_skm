@@ -358,7 +358,7 @@ const Survey = () => {
           Header
       ========================================================== */}
       <header className="survey-header">
-       
+
 
         {/* =====================================================
             Stepper 영역
@@ -397,35 +397,61 @@ const Survey = () => {
           Main Content
       ========================================================== */}
       <main className="main-content">
-        <div className="input-card">
-          <h2
-            style={{
-              fontSize: "1.4rem",
-              fontWeight: 800,
-              marginBottom: "6px",
-            }}
-          >
-            이해관계자 설문
-          </h2>
-
-          <p
-            style={{
-              color: "#64748b",
-              fontSize: "0.9rem",
-              marginBottom: "4px",
-            }}
-          >
-            각 이해관계자 그룹별 설문 발송 관리 및
-            실시간 집계 결과를 매핑합니다.
-          </p>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", }}>
-            <button
-              className="survey-btn"
-              onClick={createSurveyUrl}
-              disabled={isCreatingUrl}
-            >
+        <div className="survey-input-card">
+          <div className="survey-page-header">
+            <div className="survey-page-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                <rect x="8" y="2" width="8" height="4" rx="1" />
+                <polyline points="9,11 10.5,12.5 13,10" />
+                <polyline points="9,16 10.5,17.5 13,15" />
+                <line x1="13" y1="11" x2="16" y2="11" />
+                <line x1="13" y1="16" x2="16" y2="16" />
+              </svg>
+            </div>
+            <div className="survey-page-text">
+              <h2 className="survey-page-title">이해관계자 설문</h2>
+              <p className="survey-page-desc">
+                임직원·경영진·외부이해관계자를 대상으로 ESG 이슈의 중요도를 직접 평가받습니다.
+                설문 URL을 생성·배포하고 AI가 응답을 집계하여 <strong>이중 중대성 평가</strong>에 반영합니다.
+              </p>
+              <div className="survey-tag-row">
+                <span className="survey-tag survey-tag-green">설문 URL 자동 생성</span>
+                <span className="survey-tag survey-tag-blue">3그룹 분류</span>
+                <span className="survey-tag survey-tag-purple">AI 집계 분석</span>
+                <span className="survey-tag survey-tag-orange">이중 중대성 반영</span>
+              </div>
+            </div>
+            <button className="survey-btn survey-btn-header" onClick={createSurveyUrl} disabled={isCreatingUrl}>
               {isCreatingUrl ? "URL 생성 중..." : "URL 생성"}
             </button>
+          </div>
+
+          <div className="survey-group-grid">
+            <div className="survey-group-card survey-group-card--green">
+              <div className="survey-group-card-head">
+                <span className="survey-group-badge survey-group-badge--green">임직원</span>
+                <span className="survey-group-label survey-group-label--green">Employee</span>
+              </div>
+              <p className="survey-group-desc">기업 활동이 환경·사회에 미치는 영향 관점에서 ESG 이슈의 중요도를 평가합니다.
+                업무 수행 과정에서 경험한 실제 영향과 현장의 의견을 바탕으로 응답합니다.</p>
+            </div>
+            <div className="survey-group-card survey-group-card--blue">
+              <div className="survey-group-card-head">
+                <span className="survey-group-badge survey-group-badge--blue">경영진</span>
+                <span className="survey-group-label survey-group-label--blue">Management</span>
+              </div>
+              <p className="survey-group-desc">ESG 이슈가 기업의 재무성과, 사업 지속가능성 및 경영 전략에 미치는 영향을
+                고려하여 중요도를 평가합니다. 리스크와 기회 요인을 종합적으로 검토해 응답합니다.</p>
+            </div>
+            <div className="survey-group-card survey-group-card--orange">
+              <div className="survey-group-card-head">
+                <span className="survey-group-badge survey-group-badge--orange">외부</span>
+                <span className="survey-group-label survey-group-label--orange">External Stakeholder</span>
+              </div>
+              <p className="survey-group-desc">고객, 투자자, 협력사, 지역사회 등 이해관계자의 관점에서 ESG 이슈의 중요도를
+                평가합니다. 기업 활동이 사회와 환경에 미치는 영향 및 기대 수준을 반영하여 응답합니다.</p>
+            </div>
           </div>
           {/* =====================================================
               설문 영역
@@ -446,30 +472,30 @@ const Survey = () => {
                   <div className="survey-row-box">
 
                     <label>임직원</label>
-                  <div className="url-list">
-                    {Object.entries(
-                      surveyUrls.employee || {}
-                    ).map(([label, url]) => (
-                      <div
-                        className="url-input-line"
-                        key={label}
-                      >
-                        <span>{label}</span>
+                    <div className="url-list">
+                      {Object.entries(
+                        surveyUrls.employee || {}
+                      ).map(([label, url]) => (
+                        <div
+                          className="url-input-line"
+                          key={label}
+                        >
+                          <span>{label}</span>
 
-                        {/* <input
+                          {/* <input
                           type="text"
                           value={url}
                           readOnly
                         /> */}
 
-                        <button
-                          className="btn-url-copy"
-                          onClick={() => copyUrl(url)}
-                        >
-                          복사
-                        </button>
-                      </div>
-                    ))}
+                          <button
+                            className="btn-url-copy"
+                            onClick={() => copyUrl(url)}
+                          >
+                            복사
+                          </button>
+                        </div>
+                      ))}
                     </div>
 
                     <div className="kpi-input-line">

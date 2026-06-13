@@ -41,6 +41,7 @@ from src.utils.dmaaggregator import (
     aggregateBenchmark,
     calcFinal,
 )
+from src.utils.subissuemaster import subissueMaster
 
 def saveSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] = None, sourceTitle: str = ""):
     """
@@ -915,6 +916,9 @@ MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP = (
 # Regulation stays a media_external internal source type (regulation), never a top-level stage.
 MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP = (
     "media_external_regulation_v13_shadow"
+)
+MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP = (
+    "media_external_agency_kcgs_v13_shadow"
 )
 
 _SHADOW_INSERT_SQL = """
@@ -1805,6 +1809,210 @@ def step4ReplaceRegulationShadowTracesTx(
 # STEP 4. scoring_payload_json 값을 읽어 v1.3 payload dict로 반환한다.
 # Input: scoring_payload_json 값 (str | dict | None).
 # Output: 정규화된 v1.3 payload dict 또는 None (legacy / 빈 값).
+# =========================================================
+# STEP 4. media_external.agency.kcgs Shadow Runtime
+# =========================================================
+
+
+def listApprovedKcgsGradeInputs(companyId: int) -> list[dict]:
+    sql = """
+        SELECT
+            company_id AS companyId,
+            rating_year AS ratingYear,
+            overall_grade AS overallGrade,
+            environment_grade AS environmentGrade,
+            social_grade AS socialGrade,
+            governance_grade AS governanceGrade,
+            source_type AS inputSourceType,
+            source_document_ref AS sourceDocumentRef,
+            review_status AS reviewStatus
+        FROM ESG_DMA_KCGS_GRADE_INPUT
+        WHERE company_id = ?
+          AND review_status = 'APPROVED'
+          AND delete_yn = 0
+        ORDER BY rating_year DESC
+        LIMIT 3
+    """
+    return _findAllRegulationRowsOrRaise(sql, (companyId,))
+
+
+def _buildKcgsShadowRows(
+    runId: int,
+    payloads: Sequence[Dict[str, Any]],
+) -> list[tuple]:
+    """Row-serialization SSOT for media_external.agency.kcgs Shadow INSERT. No DB access."""
+    rows = []
+    for payload in payloads:
+        payloadJson = step4WriteTrace(payload, asJson=True)
+        payloadData = json.loads(payloadJson)
+
+        if payloadData.get("scorePurpose") != "PRESURVEY_SCREENING":
+            raise ValueError(
+                f"KCGS Shadow scorePurpose must be 'PRESURVEY_SCREENING', "
+                f"got {payloadData.get('scorePurpose')!r}"
+            )
+        if payloadData.get("sourceChannel") != "media_external":
+            raise ValueError(
+                f"KCGS Shadow sourceChannel must be 'media_external', "
+                f"got {payloadData.get('sourceChannel')!r}"
+            )
+        subIssueCode = payloadData.get("subIssueCode")
+        if not subIssueCode:
+            raise ValueError("subIssueCode is required for KCGS Shadow trace")
+        if subIssueCode not in subissueMaster:
+            raise ValueError(f"Unknown KCGS Shadow subIssueCode: {subIssueCode!r}")
+
+        screeningTrace = payloadData.get("screeningTrace")
+        if not isinstance(screeningTrace, list):
+            raise ValueError("screeningTrace is required for KCGS Shadow trace")
+        if len(screeningTrace) != 1:
+            raise ValueError(
+                f"KCGS Shadow requires exactly 1 screeningTrace, got {len(screeningTrace)}"
+            )
+        trace = screeningTrace[0]
+        if not isinstance(trace, dict):
+            raise ValueError("KCGS Shadow screeningTrace[0] must be a dict")
+        if trace.get("channel") != "kcgs_pillar_boost":
+            raise ValueError(
+                f"KCGS Shadow channel must be 'kcgs_pillar_boost', got {trace.get('channel')!r}"
+            )
+        if trace.get("impactSignal") is not None:
+            raise ValueError("KCGS Shadow impactSignal must be None")
+        if trace.get("financialSignal") is not None:
+            raise ValueError("KCGS Shadow financialSignal must be None")
+
+        rawInputs = trace.get("rawInputs")
+        if not isinstance(rawInputs, dict):
+            raise ValueError("KCGS Shadow rawInputs is required")
+        if rawInputs.get("sourceStep") != "media_external":
+            raise ValueError(
+                f"KCGS Shadow rawInputs.sourceStep must be 'media_external', "
+                f"got {rawInputs.get('sourceStep')!r}"
+            )
+        if rawInputs.get("sourceType") != "agency":
+            raise ValueError(
+                f"KCGS Shadow rawInputs.sourceType must be 'agency', "
+                f"got {rawInputs.get('sourceType')!r}"
+            )
+        if rawInputs.get("providerKey") != "kcgs":
+            raise ValueError(
+                f"KCGS Shadow rawInputs.providerKey must be 'kcgs', "
+                f"got {rawInputs.get('providerKey')!r}"
+            )
+        companyId = rawInputs.get("companyId")
+        if not isinstance(companyId, int) or isinstance(companyId, bool) or companyId <= 0:
+            raise ValueError(
+                f"KCGS Shadow rawInputs.companyId must be a positive int, got {companyId!r}"
+            )
+        pillar = rawInputs.get("pillar")
+        if pillar not in ("E", "S", "G"):
+            raise ValueError(f"KCGS Shadow rawInputs.pillar must be one of E/S/G, got {pillar!r}")
+        if subissueMaster[subIssueCode].get("domain") != pillar:
+            raise ValueError(
+                f"KCGS Shadow subIssueCode/domain mismatch: "
+                f"subIssueCode={subIssueCode!r}, pillar={pillar!r}"
+            )
+        subIssueBoost = rawInputs.get("subIssueBoost")
+        if (
+            isinstance(subIssueBoost, bool)
+            or not isinstance(subIssueBoost, (int, float))
+            or not (0.0 <= float(subIssueBoost) <= 1.0)
+        ):
+            raise ValueError(
+                f"KCGS Shadow rawInputs.subIssueBoost must be numeric in 0..1, got {subIssueBoost!r}"
+            )
+        if rawInputs.get("externalMaxEligibleYn") is not False:
+            raise ValueError("KCGS Shadow rawInputs.externalMaxEligibleYn must be false")
+        if rawInputs.get("top20BoostOnlyYn") is not True:
+            raise ValueError("KCGS Shadow rawInputs.top20BoostOnlyYn must be true")
+        if rawInputs.get("directCanonicalFinalAllowedYn") is not False:
+            raise ValueError("KCGS Shadow rawInputs.directCanonicalFinalAllowedYn must be false")
+
+        rows.append((
+            runId,
+            None,
+            f"KCGS:{pillar}",
+            subIssueCode,
+            MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP,
+            "agency",
+            None,
+            None,
+            None,
+            payloadJson,
+        ))
+    return rows
+
+
+def step4ReplaceKcgsShadowTracesTx(
+    runId: int,
+    payloads: Sequence[Dict[str, Any]],
+) -> int:
+    """
+    Replace-Active Transaction for media_external.agency.kcgs Shadow rows.
+
+    payloads=[] is a valid empty-clear result: prior active KCGS shadow rows are
+    soft-deleted, no rows are inserted, and COUNT(*) must verify as zero.
+    """
+    rows = _buildKcgsShadowRows(runId, payloads)
+
+    conn = getConn()
+    if conn is None:
+        raise RuntimeError(
+            "DB connection is not available for KCGS shadow replace transaction"
+        )
+    try:
+        conn.autocommit = False
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? FOR UPDATE",
+                (runId,),
+            )
+            lockRow = cur.fetchone()
+            if not lockRow:
+                raise RuntimeError(f"ESG_MATERIALITY_RUN row not found for runId={runId}")
+
+            cur.execute(
+                """
+                UPDATE ESG_DMA_SIGNAL_DETAIL
+                SET delete_yn = 1
+                WHERE esg_materiality_run_id = ?
+                  AND source_step = ?
+                  AND delete_yn = 0
+                """,
+                (runId, MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP),
+            )
+
+            if rows:
+                cur.executemany(_SHADOW_INSERT_SQL, rows)
+
+            cur.execute(
+                """
+                SELECT COUNT(*) AS row_count
+                FROM ESG_DMA_SIGNAL_DETAIL
+                WHERE esg_materiality_run_id = ?
+                  AND source_step = ?
+                  AND delete_yn = 0
+                """,
+                (runId, MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP),
+            )
+            verifyRow = cur.fetchone() or {}
+            rowCount = int(verifyRow.get("row_count") or 0)
+            if rowCount != len(rows):
+                raise RuntimeError(
+                    f"KCGS shadow count check failed: expected={len(rows)}, row_count={rowCount}"
+                )
+
+        conn.commit()
+        return len(rows)
+    except Exception:
+        if hasattr(conn, "rollback"):
+            conn.rollback()
+        raise
+    finally:
+        if hasattr(conn, "close"):
+            conn.close()
+
+
 def step4ReadTrace(raw: Union[str, Dict[str, Any], None]) -> Optional[Dict[str, Any]]:
     if isLegacyPayload(raw):
         return None
@@ -1933,6 +2141,7 @@ __all__ = [
     "MEDIA_EXTERNAL_NEWS_V13_SHADOW_SOURCE_STEP",
     "MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP",
     "MEDIA_EXTERNAL_REGULATION_V13_SHADOW_SOURCE_STEP",
+    "MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP",
     "isLegacyPayload",
     "step4BuildTrace",
     "step4WriteTrace",
@@ -1947,6 +2156,10 @@ __all__ = [
     "listApprovedActiveRegulationMappings",
     # _buildRegulationShadowRows is intentionally omitted — private serializer
     "step4ReplaceRegulationShadowTracesTx",
+    # media_external.agency.kcgs Shadow Runtime
+    "listApprovedKcgsGradeInputs",
+    # _buildKcgsShadowRows is intentionally omitted ??private serializer
+    "step4ReplaceKcgsShadowTracesTx",
     "step4ReadTrace",
     "step4UpdateTrace",
     "appendFactorTrace",

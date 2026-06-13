@@ -175,6 +175,15 @@ def validatePolicyVersions(policies: Dict[str, Dict[str, Any]]) -> None:
 
 
 _KNOWN_DEDUP_MANDATORY_KEYS = frozenset({"subIssueCode", "normalizedEventType", "eventDateBucket"})
+_KCGS_GRADE_ORDER_BEST_TO_WORST = ["S", "A+", "A", "B+", "B", "C", "D"]
+_KCGS_PILLARS = ["E", "S", "G"]
+_KCGS_TREND_MODIFIER_KEYS = frozenset({
+    "downgradeTwoOrMore",
+    "downgradeOne",
+    "flat",
+    "upgrade",
+    "insufficientData",
+})
 
 
 def _validateBandSection(section: Mapping[str, Any], section_name: str, must_have_bands: bool) -> None:
@@ -333,10 +342,78 @@ def validateMediaEventResolverPolicy(policy: Mapping[str, Any]) -> None:
         raise DmaRuleValidationError("media_event_resolver_policy: missingPolicy.missingAsZeroForbiddenYn must be true")
 
 
+def validateKcgsScreeningPolicy(policy: Mapping[str, Any]) -> None:
+    """Fail-fast structural validation for screening_policy.kcgs."""
+    if not isinstance(policy, Mapping):
+        raise DmaRuleValidationError("screening_policy must be a JSON object")
+    kcgs = policy.get("kcgs")
+    if not isinstance(kcgs, Mapping):
+        raise DmaRuleValidationError("screening_policy.kcgs must be a JSON object")
+
+    gradeOrder = kcgs.get("gradeOrderBestToWorst")
+    if gradeOrder != _KCGS_GRADE_ORDER_BEST_TO_WORST:
+        raise DmaRuleValidationError(
+            "screening_policy.kcgs.gradeOrderBestToWorst must be exactly "
+            f"{_KCGS_GRADE_ORDER_BEST_TO_WORST!r}"
+        )
+
+    gradeRisk = kcgs.get("gradeRisk")
+    if not isinstance(gradeRisk, Mapping):
+        raise DmaRuleValidationError("screening_policy.kcgs.gradeRisk must be a JSON object")
+    if set(gradeRisk.keys()) != set(_KCGS_GRADE_ORDER_BEST_TO_WORST):
+        raise DmaRuleValidationError(
+            "screening_policy.kcgs.gradeRisk keys must match gradeOrderBestToWorst"
+        )
+
+    trendModifier = kcgs.get("trendModifier")
+    if not isinstance(trendModifier, Mapping):
+        raise DmaRuleValidationError("screening_policy.kcgs.trendModifier must be a JSON object")
+    missingTrendKeys = _KCGS_TREND_MODIFIER_KEYS - set(trendModifier)
+    if missingTrendKeys:
+        raise DmaRuleValidationError(
+            f"screening_policy.kcgs.trendModifier missing required keys: {sorted(missingTrendKeys)}"
+        )
+    if trendModifier.get("insufficientData") != "UNOBSERVED":
+        raise DmaRuleValidationError(
+            "screening_policy.kcgs.trendModifier.insufficientData must be 'UNOBSERVED'"
+        )
+
+    if kcgs.get("pillars") != _KCGS_PILLARS:
+        raise DmaRuleValidationError(
+            f"screening_policy.kcgs.pillars must be exactly {_KCGS_PILLARS!r}"
+        )
+    if kcgs.get("propagationMode") != "ALL_SUB_ISSUES_IN_PILLAR_DOMAIN":
+        raise DmaRuleValidationError(
+            "screening_policy.kcgs.propagationMode must be "
+            "'ALL_SUB_ISSUES_IN_PILLAR_DOMAIN'"
+        )
+    if kcgs.get("overallGradeTraceOnlyYn") is not True:
+        raise DmaRuleValidationError("screening_policy.kcgs.overallGradeTraceOnlyYn must be true")
+    if kcgs.get("externalMaxEligibleYn") is not False:
+        raise DmaRuleValidationError("screening_policy.kcgs.externalMaxEligibleYn must be false")
+    if kcgs.get("top20BoostOnlyYn") is not True:
+        raise DmaRuleValidationError("screening_policy.kcgs.top20BoostOnlyYn must be true")
+    if kcgs.get("directCanonicalFinalAllowedYn") is not False:
+        raise DmaRuleValidationError("screening_policy.kcgs.directCanonicalFinalAllowedYn must be false")
+
+    for key, expected in (
+        ("pillarSignalMax", 5.0),
+        ("maxSubIssueBoost", 1.0),
+        ("boostMultiplier", 0.20),
+    ):
+        value = kcgs.get(key)
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or float(value) != expected:
+            raise DmaRuleValidationError(
+                f"screening_policy.kcgs.{key} must be exactly {expected!r}, got {value!r}"
+            )
+
+
 def validateBundle(manifest: Dict[str, Any], policies: Dict[str, Dict[str, Any]]) -> None:
     validateManifest(manifest)
     validatePolicies(policies.keys())
     validatePolicyVersions(policies)
+    if "screening_policy.json" in policies:
+        validateKcgsScreeningPolicy(policies["screening_policy.json"])
     if "media_event_resolver_policy.json" in policies:
         validateMediaEventResolverPolicy(policies["media_event_resolver_policy.json"])
 
@@ -473,6 +550,7 @@ __all__ = [
     "validatePolicyVersions",
     "validateBundle",
     "validateMediaEventResolverPolicy",
+    "validateKcgsScreeningPolicy",
     "readJson",
     "computeConfigHash",
     "getDmaRules",

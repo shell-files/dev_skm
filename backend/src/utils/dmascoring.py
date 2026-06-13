@@ -419,6 +419,37 @@ def step2CalcRegulation(regime: str, applicability: str, policy: Mapping[str, An
 # STEP 2. KCGS Pillar 리스크 신호 계산.
 # Input: grade, trend, screening policy.
 # Output: dict with pillarSignal (최대 pillarSignalMax), status, gradeRisk, trendModifier.
+def step2ResolveKcgsTrend(
+    previousGrade: str,
+    latestGrade: str,
+    policy: Mapping[str, Any],
+) -> dict:
+    kcgs = policy["kcgs"]
+    gradeOrder = list(kcgs["gradeOrderBestToWorst"])
+    if previousGrade not in gradeOrder:
+        raise ValueError(f"Unknown KCGS previous grade: {previousGrade!r}")
+    if latestGrade not in gradeOrder:
+        raise ValueError(f"Unknown KCGS latest grade: {latestGrade!r}")
+
+    previousIndex = gradeOrder.index(previousGrade)
+    latestIndex = gradeOrder.index(latestGrade)
+    stepDifference = latestIndex - previousIndex
+    if stepDifference >= 2:
+        trend = "downgradeTwoOrMore"
+    elif stepDifference == 1:
+        trend = "downgradeOne"
+    elif stepDifference == 0:
+        trend = "flat"
+    else:
+        trend = "upgrade"
+    return {
+        "trend": trend,
+        "stepDifference": stepDifference,
+        "previousGrade": previousGrade,
+        "latestGrade": latestGrade,
+    }
+
+
 def step2CalcKcgs(grade: str, trend: str, policy: Mapping[str, Any]) -> dict:
     kcgs = policy["kcgs"]
     gradeRiskMap = kcgs["gradeRisk"]
@@ -724,6 +755,7 @@ __all__ = [
     "STATUS_CAPABILITY_PENDING",
     "step2CalcBenchmark",
     "step2CalcRegulation",
+    "step2ResolveKcgsTrend",
     "step2CalcKcgs",
     "step2CalcKcgsBoost",
     "step2GetKisState",

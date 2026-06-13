@@ -15,6 +15,7 @@ from src.services.medias.pipeline import processMediaPipeline
 from src.services.materialities.orchestrator import (
     step0BuildFactTrace,
     step1BuildMediaNewsCanonicalPayloads,
+    step2BuildKcgsPillarBoostPayloads,
     step2BuildRegulationScreeningPayloads,
 )
 from src.utils.dmarepository import (
@@ -24,8 +25,10 @@ from src.utils.dmarepository import (
     saveSignals,
     step4ReplaceMediaNewsShadowBundleTx,
     findRegulationRunContext,
+    listApprovedKcgsGradeInputs,
     listApprovedRegulationInputs,
     listApprovedActiveRegulationMappings,
+    step4ReplaceKcgsShadowTracesTx,
     step4ReplaceRegulationShadowTracesTx,
 )
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
@@ -130,6 +133,13 @@ def runMediaCrawlAndAnalyze(
         refreshRegulationShadowForRun(request.runId)
     except Exception as shadowError:
         print(f"Warning: media_external.regulation v1.3 shadow replace failed: {shadowError}")
+
+    # media_external.agency.kcgs Shadow refresh ??independent of the news crawl result.
+    # KCGS is trace-only metadata for pillar boost; it is not an externalMax or summary input.
+    try:
+        refreshKcgsShadowForRun(request.runId)
+    except Exception as shadowError:
+        print(f"Warning: media_external.agency.kcgs v1.3 shadow replace failed: {shadowError}")
 
     sourceBreakdown = applySavedSignalCounts(
         crawlResult.sourceBreakdown,
@@ -251,6 +261,25 @@ def refreshRegulationShadowForRun(runId: int) -> int:
     payloads = step2BuildRegulationScreeningPayloads(approvedInputs, approvedMappings)
 
     return step4ReplaceRegulationShadowTracesTx(runId, payloads)
+
+
+def refreshKcgsShadowForRun(runId: int) -> int:
+    """
+    Refresh the media_external.agency.kcgs Shadow set for a materiality run.
+
+    Reads APPROVED latest 3-year KCGS grade inputs for the run company, rebuilds
+    pillar boost metadata traces via the pure orchestrator builder, then replaces
+    the active KCGS shadow rows in one transaction. Empty approved input yields a
+    valid empty-clear. Partial or non-consecutive APPROVED input fails before the
+    writer is called.
+    """
+    runContext = findRegulationRunContext(runId)
+    companyId = runContext["companyId"]
+
+    gradeRows = listApprovedKcgsGradeInputs(companyId)
+    payloads = step2BuildKcgsPillarBoostPayloads(gradeRows)
+
+    return step4ReplaceKcgsShadowTracesTx(runId, payloads)
 
 
 def _isCrawlComplete(crawlResult) -> bool:

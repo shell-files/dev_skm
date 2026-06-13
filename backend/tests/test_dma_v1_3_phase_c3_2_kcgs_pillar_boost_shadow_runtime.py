@@ -173,10 +173,10 @@ def _craftedKcgsDict(subIssueCode=E_CODE, pillar="E"):
         "sourceChannel": "media_external",
         "subIssueCode": subIssueCode,
         "screeningTrace": [{
-            "channel": "kcgs_pillar_boost",
+            "channel": "kcgs_pillar_domain_signal",
             "scorePurpose": "PRESURVEY_SCREENING",
-            "impactSignal": None,
-            "financialSignal": None,
+            "impactSignal": 3.5,
+            "financialSignal": 3.5,
             "status": "OBSERVED",
             "capability": "READY",
             "rawInputs": {
@@ -206,8 +206,9 @@ def _craftedKcgsDict(subIssueCode=E_CODE, pillar="E"):
                 "subIssueBoost": 0.7,
                 "propagationMode": "ALL_SUB_ISSUES_IN_PILLAR_DOMAIN",
                 "overallGradeTraceOnlyYn": True,
-                "externalMaxEligibleYn": False,
-                "top20BoostOnlyYn": True,
+                "externalMaxEligibleYn": True,
+                "top20BoostOnlyYn": False,
+                "axisMode": "SYMMETRIC_DOMAIN_SIGNAL",
                 "directCanonicalFinalAllowedYn": False,
             },
         }],
@@ -292,8 +293,9 @@ class KcgsPolicyValidationTest(unittest.TestCase):
         kcgs = self.policy()["kcgs"]
         self.assertEqual(kcgs["gradeOrderBestToWorst"], ["S", "A+", "A", "B+", "B", "C", "D"])
         self.assertEqual(kcgs["pillars"], ["E", "S", "G"])
-        self.assertFalse(kcgs["externalMaxEligibleYn"])
-        self.assertTrue(kcgs["top20BoostOnlyYn"])
+        self.assertTrue(kcgs["externalMaxEligibleYn"])
+        self.assertFalse(kcgs["top20BoostOnlyYn"])
+        self.assertEqual(kcgs["axisMode"], "SYMMETRIC_DOMAIN_SIGNAL")
 
 
 def _makePolicyValidatorTest(name, mutator):
@@ -319,12 +321,13 @@ _POLICY_MUTATORS = {
     "test_10_pillars_rejected": lambda p: p["kcgs"].update({"pillars": ["E", "S"]}),
     "test_11_propagation_mode_rejected": lambda p: p["kcgs"].update({"propagationMode": "DIRECT"}),
     "test_12_overall_trace_flag_rejected": lambda p: p["kcgs"].update({"overallGradeTraceOnlyYn": False}),
-    "test_13_external_max_flag_rejected": lambda p: p["kcgs"].update({"externalMaxEligibleYn": True}),
-    "test_14_top20_flag_rejected": lambda p: p["kcgs"].update({"top20BoostOnlyYn": False}),
+    "test_13_external_max_flag_rejected": lambda p: p["kcgs"].update({"externalMaxEligibleYn": False}),
+    "test_14_top20_flag_rejected": lambda p: p["kcgs"].update({"top20BoostOnlyYn": True}),
     "test_15_direct_canonical_flag_rejected": lambda p: p["kcgs"].update({"directCanonicalFinalAllowedYn": True}),
     "test_16_pillar_signal_max_rejected": lambda p: p["kcgs"].update({"pillarSignalMax": 4.0}),
     "test_17_max_boost_rejected": lambda p: p["kcgs"].update({"maxSubIssueBoost": 2.0}),
     "test_18_boost_multiplier_rejected": lambda p: p["kcgs"].update({"boostMultiplier": 0.25}),
+    "test_18b_axis_mode_rejected": lambda p: p["kcgs"].update({"axisMode": "WRONG"}),
 }
 for _name, _mutator in _POLICY_MUTATORS.items():
     setattr(KcgsPolicyValidationTest, _name, _makePolicyValidatorTest(_name, _mutator))
@@ -375,12 +378,15 @@ class KcgsBuilderTest(unittest.TestCase):
     def test_27_exact_three_approved_builds_domain_universe(self):
         self.assertEqual(len(_buildPayloads()), TOTAL_DOMAIN_COUNT)
 
-    def test_28_payloads_are_media_external_shadow_metadata(self):
+    def test_28_payloads_are_kcgs_domain_signal(self):
         payload = _buildPayloads()[0]
         self.assertEqual(payload["sourceChannel"], "media_external")
         self.assertEqual(payload["scorePurpose"], "PRESURVEY_SCREENING")
-        self.assertIsNone(_trace(payload)["impactSignal"])
-        self.assertIsNone(_trace(payload)["financialSignal"])
+        trace = _trace(payload)
+        self.assertEqual(trace["channel"], "kcgs_pillar_domain_signal")
+        self.assertIsNotNone(trace["impactSignal"])
+        self.assertIsNotNone(trace["financialSignal"])
+        self.assertEqual(trace["impactSignal"], trace["financialSignal"])
 
     def test_29_payload_counts_match_pillar_domains(self):
         payloads = _buildPayloads()
@@ -420,8 +426,9 @@ class KcgsBuilderTest(unittest.TestCase):
         raw = _raw(_buildPayloads()[0])
         self.assertEqual(raw["propagationMode"], "ALL_SUB_ISSUES_IN_PILLAR_DOMAIN")
         self.assertTrue(raw["overallGradeTraceOnlyYn"])
-        self.assertFalse(raw["externalMaxEligibleYn"])
-        self.assertTrue(raw["top20BoostOnlyYn"])
+        self.assertTrue(raw["externalMaxEligibleYn"])
+        self.assertFalse(raw["top20BoostOnlyYn"])
+        self.assertEqual(raw["axisMode"], "SYMMETRIC_DOMAIN_SIGNAL")
         self.assertFalse(raw["directCanonicalFinalAllowedYn"])
 
     def test_35_partial_one_approved_rejected(self):
@@ -534,8 +541,8 @@ class KcgsSerializerTest(unittest.TestCase):
         self.assertEqual(row[3], E_CODE)
         self.assertEqual(row[4], MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP)
         self.assertEqual(row[5], "agency")
-        self.assertIsNone(row[6])
-        self.assertIsNone(row[7])
+        self.assertEqual(row[6], 3.5)
+        self.assertEqual(row[7], 3.5)
         self.assertIsNone(row[8])
         payload = json.loads(row[9])
         self.assertEqual(payload["screeningTrace"][0]["rawInputs"]["subIssueBoost"], 0.7)
@@ -574,9 +581,10 @@ _SERIALIZER_MUTATORS = {
     "test_67_boost_string_rejected": lambda d: d["screeningTrace"][0]["rawInputs"].update({"subIssueBoost": "0.7"}),
     "test_68_boost_low_rejected": lambda d: d["screeningTrace"][0]["rawInputs"].update({"subIssueBoost": -0.1}),
     "test_69_boost_high_rejected": lambda d: d["screeningTrace"][0]["rawInputs"].update({"subIssueBoost": 1.1}),
-    "test_70_external_max_flag_rejected": lambda d: d["screeningTrace"][0]["rawInputs"].update({"externalMaxEligibleYn": True}),
-    "test_71_top20_flag_rejected": lambda d: d["screeningTrace"][0]["rawInputs"].update({"top20BoostOnlyYn": False}),
+    "test_70_external_max_flag_rejected": lambda d: d["screeningTrace"][0]["rawInputs"].update({"externalMaxEligibleYn": False}),
+    "test_71_top20_flag_rejected": lambda d: d["screeningTrace"][0]["rawInputs"].update({"top20BoostOnlyYn": True}),
     "test_72_direct_canonical_flag_rejected": lambda d: d["screeningTrace"][0]["rawInputs"].update({"directCanonicalFinalAllowedYn": True}),
+    "test_72b_axis_mode_rejected": lambda d: d["screeningTrace"][0]["rawInputs"].update({"axisMode": "WRONG"}),
 }
 for _name, _mutator in _SERIALIZER_MUTATORS.items():
     setattr(KcgsSerializerTest, _name, _makeSerializerRejectTest(_name, _mutator))

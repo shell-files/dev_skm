@@ -5,7 +5,7 @@ import axios from 'axios'
  * 토큰이 존재할 경우 Authorization 헤더를 자동으로 추가합니다.
  */
 const initConfig = dns => {
-	let baseURL = import.meta.env.VITE_API_URL_SKM_BACK || baseURL;
+	const baseURL = import.meta.env.VITE_API_URL_SKM_BACK || "";
 	const headers = {
 		"Content-Type": "application/json",
 	}

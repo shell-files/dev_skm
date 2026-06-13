@@ -101,7 +101,7 @@
 }
 
 .media-page-title {
-  font-size: 1.18rem;
+  font-size: 1.41rem;
   font-weight: 850;
   color: #0f172a;
   margin: 0 0 6px;
@@ -110,7 +110,7 @@
 
 .media-page-desc {
   color: #475569;
-  font-size: 0.86rem;
+  font-size: 1rem;
   margin: 0 0 10px;
   line-height: 1.7;
 }
@@ -129,10 +129,29 @@
   letter-spacing: 0.01em;
 }
 
-.media-tag-blue   { color: #1d4ed8; background: #eff6ff; border: 1px solid #bfdbfe; }
-.media-tag-green  { color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; }
-.media-tag-purple { color: #7c3aed; background: #f5f3ff; border: 1px solid #ddd6fe; }
-.media-tag-orange { color: #b45309; background: #fffbeb; border: 1px solid #fde68a; }
+.media-tag-blue {
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
+
+.media-tag-green {
+  color: #15803d;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.media-tag-purple {
+  color: #7c3aed;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+}
+
+.media-tag-orange {
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
 
 /* =========================================================
    분석 소스 유형 카드 (언론 / 규제 / 전문기관)
@@ -161,18 +180,39 @@
 .media-source-card::before {
   content: "";
   position: absolute;
-  top: 0; left: 0; right: 0;
+  top: 0;
+  left: 0;
+  right: 0;
   height: 3px;
   border-radius: 10px 10px 0 0;
 }
 
-.media-source-card--blue   { background: #eff6ff; border: 1px solid #bfdbfe; }
-.media-source-card--red    { background: #fff1f2; border: 1px solid #fecdd3; }
-.media-source-card--purple { background: #f5f3ff; border: 1px solid #ddd6fe; }
+.media-source-card--blue {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+}
 
-.media-source-card--blue::before   { background: #3b82f6; }
-.media-source-card--red::before    { background: #f43f5e; }
-.media-source-card--purple::before { background: #8b5cf6; }
+.media-source-card--red {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+}
+
+.media-source-card--purple {
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+}
+
+.media-source-card--blue::before {
+  background: #3b82f6;
+}
+
+.media-source-card--red::before {
+  background: #f43f5e;
+}
+
+.media-source-card--purple::before {
+  background: #8b5cf6;
+}
 
 .media-source-card-head {
   display: flex;
@@ -194,18 +234,37 @@
   flex-shrink: 0;
 }
 
-.media-source-badge--blue   { background: #3b82f6; box-shadow: 0 2px 6px rgba(59,130,246,0.3); }
-.media-source-badge--red    { background: #f43f5e; box-shadow: 0 2px 6px rgba(244,63,94,0.3); }
-.media-source-badge--purple { background: #8b5cf6; box-shadow: 0 2px 6px rgba(139,92,246,0.3); }
+.media-source-badge--blue {
+  background: #3b82f6;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+
+.media-source-badge--red {
+  background: #f43f5e;
+  box-shadow: 0 2px 6px rgba(244, 63, 94, 0.3);
+}
+
+.media-source-badge--purple {
+  background: #8b5cf6;
+  box-shadow: 0 2px 6px rgba(139, 92, 246, 0.3);
+}
 
 .media-source-label {
   font-weight: 800;
   font-size: 0.84rem;
 }
 
-.media-source-label--blue   { color: #1d4ed8; }
-.media-source-label--red    { color: #be123c; }
-.media-source-label--purple { color: #6d28d9; }
+.media-source-label--blue {
+  color: #1d4ed8;
+}
+
+.media-source-label--red {
+  color: #be123c;
+}
+
+.media-source-label--purple {
+  color: #6d28d9;
+}
 
 .media-source-desc {
   font-size: 0.77rem;
@@ -215,14 +274,29 @@
 }
 
 @media (max-width: 992px) {
-  .media-source-grid { grid-template-columns: 1fr; }
-  .media-page-header { gap: 12px; }
+  .media-source-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .media-page-header {
+    gap: 12px;
+  }
 }
 
 @media (max-width: 768px) {
-  .media-page-header { flex-direction: column; }
-  .media-page-icon { width: 40px; height: 40px; border-radius: 10px; }
-  .media-page-title { font-size: 1.05rem; }
+  .media-page-header {
+    flex-direction: column;
+  }
+
+  .media-page-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+
+  .media-page-title {
+    font-size: 1.05rem;
+  }
 }
 
 /* 미디어 데이터 수집 카드 세단 그리드 */

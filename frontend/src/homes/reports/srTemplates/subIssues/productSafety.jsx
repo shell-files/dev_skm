@@ -10,9 +10,9 @@ const TEMPLATE =
   "제품안전 CAP 완료율은 {AP-S-01__G0005}이다.";
 
 const metricFields = [
-  { id: "AP-S-01__G0001",  label: "필드액션 건수" },
-  { id: "AP-S-01__G0002",  label: "리콜 건수" },
-  { id: "AP-S-01__G0005",  label: "제품안전 CAP 완료율" },
+  { id: "AP-S-01__G0001", label: "필드액션 건수" },
+  { id: "AP-S-01__G0002", label: "리콜 건수" },
+  { id: "AP-S-01__G0005", label: "제품안전 CAP 완료율" },
   { id: "AP-S-01__QL0001", label: "제품안전 경영 방침" },
   { id: "AP-S-01__QL0002", label: "제품안전 거버넌스" },
   { id: "AP-S-01__QL0003", label: "주요 이슈 대응" },
@@ -72,35 +72,37 @@ function ProductSafetyPage(props) {
                 </div>
                 <div className="sr-flow-note" data-source="AP-S-01__QL0003">
                   {mt(metrics, "AP-S-01__QL0003", mode)}
+
                 </div>
+
+              </div>
+            </div>
+          </div>
+          {/* 우: 안전 사고 수치 */}
+          <div className="c-side">
+            <div className="sr-panel" style={{ padding: "12px 14px" }}>
+              <div className="sr-stat">
+                <span className="l">
+                  필드액션 건수<br />
+                  <small>연결 기준 발생</small>
+                </span>
+                <span className="v" data-source="AP-S-01__G0001">
+                  {mt(metrics, "AP-S-01__G0001", mode)}
+                </span>
+              </div>
+              <div className="sr-stat">
+                <span className="l">
+                  리콜 건수<br />
+                  <small>자발적 리콜 포함</small>
+                </span>
+                <span className="v" data-source="AP-S-01__G0002">
+                  {mt(metrics, "AP-S-01__G0002", mode)}
+                </span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 우: 안전 사고 수치 */}
-        <div className="c-side">
-          <div className="sr-panel" style={{ padding: "12px 14px" }}>
-            <div className="sr-stat">
-              <span className="l">
-                필드액션 건수<br />
-                <small>연결 기준 발생</small>
-              </span>
-              <span className="v" data-source="AP-S-01__G0001">
-                {mt(metrics, "AP-S-01__G0001", mode)}
-              </span>
-            </div>
-            <div className="sr-stat">
-              <span className="l">
-                리콜 건수<br />
-                <small>자발적 리콜 포함</small>
-              </span>
-              <span className="v" data-source="AP-S-01__G0002">
-                {mt(metrics, "AP-S-01__G0002", mode)}
-              </span>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* ── 제품안전 경영 방침 ── */}

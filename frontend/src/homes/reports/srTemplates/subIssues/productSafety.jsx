@@ -51,8 +51,8 @@ function ProductSafetyPage(props) {
         </div>
       </div>
 
-      {/* ── 제품안전 거버넌스 & 이슈 대응 ── */}
-      <div className="sr-panel" style={{ marginTop: 16 }}>
+      {/* ── 제품안전 거버넌스 & 이슈 대응 — flex:1 로 남은 공간 흡수 ── */}
+      <div className="sr-panel" style={{ marginTop: 16, flex: 1 }}>
         <div className="sr-panel-grid">
 
           {/* 좌: 거버넌스 */}

@@ -61,8 +61,8 @@ function EcoProductPage(props) {
         </div>
       </div>
 
-      {/* ── 친환경 임팩트 패널 ── */}
-      <div className="sr-panel">
+      {/* ── 친환경 임팩트 패널 — flex:1 로 남은 공간 흡수 ── */}
+      <div className="sr-panel" style={{ flex: 1 }}>
         <div className="sr-panel-grid">
 
           {/* 좌: 환경 임팩트 수치 (sr-stat) */}

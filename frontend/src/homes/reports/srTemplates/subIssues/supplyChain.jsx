@@ -85,7 +85,7 @@ function SupplyChainPage(props) {
         </div>
       </div>
 
-      {/* 공급망 실사 프로세스 */}
+      {/* 공급망 실사 프로세스 — flex:1 로 남은 공간 흡수 */}
       <SupplyPanel metrics={metrics} mode={mode} />
 
       <div className="sr-measures" data-source="S6-01__QL0001">

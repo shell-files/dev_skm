@@ -117,12 +117,12 @@ function TalentDevPage(props) {
 
       {/* ── 주요 교육 프로그램 ── */}
       <SectionHeader title="주요 교육 프로그램" tag="PROGRAMS" />
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11 }}>
+      <div style={{ display: "flex", gap: 11, flex: "0 1 auto" }}>
         {[
           { id: "S3-01__QL0003", badge: "1" },
           { id: "S3-01__QL0004", badge: "2" },
         ].map(({ id, badge }) => (
-          <div key={id} style={{ border: "1px solid var(--line)", borderRadius: 6, padding: "12px 14px" }}>
+          <div key={id} style={{ flex: 1, border: "1px solid var(--line)", borderRadius: 6, padding: "12px 14px" }}>
             <div style={{ marginBottom: 7 }}>
               <span style={{
                 display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -139,10 +139,10 @@ function TalentDevPage(props) {
         ))}
       </div>
 
-      {/* ── 교육 운영 방식 / 인재 전략 방향 ── */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 11, marginTop: 11 }}>
+      {/* ── 교육 운영 방식 / 인재 전략 방향 — flex:1 로 남은 세로 공간 흡수 ── */}
+      <div style={{ display: "flex", gap: 11, marginTop: 11, flex: 1, minHeight: 60, alignItems: "stretch" }}>
         <div style={{
-          background: "var(--tint)", border: "1px solid var(--line)",
+          flex: 1, background: "var(--tint)", border: "1px solid var(--line)",
           borderRadius: 6, padding: "12px 14px",
         }}>
           <div style={{ fontSize: 10.5, fontWeight: 800, color: "var(--brand)", marginBottom: 5 }}>교육 운영 방식</div>
@@ -152,7 +152,7 @@ function TalentDevPage(props) {
           </div>
         </div>
         <div style={{
-          background: "var(--tint)", border: "1px solid var(--line)",
+          flex: 1, background: "var(--tint)", border: "1px solid var(--line)",
           borderRadius: 6, padding: "12px 14px",
         }}>
           <div style={{ fontSize: 10.5, fontWeight: 800, color: "var(--brand)", marginBottom: 5 }}>인재 전략 방향</div>

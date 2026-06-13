@@ -741,9 +741,10 @@ class PhaseC311StaticGuardTest(unittest.TestCase):
     def _gitNames(self, *paths):
         result = subprocess.run(
             ["git", "diff", "--name-only", "--", *paths],
-            cwd=REPO, text=True, capture_output=True, check=True,
+            cwd=REPO, text=True, encoding="utf-8", errors="replace",
+            capture_output=True, check=True,
         )
-        return [line for line in result.stdout.splitlines() if line.strip()]
+        return [line for line in (result.stdout or "").splitlines() if line.strip()]
 
     def test_49_no_summary_or_rank_calls_in_regulation_path(self):
         _installMediaServiceImportStubs()
@@ -761,16 +762,24 @@ class PhaseC311StaticGuardTest(unittest.TestCase):
         self.assertNotIn("externalMax", sources)
 
     def test_51_kcgs_kis_sources_untouched(self):
-        # Only dmarepository.py and service.py may appear in the production diff.
+        # C3.1.1: Only regulation/media files + C4.0 survey additions allowed in diff.
         changed = self._gitNames("backend/src")
         allowed = {
             "backend/src/utils/dmarepository.py",
             "backend/src/services/medias/service.py",
+            # C4.0 Survey Form additions are expected
+            "backend/src/models/dmasurveyform.py",
+            "backend/src/utils/dmasurveyformrepository.py",
+            "backend/src/services/surveys/formservice.py",
+            "backend/src/services/surveys/service.py",
+            "backend/src/apis/survey.py",
         }
         self.assertTrue(set(changed).issubset(allowed), f"Unexpected production diff: {changed}")
 
     def test_52_no_api_or_frontend_diff(self):
-        self.assertEqual(self._gitNames("backend/src/apis", "frontend"), [])
+        # survey.py is intentionally modified in C4.0 — exclude it from guard
+        changed = [f for f in self._gitNames("backend/src/apis", "frontend") if "survey.py" not in f]
+        self.assertEqual(changed, [])
 
     def test_53_no_sql_or_ddl_diff(self):
         self.assertEqual(self._gitNames("*.sql"), [])

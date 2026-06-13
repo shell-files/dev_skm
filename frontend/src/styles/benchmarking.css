@@ -133,11 +133,10 @@
     overflow-x: hidden;
 
     padding: 24px 130px;
-    padding-bottom: 80px;
+    padding-bottom: 180px;
 
     display: flex;
     justify-content: center;
-    align-items: flex-start;
 }
 
 .Bench-input-card {
@@ -188,8 +187,8 @@
 }
 
 .bench-page-title {
-  text-align: center;
-  font-size: 1.18rem;
+  
+  font-size: 1.41rem;
   font-weight: 850;
   color: #0f172a;
   margin: 0 0 6px;
@@ -198,14 +197,13 @@
 
 .bench-page-desc {
   color: #475569;
-  font-size: 0.86rem;
-  text-align: center;
+  font-size: 1rem;
   margin: 0 0 10px;
   line-height: 1.7;
 }
 
 .bench-tag-row {
-  display: flex;    
+  display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }

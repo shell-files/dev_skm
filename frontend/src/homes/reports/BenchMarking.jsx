@@ -374,12 +374,12 @@ const Benchmarking = () => {
                 리더·피어·자회사 간 공시 현황과 격차(Gap)를 비교·분석합니다.
                 각 그룹별 최근 <strong>3개년치</strong> 보고서를 등록하면 분석이 시작됩니다.
               </p>
-              {/* <div className="bench-tag-row">
+              <div className="bench-tag-row">
                 <span className="bench-tag bench-tag-green">PDF 자동 파싱</span>
                 <span className="bench-tag bench-tag-blue">ESG 이슈 자동 식별</span>
                 <span className="bench-tag bench-tag-purple">공시 Gap 분석</span>
                 <span className="bench-tag bench-tag-orange">3개년 비교</span>
-              </div> */}
+              </div>
             </div>
           </div>
 

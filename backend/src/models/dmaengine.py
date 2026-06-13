@@ -342,6 +342,22 @@ class RegulationSubIssueMappingSeedV13(BaseModel):
     reviewStatus: str = "DRAFT"
 
 
+class KcgsGradeInputV13(BaseModel):
+    """Company-specific KCGS grade input used for shadow-only pillar boost traces."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    companyId: int = Field(..., strict=True, gt=0)
+    ratingYear: int = Field(..., strict=True, ge=2000, le=2100)
+    overallGrade: str
+    environmentGrade: str
+    socialGrade: str
+    governanceGrade: str
+    inputSourceType: str = "MANUAL"
+    sourceDocumentRef: Optional[str] = None
+    reviewStatus: str = "DRAFT"
+
+
 class AggregationTraceV13(BaseModel):
     """Sub-issue axis aggregation trace. MAX over sources; offsetting forbidden."""
 

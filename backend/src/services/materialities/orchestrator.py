@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from src.models.dmaengine import (
     ExtractedFactsV13,
+    KcgsGradeInputV13,
     MediaNewsDedupTraceV13,
     MediaNewsEventResolutionTraceV13,
     RegulationApplicabilityInputV13,
@@ -36,6 +37,13 @@ from src.utils.subissuemaster import subissueMaster
 
 REGULATION_INPUT_METHODS = ("CONSULTANT_INPUT", "MANUAL", "POLICY_SEED")
 REGULATION_REVIEW_STATUSES = ("APPROVED", "DRAFT", "REVIEWED")
+KCGS_INPUT_SOURCE_TYPES = ("MANUAL", "IMPORT")
+KCGS_REVIEW_STATUSES = ("APPROVED", "DRAFT", "REVIEWED")
+KCGS_PILLAR_GRADE_FIELDS = (
+    ("E", "environmentGrade"),
+    ("S", "socialGrade"),
+    ("G", "governanceGrade"),
+)
 
 
 def step0BuildFactTrace(
@@ -144,7 +152,9 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
         return buildPayload(trace, subIssueCode=payload.get("subIssueCode"), sourceChannel="media_external")
 
     if normalizedChannel == "kcgs":
-        state = dmascoring.step2CalcKcgs(str(payload["grade"]), str(payload["trend"]), screeningPolicy)
+        kcgsPolicy = screeningPolicy["kcgs"]
+        latestGrade = str(payload.get("latestGrade") or payload["grade"])
+        state = dmascoring.step2CalcKcgs(latestGrade, str(payload["trend"]), screeningPolicy)
         subIssueBoost = dmascoring.step2CalcKcgsBoost(state["pillarSignal"], screeningPolicy)
         # KCGS pillar movement is not an axis score. Preserve it only as a Top20 boost hint.
         trace = ScreeningTraceV13(
@@ -155,12 +165,37 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
             status=state["status"],
             capability=dmaruleregistry.getCapability("kcgsPillarSignal"),
             rawInputs={
-                **state,
+                "sourceStep": "media_external",
+                "sourceType": "agency",
+                "providerKey": "kcgs",
+                "companyId": payload.get("companyId"),
+                "ratingYears": list(payload.get("ratingYears") or []),
+                "overallGradeHistory": list(payload.get("overallGradeHistory") or []),
+                "pillar": payload.get("pillar"),
+                "pillarGradeHistory": list(payload.get("pillarGradeHistory") or []),
+                "previousGrade": payload.get("previousGrade"),
+                "latestGrade": latestGrade,
+                "trend": payload.get("trend"),
+                "stepDifference": payload.get("stepDifference"),
+                "inputSourceType": payload.get("inputSourceType"),
+                "sourceDocumentRefs": list(payload.get("sourceDocumentRefs") or []),
+                "reviewStatusHistory": list(payload.get("reviewStatusHistory") or []),
+                "gradeRisk": state["gradeRisk"],
+                "trendModifier": state["trendModifier"],
+                "pillarSignal": state["pillarSignal"],
                 "subIssueBoost": subIssueBoost,
-                "directCanonicalFinalAllowedYn": screeningPolicy["kcgs"]["directCanonicalFinalAllowedYn"],
+                "propagationMode": kcgsPolicy["propagationMode"],
+                "overallGradeTraceOnlyYn": kcgsPolicy["overallGradeTraceOnlyYn"],
+                "externalMaxEligibleYn": kcgsPolicy["externalMaxEligibleYn"],
+                "top20BoostOnlyYn": kcgsPolicy["top20BoostOnlyYn"],
+                "directCanonicalFinalAllowedYn": kcgsPolicy["directCanonicalFinalAllowedYn"],
             },
         )
-        return buildPayload(trace)
+        return buildPayload(
+            trace,
+            subIssueCode=payload.get("subIssueCode"),
+            sourceChannel="media_external",
+        )
 
     if normalizedChannel == "externalMax":
         signals = [
@@ -340,6 +375,100 @@ def step2BuildRegulationScreeningPayloads(
     ]
 
 
+def step2BuildKcgsPillarBoostPayloads(
+    gradeRows: Sequence[KcgsGradeInputV13 | Mapping[str, Any]],
+) -> list[dict]:
+    screeningPolicy = dmaruleregistry.getPolicy("screening_policy")
+    kcgsPolicy = screeningPolicy["kcgs"]
+    gradeOrder = set(kcgsPolicy["gradeOrderBestToWorst"])
+
+    inputs = [
+        item if isinstance(item, KcgsGradeInputV13)
+        else KcgsGradeInputV13(**dict(item))
+        for item in gradeRows
+    ]
+
+    approvedInputs: list[KcgsGradeInputV13] = []
+    for item in inputs:
+        if item.reviewStatus not in KCGS_REVIEW_STATUSES:
+            raise ValueError(f"Unknown KCGS reviewStatus: {item.reviewStatus!r}")
+        if item.inputSourceType not in KCGS_INPUT_SOURCE_TYPES:
+            raise ValueError(f"Unknown KCGS inputSourceType: {item.inputSourceType!r}")
+        for fieldName in ("overallGrade", "environmentGrade", "socialGrade", "governanceGrade"):
+            grade = getattr(item, fieldName)
+            if grade not in gradeOrder:
+                raise ValueError(f"Unknown KCGS {fieldName}: {grade!r}")
+        if item.reviewStatus == "APPROVED":
+            approvedInputs.append(item)
+
+    if not approvedInputs:
+        return []
+    if len(approvedInputs) != 3:
+        raise ValueError(
+            f"KCGS pillar boost requires exactly 3 APPROVED rows, got {len(approvedInputs)}"
+        )
+
+    companyIds = {item.companyId for item in approvedInputs}
+    if len(companyIds) != 1:
+        raise ValueError(f"KCGS pillar boost rows must belong to one company, got {sorted(companyIds)}")
+
+    years = [item.ratingYear for item in approvedInputs]
+    if len(set(years)) != len(years):
+        raise ValueError(f"Duplicate APPROVED KCGS ratingYear detected: {sorted(years)}")
+    orderedInputs = sorted(approvedInputs, key=lambda item: item.ratingYear)
+    orderedYears = [item.ratingYear for item in orderedInputs]
+    if orderedYears != list(range(orderedYears[0], orderedYears[0] + 3)):
+        raise ValueError(f"KCGS APPROVED rating years must be consecutive, got {orderedYears}")
+
+    previousInput = orderedInputs[-2]
+    latestInput = orderedInputs[-1]
+    companyId = latestInput.companyId
+    overallGradeHistory = [
+        {"ratingYear": item.ratingYear, "grade": item.overallGrade}
+        for item in orderedInputs
+    ]
+    sourceDocumentRefs = [
+        {"ratingYear": item.ratingYear, "sourceDocumentRef": item.sourceDocumentRef}
+        for item in orderedInputs
+    ]
+    reviewStatusHistory = [
+        {"ratingYear": item.ratingYear, "reviewStatus": item.reviewStatus}
+        for item in orderedInputs
+    ]
+    inputSourceType = latestInput.inputSourceType
+
+    payloads: list[dict] = []
+    for pillar, fieldName in KCGS_PILLAR_GRADE_FIELDS:
+        previousGrade = getattr(previousInput, fieldName)
+        latestGrade = getattr(latestInput, fieldName)
+        trend = dmascoring.step2ResolveKcgsTrend(previousGrade, latestGrade, screeningPolicy)
+        pillarGradeHistory = [
+            {"ratingYear": item.ratingYear, "grade": getattr(item, fieldName)}
+            for item in orderedInputs
+        ]
+        for subIssueCode, metadata in sorted(subissueMaster.items()):
+            if metadata.get("domain") != pillar:
+                continue
+            payloads.append(step2RunScreening("kcgs", {
+                "companyId": companyId,
+                "ratingYears": orderedYears,
+                "overallGradeHistory": overallGradeHistory,
+                "pillar": pillar,
+                "pillarGradeHistory": pillarGradeHistory,
+                "previousGrade": trend["previousGrade"],
+                "latestGrade": trend["latestGrade"],
+                "grade": trend["latestGrade"],
+                "trend": trend["trend"],
+                "stepDifference": trend["stepDifference"],
+                "inputSourceType": inputSourceType,
+                "sourceDocumentRefs": sourceDocumentRefs,
+                "reviewStatusHistory": reviewStatusHistory,
+                "subIssueCode": subIssueCode,
+            }))
+
+    return payloads
+
+
 def _mediaNewsCandidateFingerprint(candidate) -> tuple:
     """Deterministic fingerprint of an axis candidate for MERGED consistency check."""
     if candidate is None:
@@ -495,6 +624,7 @@ __all__ = [
     "step1RunCanonical",
     "step2ResolveBenchmarkObservation",
     "step2BuildBenchmarkScreeningPayloads",
+    "step2BuildKcgsPillarBoostPayloads",
     "step2BuildRegulationScreeningPayloads",
     "step2RunScreening",
     "step3RunSelection",

@@ -28,8 +28,14 @@
     }
   },
   "kcgs": {
+    "gradeOrderBestToWorst": ["S", "A+", "A", "B+", "B", "C", "D"],
     "gradeRisk": {"S": 0.0, "A+": 0.5, "A": 1.0, "B+": 2.0, "B": 3.0, "C": 4.0, "D": 5.0},
     "trendModifier": {"downgradeTwoOrMore": 1.0, "downgradeOne": 0.5, "flat": 0.0, "upgrade": 0.0, "insufficientData": "UNOBSERVED"},
+    "pillars": ["E", "S", "G"],
+    "propagationMode": "ALL_SUB_ISSUES_IN_PILLAR_DOMAIN",
+    "overallGradeTraceOnlyYn": true,
+    "externalMaxEligibleYn": false,
+    "top20BoostOnlyYn": true,
     "pillarSignalMax": 5.0,
     "maxSubIssueBoost": 1.0,
     "boostMultiplier": 0.20,

@@ -9,9 +9,18 @@ from src.utils.db import save, findOne
 from src.models.model import ResponseModel, UserModel
 from src.models.benchmk import FileModel, FileFindModel
 from src.utils.ocraiv8 import gemini
-from src.utils.dmarepository import saveSignals
+from src.utils import dmaruleregistry
+from src.utils.dmarepository import (
+    saveSignals,
+    step4ReplaceBenchmarkShadowTracesTx,
+)
 from src.utils.dmascoring import scoreSignals
-from src.services.benchmarks.adapter import convertToDmaSignals
+from src.services.benchmarks.adapter import convertToDmaSignals, step0NormalizeBenchmarkFacts
+from src.services.materialities.orchestrator import (
+    step0BuildFactTrace,
+    step2BuildBenchmarkScreeningPayloads,
+)
+from src.utils.subissuemaster import subissueMaster
 
 def normalizeSourceType(value: str) -> str:
     if not value:
@@ -141,6 +150,8 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
     
     # 결과(BENCHMK TABLE)DB 저장
     if finalResult:
+        shadowFactBuildFailedYn = False
+        factPayloads = []
         for item in finalResult["data"]:
             if item == None:
                 continue
@@ -151,29 +162,66 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
             # 파일 저장 실패 알림
             if not resultList or item.get("type") == "ERROR":
                 raise Exception(f"{dbFileName} 파일 분석 중 AI 엔진 내부 오류가 발생했습니다.")
-            
+
             # fileMetaByName에서 메타데이터 찾기
             fileMeta = fileMetaByName.get(dbFileName, {})
             fileId = fileMeta.get("fileId")
             sourceTitle = fileMeta.get("sourceTitle", dbFileName)
-                    
+            sourceType = fileMeta.get("sourceType")
+
             # DMASignal 객체 리스트로 변환
             signalsToSave = convertToDmaSignals(resultList, fileId)
-            
+
             # Rule Engine을 호출하여 점수 산출
             scoredSignals = scoreSignals(signalsToSave)
-                    
+
             # Repository를 통해 DB에 저장(동적으로 run_id 전달)
             try:
                 saveSignals(
-                    runId=fileFindModel.esgMaterialityRunId, 
+                    runId=fileFindModel.esgMaterialityRunId,
                     signals=scoredSignals,
                     fileId=fileId,
                     sourceTitle=sourceTitle
                 )
+                try:
+                    aiPolicy = dmaruleregistry.getPolicy("ai_fact_validation_policy")
+                    shadowFacts = step0NormalizeBenchmarkFacts(
+                        resultList,
+                        fileId=fileId,
+                        sourceType=sourceType,
+                        aiPolicy=aiPolicy,
+                    )
+                    for fact in shadowFacts:
+                        factPayloads.append(step0BuildFactTrace(
+                            extractedFact=fact,
+                            sourceChannel="benchmark",
+                        ))
+                except Exception as shadowError:
+                    shadowFactBuildFailedYn = True
+                    print(f"Warning: Benchmark v1.3 shadow fact build failed: {shadowError}")
             except Exception as e:
                 raise Exception(f"{dbFileName} 파일 분석 후 DB 저장 중 오류가 발생했습니다: {e}")
-                
+
+        # Fact Build 실패 시 기존 활성 Shadow Set 보호 — Replace Transaction 전체 Skip
+        if shadowFactBuildFailedYn:
+            print("Warning: Benchmark v1.3 shadow replace skipped because fact build failed")
+        else:
+            # 모든 Legacy 파일 저장 성공 후 Shadow Replace Transaction 요청당 1회 실행
+            try:
+                universeSubIssueCodes = [
+                    code for code, meta in subissueMaster.items()
+                    if meta.get("materiality_issue_pool_yn") == "Y"
+                ]
+                screeningPayloads = step2BuildBenchmarkScreeningPayloads(factPayloads, universeSubIssueCodes)
+                step4ReplaceBenchmarkShadowTracesTx(
+                    runId=fileFindModel.esgMaterialityRunId,
+                    factPayloads=factPayloads,
+                    screeningPayloads=screeningPayloads,
+                    expectedScreeningCount=len(universeSubIssueCodes),
+                )
+            except Exception as shadowError:
+                print(f"Warning: Benchmark v1.3 shadow replace transaction failed: {shadowError}")
+
         return ResponseModel(True, "분석이 성공적으로 완료되었습니다.", finalResult)
            
     return finalResult

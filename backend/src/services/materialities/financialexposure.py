@@ -40,9 +40,13 @@ from typing import Any, Optional
 
 from src.models.dmaengine import DMASignal, FinancialFactor
 from src.utils.companycontextrepository import getMaterialityRunContext
-from src.utils.dmafinancialrepository import getBasis
+from src.utils.financialbasisrepository import getBasis
 from src.utils.subissuemaster import getScoringAllowedIros
 
+# LEGACY ONLY:
+# Applies existing G0 financial basis to legacy DMASignal financial factors.
+# Not called by the new v1.3 Orchestrator foundation in Phase B.
+# Keep formula behavior unchanged until a later runtime migration explicitly rewires it.
 
 FINANCIAL_EXPOSURE_RULE_VERSION = "financial-exposure-rule-v1"
 

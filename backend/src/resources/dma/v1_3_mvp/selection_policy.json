@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "ruleVersion": "dma-rule-v1.3-mvp",
+  "scorePurpose": "CANONICAL_IRO",
+  "candidateThreshold": 3.0,
+  "candidateCondition": "EITHER_AXIS_GTE_THRESHOLD",
+  "sortStrategy": ["MAX_AXIS_DESC", "MIN_AXIS_DESC", "SURVEY_PRIORITY_RATE_DESC", "SUB_ISSUE_CODE_ASC"],
+  "recommendedTop10": 10,
+  "recommendedTop5": 5,
+  "ranking": {
+    "missingAxisSortValue": 0.0
+  },
+  "governanceGate": {
+    "separateFromScoringYn": true,
+    "scoreEditPermissionYn": false,
+    "manualScoreOverrideAllowedYn": false,
+    "manualSelectionActionsAllowed": ["MANUAL_ADD", "MANUAL_EXCLUDE"]
+  }
+}

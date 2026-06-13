@@ -2,6 +2,14 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { GET, POST, PATCH } from "@utils/Network";
 
 export const DEFAULT_REPORTING_YEAR = new Date().getFullYear();
+
+export const normalizeReportingYear = (value) => {
+  const year = Number(value);
+  return Number.isInteger(year) && year >= 2000 && year <= 2100
+    ? year
+    : DEFAULT_REPORTING_YEAR;
+};
+
 const ONBOARDING_ASSIGNMENT_ROOT = "/onboardingAssignment";
 
 const normalizeDirectDtoResponse = (res) => {
@@ -220,7 +228,9 @@ export const fetchCurrentWorkflow = createAsyncThunk(
     { companyId, reportingYear = DEFAULT_REPORTING_YEAR } = {},
     { rejectWithValue }
   ) => {
-    const params = companyId == null ? undefined : { companyId, reportingYear };
+    const params = companyId == null
+      ? undefined
+      : { companyId, reportingYear: normalizeReportingYear(reportingYear) };
     try {
       const res = await GET("/reportWorkflow/current", params);
       return rejectIfFailed(res, rejectWithValue, "보고서 워크플로우 조회에 실패했습니다.");
@@ -240,7 +250,9 @@ export const probeCurrentWorkflow = createAsyncThunk(
     { companyId, reportingYear = DEFAULT_REPORTING_YEAR } = {},
     { rejectWithValue }
   ) => {
-    const params = companyId == null ? undefined : { companyId, reportingYear };
+    const params = companyId == null
+      ? undefined
+      : { companyId, reportingYear: normalizeReportingYear(reportingYear) };
     try {
       const res = await GET("/reportWorkflow/current", params);
       return rejectIfFailed(res, rejectWithValue, "보고서 워크플로우 조회에 실패했습니다.");
@@ -258,7 +270,11 @@ export const startReportWorkflow = createAsyncThunk(
   "report/startReportWorkflow",
   async (payload, { rejectWithValue }) => {
     try {
-      const res = await POST("/reportWorkflow/start", payload);
+      const normalizedPayload = {
+        ...payload,
+        reportingYear: normalizeReportingYear(payload?.reportingYear),
+      };
+      const res = await POST("/reportWorkflow/start", normalizedPayload);
       return rejectIfFailed(res, rejectWithValue, "보고서 워크플로우 시작에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -314,7 +330,7 @@ export const fetchOnboardingMetrics = createAsyncThunk(
     },
     { rejectWithValue }
   ) => {
-    const params = { companyId, reportingYear, cycleType };
+    const params = { companyId, reportingYear: normalizeReportingYear(reportingYear), cycleType };
     if (metricId) params.metricId = metricId;
     if (batchId) params.batchId = batchId;
     try {
@@ -359,7 +375,7 @@ export const fetchOnboardingAssignments = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const params = { companyId, reportingYear, cycleType };
+      const params = { companyId, reportingYear: normalizeReportingYear(reportingYear), cycleType };
       if (batchId) params.batchId = batchId;
       const res = normalizeDirectDtoResponse(
         await GET(ONBOARDING_ASSIGNMENT_ROOT, params)
@@ -428,7 +444,7 @@ export const fetchApprovalItems = createAsyncThunk(
   ) => {
     const params = {
       companyId,
-      reportingYear,
+      reportingYear: normalizeReportingYear(reportingYear),
       cycleType,
       assignedOnlyYn,
     };
@@ -460,7 +476,7 @@ export const fetchOnboardingApprovalDetail = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const params = { companyId, reportingYear, metricId, cycleType };
+      const params = { companyId, reportingYear: normalizeReportingYear(reportingYear), metricId, cycleType };
       if (batchId) params.batchId = batchId;
       const res = await GET(`${ONBOARDING_APPROVAL_API_ROOT}/detail`, params);
       return rejectIfFailed(res, rejectWithValue, "온보딩 승인 상세 조회에 실패했습니다.");
@@ -849,8 +865,9 @@ const reportSlice = createSlice({
   initialState,
   reducers: {
     setCurruntYear: (state, action) => {
-      localStorage.setItem("currentYear", action.payload);
-      state.currentYear = action.payload ?? null;
+      const normalized = normalizeReportingYear(action.payload);
+      localStorage.setItem("currentYear", normalized);
+      state.currentYear = normalized;
     },
     setMaterialityRunId: (state, action) => {
       localStorage.setItem("currentRunId", action.payload);

@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "ruleVersion": "dma-rule-v1.3-mvp",
+  "scorePurpose": "STAKEHOLDER_OVERLAY",
+  "surveyVersion": "V1.5",
+  "detailFormulaStrategy": "SQRT_PRODUCT",
+  "personalJudgment": {"baseWeight": 0.40, "detailWeight": 0.60},
+  "departmentWeight": {
+    "impactExpert": {"impact": 1.5, "financial": 1.0},
+    "financialExpert": {"impact": 1.0, "financial": 1.5},
+    "common": {"impact": 1.0, "financial": 1.0}
+  },
+  "externalSubtypeWeight": {
+    "impact": {"community": 0.6, "investor": 0.1, "expert": 0.3},
+    "financial": {"community": 0.1, "investor": 0.6, "expert": 0.3}
+  },
+  "groupWeight": {
+    "impact": {"employee": 0.35, "management": 0.40, "external": 0.25},
+    "financial": {"employee": 0.20, "management": 0.50, "external": 0.30}
+  },
+  "nullPolicy": {"excludeFromDenominatorYn": true, "reweightAvailableGroupsYn": true, "hardToJudgeAsZeroYn": false},
+  "top5": {"useFor": ["TIE_BREAK", "GOVERNANCE_OVERLAY"], "canonicalScoreAdditiveYn": false},
+  "corroborativeOnlyYn": true,
+  "directCanonicalOverrideAllowedYn": false
+}

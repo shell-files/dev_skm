@@ -34,6 +34,11 @@ Stage별 시그널 집계 및 Final Materiality Score 산출 모듈.
 - benchmark ratio/blind spot 산식은 v1 provisional (후속 정교화 예정)
 """
 
+# LEGACY ONLY:
+# Existing Survey 0.40 + Benchmark 0.35 + Media 0.25 stage weighted-average path.
+# Not called by the new v1.3 Orchestrator.
+# Delete after Phase C Runtime Migration confirms import count is 0.
+
 from typing import List, Tuple, Optional
 from src.models.dmaengine import DMASignal, StageScore, FinalMaterialityScore
 from src.utils.dmascoring import clamp

@@ -8,15 +8,28 @@ from src.models.media import (
     MediaNewsCrawlAnalyzeResponse,
     MediaTopIssue,
 )
-from src.services.medias.adapter import convertMediaToDmaSignals
+from src.services.medias.adapter import convertMediaToDmaSignals, step0NormalizeMediaFacts
 from src.services.medias.baseline import applyMediaBaseline
 from src.services.medias.crawler import applySavedSignalCounts, crawlNewsArticles
 from src.services.medias.pipeline import processMediaPipeline
+from src.services.materialities.orchestrator import (
+    step0BuildFactTrace,
+    step1BuildMediaNewsCanonicalPayloads,
+    step2BuildKcgsPillarBoostPayloads,
+    step2BuildRegulationScreeningPayloads,
+)
 from src.utils.dmarepository import (
     getMediaCoverage,
     countMediaSubIssues,
     listTopMediaIssues,
     saveSignals,
+    step4ReplaceMediaNewsShadowBundleTx,
+    findRegulationRunContext,
+    listApprovedKcgsGradeInputs,
+    listApprovedRegulationInputs,
+    listApprovedActiveRegulationMappings,
+    step4ReplaceKcgsShadowTracesTx,
+    step4ReplaceRegulationShadowTracesTx,
 )
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
 from src.utils.subissuemaster import getSubIssueDisplayName
@@ -31,6 +44,7 @@ def runMediaAnalysis(
     runId: int,
     keywords: Optional[list[str]] = None,
     industryKeywords: Optional[list[str]] = None,
+    shadowReplaceYn: bool = True,
 ):
     """
     미디어 언론 분석 전체 워크플로우를 실행합니다.
@@ -52,6 +66,12 @@ def runMediaAnalysis(
 
     if scoredSignals:
         saveSignals(runId=runId, signals=scoredSignals, fileId=None, sourceTitle="Media Analysis")
+
+    if shadowReplaceYn:
+        try:
+            _replaceMediaNewsShadowFromPipelineResults(runId=runId, pipelineResults=pipelineResults)
+        except Exception as shadowError:
+            print(f"Warning: media_external.news v1.3 shadow replace failed: {shadowError}")
 
     return scoredSignals
 
@@ -88,6 +108,7 @@ def runMediaCrawlAndAnalyze(
         industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
     )
 
+    crawlCompleteYn = _isCrawlComplete(crawlResult)
     scoredSignals = []
     savedSignalCountsBySource = {}
     if crawlResult.articles:
@@ -96,8 +117,29 @@ def runMediaCrawlAndAnalyze(
             runId=request.runId,
             keywords=MVP_DEMO_COMPANY_KEYWORDS,
             industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
+            shadowReplaceYn=crawlCompleteYn,
         )
         savedSignalCountsBySource = _countSavedSignalsBySource(scoredSignals)
+    elif crawlCompleteYn:
+        try:
+            _replaceMediaNewsShadowFromPipelineResults(runId=request.runId, pipelineResults=[])
+        except Exception as shadowError:
+            print(f"Warning: media_external.news v1.3 shadow empty-clear failed: {shadowError}")
+
+    # media_external.regulation Shadow refresh — independent of the news crawl result.
+    # Runs exactly once even when the crawl FAILED; a failure here must never break the
+    # legacy media response (warning only).
+    try:
+        refreshRegulationShadowForRun(request.runId)
+    except Exception as shadowError:
+        print(f"Warning: media_external.regulation v1.3 shadow replace failed: {shadowError}")
+
+    # media_external.agency.kcgs Shadow refresh ??independent of the news crawl result.
+    # KCGS is trace-only metadata for pillar boost; it is not an externalMax or summary input.
+    try:
+        refreshKcgsShadowForRun(request.runId)
+    except Exception as shadowError:
+        print(f"Warning: media_external.agency.kcgs v1.3 shadow replace failed: {shadowError}")
 
     sourceBreakdown = applySavedSignalCounts(
         crawlResult.sourceBreakdown,
@@ -174,6 +216,80 @@ def _safeFloatOrNone(value):
 
 def _score10(score05):
     return round(score05 * SCORE_UI_MULTIPLIER, 2) if score05 is not None else None
+
+
+def _replaceMediaNewsShadowFromPipelineResults(runId: int, pipelineResults: list) -> None:
+    shadowFacts = step0NormalizeMediaFacts(pipelineResults)
+
+    factPayloads = [
+        step0BuildFactTrace(extractedFact=fact, sourceChannel="media_external")
+        for fact in shadowFacts
+    ]
+
+    canonicalPayloads = step1BuildMediaNewsCanonicalPayloads(
+        shadowFacts,
+        evaluationDate=date.today().isoformat(),
+    )
+
+    step4ReplaceMediaNewsShadowBundleTx(
+        runId=runId,
+        factPayloads=factPayloads,
+        canonicalPayloads=canonicalPayloads,
+    )
+
+
+def refreshRegulationShadowForRun(runId: int) -> int:
+    """
+    Refresh the media_external.regulation Shadow set for a materiality run.
+
+    Independent of the news crawl result. Reads the run's company/year, the APPROVED
+    applicability inputs and the APPROVED + active regime→sub-issue mappings, rebuilds
+    the regulation screening payloads via the pure orchestrator builder, then replaces
+    the active regulation shadow rows within a single transaction.
+
+    Empty approved input or empty active mapping yields payloads=[], which is a valid
+    empty-clear (prior active regulation shadow rows are soft-deleted, nothing inserted).
+    Returns the number of regulation shadow rows persisted.
+    """
+    runContext = findRegulationRunContext(runId)
+    companyId = runContext["companyId"]
+    reportingYear = runContext["reportingYear"]
+
+    approvedInputs = listApprovedRegulationInputs(companyId, reportingYear)
+    approvedMappings = listApprovedActiveRegulationMappings()
+
+    payloads = step2BuildRegulationScreeningPayloads(approvedInputs, approvedMappings)
+
+    return step4ReplaceRegulationShadowTracesTx(runId, payloads)
+
+
+def refreshKcgsShadowForRun(runId: int) -> int:
+    """
+    Refresh the media_external.agency.kcgs Shadow set for a materiality run.
+
+    Reads APPROVED latest 3-year KCGS grade inputs for the run company, rebuilds
+    pillar boost metadata traces via the pure orchestrator builder, then replaces
+    the active KCGS shadow rows in one transaction. Empty approved input yields a
+    valid empty-clear. Partial or non-consecutive APPROVED input fails before the
+    writer is called.
+    """
+    runContext = findRegulationRunContext(runId)
+    companyId = runContext["companyId"]
+
+    gradeRows = listApprovedKcgsGradeInputs(companyId)
+    payloads = step2BuildKcgsPillarBoostPayloads(gradeRows)
+
+    return step4ReplaceKcgsShadowTracesTx(runId, payloads)
+
+
+def _isCrawlComplete(crawlResult) -> bool:
+    if not crawlResult.allowedSources:
+        return False
+    if crawlResult.errors:
+        return False
+    return bool(crawlResult.sourceBreakdown) and all(
+        item.status == "SUCCESS" for item in crawlResult.sourceBreakdown
+    )
 
 
 def _parseRequestDate(value: str, fieldName: str) -> date:

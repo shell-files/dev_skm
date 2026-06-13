@@ -48,8 +48,7 @@ function EcoProductPage(props) {
                 {mt(metrics, "AP-E-06__G0001", mode)}
               </span>
             </div>
-            <div style={{ marginTop: 10, borderTop: "1px solid var(--panel-line)", paddingTop: 10 }}>
-              <div style={{ fontSize: 9.5, color: "var(--muted)", marginBottom: 4 }}>매출 대비 친환경 비중</div>
+            {/* <div style={{ marginTop: 10, borderTop: "1px solid var(--panel-line)", paddingTop: 10 }}>
               <div style={{ fontSize: 18, fontWeight: 900, color: "var(--brand)" }}
                 data-source="AP-E-06__G0003">
                 {mt(metrics, "AP-E-06__G0003", mode)}
@@ -57,7 +56,7 @@ function EcoProductPage(props) {
               <div className="sr-track" style={{ marginTop: 6 }}>
                 <div className="sr-fill" style={{ width: `${fillPct}%` }} />
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

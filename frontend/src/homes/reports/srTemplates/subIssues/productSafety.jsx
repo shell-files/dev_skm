@@ -26,8 +26,8 @@ function ProductSafetyPage(props) {
   return (
     <SRChrome {...props}>
       {/* 문단 + CAP 완료율 게이지 나란히 */}
-      <div className="sr-cols">
-        <div className="c-main">
+      <div className="sr-cols" style={{ alignItems: "stretch" }}>
+        <div className="c-main" style={{ display: "flex", flexDirection: "column" }}>
           <Narrative
             narrativeText={narrativeText}
             template={TEMPLATE}
@@ -37,8 +37,8 @@ function ProductSafetyPage(props) {
             onNarrativeChange={props.onNarrativeChange}
           />
         </div>
-        <div className="c-side">
-          <div className="sr-gauge">
+        <div className="c-side" style={{ display: "flex", alignItems: "center" }}>
+          <div className="sr-gauge" style={{ width: "100%" }}>
             <div className="gl">제품안전 CAP 완료율</div>
             <div className="gv" data-source="AP-S-01__G0005">
               {mt(metrics, "AP-S-01__G0005", mode)}
@@ -52,57 +52,53 @@ function ProductSafetyPage(props) {
       </div>
 
       {/* ── 제품안전 거버넌스 & 이슈 대응 ── */}
-      <div className="sr-cols" style={{ marginTop: 16 }}>
+      <div className="sr-panel" style={{ marginTop: 16 }}>
+        <div className="sr-panel-grid">
 
-        {/* 좌: 거버넌스 패널 */}
-        <div className="c-main">
-          <div className="sr-panel" style={{ marginTop: 0 }}>
-            <div className="sr-panel-grid" style={{ display: "flex", flexDirection: "column" }}>
-              <div>
-                <div className="sr-panel-h">
-                  <span className="tagn">1</span> 제품안전 거버넌스 체계
-                </div>
-                <div className="sr-flow-note" data-source="AP-S-01__QL0002">
-                  {mt(metrics, "AP-S-01__QL0002", mode)}
-                </div>
+          {/* 좌: 거버넌스 */}
+          <div className="sr-panel-l">
+            <div>
+              <div className="sr-panel-h">
+                <span className="tagn">1</span> 제품안전 거버넌스 체계
               </div>
-              <div style={{ marginTop: 12, borderTop: "1px dashed var(--panel-line)", paddingTop: 10 }}>
-                <div className="sr-panel-h" style={{ marginBottom: 6 }}>
-                  <span className="tagn">2</span> 주요 이슈 대응
-                </div>
-                <div className="sr-flow-note" data-source="AP-S-01__QL0003">
-                  {mt(metrics, "AP-S-01__QL0003", mode)}
-
-                </div>
-
+              <div className="sr-flow-note" data-source="AP-S-01__QL0002">
+                {mt(metrics, "AP-S-01__QL0002", mode)}
+              </div>
+            </div>
+            <div style={{ marginTop: 12, borderTop: "1px dashed var(--panel-line)", paddingTop: 10 }}>
+              <div className="sr-panel-h" style={{ marginBottom: 6 }}>
+                <span className="tagn">2</span> 주요 이슈 대응
+              </div>
+              <div className="sr-flow-note" data-source="AP-S-01__QL0003">
+                {mt(metrics, "AP-S-01__QL0003", mode)}
               </div>
             </div>
           </div>
+
           {/* 우: 안전 사고 수치 */}
-          <div className="c-side">
-            <div className="sr-panel" style={{ padding: "12px 14px" }}>
-              <div className="sr-stat">
-                <span className="l">
-                  필드액션 건수<br />
-                  <small>연결 기준 발생</small>
-                </span>
-                <span className="v" data-source="AP-S-01__G0001">
-                  {mt(metrics, "AP-S-01__G0001", mode)}
-                </span>
-              </div>
-              <div className="sr-stat">
-                <span className="l">
-                  리콜 건수<br />
-                  <small>자발적 리콜 포함</small>
-                </span>
-                <span className="v" data-source="AP-S-01__G0002">
-                  {mt(metrics, "AP-S-01__G0002", mode)}
-                </span>
-              </div>
+          <div className="sr-panel-r">
+            <div className="sr-panel-h">안전 사고 현황</div>
+            <div className="sr-stat hl">
+              <span className="l">
+                필드액션 건수<br />
+                <small>연결 기준 발생</small>
+              </span>
+              <span className="v" data-source="AP-S-01__G0001">
+                {mt(metrics, "AP-S-01__G0001", mode)}
+              </span>
+            </div>
+            <div className="sr-stat">
+              <span className="l">
+                리콜 건수<br />
+                <small>자발적 리콜 포함</small>
+              </span>
+              <span className="v" data-source="AP-S-01__G0002">
+                {mt(metrics, "AP-S-01__G0002", mode)}
+              </span>
             </div>
           </div>
-        </div>
 
+        </div>
       </div>
 
       {/* ── 제품안전 경영 방침 ── */}

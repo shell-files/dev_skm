@@ -207,6 +207,13 @@ const supplyChain = {
         pageTitle: "공급망 감사·시정조치",
         pageTitleEn: "Supply Chain Audit & Corrective Action Plan",
         sourceNote: "SKM SR Template v1.0 · Auto-generated",
+        subNavItems: [
+          { label: "기후변화 대응" },
+          { label: "공급망 감사", active: true },
+          { label: "교육훈련" },
+          { label: "친환경 제품" },
+          { label: "제품안전" },
+        ],
       },
     },
   ],

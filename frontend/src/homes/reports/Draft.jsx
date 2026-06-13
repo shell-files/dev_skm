@@ -155,9 +155,6 @@ const Draft = () => {
 
   useEffect(() => {
     if (!reportData) {
-      // navigate('/result');
-      console.log("데이터 없음")
-      console.log(selectedCompany.company_id, year)
       return;
     }
   }, [reportData]);
@@ -823,7 +820,6 @@ const Draft = () => {
       aiDesc: null,
     }
     : null;
-  console.log(srMetric);
 
   return (
     <div className="draft-container">

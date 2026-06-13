@@ -474,6 +474,55 @@ class KcgsBuilderTest(unittest.TestCase):
             raw = _raw(payload)
             self.assertEqual(subissueMaster[payload["subIssueCode"]]["domain"], raw["pillar"])
 
+    def test_mvp_fixture_2023_2025_expected_pillar_boosts(self):
+        rows = [
+            {
+                "companyId": COMPANY_ID,
+                "ratingYear": 2023,
+                "overallGrade": "A",
+                "environmentGrade": "A+",
+                "socialGrade": "A+",
+                "governanceGrade": "B+",
+                "inputSourceType": "MANUAL",
+                "reviewStatus": "APPROVED",
+            },
+            {
+                "companyId": COMPANY_ID,
+                "ratingYear": 2024,
+                "overallGrade": "A",
+                "environmentGrade": "A+",
+                "socialGrade": "A+",
+                "governanceGrade": "B+",
+                "inputSourceType": "MANUAL",
+                "reviewStatus": "APPROVED",
+            },
+            {
+                "companyId": COMPANY_ID,
+                "ratingYear": 2025,
+                "overallGrade": "B+",
+                "environmentGrade": "B+",
+                "socialGrade": "A+",
+                "governanceGrade": "B",
+                "inputSourceType": "MANUAL",
+                "reviewStatus": "APPROVED",
+            },
+        ]
+
+        payloads = orchestrator.step2BuildKcgsPillarBoostPayloads(rows)
+
+        e = _raw(_firstByPillar(payloads, "E"))
+        s = _raw(_firstByPillar(payloads, "S"))
+        g = _raw(_firstByPillar(payloads, "G"))
+
+        self.assertAlmostEqual(e["pillarSignal"], 3.0)
+        self.assertAlmostEqual(e["subIssueBoost"], 0.60)
+
+        self.assertAlmostEqual(s["pillarSignal"], 0.5)
+        self.assertAlmostEqual(s["subIssueBoost"], 0.10)
+
+        self.assertAlmostEqual(g["pillarSignal"], 3.5)
+        self.assertAlmostEqual(g["subIssueBoost"], 0.70)
+
 
 class KcgsSerializerTest(unittest.TestCase):
     def test_45_valid_serializer_maps_shadow_row(self):

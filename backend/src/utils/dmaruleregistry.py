@@ -408,12 +408,64 @@ def validateKcgsScreeningPolicy(policy: Mapping[str, Any]) -> None:
             )
 
 
+def validateKisScreeningPolicy(
+    policy: Mapping[str, Any],
+    manifest: Mapping[str, Any],
+) -> None:
+    """Fail-fast structural validation for screening_policy.kis / manifest.kisFinancialResilience."""
+    if not isinstance(policy, Mapping):
+        raise DmaRuleValidationError("screening_policy must be a JSON object")
+    kis = policy.get("kis")
+    if not isinstance(kis, Mapping):
+        raise DmaRuleValidationError("screening_policy.kis must be a JSON object")
+
+    capability = kis.get("capability")
+    if capability != "DATA_EXPORT_REQUIRED":
+        raise DmaRuleValidationError(
+            f"screening_policy.kis.capability must be 'DATA_EXPORT_REQUIRED', got {capability!r}"
+        )
+
+    reason = kis.get("reason")
+    if reason != "GRID_THRESHOLDS_REQUIRED":
+        raise DmaRuleValidationError(
+            f"screening_policy.kis.reason must be 'GRID_THRESHOLDS_REQUIRED', got {reason!r}"
+        )
+
+    creditRating = kis.get("creditRatingPredictionAllowedYn")
+    if creditRating is not False:
+        raise DmaRuleValidationError(
+            "screening_policy.kis.creditRatingPredictionAllowedYn must be false"
+        )
+
+    officialLabel = kis.get("officialCreditRatingLabelAllowedYn")
+    if officialLabel is not False:
+        raise DmaRuleValidationError(
+            "screening_policy.kis.officialCreditRatingLabelAllowedYn must be false"
+        )
+
+    if not isinstance(manifest, Mapping):
+        raise DmaRuleValidationError("manifest must be a JSON object")
+    caps = manifest.get("capabilities")
+    if not isinstance(caps, Mapping):
+        raise DmaRuleValidationError("manifest.capabilities must be a JSON object")
+    manifestKis = caps.get("kisFinancialResilience")
+    if manifestKis != capability:
+        raise DmaRuleValidationError(
+            f"manifest.capabilities.kisFinancialResilience ({manifestKis!r}) "
+            f"must equal screening_policy.kis.capability ({capability!r})"
+        )
+
+
 def validateBundle(manifest: Dict[str, Any], policies: Dict[str, Dict[str, Any]]) -> None:
     validateManifest(manifest)
     validatePolicies(policies.keys())
     validatePolicyVersions(policies)
     if "screening_policy.json" in policies:
         validateKcgsScreeningPolicy(policies["screening_policy.json"])
+        validateKisScreeningPolicy(
+            policies["screening_policy.json"],
+            manifest,
+        )
     if "media_event_resolver_policy.json" in policies:
         validateMediaEventResolverPolicy(policies["media_event_resolver_policy.json"])
 
@@ -551,6 +603,7 @@ __all__ = [
     "validateBundle",
     "validateMediaEventResolverPolicy",
     "validateKcgsScreeningPolicy",
+    "validateKisScreeningPolicy",
     "readJson",
     "computeConfigHash",
     "getDmaRules",

@@ -572,6 +572,24 @@ class ExternalMaxBuilderTest(unittest.TestCase):
         self.assertAlmostEqual(trace["impactSignal"], 3.0)
         self.assertAlmostEqual(trace["financialSignal"], 4.0)
 
+    def test_97_news_row_wrong_source_type_rejected(self):
+        row = _newsRow()
+        row["sourceType"] = "agency"
+        with self.assertRaises(ValueError):
+            _buildPayloads([row])
+
+    def test_98_regulation_row_wrong_source_type_rejected(self):
+        row = _regRow()
+        row["sourceType"] = "news"
+        with self.assertRaises(ValueError):
+            _buildPayloads([row])
+
+    def test_99_kcgs_row_wrong_source_type_rejected(self):
+        row = _kcgsRow()
+        row["sourceType"] = "regulation"
+        with self.assertRaises(ValueError):
+            _buildPayloads([row])
+
 
 # ─── Group 4: Transaction ─────────────────────────────────────────────────────
 
@@ -896,6 +914,88 @@ class ExternalMaxStaticInventoryTest(unittest.TestCase):
         self.assertIn("step2CalcExternalMax", ext_branch)
         self.assertNotIn("calcFinal", ext_branch)
         self.assertNotIn("updateRanks", ext_branch)
+
+
+# ─── Group 7: P0 Snapshot-Mixing Gate ────────────────────────────────────────
+
+class ExternalMaxGateTest(unittest.TestCase):
+    """Verify that Regulation/KCGS refresh failures block External MAX execution."""
+
+    def setUp(self):
+        _installMediaServiceImportStubs()
+        self.service = importlib.import_module("src.services.medias.service")
+
+    def _request(self):
+        return types.SimpleNamespace(
+            runId=RUN_ID,
+            dateFrom="2025-01-01",
+            dateTo="2025-01-31",
+            sources=["naver"],
+        )
+
+    def _crawlResult(self):
+        return types.SimpleNamespace(
+            articles=[],
+            requestedSources=[],
+            allowedSources=[],
+            rejectedSources=[],
+            collectedArticleCount=0,
+            filteredArticleCount=0,
+            errors=[],
+            sourceBreakdown=[],
+        )
+
+    def _patchResponseDeps(self, svc):
+        return (
+            patch.object(svc, "applySavedSignalCounts", return_value=[]),
+            patch.object(svc, "getMediaCoverage", return_value={"coverageStatus": "NO_DATA"}),
+            patch.object(svc, "countMediaSubIssues", return_value=0),
+            patch.object(svc, "_buildMediaTopIssues", return_value=[]),
+        )
+
+    def test_100_regulation_failure_gates_external_max(self):
+        svc = self.service
+        with patch.object(svc, "crawlNewsArticles", return_value=self._crawlResult()), \
+             patch.object(svc, "refreshRegulationShadowForRun", side_effect=RuntimeError("db")), \
+             patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
+             patch.object(svc, "refreshMediaExternalMaxForRun") as ext_max:
+            with self.assertRaises(RuntimeError):
+                svc.runMediaCrawlAndAnalyze(self._request())
+        ext_max.assert_not_called()
+
+    def test_101_kcgs_failure_gates_external_max(self):
+        svc = self.service
+        with patch.object(svc, "crawlNewsArticles", return_value=self._crawlResult()), \
+             patch.object(svc, "refreshRegulationShadowForRun", return_value=0), \
+             patch.object(svc, "refreshKcgsShadowForRun", side_effect=RuntimeError("kcgs db")), \
+             patch.object(svc, "refreshMediaExternalMaxForRun") as ext_max:
+            with self.assertRaises(RuntimeError):
+                svc.runMediaCrawlAndAnalyze(self._request())
+        ext_max.assert_not_called()
+
+    def test_102_both_failures_error_message_contains_both_keys(self):
+        svc = self.service
+        with patch.object(svc, "crawlNewsArticles", return_value=self._crawlResult()), \
+             patch.object(svc, "refreshRegulationShadowForRun", side_effect=RuntimeError("reg fail")), \
+             patch.object(svc, "refreshKcgsShadowForRun", side_effect=RuntimeError("kcgs fail")), \
+             patch.object(svc, "refreshMediaExternalMaxForRun"):
+            try:
+                svc.runMediaCrawlAndAnalyze(self._request())
+                self.fail("Expected RuntimeError")
+            except RuntimeError as exc:
+                self.assertIn("regulation", str(exc))
+                self.assertIn("kcgs", str(exc))
+
+    def test_103_both_source_refresh_success_calls_external_max(self):
+        svc = self.service
+        deps = self._patchResponseDeps(svc)
+        with patch.object(svc, "crawlNewsArticles", return_value=self._crawlResult()), \
+             deps[0], deps[1], deps[2], deps[3], \
+             patch.object(svc, "refreshRegulationShadowForRun", return_value=0), \
+             patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
+             patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0) as ext_max:
+            svc.runMediaCrawlAndAnalyze(self._request())
+        ext_max.assert_called_once_with(RUN_ID)
 
 
 if __name__ == "__main__":

@@ -641,6 +641,7 @@ class PhaseC312ServiceHookTest(unittest.TestCase):
              patch.object(svc, "runMediaAnalysis", return_value=[]), \
              deps[0], deps[1], deps[2], deps[3], \
              patch.object(svc, "refreshRegulationShadowForRun", return_value=0) as refresh, \
+             patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
              patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0):
             svc.runMediaCrawlAndAnalyze(self._request())
         refresh.assert_called_once_with(RUN_ID)
@@ -655,6 +656,7 @@ class PhaseC312ServiceHookTest(unittest.TestCase):
         with patch.object(svc, "crawlNewsArticles", return_value=crawl), \
              deps[0], deps[1], deps[2], deps[3], \
              patch.object(svc, "refreshRegulationShadowForRun", return_value=0) as refresh, \
+             patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
              patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0):
             svc.runMediaCrawlAndAnalyze(self._request())
         refresh.assert_called_once_with(RUN_ID)
@@ -670,34 +672,35 @@ class PhaseC312ServiceHookTest(unittest.TestCase):
              patch.object(svc, "_replaceMediaNewsShadowFromPipelineResults"), \
              deps[0], deps[1], deps[2], deps[3], \
              patch.object(svc, "refreshRegulationShadowForRun", return_value=0) as refresh, \
+             patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
              patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0):
             svc.runMediaCrawlAndAnalyze(self._request())
         refresh.assert_called_once_with(RUN_ID)
 
-    def test_104_regulation_refresh_failure_preserves_media_response(self):
+    def test_104_regulation_refresh_failure_aborts_external_max(self):
         svc = self.svc
         crawl = self._crawlResult()
         deps = self._patchResponseDeps(svc)
         with patch.object(svc, "crawlNewsArticles", return_value=crawl), \
              deps[0], deps[1], deps[2], deps[3], \
              patch.object(svc, "refreshRegulationShadowForRun", side_effect=RuntimeError("broken")), \
-             patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0), \
-             patch("builtins.print"):
-            response = svc.runMediaCrawlAndAnalyze(self._request())
-        self.assertEqual(response.runId, RUN_ID)
-        self.assertEqual(response.coverageStatus, "NO_DATA")
+             patch.object(svc, "refreshMediaExternalMaxForRun") as ext_max:
+            with self.assertRaises(RuntimeError):
+                svc.runMediaCrawlAndAnalyze(self._request())
+        ext_max.assert_not_called()
 
-    def test_105_regulation_refresh_failure_logs_warning(self):
+    def test_105_kcgs_refresh_failure_aborts_external_max(self):
         svc = self.svc
         crawl = self._crawlResult()
         deps = self._patchResponseDeps(svc)
         with patch.object(svc, "crawlNewsArticles", return_value=crawl), \
              deps[0], deps[1], deps[2], deps[3], \
-             patch.object(svc, "refreshRegulationShadowForRun", side_effect=RuntimeError("broken")), \
-             patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0), \
-             patch("builtins.print") as printer:
-            svc.runMediaCrawlAndAnalyze(self._request())
-        self.assertTrue(any("Warning: media_external.regulation" in str(call) for call in printer.mock_calls))
+             patch.object(svc, "refreshRegulationShadowForRun", return_value=0), \
+             patch.object(svc, "refreshKcgsShadowForRun", side_effect=RuntimeError("kcgs broken")), \
+             patch.object(svc, "refreshMediaExternalMaxForRun") as ext_max:
+            with self.assertRaises(RuntimeError):
+                svc.runMediaCrawlAndAnalyze(self._request())
+        ext_max.assert_not_called()
 
     def test_106_run_media_analysis_does_not_refresh_regulation(self):
         svc = self.svc
@@ -720,6 +723,7 @@ class PhaseC312ServiceHookTest(unittest.TestCase):
              patch.object(svc, "countMediaSubIssues", return_value=0), \
              patch.object(svc, "_buildMediaTopIssues", return_value=[]), \
              patch.object(svc, "refreshRegulationShadowForRun", side_effect=lambda runId: call_order.append("refresh")), \
+             patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
              patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0), \
              patch.object(
                  svc,

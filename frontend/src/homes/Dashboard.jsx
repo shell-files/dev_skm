@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import ApprovalProjectSelectModal from "@mains/modal/ApprovalProjectSelectModal";
 import { useAuth } from "@hooks/AuthContext";
 import { GET } from "@utils/Network";
-import { setCurruntYear, setMaterialityRunId } from "@stores/reportSlice";
+import { setCurruntYear, setMaterialityRunId, fetchApprovalProjects } from "@stores/reportSlice";
 import "@styles/dashboard.css";
 
 const MOCK_PROJECTS = [
@@ -120,11 +120,37 @@ const Dashboard = () => {
   const companyName = selectedCompany?.company_name || "A_GROUP";
   const currentYear = useSelector((state) => state.report.currentYear);
   const currentRunId = useSelector((state) => state.report.currentRunId);
+  const approvalProjects = useSelector((state) => state.report?.approval?.projects ?? []);
+  const approvalProjectsLoading = useSelector((state) => state.report?.loading?.approvalProjects ?? false);
 
   const [showProjectModal, setShowProjectModal] = useState(false);
-  const [currentProject, setCurrentProject] = useState(MOCK_PROJECTS[0]);
+  const [currentProject, setCurrentProject] = useState(null);
   const [onboardingRows, setOnboardingRows] = useState(ONBOARDING_ROWS);
   const [onboardingLoading, setOnboardingLoading] = useState(false);
+
+  // 회사 변경 시 프로젝트 목록 새로 불러오고 첫 활성 프로젝트 자동 선택
+  useEffect(() => {
+    if (!companyId) return;
+    dispatch(fetchApprovalProjects({ companyId }))
+      .unwrap()
+      .then((res) => {
+        const items = Array.isArray(res?.items) ? res.items : (Array.isArray(res) ? res : []);
+        if (items.length === 0) return;
+        const firstActive =
+          items.find((p) => String(p.runStatus || "ACTIVE").toUpperCase() === "ACTIVE") ??
+          items[0];
+        setCurrentProject(firstActive);
+        dispatch(setCurruntYear(firstActive.reportingYear));
+        dispatch(setMaterialityRunId(firstActive.runId));
+      })
+      .catch(() => {
+        // API 실패 시 mock 사용
+        const fallback = MOCK_PROJECTS[0];
+        setCurrentProject(fallback);
+        dispatch(setCurruntYear(fallback.reportingYear));
+        dispatch(setMaterialityRunId(fallback.runId));
+      });
+  }, [companyId, dispatch]);
 
   useEffect(() => {
     if (!currentRunId) return;
@@ -154,6 +180,9 @@ const Dashboard = () => {
     setShowProjectModal(false);
   };
 
+  const displayProject = currentProject ?? MOCK_PROJECTS[0];
+  const projectList = approvalProjects.length > 0 ? approvalProjects : MOCK_PROJECTS;
+
   return (
     <div id="dashboard_page">
       {/* ── 현재 프로젝트 배너 ── */}
@@ -164,7 +193,7 @@ const Dashboard = () => {
             {currentYear} 지속가능경영보고서
           </h2>
           <p className="db-project-meta">
-            {companyName} · {getBasisLabel(currentProject.reportBasisType)} · {getProjectStatusLabel(currentProject.runStatus)}
+            {companyName} · {getBasisLabel(displayProject.reportBasisType)} · {getProjectStatusLabel(displayProject.runStatus)}
           </p>
         </div>
 
@@ -178,7 +207,7 @@ const Dashboard = () => {
 
           <div className="db-project-actions">
             <span className="db-stage-chip">
-              현재 단계: {getStageLabel(currentProject.currentStageLabel)}
+              현재 단계: {getStageLabel(displayProject.currentStageLabel)}
             </span>
             <button className="db-change-btn" onClick={() => setShowProjectModal(true)}>
               프로젝트 변경
@@ -324,8 +353,8 @@ const Dashboard = () => {
       {/* ── 프로젝트 선택 모달 ── */}
       <ApprovalProjectSelectModal
         isOpen={showProjectModal}
-        projects={MOCK_PROJECTS}
-        selectedRunId={currentProject?.runId}
+        projects={projectList}
+        selectedRunId={displayProject?.runId}
         onSelectProject={handleSelectProject}
         onClose={() => setShowProjectModal(false)}
       />

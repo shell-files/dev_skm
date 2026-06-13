@@ -76,7 +76,6 @@
 
         /* 메인 중앙 그리드 */
         .survey-section-grid {
-            padding: 0 10%;
             display: flex;
             gap: 50px;
             margin: 20px 0;

@@ -4,7 +4,7 @@ import Observing from "@assets/icons/result_page/observe.png";
 import Chain from "@assets/icons/result_page/valuechain.png";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
 import { useDispatch, useSelector } from "react-redux";
-import { generateReport, fetchMaterialityResults, fetchMaterialitySelectionProcess } from "@stores/reportSlice";
+import { generateReport, fetchMaterialityResults, fetchMaterialitySelectionProcess, finalizeSelectedSubIssues } from "@stores/reportSlice";
 import { useAuth } from '@hooks/AuthContext.jsx';
 
 import "@styles/result.css";
@@ -517,6 +517,7 @@ const Result = () => {
   const runId = useSelector((state) => state.report.currentRunId);
   const materialityResults = useSelector((state) => state.report.materialityResults);
   const materialitySelectionProcess = useSelector((state) => state.report.materialitySelectionProcess);
+  const finalizeSelectionLoading = useSelector((state) => state.report.loading.finalizeSelectedSubIssues);
 
   useEffect(() => {
     if (!runId) {
@@ -526,6 +527,15 @@ const Result = () => {
     dispatch(fetchMaterialityResults({ runId }));
     dispatch(fetchMaterialitySelectionProcess({ runId }));
   }, [dispatch, runId, navigate]);
+
+  const handleFinalize = async () => {
+    if (!runId || finalizeSelectionLoading) return;
+    const result = await dispatch(finalizeSelectedSubIssues({ runId }));
+    if (finalizeSelectedSubIssues.fulfilled.match(result)) {
+      dispatch(fetchMaterialityResults({ runId }));
+      dispatch(fetchMaterialitySelectionProcess({ runId }));
+    }
+  };
 
   // matrixItems → 10점 원본값 그대로 (차트 도메인이 동적으로 맞춤)
   const apiMatrixPoints = materialityResults?.matrixItems?.map((item) => ({
@@ -564,8 +574,8 @@ const Result = () => {
   const flowScoredCount = materialitySelectionProcess?.scoredCount ?? 25;
   const flowSelectedCount = materialitySelectionProcess?.selectedCount ?? 10;
 
-  // 최종 Top 이슈 점수 분해 (items[])
-  const topIssueScores = materialityResults?.items?.slice(0, 5).map((item) => ({
+  // 최종 Top 이슈 점수 분해 (topIssues[])
+  const topIssueScores = materialityResults?.topIssues?.map((item) => ({
     name: item.displaySubIssueName,
     finalScore: item.finalScore05?.toFixed(2) ?? "-",
     impact: item.finalImpactScore05?.toFixed(2) ?? "-",
@@ -574,6 +584,49 @@ const Result = () => {
     media: item.mediaImpactScore05?.toFixed(2) ?? "-",
     survey: item.surveyImpactScore05?.toFixed(2) ?? "-",
   }));
+
+  // 분석축 기여도 (API topIssues 기반 계산)
+  const contributionData = materialityResults?.topIssues?.map((item, idx) => {
+    const bench = (item.benchmarkImpactScore05 ?? 0) + (item.benchmarkFinancialScore05 ?? 0);
+    const media = (item.mediaImpactScore05 ?? 0) + (item.mediaFinancialScore05 ?? 0);
+    const survey = (item.surveyImpactScore05 ?? 0) + (item.surveyFinancialScore05 ?? 0);
+    const total = bench + media + survey || 1;
+    return {
+      rank: idx + 1,
+      rankColor: getDomainColor(item.domain),
+      name: item.displaySubIssueName,
+      bench: Math.round((bench / total) * 100),
+      media: Math.round((media / total) * 100),
+      survey: Math.round((survey / total) * 100),
+    };
+  }) ?? CONTRIBUTION_DATA;
+
+  // Blind Spot (분석축 간 점수 격차가 큰 이슈)
+  const blindSpots = materialityResults?.topIssues?.reduce((acc, item) => {
+    const bench = ((item.benchmarkImpactScore05 ?? 0) + (item.benchmarkFinancialScore05 ?? 0)) / 2;
+    const media = ((item.mediaImpactScore05 ?? 0) + (item.mediaFinancialScore05 ?? 0)) / 2;
+    const survey = ((item.surveyImpactScore05 ?? 0) + (item.surveyFinancialScore05 ?? 0)) / 2;
+    const scores = [bench, media, survey].filter((s) => s > 0);
+    if (scores.length < 2) return acc;
+    const maxVal = Math.max(...scores);
+    const minVal = Math.min(...scores);
+    const gap = maxVal - minVal;
+    if (gap >= 0.5) {
+      const labels = ["벤치마킹", "미디어", "설문"];
+      const maxLabel = labels[[bench, media, survey].indexOf(maxVal)];
+      const minLabel = labels[[bench, media, survey].indexOf(minVal)];
+      acc.push({
+        rank: item.rankNo,
+        rankColor: getDomainColor(item.domain),
+        name: item.displaySubIssueName,
+        desc: `${maxLabel} 점수 높음, ${minLabel} 점수 낮음`,
+        badge: `${maxLabel}-${minLabel} 격차 +${gap.toFixed(1)}`,
+        badgeBg: "#f1f5f9",
+        badgeColor: "#475569",
+      });
+    }
+    return acc;
+  }, []) ?? BLIND_SPOTS;
 
   // 선정 사유 (selectionReasons[])
   const selectionReasonItems = materialityResults?.selectionReasons;
@@ -733,32 +786,56 @@ const Result = () => {
                   </div>
                 </div>
 
+                {/* 확정 상태 배너 */}
+                {materialityResults?.selectionSource === "RANK_FALLBACK" && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", padding: "12px 16px" }}>
+                    <span style={{ fontSize: "0.84rem", color: "#92400e", fontWeight: 600 }}>
+                      임시 Top 5 — 점수 기반 자동 선정 상태입니다. 확정 저장 후 보고서 초안을 생성하세요.
+                    </span>
+                    <button
+                      onClick={handleFinalize}
+                      disabled={finalizeSelectionLoading}
+                      style={{ marginLeft: "16px", padding: "7px 18px", background: "#03A94D", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, fontSize: "0.82rem", cursor: finalizeSelectionLoading ? "not-allowed" : "pointer", opacity: finalizeSelectionLoading ? 0.6 : 1, flexShrink: 0 }}
+                    >
+                      {finalizeSelectionLoading ? "저장 중..." : "Top 5 확정 저장"}
+                    </button>
+                  </div>
+                )}
+                {materialityResults?.selectionSource === "TABLE" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "12px", padding: "12px 16px" }}>
+                    <span style={{ color: "#03A94D", fontWeight: 800, fontSize: "1rem" }}>✓</span>
+                    <span style={{ fontSize: "0.84rem", color: "#166534", fontWeight: 600 }}>Top 5 확정 완료 — DB에 저장된 선정 이슈 기준으로 표시됩니다.</span>
+                  </div>
+                )}
+
                 <div className="card-container">
                   <div className="card-title">최종 Top 이슈 점수 분해</div>
-                  <table className="result-table">
-                    <thead>
-                      <tr><th>이슈</th><th>최종점수</th><th>영향</th><th>재무</th><th>벤치마킹</th><th>미디어</th><th>설문</th></tr>
-                    </thead>
-                    <tbody>
-                      {topIssueScores
-                        ? topIssueScores.map((row, i) => (
-                          <tr key={i}>
-                            <td className="issue-name">{row.name}</td>
-                            <td className="score-main">{row.finalScore}</td>
-                            <td>{row.impact}</td>
-                            <td>{row.financial}</td>
-                            <td>{row.benchmark}</td>
-                            <td>{row.media}</td>
-                            <td>{row.survey}</td>
-                          </tr>
-                        ))
-                        : <>
-                          <tr><td className="issue-name">기후변화 대응</td><td className="score-main">4.61</td><td>4.40</td><td>4.75</td><td>4.20</td><td>4.60</td><td>4.70</td></tr>
-                          <tr><td className="issue-name">에너지 관리</td><td className="score-highlight">4.34</td><td>4.10</td><td>4.50</td><td>4.00</td><td>4.30</td><td>4.40</td></tr>
-                        </>
-                      }
-                    </tbody>
-                  </table>
+                  <div className="result-table-scroll">
+                    <table className="result-table">
+                      <thead>
+                        <tr><th>이슈</th><th>최종점수</th><th>영향</th><th>재무</th><th>벤치마킹</th><th>미디어</th><th>설문</th></tr>
+                      </thead>
+                      <tbody>
+                        {topIssueScores
+                          ? topIssueScores.map((row, i) => (
+                            <tr key={i}>
+                              <td className="issue-name">{row.name}</td>
+                              <td className="score-main">{row.finalScore}</td>
+                              <td>{row.impact}</td>
+                              <td>{row.financial}</td>
+                              <td>{row.benchmark}</td>
+                              <td>{row.media}</td>
+                              <td>{row.survey}</td>
+                            </tr>
+                          ))
+                          : <>
+                            <tr><td className="issue-name">기후변화 대응</td><td className="score-main">4.61</td><td>4.40</td><td>4.75</td><td>4.20</td><td>4.60</td><td>4.70</td></tr>
+                            <tr><td className="issue-name">에너지 관리</td><td className="score-highlight">4.34</td><td>4.10</td><td>4.50</td><td>4.00</td><td>4.30</td><td>4.40</td></tr>
+                          </>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 {/* 선정 사유 요약 */}
@@ -865,47 +942,51 @@ const Result = () => {
                 {/* 최종 선정 이슈 */}
                 <div className="card-container">
                   <div className="section-title-sm">최종 선정 이슈</div>
-                  <table className="issue-table-inner">
-                    <thead>
-                      <tr>
-                        <th className="th-left" style={{ width: "30%" }}>이슈</th>
-                        <th className="th-center" style={{ width: "12%" }}>최종순위</th>
-                        <th className="th-left">포함 사유</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedIssues.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: i < selectedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-                          <td className="td-name">{row.name}</td>
-                          <td className="td-center-green">{row.finalRank}</td>
-                          <td className="td-text">{row.reason}</td>
+                  <div className="result-table-scroll">
+                    <table className="issue-table-inner">
+                      <thead>
+                        <tr>
+                          <th className="th-left" style={{ width: "30%" }}>이슈</th>
+                          <th className="th-center" style={{ width: "12%" }}>최종순위</th>
+                          <th className="th-left">포함 사유</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {selectedIssues.map((row, i) => (
+                          <tr key={i} style={{ borderBottom: i < selectedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                            <td className="td-name">{row.name}</td>
+                            <td className="td-center-green">{row.finalRank}</td>
+                            <td className="td-text">{row.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 {/* 후보였지만 제외된 이슈 */}
                 <div className="card-container">
                   <div className="section-title-red">후보였지만 제외된 이슈</div>
-                  <table className="issue-table-inner">
-                    <thead>
-                      <tr>
-                        <th className="th-left" style={{ width: "30%" }}>이슈</th>
-                        <th className="th-center" style={{ width: "12%" }}>최종순위</th>
-                        <th className="th-left">제외 사유</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {excludedIssues.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: i < excludedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-                          <td className="td-name">{row.name}</td>
-                          <td className="td-center">{row.candRank}</td>
-                          <td className="td-text">{row.reason}</td>
+                  <div className="result-table-scroll">
+                    <table className="issue-table-inner">
+                      <thead>
+                        <tr>
+                          <th className="th-left" style={{ width: "30%" }}>이슈</th>
+                          <th className="th-center" style={{ width: "12%" }}>최종순위</th>
+                          <th className="th-left">제외 사유</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {excludedIssues.map((row, i) => (
+                          <tr key={i} style={{ borderBottom: i < excludedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                            <td className="td-name">{row.name}</td>
+                            <td className="td-center">{row.candRank}</td>
+                            <td className="td-text">{row.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
               </div>
@@ -931,7 +1012,7 @@ const Result = () => {
                     ))}
                   </div>
                   <div id="contribution-list">
-                    {CONTRIBUTION_DATA.map((item) => (
+                    {contributionData.map((item) => (
                       <div key={item.rank} className="contribution-row">
                         <div className="contribution-label">
                           <span className="rank-circle" style={{ background: item.rankColor }}>{item.rank}</span>
@@ -952,16 +1033,19 @@ const Result = () => {
                   <div className="section-title">2. 분석축 간 불일치 / Blind Spot</div>
                   <div className="section-desc">분석축 간 점수 편차가 큰 이슈를 확인하여 전략적 블라인드 스팟을 식별합니다.</div>
                   <div id="blind-spot-list">
-                    {BLIND_SPOTS.map((item) => (
-                      <div key={item.rank} className="blind-spot-row">
-                        <span className="rank-circle sm" style={{ background: item.rankColor }}>{item.rank}</span>
-                        <div className="blind-spot-info">
-                          <div className="blind-spot-name">{item.name}</div>
-                          <div className="blind-spot-desc">{item.desc}</div>
-                        </div>
-                        <span className="blind-spot-badge" style={{ background: item.badgeBg, color: item.badgeColor }}>{item.badge}</span>
-                      </div>
-                    ))}
+                    {blindSpots.length > 0
+                      ? blindSpots.map((item) => (
+                          <div key={item.rank} className="blind-spot-row">
+                            <span className="rank-circle sm" style={{ background: item.rankColor }}>{item.rank}</span>
+                            <div className="blind-spot-info">
+                              <div className="blind-spot-name">{item.name}</div>
+                              <div className="blind-spot-desc">{item.desc}</div>
+                            </div>
+                            <span className="blind-spot-badge" style={{ background: item.badgeBg, color: item.badgeColor }}>{item.badge}</span>
+                          </div>
+                        ))
+                      : <div style={{ color: "#94a3b8", fontSize: "0.82rem", padding: "12px 0" }}>분석축 간 점수 격차가 큰 이슈가 없습니다.</div>
+                    }
                   </div>
                 </section>
 

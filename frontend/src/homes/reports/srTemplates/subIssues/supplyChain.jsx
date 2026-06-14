@@ -85,7 +85,7 @@ function SupplyChainPage(props) {
         </div>
       </div>
 
-      {/* 공급망 실사 프로세스 — flex:1 로 남은 공간 흡수 */}
+      {/* 공급망 실사 프로세스 */}
       <SupplyPanel metrics={metrics} mode={mode} />
 
       <div className="sr-measures" data-source="S6-01__QL0001">
@@ -99,7 +99,7 @@ function SupplyChainPage(props) {
 function SupplyPanel({ metrics, mode }) {
   const steps = processSteps(mt(metrics, "S6-02__QL0001", "render"));
   return (
-    <div className="sr-panel">
+    <div className="sr-panel sr-last">
       <div className="sr-panel-grid">
         {/* 좌: 공급망 실사 프로세스 */}
         <div className="sr-panel-l">

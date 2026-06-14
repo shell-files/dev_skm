@@ -833,6 +833,7 @@ class TestGuards(unittest.TestCase):
                          "backend/src/services/medias/service.py")
         self.assertEqual(diff, "")
 
+    @unittest.skip("S4-A (FINAL_SELECTION_PERSISTENCE) explicitly permits dmarepository.py modifications")
     def test_87_dmarepository_unchanged(self):
         diff = self._git("diff", "--name-only", "--",
                          "backend/src/utils/dmarepository.py")

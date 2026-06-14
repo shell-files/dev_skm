@@ -268,3 +268,20 @@ class SelectionProcessResponseDto(BaseModel):
     selectionRules: dict
     selectedIssues: List[SelectionReasonDto]
     excludedIssues: List[SelectionReasonDto]
+
+
+class FinalizeSelectedSubIssueItemDto(BaseModel):
+    subIssueCode: str
+    selectedRankNo: int
+    rankNo: Optional[int] = None
+    finalScore05: Optional[float] = None
+    selectionType: str
+    selectionReason: str
+
+
+class FinalizeSelectedSubIssuesResponseDto(BaseModel):
+    runId: int
+    selectedCount: int
+    selectionSource: Literal["TABLE", "RANK_FALLBACK"]
+    fallbackYn: bool
+    selectedIssues: List[FinalizeSelectedSubIssueItemDto]

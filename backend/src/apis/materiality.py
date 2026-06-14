@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from src.models.materiality import (
     BenchmarkResponseDto,
+    FinalizeSelectedSubIssuesResponseDto,
     MaterialityResultsResponseDto,
     MediaStageResponseDto,
     SelectionProcessResponseDto,
@@ -14,6 +15,7 @@ from src.models.materialitycontext import (
 from src.models.dmaworkflowstatus import DmaWorkflowStatusResponseDto
 from src.services.materialities.context import applyCompanyContextModifiers, getCompanyContextProfile
 from src.services.materialities.service import (
+    finalizeSelectedSubIssues,
     getBenchmarkResult,
     getMaterialityResults,
     getMediaResult,
@@ -32,6 +34,20 @@ router = APIRouter(tags=["materiality"])
 async def get_dma_results(runId: int, userModel=Depends(get_token)):
     try:
         return getMaterialityResults(runId)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/results/{runId}/selected-sub-issues/finalize",
+    response_model=FinalizeSelectedSubIssuesResponseDto,
+    summary="DMA 최종 Top 5 선정 이슈 확정 저장",
+)
+async def finalize_selected_sub_issues(runId: int, userModel=Depends(get_token)):
+    try:
+        return finalizeSelectedSubIssues(runId, userModel)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

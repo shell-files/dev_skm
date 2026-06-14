@@ -61,12 +61,16 @@
 }
 
 .survey-container .main-content {
+    flex: 1 1 auto;
     min-height: 0;
+    overflow: hidden;
+    padding: 0;
     align-items: flex-start;
 }
 
 .survey-input-card {
-    flex: 1;
+    flex: 1 1 auto;
+    height: 100%;
     min-height: 0;
 
     overflow-y: auto;
@@ -340,9 +344,14 @@
     min-width: 0;
     min-height: 0;
 
-    height: calc(100vh - 60px);
+    height: 100dvh;
+    min-height: 100dvh;
 
     overflow: hidden;
+}
+
+.survey-container .survey-header {
+    flex: 0 0 auto;
 }
 
 .survey-view-container.showing-result {
@@ -1423,4 +1432,70 @@
     .survey-section-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* =========================================================
+   응답률 카드 (S3.1)
+========================================================= */
+
+.survey-rate-card {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.survey-rate-card--total {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.survey-rate-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.survey-rate-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #475569;
+}
+
+.survey-rate-count {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 0.78rem;
+}
+
+.survey-rate-pct {
+    margin-left: 6px;
+    font-weight: 800;
+    font-size: 0.82rem;
+}
+
+.survey-rate-bar-bg {
+    height: 6px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.survey-rate-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.4s ease;
+}
+
+.survey-recalc-done {
+    padding: 8px 12px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    color: #15803d;
+    font-size: 0.8rem;
+    font-weight: 600;
 }

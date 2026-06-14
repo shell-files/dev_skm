@@ -136,6 +136,7 @@ const initialState = {
     targets: null,
     importResult: null,
     recalculateResult: null,
+    result: null,
   },
 
   approval: {
@@ -200,6 +201,7 @@ const initialState = {
     surveyRetry: false,
     surveyResponseStatus: false,
     surveyTargets: false,
+    surveyResult: false,
   },
 
   error: {
@@ -238,6 +240,7 @@ const initialState = {
     surveyRetry: null,
     surveyResponseStatus: null,
     surveyTargets: null,
+    surveyResult: null,
   },
 };
 
@@ -852,6 +855,22 @@ export const fetchMaterialitySelectionProcess = createAsyncThunk(
   }
 );
 
+// GET /materiality/survey/{runId}  : 설문 단계 결과(축 분리 점수) 조회
+export const fetchMaterialitySurveyResult = createAsyncThunk(
+  "report/fetchMaterialitySurveyResult",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(
+        await GET(`/materiality/survey/${runId}`)
+      );
+      return rejectIfFailed(res, rejectWithValue, "설문 결과 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({ status: false, message: "설문 결과 조회 중 오류가 발생했습니다." });
+    }
+  }
+);
+
 // POST /materiality/results/{runId}/selected-sub-issues/finalize
 export const finalizeSelectedSubIssues = createAsyncThunk(
   "report/finalizeSelectedSubIssues",
@@ -1056,6 +1075,7 @@ const reportSlice = createSlice({
       state.survey.targets = null;
       state.survey.importResult = null;
       state.survey.recalculateResult = null;
+      state.survey.result = null;
       state.loading.surveyForm = false;
       state.loading.surveyImport = false;
       state.loading.surveyScorePreview = false;
@@ -1070,6 +1090,8 @@ const reportSlice = createSlice({
       state.error.surveyRetry = null;
       state.error.surveyResponseStatus = null;
       state.error.surveyTargets = null;
+      state.loading.surveyResult = false;
+      state.error.surveyResult = null;
     },
   },
   extraReducers: (builder) => {
@@ -1537,6 +1559,18 @@ const reportSlice = createSlice({
       .addCase(saveSurveyResponseTargets.rejected, (state, action) =>
         setRejected(state, "surveyTargets", action)
       );
+
+    builder
+      .addCase(fetchMaterialitySurveyResult.pending, (state) => setPending(state, "surveyResult"))
+      .addCase(fetchMaterialitySurveyResult.fulfilled, (state, action) => {
+        state.loading.surveyResult = false;
+        state.error.surveyResult = null;
+        state.survey.result = dataOf(action.payload);
+      })
+      .addCase(fetchMaterialitySurveyResult.rejected, (state, action) => {
+        setRejected(state, "surveyResult", action);
+        state.survey.result = null;
+      });
   },
 });
 

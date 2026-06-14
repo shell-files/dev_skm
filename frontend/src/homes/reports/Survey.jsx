@@ -20,6 +20,7 @@ import {
   recalculateSurveyScores as recalculateSurveyScoresThunk,
   fetchSurveyResponseStatus as fetchSurveyResponseStatusThunk,
   saveSurveyResponseTargets as saveSurveyResponseTargetsThunk,
+  fetchMaterialitySurveyResult as fetchMaterialitySurveyResultThunk,
   clearSurveyState,
 } from "@stores/reportSlice";
 
@@ -62,6 +63,23 @@ const GROUP_META = {
   },
 };
 const GROUP_KEYS = ["employee", "management", "external"];
+const GROUP_SCORE_KEY = {
+  employee:   "employeeImpactScore05",
+  management: "managementImpactScore05",
+  external:   "externalImpactScore05",
+};
+
+/* ── 표시 헬퍼 ──────────────────────────────────── */
+// responseRate(0~1 fraction) → 0~100 (소수 1자리)
+const pctFromRate = (rate) => Math.round((rate ?? 0) * 1000) / 10;
+// 목표 인원이 0이면 백분율 대신 "목표 미설정" 표기
+const displayRate = (rate, targetCount) =>
+  targetCount > 0 ? `${pctFromRate(rate).toFixed(1)}%` : "목표 미설정";
+const rateBarWidth = (rate, targetCount) =>
+  targetCount > 0 ? Math.min(100, pctFromRate(rate)) : 0;
+// 점수 포맷: 숫자면 toFixed(2), null/undefined면 "-"
+const fmtScore = (v) =>
+  v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : "-";
 
 const URL_LABEL = {
   employee:   (year) => `임직원 ESG ${year} 설문조사`,
@@ -88,6 +106,8 @@ const Survey = () => {
       s.report.loading.surveyTargets
   );
   const responseStatusLoading = useSelector((s) => s.report.loading.surveyResponseStatus);
+  const surveyResult        = useSelector((s) => s.report.survey.result);
+  const surveyResultLoading = useSelector((s) => s.report.loading.surveyResult);
   const surveyErrorRaw = useSelector(
     (s) =>
       s.report.error.surveyImport ||
@@ -139,6 +159,7 @@ const Survey = () => {
     }
     dispatch(fetchSurveyFormThunk({ runId: currentRunId }));
     dispatch(fetchSurveyResponseStatusThunk({ runId: currentRunId }));
+    dispatch(fetchMaterialitySurveyResultThunk({ runId: currentRunId }));
   }, [currentRunId, dispatch]);
 
   useEffect(() => {
@@ -216,6 +237,7 @@ const Survey = () => {
       console.debug("[Survey] recalculate:", res.payload?.data ?? res.payload);
       setRecalcDone(true);
       dispatch(fetchSurveyResponseStatusThunk({ runId: currentRunId }));
+      dispatch(fetchMaterialitySurveyResultThunk({ runId: currentRunId }));
     } else {
       await showDefaultAlert("실패", "응답 집계 반영에 실패했습니다.", "error");
     }
@@ -255,6 +277,19 @@ const Survey = () => {
   const isActionDisabled = !currentRunId || surveyActionLoading || !isReady;
   const groups = responseStatus?.groups ?? null;
   const totals = responseStatus?.totals ?? null;
+
+  // 설문 Top 이슈 점수 (GET /materiality/survey/{runId})
+  const surveyTopIssues = surveyResult?.topIssues ?? [];
+
+  // 그룹별 상위 2개 Sub-Issue (해당 그룹 Impact 점수 기준 정렬)
+  const stakeholderTopIssues = {};
+  GROUP_KEYS.forEach((key) => {
+    const scoreKey = GROUP_SCORE_KEY[key];
+    stakeholderTopIssues[key] = [...surveyTopIssues]
+      .filter((issue) => issue[scoreKey] != null)
+      .sort((a, b) => Number(b[scoreKey]) - Number(a[scoreKey]))
+      .slice(0, 2);
+  });
 
   /* ── URL panel ────────────────────────────────── */
   const renderUrlArea = () => {
@@ -326,8 +361,7 @@ const Survey = () => {
           const grp  = groups[key];
           if (!grp) return null;
           const meta = GROUP_META[key];
-          const pct  = grp.targetCount > 0 ? Math.round(grp.responseRate * 1000) / 10 : 0;
-          const pctW = Math.min(100, Math.round(pct));
+          const hasTarget = grp.targetCount > 0;
           return (
             <div className="svrate-card" key={key}>
               <div className="svrate-card-top">
@@ -337,14 +371,14 @@ const Survey = () => {
                 </div>
                 <div className="svrate-card-count">
                   <strong style={{ color: "#1e293b", fontSize: "1.15rem" }}>{grp.responseCount}</strong>
-                  <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}> / {grp.targetCount} 명</span>
+                  <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>{hasTarget ? ` / ${grp.targetCount} 명` : " 명 · 목표 미설정"}</span>
                 </div>
               </div>
               <div className="svrate-bar-row">
                 <div className="svrate-bar-bg">
-                  <div className="svrate-bar-fill" style={{ width: `${pctW}%`, background: meta.color }} />
+                  <div className="svrate-bar-fill" style={{ width: `${rateBarWidth(grp.responseRate, grp.targetCount)}%`, background: meta.color }} />
                 </div>
-                <span className="svrate-pct" style={{ color: meta.color }}>{pct.toFixed(1)}%</span>
+                <span className="svrate-pct" style={{ color: meta.color }}>{displayRate(grp.responseRate, grp.targetCount)}</span>
               </div>
             </div>
           );
@@ -374,7 +408,7 @@ const Survey = () => {
               </div>
               <div>
                 <div className="svrate-total-label">응답률</div>
-                <div className="svrate-total-value">{(totals.responseRate * 100).toFixed(1)}<span style={{ fontSize: "0.8rem", fontWeight: 500 }}>%</span></div>
+                <div className="svrate-total-value">{totals.targetCount > 0 ? <>{pctFromRate(totals.responseRate).toFixed(1)}<span style={{ fontSize: "0.8rem", fontWeight: 500 }}>%</span></> : <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#94a3b8" }}>목표 미설정</span>}</div>
               </div>
             </div>
           </div>
@@ -620,7 +654,7 @@ const Survey = () => {
                 {GROUP_KEYS.map((key) => {
                   const grp  = groups[key];
                   const meta = GROUP_META[key];
-                  const pct  = grp?.targetCount > 0 ? Math.round(grp.responseRate * 1000) / 10 : 0;
+                  const hasTarget = grp?.targetCount > 0;
                   return (
                     <div className="survey-kpi-card" key={key}>
                       <div className="stat-label" style={{ color: meta.color, display: "flex", alignItems: "center", gap: "6px" }}>
@@ -628,11 +662,11 @@ const Survey = () => {
                       </div>
                       <div className="stat-value">
                         {grp?.responseCount ?? 0}<span style={{ fontSize: "0.85rem", fontWeight: 500 }}>명</span>
-                        <span className="stat-target">(목표 {grp?.targetCount ?? 0}명)</span>
+                        <span className="stat-target">{hasTarget ? `(목표 ${grp.targetCount}명)` : "(목표 미설정)"}</span>
                       </div>
                       <div className="kpi-bar-wrap">
-                        <div className="kpi-bar-fill" style={{ width: `${Math.min(100, pct)}%`, background: meta.color }} />
-                        <span className="kpi-bar-pct" style={{ color: meta.color }}>{pct.toFixed(1)}%</span>
+                        <div className="kpi-bar-fill" style={{ width: `${rateBarWidth(grp?.responseRate, grp?.targetCount ?? 0)}%`, background: meta.color }} />
+                        <span className="kpi-bar-pct" style={{ color: meta.color }}>{displayRate(grp?.responseRate, grp?.targetCount ?? 0)}</span>
                       </div>
                     </div>
                   );
@@ -641,12 +675,14 @@ const Survey = () => {
                   <div className="survey-kpi-card">
                     <div className="stat-label">전체 응답률</div>
                     <div className="stat-value">
-                      {(totals.responseRate * 100).toFixed(1)}<span style={{ fontSize: "0.85rem", fontWeight: 500 }}>%</span>
+                      {totals.targetCount > 0
+                        ? <>{pctFromRate(totals.responseRate).toFixed(1)}<span style={{ fontSize: "0.85rem", fontWeight: 500 }}>%</span></>
+                        : <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#94a3b8" }}>목표 미설정</span>}
                       <span className="stat-target">({totals.responseCount}/{totals.targetCount}명)</span>
                     </div>
                     <div className="kpi-bar-wrap">
-                      <div className="kpi-bar-fill" style={{ width: `${Math.min(100, totals.responseRate * 100)}%` }} />
-                      <span className="kpi-bar-pct">{(totals.responseRate * 100).toFixed(1)}%</span>
+                      <div className="kpi-bar-fill" style={{ width: `${rateBarWidth(totals.responseRate, totals.targetCount)}%` }} />
+                      <span className="kpi-bar-pct">{displayRate(totals.responseRate, totals.targetCount)}</span>
                     </div>
                   </div>
                 )}
@@ -655,7 +691,7 @@ const Survey = () => {
               {/* 결과 2패널 */}
               <div className="survey-panels" style={{ marginTop: "16px" }}>
 
-                {/* Sub-Issue 점수 테이블 (TODO: 전체 결과 API 연동 후 채울 것) */}
+                {/* Sub-Issue 점수 테이블 (GET /materiality/survey/{runId}) */}
                 <div className="survey-panel">
                   <div className="panel-header-row">
                     <div className="panel-title">
@@ -684,12 +720,34 @@ const Survey = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {/* TODO: 전체 결과 페이지 API 연동 후 실 데이터로 교체 */}
-                        <tr>
-                          <td colSpan="10" style={{ textAlign: "center", color: "#94a3b8", padding: "20px", fontSize: "0.82rem" }}>
-                            전체 결과 페이지에서 Sub-Issue별 상세 점수를 확인하세요.
-                          </td>
-                        </tr>
+                        {surveyResultLoading ? (
+                          <tr>
+                            <td colSpan="10" style={{ textAlign: "center", color: "#94a3b8", padding: "20px", fontSize: "0.82rem" }}>
+                              설문 점수를 불러오는 중...
+                            </td>
+                          </tr>
+                        ) : surveyTopIssues.length > 0 ? (
+                          surveyTopIssues.map((issue, i) => (
+                            <tr key={issue.subIssueCode ?? i}>
+                              <td>{issue.rankNo ?? i + 1}</td>
+                              <td style={{ textAlign: "left" }}>{issue.displaySubIssueName ?? issue.subIssueCode}</td>
+                              <td>{fmtScore(issue.surveyImpactScore05)}</td>
+                              <td>{fmtScore(issue.surveyFinancialScore05)}</td>
+                              <td>{fmtScore(issue.employeeImpactScore05)}</td>
+                              <td>{fmtScore(issue.employeeFinancialScore05)}</td>
+                              <td>{fmtScore(issue.managementImpactScore05)}</td>
+                              <td>{fmtScore(issue.managementFinancialScore05)}</td>
+                              <td>{fmtScore(issue.externalImpactScore05)}</td>
+                              <td>{fmtScore(issue.externalFinancialScore05)}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="10" style={{ textAlign: "center", color: "#94a3b8", padding: "20px", fontSize: "0.82rem" }}>
+                              아직 설문 점수 데이터가 없습니다. 설문 점수 반영 후 다시 확인하세요.
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -702,22 +760,40 @@ const Survey = () => {
                   </div>
                   <div className="stakeholder-group-list">
                     {GROUP_KEYS.map((key) => {
-                      const grp  = groups[key];
-                      const meta = GROUP_META[key];
-                      const pct  = grp?.targetCount > 0 ? Math.round(grp.responseRate * 1000) / 10 : 0;
+                      const grp     = groups[key];
+                      const meta    = GROUP_META[key];
+                      const hasTarget = grp?.targetCount > 0;
+                      const topTwo  = stakeholderTopIssues[key] ?? [];
                       return (
                         <div className="stakeholder-item" key={key}>
                           <div className="stakeholder-header">
                             <span className="svgroup-icon-sm" style={{ background: meta.bg, color: meta.color, width: 36, height: 36, borderRadius: 10 }}>
                               {meta.icon}
                             </span>
-                            <div>
+                            <div style={{ flex: 1 }}>
                               <span className="stakeholder-name">{meta.label}</span>
                               <span className="stakeholder-topics">
-                                응답 {grp?.responseCount ?? 0}명 / 목표 {grp?.targetCount ?? 0}명 ({pct.toFixed(1)}%)
+                                {hasTarget
+                                  ? `응답 ${grp?.responseCount ?? 0}명 / 목표 ${grp.targetCount}명 (${pctFromRate(grp.responseRate).toFixed(1)}%)`
+                                  : `응답 ${grp?.responseCount ?? 0}명 / 목표 미설정`}
                               </span>
                             </div>
                           </div>
+                          {topTwo.length > 0 ? (
+                            <div className="stakeholder-top-issues">
+                              {topTwo.map((issue, i) => (
+                                <div className="stakeholder-top-issue-row" key={issue.subIssueCode ?? i}>
+                                  <span className="stakeholder-issue-rank" style={{ background: meta.bg, color: meta.color }}>{i + 1}위</span>
+                                  <span className="stakeholder-issue-name">{issue.displaySubIssueName ?? issue.subIssueCode}</span>
+                                  <span className="stakeholder-issue-score" style={{ color: meta.color }}>
+                                    {fmtScore(issue[GROUP_SCORE_KEY[key]])}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="stakeholder-top-empty">점수 데이터 없음</div>
+                          )}
                         </div>
                       );
                     })}

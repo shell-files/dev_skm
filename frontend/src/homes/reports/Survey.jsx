@@ -15,8 +15,9 @@ import {
   fetchSurveyForm as fetchSurveyFormThunk,
   retrySurveyForm as retrySurveyFormThunk,
   importSurveyResponses as importSurveyResponsesThunk,
-  previewSurveyScores as previewSurveyScoresThunk,
   recalculateSurveyScores as recalculateSurveyScoresThunk,
+  fetchSurveyResponseStatus as fetchSurveyResponseStatusThunk,
+  saveSurveyResponseTargets as saveSurveyResponseTargetsThunk,
   clearSurveyState,
 } from "@stores/reportSlice";
 
@@ -29,15 +30,18 @@ const Survey = () => {
   /* Redux state */
   const surveyForm = useSelector((s) => s.report.survey.form);
   const surveyFormLoading = useSelector((s) => s.report.loading.surveyForm);
-  const importResult = useSelector((s) => s.report.survey.importResult);
-  const scorePreview = useSelector((s) => s.report.survey.scorePreview);
+  const responseStatus = useSelector((s) => s.report.survey.responseStatus);
   const recalculateResult = useSelector((s) => s.report.survey.recalculateResult);
+
   const surveyActionLoading = useSelector(
     (s) =>
       s.report.loading.surveyImport ||
       s.report.loading.surveyRecalculate ||
-      s.report.loading.surveyRetry
+      s.report.loading.surveyRetry ||
+      s.report.loading.surveyTargets
   );
+  const responseStatusLoading = useSelector((s) => s.report.loading.surveyResponseStatus);
+
   const surveyErrorRaw = useSelector(
     (s) =>
       s.report.error.surveyImport ||
@@ -47,8 +51,10 @@ const Survey = () => {
   );
   const surveyError = surveyErrorRaw?.message ?? null;
 
-  /* Local state — UI only */
-  const [kpiData, setKpiData] = useState({ emp: 150, exec: 20, ext: 80 });
+  /* Local state — target inputs (editable form values) */
+  const [localTargets, setLocalTargets] = useState({ employee: 150, management: 20, external: 80 });
+  const [targetsDirty, setTargetsDirty] = useState(false);
+  const [recalcDone, setRecalcDone] = useState(false);
 
   const activeIndex = 2;
 
@@ -122,11 +128,23 @@ const Survey = () => {
   useEffect(() => {
     if (!currentRunId) {
       dispatch(clearSurveyState());
+      setRecalcDone(false);
       return;
     }
     dispatch(fetchSurveyFormThunk({ runId: currentRunId }));
-    dispatch(previewSurveyScoresThunk({ runId: currentRunId }));
+    dispatch(fetchSurveyResponseStatusThunk({ runId: currentRunId }));
   }, [currentRunId, dispatch]);
+
+  // Sync local targets from server when responseStatus loads
+  useEffect(() => {
+    if (!responseStatus?.groups) return;
+    setLocalTargets({
+      employee: responseStatus.groups.employee?.targetCount ?? 150,
+      management: responseStatus.groups.management?.targetCount ?? 20,
+      external: responseStatus.groups.external?.targetCount ?? 80,
+    });
+    setTargetsDirty(false);
+  }, [responseStatus]);
 
   /* =========================
      ACTION HANDLERS
@@ -139,17 +157,31 @@ const Survey = () => {
 
   const handleRetrySurveyForm = async () => {
     if (!currentRunId || surveyActionLoading) return;
-    const confirmed = await showConfirmAlert(
-      "설문 URL 재생성",
-      "설문 URL 생성을 다시 시도할까요?",
-      "question"
-    );
+    const confirmed = await showConfirmAlert("설문 URL 재생성", "설문 URL 생성을 다시 시도할까요?", "question");
     if (!confirmed) return;
     const result = await dispatch(retrySurveyFormThunk({ runId: currentRunId }));
     if (retrySurveyFormThunk.fulfilled.match(result)) {
       await showDefaultAlert("완료", "설문 URL 생성 상태를 갱신했습니다.", "success");
     } else {
       await showDefaultAlert("실패", "설문 URL 재시도에 실패했습니다.", "error");
+    }
+  };
+
+  const handleRefreshStatus = () => {
+    if (!currentRunId) return;
+    dispatch(fetchSurveyResponseStatusThunk({ runId: currentRunId }));
+  };
+
+  const handleSaveTargets = async () => {
+    if (!currentRunId || surveyActionLoading) return;
+    const result = await dispatch(
+      saveSurveyResponseTargetsThunk({ runId: currentRunId, targets: localTargets })
+    );
+    if (saveSurveyResponseTargetsThunk.fulfilled.match(result)) {
+      setTargetsDirty(false);
+      await showDefaultAlert("저장 완료", "목표 인원이 저장되었습니다.", "success");
+    } else {
+      await showDefaultAlert("저장 실패", "목표 인원 저장에 실패했습니다.", "error");
     }
   };
 
@@ -163,32 +195,42 @@ const Survey = () => {
     if (!confirmed) return;
     const result = await dispatch(importSurveyResponsesThunk({ runId: currentRunId }));
     if (importSurveyResponsesThunk.fulfilled.match(result)) {
-      await showDefaultAlert("완료", "설문 응답 Import가 완료되었습니다.", "success");
-      dispatch(previewSurveyScoresThunk({ runId: currentRunId }));
+      const raw = result.payload?.data ?? result.payload;
+      const empC = raw?.respondentCounts?.employee ?? 0;
+      const mgmtC = raw?.respondentCounts?.management ?? 0;
+      const extC = raw?.respondentCounts?.external ?? 0;
+      console.debug("[Survey] import result:", raw);
+      await showDefaultAlert(
+        "응답 동기화 완료",
+        `임직원 ${empC}명 / 경영진 ${mgmtC}명 / 외부 ${extC}명`,
+        "success"
+      );
+      dispatch(fetchSurveyResponseStatusThunk({ runId: currentRunId }));
     } else {
-      await showDefaultAlert("실패", "설문 응답 Import에 실패했습니다.", "error");
+      await showDefaultAlert("실패", "설문 응답 가져오기에 실패했습니다.", "error");
     }
   };
 
-  const handlePreviewSurveyScores = () => {
-    if (!currentRunId) return;
-    dispatch(previewSurveyScoresThunk({ runId: currentRunId }));
-  };
-
-  const handleRecalculateSurveyScores = async () => {
+  const handleRecalculate = async () => {
     if (!currentRunId || surveyActionLoading) return;
     const confirmed = await showConfirmAlert(
-      "점수 반영",
+      "응답 집계 반영",
       "설문 점수를 이중중대성 평가 점수에 반영할까요?",
       "question"
     );
     if (!confirmed) return;
     const result = await dispatch(recalculateSurveyScoresThunk({ runId: currentRunId }));
     if (recalculateSurveyScoresThunk.fulfilled.match(result)) {
-      await showDefaultAlert("완료", "설문 점수 반영이 완료되었습니다.", "success");
-      dispatch(previewSurveyScoresThunk({ runId: currentRunId }));
+      console.debug("[Survey] recalculate result:", result.payload?.data ?? result.payload);
+      setRecalcDone(true);
+      await showDefaultAlert(
+        "반영 완료",
+        "이중 중대성 평가 점수에 설문 응답이 반영되었습니다.",
+        "success"
+      );
+      dispatch(fetchSurveyResponseStatusThunk({ runId: currentRunId }));
     } else {
-      await showDefaultAlert("실패", "설문 점수 반영에 실패했습니다.", "error");
+      await showDefaultAlert("실패", "응답 집계 반영에 실패했습니다.", "error");
     }
   };
 
@@ -224,11 +266,18 @@ const Survey = () => {
     navigate(steps[index].path);
   };
 
-  const handleKpiChange = (type, value) => {
-    setKpiData((prev) => ({ ...prev, [type]: Number(value) }));
+  const handleTargetChange = (group, value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n) || n < 0) return;
+    setLocalTargets((prev) => ({ ...prev, [group]: Math.floor(n) }));
+    setTargetsDirty(true);
   };
 
-  const fmt = (v) => (v != null ? Number(v).toFixed(2) : "-");
+  const rateColor = (rate) => {
+    if (rate >= 0.7) return "#22c55e";
+    if (rate >= 0.3) return "#f59e0b";
+    return "#ef4444";
+  };
 
   /* =========================
      DERIVED
@@ -237,18 +286,8 @@ const Survey = () => {
   const isReady = surveyForm?.surveyStatus === "READY";
   const isActionDisabled = !currentRunId || surveyActionLoading || !isReady;
 
-  const respondentCounts = importResult?.respondentCounts || {};
-  const empCount = respondentCounts.employee ?? 0;
-  const mgmtCount = respondentCounts.management ?? 0;
-  const extCount = respondentCounts.external ?? 0;
-
-  const displayScores = [...(scorePreview?.scores || [])]
-    .sort((a, b) => {
-      const avgA = ((a.surveyImpactScore || 0) + (a.surveyFinancialScore || 0)) / 2;
-      const avgB = ((b.surveyImpactScore || 0) + (b.surveyFinancialScore || 0)) / 2;
-      return avgB - avgA;
-    })
-    .slice(0, 20);
+  const groups = responseStatus?.groups ?? null;
+  const totals = responseStatus?.totals ?? null;
 
   /* =========================
      URL AREA
@@ -256,65 +295,39 @@ const Survey = () => {
 
   const renderUrlArea = () => {
     if (surveyFormLoading) {
-      return (
-        <p className="survey-status-box">설문 URL 상태를 불러오는 중...</p>
-      );
+      return <p className="survey-status-box">설문 URL 상태를 불러오는 중...</p>;
     }
-
     if (!currentRunId) {
-      return (
-        <p className="survey-status-box">분석 실행 후 설문 URL이 자동 생성됩니다.</p>
-      );
+      return <p className="survey-status-box">분석 실행 후 설문 URL이 자동 생성됩니다.</p>;
     }
-
     if (surveyForm?.surveyStatus === "RETRYABLE") {
       return (
         <div>
-          <p className="survey-error-box">
-            {surveyForm.errorMessage || "설문 URL 생성에 실패했습니다."}
-          </p>
-          <button
-            className="survey-btn"
-            style={{ marginBottom: 0 }}
-            onClick={handleRetrySurveyForm}
-            disabled={surveyActionLoading}
-          >
+          <p className="survey-error-box">{surveyForm.errorMessage || "설문 URL 생성에 실패했습니다."}</p>
+          <button className="survey-btn" style={{ marginBottom: 0 }} onClick={handleRetrySurveyForm} disabled={surveyActionLoading}>
             재시도
           </button>
         </div>
       );
     }
-
     if (surveyForm === null) {
       return (
         <div>
-          <p className="survey-status-box">
-            미디어 분석 완료 후 설문 URL이 자동 생성됩니다.
-          </p>
-          <button
-            className="survey-btn"
-            style={{ marginBottom: 0, marginTop: "8px" }}
-            onClick={handleFetchSurveyForm}
-            disabled={surveyFormLoading}
-          >
+          <p className="survey-status-box">미디어 분석 완료 후 설문 URL이 자동 생성됩니다.</p>
+          <button className="survey-btn" style={{ marginBottom: 0, marginTop: "8px" }} onClick={handleFetchSurveyForm} disabled={surveyFormLoading}>
             URL 생성 상태 재조회
           </button>
         </div>
       );
     }
-
     if (surveyForm.surveyStatus === "GENERATING") {
-      return (
-        <p className="survey-status-box">설문 URL 자동 생성 중입니다...</p>
-      );
+      return <p className="survey-status-box">설문 URL 자동 생성 중입니다...</p>;
     }
-
     const urlRows = [
       { label: "임직원", url: surveyForm.employeeFormUrl },
       { label: "경영진", url: surveyForm.managementFormUrl },
       { label: "외부이해관계자", url: surveyForm.externalFormUrl },
     ];
-
     return (
       <div className="survey-group-list">
         {urlRows.map(({ label, url }) => (
@@ -326,20 +339,8 @@ const Survey = () => {
                   {url}
                 </span>
                 <div className="survey-url-actions">
-                  <button
-                    className="btn-url-copy"
-                    style={{ background: "#334155", marginBottom: 0 }}
-                    onClick={() => openUrl(url)}
-                  >
-                    열기
-                  </button>
-                  <button
-                    className="btn-url-copy"
-                    style={{ marginBottom: 0 }}
-                    onClick={() => copyUrl(url)}
-                  >
-                    복사
-                  </button>
+                  <button className="btn-url-copy" style={{ background: "#334155", marginBottom: 0 }} onClick={() => openUrl(url)}>열기</button>
+                  <button className="btn-url-copy" style={{ marginBottom: 0 }} onClick={() => copyUrl(url)}>복사</button>
                 </div>
               </div>
             ) : (
@@ -352,14 +353,85 @@ const Survey = () => {
   };
 
   /* =========================
+     RESPONSE RATE PANEL
+  ========================= */
+
+  const GROUP_LABELS = { employee: "임직원", management: "경영진", external: "외부이해관계자" };
+
+  const renderResponseRatePanel = () => {
+    if (responseStatusLoading) {
+      return <p className="survey-status-box" style={{ marginTop: "12px" }}>응답 현황 불러오는 중...</p>;
+    }
+    if (!currentRunId || !groups) {
+      return <p className="survey-status-box" style={{ marginTop: "12px" }}>runId를 선택하면 응답 현황이 표시됩니다.</p>;
+    }
+
+    const groupKeys = ["employee", "management", "external"];
+
+    return (
+      <div style={{ marginTop: "12px" }}>
+        {groupKeys.map((g) => {
+          const grp = groups[g];
+          if (!grp) return null;
+          const pct = Math.round(grp.responseRate * 100);
+          const color = rateColor(grp.responseRate);
+          return (
+            <div className="survey-rate-card" key={g}>
+              <div className="survey-rate-header">
+                <span className="survey-rate-label">{GROUP_LABELS[g]} 응답자</span>
+                <span className="survey-rate-count">
+                  <strong style={{ color }}>{grp.responseCount}</strong>
+                  <span style={{ color: "#94a3b8" }}> / {grp.targetCount}명</span>
+                  <span className="survey-rate-pct" style={{ color }}>{pct}%</span>
+                </span>
+              </div>
+              <div className="survey-rate-bar-bg">
+                <div
+                  className="survey-rate-bar-fill"
+                  style={{ width: `${Math.min(100, pct)}%`, background: color }}
+                />
+              </div>
+            </div>
+          );
+        })}
+
+        {totals && (
+          <div className="survey-rate-card survey-rate-card--total">
+            <div className="survey-rate-header">
+              <span className="survey-rate-label">총 응답률</span>
+              <span className="survey-rate-count">
+                <strong style={{ color: rateColor(totals.responseRate) }}>{totals.responseCount}</strong>
+                <span style={{ color: "#94a3b8" }}> / {totals.targetCount}명</span>
+                <span className="survey-rate-pct" style={{ color: rateColor(totals.responseRate) }}>
+                  {Math.round(totals.responseRate * 100)}%
+                </span>
+              </span>
+            </div>
+            <div className="survey-rate-bar-bg">
+              <div
+                className="survey-rate-bar-fill"
+                style={{ width: `${Math.min(100, Math.round(totals.responseRate * 100))}%`, background: rateColor(totals.responseRate) }}
+              />
+            </div>
+          </div>
+        )}
+
+        {recalcDone && (
+          <div className="survey-recalc-done" style={{ marginTop: "10px" }}>
+            이중 중대성 평가 점수에 설문 응답이 반영되었습니다.
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /* =========================
      RENDER
   ========================= */
 
   return (
     <div className="survey-container">
-      {/* =========================================================
-          Header / Stepper
-      ========================================================== */}
+      {/* Stepper */}
       <header className="survey-header">
         <div className="survey-stepper-row">
           {steps.map((step, index) => (
@@ -369,9 +441,7 @@ const Survey = () => {
                 onClick={() => moveStep(index)}
               >
                 <div className="step-icon-circle">{step.icon}</div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 800 }}>
-                  {step.title}
-                </div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 800 }}>{step.title}</div>
               </div>
               {index < steps.length - 1 && <div className="step-line" />}
             </Fragment>
@@ -379,9 +449,6 @@ const Survey = () => {
         </div>
       </header>
 
-      {/* =========================================================
-          Main Content
-      ========================================================== */}
       <main className="main-content">
         <div className="survey-input-card">
 
@@ -391,10 +458,8 @@ const Survey = () => {
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
                 <rect x="8" y="2" width="8" height="4" rx="1" />
-                <polyline points="9,11 10.5,12.5 13,10" />
-                <polyline points="9,16 10.5,17.5 13,15" />
-                <line x1="13" y1="11" x2="16" y2="11" />
-                <line x1="13" y1="16" x2="16" y2="16" />
+                <polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" />
+                <line x1="13" y1="11" x2="16" y2="11" /><line x1="13" y1="16" x2="16" y2="16" />
               </svg>
             </div>
             <div className="survey-page-text">
@@ -449,52 +514,69 @@ const Survey = () => {
 
           {/* 에러 박스 */}
           {surveyError && (
-            <div className="survey-error-box" style={{ marginBottom: "12px" }}>
-              {surveyError}
-            </div>
+            <div className="survey-error-box" style={{ marginBottom: "12px" }}>{surveyError}</div>
           )}
 
-          {/* 메인 2패널 그리드 */}
+          {/* 2패널 그리드 */}
           <div className="survey-section-grid">
 
-            {/* 좌: URL & KPI 관리 */}
+            {/* 좌: URL & 목표 인원 */}
             <div className="survey-wrapper">
               <div className="survey-badge white-badge">설문 URL & 발송 관리</div>
               <div className="survey-panel">
                 {renderUrlArea()}
 
-                {/* KPI 목표 입력 */}
+                {/* 목표 인원 입력 */}
                 <div style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid #e2e8f0" }}>
                   <p style={{ fontSize: "0.78rem", fontWeight: 700, color: "#64748b", marginBottom: "8px" }}>
                     발송 목표 인원
                   </p>
                   {[
-                    { type: "emp", label: "임직원" },
-                    { type: "exec", label: "경영진" },
-                    { type: "ext", label: "외부이해관계자" },
-                  ].map(({ type, label }) => (
-                    <div className="kpi-input-line" key={type} style={{ marginBottom: "6px" }}>
+                    { group: "employee", label: "임직원" },
+                    { group: "management", label: "경영진" },
+                    { group: "external", label: "외부이해관계자" },
+                  ].map(({ group, label }) => (
+                    <div className="kpi-input-line" key={group} style={{ marginBottom: "6px" }}>
                       <span>{label}:</span>
                       <input
                         type="number"
-                        value={kpiData[type]}
-                        onChange={(e) => handleKpiChange(type, e.target.value)}
+                        min="0"
+                        value={localTargets[group]}
+                        onChange={(e) => handleTargetChange(group, e.target.value)}
                         style={{ width: "70px" }}
                       />
                       <span>명</span>
                     </div>
                   ))}
+                  {currentRunId && (
+                    <button
+                      className="survey-btn secondary"
+                      style={{ marginTop: "8px", marginBottom: 0, width: "100%" }}
+                      onClick={handleSaveTargets}
+                      disabled={!targetsDirty || surveyActionLoading}
+                    >
+                      {surveyActionLoading ? "저장 중..." : "목표 인원 저장"}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* 우: 응답 집계 & 점수 관리 */}
+            {/* 우: 응답 현황 */}
             <div className="survey-wrapper">
-              <div className="survey-badge white-badge">응답 집계 & 점수 관리</div>
+              <div className="survey-badge white-badge">응답 현황</div>
               <div className="survey-panel">
 
-                {/* 액션 버튼 행 */}
+                {/* 버튼 행 */}
                 <div className="survey-action-row">
+                  <button
+                    className="survey-btn secondary"
+                    style={{ marginBottom: 0, flex: 1 }}
+                    onClick={handleRefreshStatus}
+                    disabled={!currentRunId || responseStatusLoading}
+                  >
+                    {responseStatusLoading ? "갱신 중..." : "응답 현황 갱신"}
+                  </button>
                   <button
                     className="survey-btn"
                     style={{ marginBottom: 0, flex: 1 }}
@@ -505,154 +587,20 @@ const Survey = () => {
                     {surveyActionLoading ? "처리 중..." : "응답 가져오기"}
                   </button>
                   <button
-                    className="survey-btn secondary"
-                    style={{ marginBottom: 0, flex: 1 }}
-                    onClick={handlePreviewSurveyScores}
-                    disabled={!currentRunId || surveyActionLoading}
-                  >
-                    점수 미리보기
-                  </button>
-                  <button
                     className="survey-btn"
                     style={{ marginBottom: 0, flex: 1 }}
-                    onClick={handleRecalculateSurveyScores}
+                    onClick={handleRecalculate}
                     disabled={isActionDisabled}
                     title={!isReady ? "READY 상태 설문 폼이 필요합니다." : ""}
                   >
-                    점수 반영
+                    응답 집계 반영
                   </button>
                 </div>
 
-                {/* scorable=0 경고 */}
-                {scorePreview != null && scorePreview.scorableResponseCount === 0 && (
-                  <p className="survey-error-box" style={{ marginTop: "8px" }}>
-                    점수화 가능한 응답이 없습니다. 먼저 설문 응답을 제출하고 가져오기를 실행하세요.
-                  </p>
-                )}
-
-                {/* 응답자 현황 */}
-                {(importResult || scorePreview) && (
-                  <div style={{ marginTop: "14px" }}>
-                    <div className="sheets-dashboard-grid">
-                      {[
-                        { label: "임직원 응답자", count: empCount, target: kpiData.emp },
-                        { label: "경영진 응답자", count: mgmtCount, target: kpiData.exec },
-                        { label: "외부 응답자", count: extCount, target: kpiData.ext },
-                      ].map(({ label, count, target }) => (
-                        <div className="chart-status-card" key={label}>
-                          <div className="chart-header">
-                            <span className="label">{label}</span>
-                            <div className="value">
-                              <span>{count}</span>
-                              {" / "}
-                              <span>{target}</span>
-                              <span>명</span>
-                            </div>
-                          </div>
-                          <div className="api-progress-container">
-                            <div
-                              className="api-progress-bar"
-                              style={{
-                                width: `${target ? Math.min(100, (count / target) * 100) : 0}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* 점수 미리보기 지표 */}
-                    {scorePreview && (
-                      <div className="survey-metric-grid" style={{ marginTop: "10px" }}>
-                        {[
-                          { label: "총 응답 Row", value: scorePreview.activeResponseCount ?? "-" },
-                          { label: "점수화 Row", value: scorePreview.scorableResponseCount ?? "-" },
-                          { label: "제외 Row", value: scorePreview.excludedResponseCount ?? "-" },
-                          { label: "점수화 Sub-Issue", value: scorePreview.scoredSubIssueCount ?? "-" },
-                        ].map(({ label, value }) => (
-                          <div className="survey-kpi-card" key={label}>
-                            <div className="stat-label">{label}</div>
-                            <div className="stat-value" style={{ fontSize: "1.05rem" }}>{value}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <p style={{ fontSize: "0.74rem", color: "#94a3b8", marginTop: "8px", lineHeight: 1.5 }}>
-                      ※ Top5 선택 문항은 우선순위 참고용으로 저장되며, 현재 Survey Score에는 직접 반영하지 않습니다.
-                    </p>
-                  </div>
-                )}
-
-                {/* Recalculate 결과 */}
-                {recalculateResult && (
-                  <div className="survey-recalc-result" style={{ marginTop: "12px" }}>
-                    <p style={{ margin: "0 0 6px", fontWeight: 700, color: "#15803d", fontSize: "0.85rem" }}>
-                      설문 점수가 ESG_DMA_SCORE_SUMMARY에 반영되었습니다.
-                    </p>
-                    <div style={{ display: "flex", gap: "14px", flexWrap: "wrap", fontSize: "0.78rem", color: "#334155" }}>
-                      <span>영향 Sub-Issue: <strong>{recalculateResult.affectedSubIssueCount}</strong></span>
-                      <span>Final 재계산: <strong>{recalculateResult.finalRecalculatedCount}</strong></span>
-                      <span>순위 갱신: <strong>{recalculateResult.rankUpdatedCount}</strong></span>
-                      <span>상태: <strong>{recalculateResult.status}</strong></span>
-                    </div>
-                  </div>
-                )}
+                {renderResponseRatePanel()}
               </div>
             </div>
           </div>
-
-          {/* 점수 테이블 */}
-          {displayScores.length > 0 && (
-            <div style={{ marginTop: "20px" }}>
-              <div className="panel-title" style={{ marginBottom: "10px" }}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                  viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2"
-                  style={{ verticalAlign: "middle", marginRight: "4px" }}>
-                  <line x1="18" y1="20" x2="18" y2="10" />
-                  <line x1="12" y1="20" x2="12" y2="4" />
-                  <line x1="6" y1="20" x2="6" y2="14" />
-                </svg>
-                설문 점수 결과 (상위 {displayScores.length}개)
-              </div>
-              <div style={{ overflowX: "auto" }}>
-                <table className="survey-complex-table survey-score-table">
-                  <thead>
-                    <tr>
-                      <th rowSpan="2">#</th>
-                      <th rowSpan="2">Sub Issue</th>
-                      <th rowSpan="2">Impact</th>
-                      <th rowSpan="2">Financial</th>
-                      <th colSpan="2" className="group-th">임직원</th>
-                      <th colSpan="2" className="group-th">경영진</th>
-                      <th colSpan="2" className="group-th">외부</th>
-                    </tr>
-                    <tr>
-                      <th>Impact</th><th>Financial</th>
-                      <th>Impact</th><th>Financial</th>
-                      <th>Impact</th><th>Financial</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {displayScores.map((s, i) => (
-                      <tr key={s.subIssueCode}>
-                        <td>{i + 1}</td>
-                        <td style={{ textAlign: "left" }}>{s.subIssueCode}</td>
-                        <td>{fmt(s.surveyImpactScore)}</td>
-                        <td>{fmt(s.surveyFinancialScore)}</td>
-                        <td>{fmt(s.groupScores?.impact?.employee)}</td>
-                        <td>{fmt(s.groupScores?.financial?.employee)}</td>
-                        <td>{fmt(s.groupScores?.impact?.management)}</td>
-                        <td>{fmt(s.groupScores?.financial?.management)}</td>
-                        <td>{fmt(s.groupScores?.impact?.external)}</td>
-                        <td>{fmt(s.groupScores?.financial?.external)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
 
         </div>
       </main>

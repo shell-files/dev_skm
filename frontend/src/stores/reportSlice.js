@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { GET, POST, PATCH } from "@utils/Network";
+import { GET, POST, PUT, PATCH } from "@utils/Network";
 
 export const DEFAULT_REPORTING_YEAR = new Date().getFullYear();
 
@@ -132,8 +132,9 @@ const initialState = {
 
   survey: {
     form: null,
+    responseStatus: null,
+    targets: null,
     importResult: null,
-    scorePreview: null,
     recalculateResult: null,
   },
 
@@ -156,12 +157,6 @@ const initialState = {
     activeBatchId: null,
     batchStatus: null,
   },
-  generateReportStatus: {
-    loading: false,
-    error: null,
-    data: null,
-  },
-  currentRunId: null,
   currentYear: localStorage.getItem("currentYear"),
   currentRunId: localStorage.getItem("currentRunId"),
   generateReportStatus: { loading: false, data: null, error: null },
@@ -201,6 +196,8 @@ const initialState = {
     surveyScorePreview: false,
     surveyRecalculate: false,
     surveyRetry: false,
+    surveyResponseStatus: false,
+    surveyTargets: false,
   },
 
   error: {
@@ -236,6 +233,8 @@ const initialState = {
     surveyScorePreview: null,
     surveyRecalculate: null,
     surveyRetry: null,
+    surveyResponseStatus: null,
+    surveyTargets: null,
   },
 };
 
@@ -925,6 +924,34 @@ export const recalculateSurveyScores = createAsyncThunk(
   }
 );
 
+// GET /survey/form/{runId}/response-status
+export const fetchSurveyResponseStatus = createAsyncThunk(
+  "report/fetchSurveyResponseStatus",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(await GET(`/survey/form/${runId}/response-status`));
+      return rejectIfFailed(res, rejectWithValue, "응답 현황을 불러오지 못했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({ status: false, message: "응답 현황을 불러오지 못했습니다." });
+    }
+  }
+);
+
+// PUT /survey/form/{runId}/response-targets
+export const saveSurveyResponseTargets = createAsyncThunk(
+  "report/saveSurveyResponseTargets",
+  async ({ runId, targets }, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(await PUT(`/survey/form/${runId}/response-targets`, { targets }));
+      return rejectIfFailed(res, rejectWithValue, "목표 인원 저장에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({ status: false, message: "목표 인원 저장에 실패했습니다." });
+    }
+  }
+);
+
 const setPending = (state, key) => {
   state.loading[key] = true;
   state.error[key] = null;
@@ -1006,19 +1033,24 @@ const reportSlice = createSlice({
 
     clearSurveyState: (state) => {
       state.survey.form = null;
+      state.survey.responseStatus = null;
+      state.survey.targets = null;
       state.survey.importResult = null;
-      state.survey.scorePreview = null;
       state.survey.recalculateResult = null;
       state.loading.surveyForm = false;
       state.loading.surveyImport = false;
       state.loading.surveyScorePreview = false;
       state.loading.surveyRecalculate = false;
       state.loading.surveyRetry = false;
+      state.loading.surveyResponseStatus = false;
+      state.loading.surveyTargets = false;
       state.error.surveyForm = null;
       state.error.surveyImport = null;
       state.error.surveyScorePreview = null;
       state.error.surveyRecalculate = null;
       state.error.surveyRetry = null;
+      state.error.surveyResponseStatus = null;
+      state.error.surveyTargets = null;
     },
   },
   extraReducers: (builder) => {
@@ -1443,6 +1475,37 @@ const reportSlice = createSlice({
         setRejected(state, "surveyRecalculate", action);
         state.survey.recalculateResult = null;
       });
+
+    builder
+      .addCase(fetchSurveyResponseStatus.pending, (state) => setPending(state, "surveyResponseStatus"))
+      .addCase(fetchSurveyResponseStatus.fulfilled, (state, action) => {
+        state.loading.surveyResponseStatus = false;
+        state.error.surveyResponseStatus = null;
+        state.survey.responseStatus = dataOf(action.payload);
+      })
+      .addCase(fetchSurveyResponseStatus.rejected, (state, action) => {
+        setRejected(state, "surveyResponseStatus", action);
+        state.survey.responseStatus = null;
+      });
+
+    builder
+      .addCase(saveSurveyResponseTargets.pending, (state) => setPending(state, "surveyTargets"))
+      .addCase(saveSurveyResponseTargets.fulfilled, (state, action) => {
+        state.loading.surveyTargets = false;
+        state.error.surveyTargets = null;
+        const status = dataOf(action.payload);
+        state.survey.responseStatus = status;
+        state.survey.targets = status
+          ? {
+              employee: status.groups?.employee?.targetCount ?? 0,
+              management: status.groups?.management?.targetCount ?? 0,
+              external: status.groups?.external?.targetCount ?? 0,
+            }
+          : null;
+      })
+      .addCase(saveSurveyResponseTargets.rejected, (state, action) =>
+        setRejected(state, "surveyTargets", action)
+      );
   },
 });
 
@@ -1458,5 +1521,6 @@ export const {
   setMaterialityRunId,
   setReportParams,
 } = reportSlice.actions;
+
 
 export default reportSlice.reducer;

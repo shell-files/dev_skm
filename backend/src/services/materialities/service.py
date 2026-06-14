@@ -9,6 +9,8 @@ from src.models.materiality import (
     CoverageDto,
     CoverageSummaryDto,
     EvidenceSampleDto,
+    FinalizeSelectedSubIssueItemDto,
+    FinalizeSelectedSubIssuesResponseDto,
     MaterialityResultItemDto,
     MaterialityResultsResponseDto,
     MatrixItemDto,
@@ -37,11 +39,13 @@ from src.utils.dmarepository import (
     countMediaSubIssues,
     countMissingMetrics,
     countRequiredMetrics,
+    listFinalTopSubIssues,
     listSelectedSubIssues,
     listSignalCounts,
     listSurveyCounts,
     listSurveyScores,
     listTopStageIssues,
+    replaceSelectedSubIssuesTx,
 )
 from src.utils.subissuemaster import getSubIssueMeta, subissueMaster
 
@@ -297,18 +301,18 @@ def getSurveyResult(runId: int) -> SurveyResponseDto:
                 surveyImpactScore10=_toScore10(row.get("impact_score")),
                 surveyFinancialScore05=_safeFloat(row.get("financial_score")),
                 surveyFinancialScore10=_toScore10(row.get("financial_score")),
-                employeeImpactScore05=_safeFloat(scores.get("employee")),
-                employeeImpactScore10=_toScore10(scores.get("employee")),
-                employeeFinancialScore05=_safeFloat(scores.get("employee")),
-                employeeFinancialScore10=_toScore10(scores.get("employee")),
-                managementImpactScore05=_safeFloat(scores.get("management")),
-                managementImpactScore10=_toScore10(scores.get("management")),
-                managementFinancialScore05=_safeFloat(scores.get("management")),
-                managementFinancialScore10=_toScore10(scores.get("management")),
-                externalImpactScore05=_safeFloat(scores.get("external")),
-                externalImpactScore10=_toScore10(scores.get("external")),
-                externalFinancialScore05=_safeFloat(scores.get("external")),
-                externalFinancialScore10=_toScore10(scores.get("external")),
+                employeeImpactScore05=_safeFloat(scores.get("employee", {}).get("impact")),
+                employeeImpactScore10=_toScore10(scores.get("employee", {}).get("impact")),
+                employeeFinancialScore05=_safeFloat(scores.get("employee", {}).get("financial")),
+                employeeFinancialScore10=_toScore10(scores.get("employee", {}).get("financial")),
+                managementImpactScore05=_safeFloat(scores.get("management", {}).get("impact")),
+                managementImpactScore10=_toScore10(scores.get("management", {}).get("impact")),
+                managementFinancialScore05=_safeFloat(scores.get("management", {}).get("financial")),
+                managementFinancialScore10=_toScore10(scores.get("management", {}).get("financial")),
+                externalImpactScore05=_safeFloat(scores.get("external", {}).get("impact")),
+                externalImpactScore10=_toScore10(scores.get("external", {}).get("impact")),
+                externalFinancialScore05=_safeFloat(scores.get("external", {}).get("financial")),
+                externalFinancialScore10=_toScore10(scores.get("external", {}).get("financial")),
             )
         )
 
@@ -335,12 +339,12 @@ def getSurveyResult(runId: int) -> SurveyResponseDto:
         groupBreakdown=groupBreakdown,
         topIssues=topIssues,
         responseQuality={
-            "axisSeparatedYn": False,
+            "axisSeparatedYn": True,
             "targetSource": "MVP_DEFAULT",
             "observedSubIssueCount": len(topIssueRows),
         },
-        summaryText="MVP v1은 설문 점수를 impact/financial 축에 동일하게 반영합니다.",
-        axisSeparatedYn=False,
+        summaryText="설문 응답은 impact/financial 축을 분리하여 집계합니다.",
+        axisSeparatedYn=True,
         targetSource="MVP_DEFAULT",
     )
 
@@ -431,6 +435,53 @@ def getOnboardingProgress(runId: int) -> dict:
         for r in (rows or [])
     ]
     return {"runId": runId, "items": items}
+
+
+def finalizeSelectedSubIssues(runId: int, userModel) -> FinalizeSelectedSubIssuesResponseDto:
+    run = findOne(
+        "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? AND delete_yn = 0",
+        (runId,),
+    )
+    if not run:
+        raise ValueError(f"Materiality run not found: {runId}")
+
+    topRows = listFinalTopSubIssues(runId, limit=5)
+    if len(topRows) < 5:
+        raise ValueError(f"Top 5 candidates not sufficient: found {len(topRows)}")
+
+    userId = getattr(userModel, "id", None) or getattr(userModel, "user_id", None)
+
+    rowsToInsert = [
+        {
+            "sub_issue_code": row["sub_issue_code"],
+            "selected_rank_no": idx + 1,
+            "selection_type": "rank_based",
+            "selection_reason": "최종 DMA 점수 기준 Top 5 자동 선정",
+        }
+        for idx, row in enumerate(topRows[:5])
+    ]
+
+    replaceSelectedSubIssuesTx(runId, rowsToInsert, userId=userId)
+
+    selectedIssues = [
+        FinalizeSelectedSubIssueItemDto(
+            subIssueCode=row["sub_issue_code"],
+            selectedRankNo=idx + 1,
+            rankNo=_safeInt(row.get("rank_no")),
+            finalScore05=_safeFloat(row.get("final_score")),
+            selectionType="rank_based",
+            selectionReason="최종 DMA 점수 기준 Top 5 자동 선정",
+        )
+        for idx, row in enumerate(topRows[:5])
+    ]
+
+    return FinalizeSelectedSubIssuesResponseDto(
+        runId=runId,
+        selectedCount=len(selectedIssues),
+        selectionSource="TABLE",
+        fallbackYn=False,
+        selectedIssues=selectedIssues,
+    )
 
 
 def _buildResultItem(row: dict, selectedCodes: list[str]) -> MaterialityResultItemDto:
@@ -668,10 +719,12 @@ def _buildSurveyGroupScoreMap(rows: list[dict]) -> dict:
     for row in rows:
         code = row.get("sub_issue_code")
         group = row.get("respondent_group")
-        if not code or not group:
+        mappedAxis = row.get("mapped_axis")
+        if not code or not group or not mappedAxis:
             continue
         result.setdefault(code, {})
-        result[code][group] = row.get("avg_score")
+        result[code].setdefault(group, {})
+        result[code][group][mappedAxis] = row.get("avg_score")
     return result
 
 

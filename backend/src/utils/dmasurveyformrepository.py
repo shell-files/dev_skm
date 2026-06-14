@@ -73,6 +73,7 @@ SET survey_status = 'READY',
     error_message = NULL,
     generated_at = CURRENT_TIMESTAMP
 WHERE id = ?
+  AND survey_status = 'GENERATING'
   AND delete_yn = 0
 """
 
@@ -81,6 +82,7 @@ UPDATE ESG_DMA_SURVEY_FORM
 SET survey_status = 'RETRYABLE',
     error_message = ?
 WHERE id = ?
+  AND survey_status = 'GENERATING'
   AND delete_yn = 0
 """
 

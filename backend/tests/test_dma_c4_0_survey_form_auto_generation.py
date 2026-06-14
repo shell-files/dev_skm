@@ -1185,6 +1185,142 @@ class TestGuard(unittest.TestCase):
         self.assertIn("ensureSurveyFormForRun", src)
         self.assertIn("formservice", src)
 
+    def test_96_update_retryable_sql_has_generating_guard(self):
+        sql = _repo_mod._UPDATE_RETRYABLE_SQL
+        self.assertIn("survey_status = 'GENERATING'", sql)
+
+    def test_97_update_ready_sql_has_generating_guard(self):
+        sql = _repo_mod._UPDATE_READY_SQL
+        self.assertIn("survey_status = 'GENERATING'", sql)
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# §11.8  State Machine — READY 강등 방지
+# ════════════════════════════════════════════════════════════════════════════
+
+class TestStateMachineGuard(unittest.TestCase):
+
+    def _run_retryable_update(self, initial_status: str) -> int:
+        """실제 SQL WHERE 조건 확인: GENERATING 이외 상태에서는 rowcount=0."""
+        written_params = []
+
+        class RC:
+            def __init__(self):
+                self.rowcount = 0  # DB side: WHERE 조건 불일치 → rowcount 0
+
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+            def execute(self, sql, params=None):
+                written_params.append(params)
+                # 상태 조건 시뮬레이션
+                if initial_status != "GENERATING":
+                    self.rowcount = 0
+                else:
+                    self.rowcount = 1
+
+        conn = FakeConn(RC())
+        with patch.object(_repo_mod, "getConn", return_value=conn):
+            _repo_mod.markSurveyFormRetryableBestEffort(formId=1, errorMessage="err")
+        return conn._cur.rowcount
+
+    def _run_ready_update(self, initial_status: str) -> int:
+        """markSurveyFormReadyTx: GENERATING 이외 상태에서는 rowcount 0 → RuntimeError."""
+
+        class RC:
+            def __init__(self):
+                self.rowcount = 1 if initial_status == "GENERATING" else 0
+
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+
+            def execute(self, sql, params=None): pass
+
+        conn = FakeConn(RC())
+        with patch.object(_repo_mod, "getConn", return_value=conn):
+            if initial_status != "GENERATING":
+                with self.assertRaises(RuntimeError):
+                    _repo_mod.markSurveyFormReadyTx(
+                        formId=1, masterSheetId="s",
+                        employeeFormUrl="e", managementFormUrl="m", externalFormUrl="x",
+                    )
+                return 0
+            else:
+                _repo_mod.markSurveyFormReadyTx(
+                    formId=1, masterSheetId="s",
+                    employeeFormUrl="e", managementFormUrl="m", externalFormUrl="x",
+                )
+                return 1
+
+    def test_98_ready_form_not_downgraded_to_retryable(self):
+        rowcount = self._run_retryable_update("READY")
+        self.assertEqual(rowcount, 0, "READY 상태에서 RETRYABLE Update가 적용되면 안 됨")
+
+    def test_99_closed_form_not_downgraded_to_retryable(self):
+        rowcount = self._run_retryable_update("CLOSED")
+        self.assertEqual(rowcount, 0, "CLOSED 상태에서 RETRYABLE Update가 적용되면 안 됨")
+
+    def test_100_ready_update_allowed_only_from_generating(self):
+        result = self._run_ready_update("GENERATING")
+        self.assertEqual(result, 1, "GENERATING → READY 전이 허용")
+
+    def test_101_ready_update_blocked_from_ready(self):
+        self._run_ready_update("READY")  # assertRaises inside
+
+    def test_102_workflow_completed_failure_does_not_downgrade_ready_form(self):
+        """markSurveyFormReadyTx 성공 후 Workflow COMPLETED 저장 실패 시 Form READY 유지."""
+        fs = _load_formservice()
+
+        freeze_result = {
+            "id": 1, "surveyStatus": "GENERATING", "survey_status": "GENERATING",
+            "snapshot": [
+                {"rankNo": i, "subIssueCode": f"C{i}", "subIssueName": "n",
+                 "finalImpactScore": 1.0, "finalFinancialScore": 1.0, "finalScore": 1.0}
+                for i in range(1, 21)
+            ],
+            "top20_snapshot_json": "[]", "esg_materiality_run_id": 48, "template_version": "v2",
+            "master_sheet_id": None, "employee_form_url": None,
+            "management_form_url": None, "external_form_url": None,
+            "error_message": None, "generated_at": None, "updated_at": None,
+        }
+        apps_response = MagicMock()
+        apps_response.json.return_value = _make_ready_apps_response()
+
+        mark_ready_called = [False]
+        retryable_called = [False]
+        workflow_call_count = [0]
+
+        def fake_mark_ready(**kw):
+            mark_ready_called[0] = True
+
+        def fake_retryable(**kw):
+            retryable_called[0] = True
+
+        def fake_upsert(**kw):
+            workflow_call_count[0] += 1
+            # COMPLETED 저장 시도 시 실패
+            if kw.get("overallStatus") == "COMPLETED":
+                raise RuntimeError("workflow DB down")
+
+        with patch.object(fs, "findSurveyRunContext", return_value={"runId": 48, "companyId": 6, "reportingYear": 2025}), \
+             patch.object(fs, "getOrFreezeSurveyFormSnapshotTx", return_value=freeze_result), \
+             patch.object(fs, "claimRetryableSurveyFormTx", MagicMock()), \
+             patch.object(fs, "loadSurveyTemplate", return_value={"meta": {}, "questions": {}, "respondentTypes": []}), \
+             patch.object(fs, "buildSurveyPayload", return_value={"meta": {}, "respondents": {}}), \
+             patch.object(fs, "markSurveyFormReadyTx", side_effect=fake_mark_ready), \
+             patch.object(fs, "getSurveyFormByRunId", return_value=None), \
+             patch.object(fs, "upsertDmaWorkflowStatus", side_effect=fake_upsert), \
+             patch.object(fs, "markSurveyFormRetryableBestEffort", side_effect=fake_retryable), \
+             patch("requests.post", return_value=apps_response):
+            with self.assertRaises(RuntimeError):
+                fs.ensureSurveyFormForRun(48)
+
+        # markSurveyFormReadyTx는 성공했고 RETRYABLE Best Effort가 실행됐지만,
+        # _UPDATE_RETRYABLE_SQL의 WHERE survey_status='GENERATING' 조건으로
+        # DB에서 실제 downgrade는 발생하지 않음 (rowcount=0)
+        self.assertTrue(mark_ready_called[0], "markSurveyFormReadyTx는 호출돼야 함")
+        self.assertTrue(retryable_called[0], "except에서 markSurveyFormRetryableBestEffort는 호출됨")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

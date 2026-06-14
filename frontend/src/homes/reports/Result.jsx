@@ -779,6 +779,15 @@ const Result = () => {
     navigate(steps[index].path);
   };
 
+  const navigateToPostDmaOnboarding = () => {
+    navigate("/onb", {
+      state: {
+        preferredCycleType: "POST_DMA_DISCLOSURE",
+        sourceMaterialityRunId: runId,
+      },
+    });
+  };
+
   const toggleSection = (id) => {
     setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -1143,7 +1152,7 @@ const Result = () => {
                   <div id="shortcut-grid">
                     {[
                       {
-                        bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onboard",
+                        bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onb",
                         icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
                       },
                       {
@@ -1156,8 +1165,8 @@ const Result = () => {
                         className={`shortcut-card ${item.path === "/draft" && isGenerating ? "shortcut-disabled" : ""}`}
                         onClick={() => {
                           if (item.path === "/draft" && isGenerating) return;
-                          if (item.path === "/onboard") {
-                            navigate("/onboard", { state: { preferredCycleType: "POST_DMA_DISCLOSURE", sourceMaterialityRunId: runId } });
+                          if (item.path === "/onb") {
+                            navigateToPostDmaOnboarding();
                             return;
                           }
                           item.path === "/draft" ? handleGenerateReport() : navigate(item.path);
@@ -1327,7 +1336,7 @@ const Result = () => {
                   <div id="shortcut-grid">
                     {[
                       {
-                        bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onboard",
+                        bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onb",
                         icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
                       },
                       {

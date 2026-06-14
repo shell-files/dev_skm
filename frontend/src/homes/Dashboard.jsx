@@ -27,7 +27,7 @@ const MODULES = [
   {
     title: "데이터 입력",
     desc: "ESG 데이터를 체계적으로 수집하고 관리합니다.",
-    path: "/onboard",
+    path: "/onb",
     iconStyle: { background: "#f0fdf4" },
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -317,7 +317,7 @@ const Dashboard = () => {
         <div className="db-card">
           <div className="db-notice-header">
             <p className="db-section-title">필요 온보딩 지표</p>
-            <button className="db-notice-view-all" onClick={() => navigate("/onboard")}>
+            <button className="db-notice-view-all" onClick={() => navigate("/onb")}>
               전체 보기 →
             </button>
           </div>

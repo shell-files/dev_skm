@@ -163,6 +163,7 @@ const initialState = {
   reportData: null,
   materialityResults: null,
   materialitySelectionProcess: null,
+  finalizedSelection: null,
   loading: {
     workflow: false,
     onboarding: false,
@@ -191,6 +192,7 @@ const initialState = {
     ensureRollupResponseWorkspace: false,
     materialityResults: false,
     materialitySelectionProcess: false,
+    finalizeSelectedSubIssues: false,
     surveyForm: false,
     surveyImport: false,
     surveyScorePreview: false,
@@ -228,6 +230,7 @@ const initialState = {
     ensureRollupResponseWorkspace: null,
     materialityResults: null,
     materialitySelectionProcess: null,
+    finalizeSelectedSubIssues: null,
     surveyForm: null,
     surveyImport: null,
     surveyScorePreview: null,
@@ -849,6 +852,22 @@ export const fetchMaterialitySelectionProcess = createAsyncThunk(
   }
 );
 
+// POST /materiality/results/{runId}/selected-sub-issues/finalize
+export const finalizeSelectedSubIssues = createAsyncThunk(
+  "report/finalizeSelectedSubIssues",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(
+        await POST(`/materiality/results/${runId}/selected-sub-issues/finalize`, {})
+      );
+      return rejectIfFailed(res, rejectWithValue, "최종 이슈 확정에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({ status: false, message: "최종 이슈 확정 중 오류가 발생했습니다." });
+    }
+  }
+);
+
 // ── Survey API ───────────────────────────────────────────────────
 // GET /survey/form/{runId}
 // form이 없을 때(404) Network.js는 {status:false}를 반환하므로 rejected 대신 null fulfilled로 처리
@@ -1417,6 +1436,18 @@ const reportSlice = createSlice({
       .addCase(fetchMaterialitySelectionProcess.rejected, (state, action) => {
         setRejected(state, "materialitySelectionProcess", action);
         state.materialitySelectionProcess = null;
+      });
+
+    builder
+      .addCase(finalizeSelectedSubIssues.pending, (state) => setPending(state, "finalizeSelectedSubIssues"))
+      .addCase(finalizeSelectedSubIssues.fulfilled, (state, action) => {
+        state.loading.finalizeSelectedSubIssues = false;
+        state.error.finalizeSelectedSubIssues = null;
+        state.finalizedSelection = dataOf(action.payload);
+      })
+      .addCase(finalizeSelectedSubIssues.rejected, (state, action) => {
+        setRejected(state, "finalizeSelectedSubIssues", action);
+        state.finalizedSelection = null;
       });
 
     builder

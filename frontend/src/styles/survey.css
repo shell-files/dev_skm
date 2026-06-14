@@ -65,15 +65,14 @@
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 24px 130px 80px;
+    padding: 24px 130px 0;
 }
 
 .survey-input-card {
     width: 100%;
-    min-width: 0;
-
-    padding: 0;
-    text-align: left;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding-bottom: 120px;
 
     display: flex;
     flex-direction: column;
@@ -84,15 +83,15 @@
     flex: 0 0 auto;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 1280px) {
     .survey-container .main-content {
-        padding: 20px 60px 80px;
+        padding: 24px 48px 0;
     }
 }
 
 @media (max-width: 768px) {
     .survey-container .main-content {
-        padding: 14px 20px 80px;
+        padding: 20px 20px 0;
     }
 }
 
@@ -572,10 +571,11 @@
 
 .survey-section-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    grid-template-columns: minmax(0, 1.7fr) minmax(360px, 0.8fr);
+    gap: 28px;
+    align-items: start;
     width: 100%;
-    min-width: 0;
+    overflow: visible;
 }
 
 @media (max-width: 768px) {
@@ -1403,11 +1403,27 @@
     }
 }
 
+@media (min-width: 1440px) {
+    .survey-section-grid {
+        grid-template-columns: minmax(0, 820px) minmax(360px, 420px);
+        justify-content: center;
+    }
+}
+
+@media (max-width: 1280px) {
+    .survey-section-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 @media (max-width: 768px) {
     .survey-action-row {
         flex-direction: column;
     }
-    .survey-section-grid {
+    .sv-action-row {
+        flex-direction: column;
+    }
+    .sv-target-row {
         grid-template-columns: 1fr;
     }
 }
@@ -1483,13 +1499,17 @@
 ========================================================= */
 
 .sv-panel-card {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    min-height: 0;
     background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
+    border: 1px solid #dbe5ef;
+    border-radius: 18px;
     overflow: visible;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.07);
 }
 
 .sv-panel-header {
@@ -1499,7 +1519,7 @@
     padding: 16px 18px 14px;
     border-bottom: 1px solid #f1f5f9;
     background: #fafcff;
-    border-radius: 15px 15px 0 0;
+    border-radius: 18px 18px 0 0;
 }
 
 .sv-panel-header-icon {
@@ -1529,12 +1549,11 @@
 }
 
 .sv-panel-body {
-    padding: 14px 18px 18px;
-    flex: 1;
+    padding: 20px 22px 24px;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    /* 패널 내부 스크롤 없음 — 페이지(main-content) 스크롤로 대응 */
+    overflow: visible;
 }
 
 /* ── 그룹 아이콘 & 뱃지 ── */
@@ -1667,9 +1686,9 @@
 /* ── 목표 인원 ── */
 
 .sv-target-section {
-    margin-top: 4px;
-    padding-top: 12px;
-    border-top: 1px solid #f1f5f9;
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid #e5edf5;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -1690,8 +1709,9 @@
 
 .sv-target-item {
     display: flex;
-    flex-direction: column;
-    gap: 5px;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
     min-width: 0;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -1699,32 +1719,20 @@
     padding: 8px 10px;
 }
 
-.sv-target-item-top {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    min-width: 0;
-}
-
 .sv-target-item-label {
     font-size: 0.75rem;
     font-weight: 700;
     color: #334155;
+    flex: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.sv-target-item-bottom {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
 .sv-target-input {
-    flex: 1;
-    min-width: 0;
+    width: 54px;
+    flex-shrink: 0;
     padding: 3px 6px;
     border: 1px solid #dbe4ee;
     border-radius: 6px;
@@ -1753,7 +1761,9 @@
     justify-content: center;
     gap: 6px;
     width: 100%;
+    height: 48px;
     padding: 10px 16px;
+    margin-top: 4px;
     background: #03A94D;
     color: #fff;
     border: none;

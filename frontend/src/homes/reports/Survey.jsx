@@ -295,15 +295,11 @@ const Survey = () => {
               </div>
               {isReady && url ? (
                 <div className="svurl-row-right">
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="svurl-link"
-                    title={url}
-                  >
-                    {URL_LABEL[key](currentYear || new Date().getFullYear())}
-                  </a>
+                  <span className="svurl-text" title={url}>{url}</span>
+                  <button className="svurl-btn svurl-btn--dark" onClick={() => window.open(url, '_blank')}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    열기
+                  </button>
                   <button className="svurl-btn svurl-btn--green" onClick={() => copyUrl(url)}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                     복사
@@ -500,20 +496,16 @@ const Survey = () => {
                       const meta = GROUP_META[key];
                       return (
                         <div className="sv-target-item" key={key}>
-                          <div className="sv-target-item-top">
-                            <span className="svgroup-icon-sm" style={{ background: meta.bg, color: meta.color }}>{meta.icon}</span>
-                            <span className="sv-target-item-label">{meta.label}</span>
-                          </div>
-                          <div className="sv-target-item-bottom">
-                            <input
-                              type="number"
-                              min="0"
-                              className="sv-target-input"
-                              value={localTargets[key]}
-                              onChange={(e) => handleTargetChange(key, e.target.value)}
-                            />
-                            <span className="sv-target-unit">명</span>
-                          </div>
+                          <span className="svgroup-icon-sm" style={{ background: meta.bg, color: meta.color }}>{meta.icon}</span>
+                          <span className="sv-target-item-label">{meta.label}</span>
+                          <input
+                            type="number"
+                            min="0"
+                            className="sv-target-input"
+                            value={localTargets[key]}
+                            onChange={(e) => handleTargetChange(key, e.target.value)}
+                          />
+                          <span className="sv-target-unit">명</span>
                         </div>
                       );
                     })}

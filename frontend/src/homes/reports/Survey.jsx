@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
+import { useSelector } from "react-redux";
 import "@styles/sr.css";
 import "@styles/survey.css";
 
@@ -76,12 +77,6 @@ const DUMMY_SURVEY_RESULT = {
   issues: DUMMY_TOP_ISSUES,
 };
 
-const DUMMY_URLS = {
-  emp: "https://forms.gle/emp_sample_skm",
-  exec: "https://forms.gle/exec_sample_skm",
-  ext: "https://forms.gle/ext_sample_skm",
-};
-
 const DUMMY_SUMMARY =
   "AI 응답 데이터 동기화가 완료되었습니다. 외부이해관계자 그룹의 참여율이 상대적으로 낮아 추가 독려가 필요합니다.";
 
@@ -93,7 +88,7 @@ const Survey = () => {
   const navigate = useNavigate();
   const particleRef = useRef(null);
   const { selectedCompany } = useAuth();
-  const companyId = selectedCompany?.company_id;
+  const currentRunId = useSelector((state) => state.report.currentRunId);
 
   const activeIndex = 2;
 
@@ -114,13 +109,9 @@ const Survey = () => {
     exec: 20,
     ext: 80,
   });
-  const [surveyUrls, setSurveyUrls] = useState({
-    employee: {},
-    management: {},
-    external: {},
-  });
 
-  const [isUrlCreated, setIsUrlCreated] = useState(false);
+  const [surveyForm, setSurveyForm] = useState(null);
+
   const [liveData, setLiveData] = useState({ emp: 0, exec: 0, ext: 0 });
   const [topIssues, setTopIssues] = useState([]);
   const [surveyResult, setSurveyResult] = useState(null);
@@ -142,11 +133,6 @@ const Survey = () => {
       return await GET("/survey/kpi/live");
     },
 
-    getSurveyUrls: async () => {
-      if (IS_DUMMY) return DUMMY_URLS;
-      return await GET("/survey/urls");
-    },
-
     getTopIssues: async () => {
       if (IS_DUMMY) return DUMMY_TOP_ISSUES;
       return await GET("/survey/issues");
@@ -161,9 +147,6 @@ const Survey = () => {
       if (IS_DUMMY) return { success: true };
       return await POST("/survey/analyze");
     },
-    createSurvey: async (payload) => {
-      return await POST("/survey", payload);
-    },
   };
 
   /* =========================
@@ -173,6 +156,10 @@ const Survey = () => {
   useEffect(() => {
     createParticles();
   }, []);
+
+  useEffect(() => {
+    fetchSurveyForm();
+  }, [currentRunId]);
 
   useEffect(() => {
     let interval;
@@ -197,37 +184,30 @@ const Survey = () => {
   /* =========================
      FUNCTIONS
   ========================= */
-  const [isCreatingUrl, setIsCreatingUrl] = useState(false);
-  const createSurveyUrl = async () => {
-    if (isCreatingUrl) return;
 
-    setIsCreatingUrl(true);
-
+  const fetchSurveyForm = async () => {
+    if (!currentRunId) {
+      setSurveyForm(null);
+      return;
+    }
     try {
-      if (!selectedCompany?.company_id) {
-        showDefaultAlert("오류", "선택된 회사가 없습니다.", "error");
-        return;
-      }
-
-      const result = await POST("/survey", {
-        companyId: selectedCompany.company_id.toString(),
-        runId: "1",
-        year: "2025",
-      });
-      console.log(result);
-
-      setSurveyUrls(result.forms);
-
-      setIsUrlCreated(true);
-
-      showDefaultAlert("생성 완료", "설문 URL 생성 완료", "success");
-    } catch (err) {
-      console.error(err);
-      showDefaultAlert("실패", "설문 생성 실패", "error");
-    } finally {
-      setIsCreatingUrl(false);
+      const data = await GET(`/survey/form/${currentRunId}`);
+      setSurveyForm(data && !data.error ? data : null);
+    } catch {
+      setSurveyForm(null);
     }
   };
+
+  const retrySurveyForm = async () => {
+    if (!currentRunId) return;
+    try {
+      const data = await POST(`/survey/form/${currentRunId}/retry`, {});
+      setSurveyForm(data && !data.error ? data : null);
+    } catch (err) {
+      showDefaultAlert("실패", "설문 URL 재시도에 실패했습니다.", "error");
+    }
+  };
+
   const createParticles = () => {
     if (!particleRef.current) return;
 
@@ -284,14 +264,6 @@ const Survey = () => {
     const data = await api.getLiveKpi();
     setLiveData(data);
     setAggregationDone(true);
-    if (!isUrlCreated) {
-      showDefaultAlert(
-        "필요",
-        "먼저 설문 URL을 생성하세요.",
-        "warning"
-      );
-      return;
-    }
     setSummaryText(
       IS_DUMMY
         ? DUMMY_SUMMARY
@@ -307,14 +279,6 @@ const Survey = () => {
 
   const runSurveyAnalysis = async () => {
     if (isAnalyzing) return;
-    if (!isUrlCreated) {
-      showDefaultAlert(
-        "필요",
-        "먼저 설문 URL을 생성하세요.",
-        "warning"
-      );
-      return;
-    }
 
     const confirmed = await showConfirmAlert(
       "분석 실행",
@@ -329,15 +293,13 @@ const Survey = () => {
     setProgress(0);
     setIsAnalyzing(true);
 
-    const [result, issues, urls] = await Promise.all([
+    const [result, issues] = await Promise.all([
       api.getSurveyResult(),
       api.getTopIssues(),
-      api.getSurveyUrls(),
     ]);
 
     setSurveyResult(result);
     setTopIssues(issues);
-    setSurveyUrls(urls);
 
     await api.runSurveyAnalysis();
   };
@@ -352,13 +314,126 @@ const Survey = () => {
     if (!total) return 0;
     return ((current / total) * 100).toFixed(1);
   };
+
+  /* =========================
+     URL 영역 렌더링 헬퍼
+  ========================= */
+
+  const renderUrlArea = () => {
+    if (surveyForm?.surveyStatus === "RETRYABLE") {
+      return (
+        <div style={{ padding: "12px 0" }}>
+          <p style={{ color: "#ef4444", marginBottom: "8px", fontSize: "0.9rem" }}>
+            설문 URL 생성에 실패했습니다. 재시도할 수 있습니다.
+          </p>
+          <button className="survey-btn" onClick={retrySurveyForm}>
+            재시도
+          </button>
+        </div>
+      );
+    }
+
+    const statusMsg =
+      surveyForm === null
+        ? "미디어 분석 완료 후 설문 URL이 자동 생성됩니다."
+        : surveyForm.surveyStatus === "GENERATING"
+        ? "설문 URL 자동 생성 중입니다..."
+        : null;
+
+    const isReady = surveyForm?.surveyStatus === "READY";
+
+    return (
+      <div className="survey-group-list">
+        {statusMsg && (
+          <p style={{ color: "#64748b", fontSize: "0.88rem", marginBottom: "8px" }}>
+            {statusMsg}
+          </p>
+        )}
+
+        {/* 임직원 */}
+        <div className="survey-row-box">
+          <label>임직원</label>
+          <div className="url-list">
+            {isReady && (
+              <div className="url-input-line">
+                <button
+                  className="btn-url-copy"
+                  onClick={() => copyUrl(surveyForm.employeeFormUrl)}
+                >
+                  복사
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="kpi-input-line">
+            <span>총 발송 인원 (KPI) :</span>
+            <input
+              type="number"
+              value={kpiData.emp}
+              onChange={(e) => handleKpiChange("emp", e.target.value)}
+            />
+            명
+          </div>
+        </div>
+
+        {/* 경영진 */}
+        <div className="survey-row-box">
+          <label>경영진</label>
+          {isReady && (
+            <div className="url-input-line">
+              <button
+                className="btn-url-copy"
+                onClick={() => copyUrl(surveyForm.managementFormUrl)}
+              >
+                복사
+              </button>
+            </div>
+          )}
+          <div className="kpi-input-line">
+            <span>총 발송 인원 (KPI) :</span>
+            <input
+              type="number"
+              value={kpiData.exec}
+              onChange={(e) => handleKpiChange("exec", e.target.value)}
+            />
+            명
+          </div>
+        </div>
+
+        {/* 외부 이해관계자 */}
+        <div className="survey-row-box">
+          <label>외부이해관계자</label>
+          {isReady && (
+            <div className="url-input-line">
+              <button
+                className="btn-url-copy"
+                onClick={() => copyUrl(surveyForm.externalFormUrl)}
+              >
+                복사
+              </button>
+            </div>
+          )}
+          <div className="kpi-input-line">
+            <span>총 발송 인원 (KPI) :</span>
+            <input
+              type="number"
+              value={kpiData.ext}
+              onChange={(e) => handleKpiChange("ext", e.target.value)}
+            />
+            명
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="survey-container">
       {/* =========================================================
           Header
       ========================================================== */}
       <header className="survey-header">
-       
+
 
         {/* =====================================================
             Stepper 영역
@@ -418,15 +493,6 @@ const Survey = () => {
             각 이해관계자 그룹별 설문 발송 관리 및
             실시간 집계 결과를 매핑합니다.
           </p>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "12px", }}>
-            <button
-              className="survey-btn"
-              onClick={createSurveyUrl}
-              disabled={isCreatingUrl}
-            >
-              {isCreatingUrl ? "URL 생성 중..." : "URL 생성"}
-            </button>
-          </div>
           {/* =====================================================
               설문 영역
           ====================================================== */}
@@ -441,152 +507,7 @@ const Survey = () => {
               </div>
 
               <div className="survey-panel">
-                <div className="survey-group-list">
-                  {/* 임직원 */}
-                  <div className="survey-row-box">
-
-                    <label>임직원</label>
-                  <div className="url-list">
-                    {Object.entries(
-                      surveyUrls.employee || {}
-                    ).map(([label, url]) => (
-                      <div
-                        className="url-input-line"
-                        key={label}
-                      >
-                        <span>{label}</span>
-
-                        {/* <input
-                          type="text"
-                          value={url}
-                          readOnly
-                        /> */}
-
-                        <button
-                          className="btn-url-copy"
-                          onClick={() => copyUrl(url)}
-                        >
-                          복사
-                        </button>
-                      </div>
-                    ))}
-                    </div>
-
-                    <div className="kpi-input-line">
-                      <span>
-                        총 발송 인원 (KPI) :
-                      </span>
-
-                      <input
-                        type="number"
-                        value={kpiData.emp}
-                        onChange={(e) =>
-                          handleKpiChange(
-                            "emp",
-                            e.target.value
-                          )
-                        }
-                      />
-
-                      명
-                    </div>
-                  </div>
-
-                  {/* 경영진 */}
-                  <div className="survey-row-box">
-                    <label>경영진</label>
-
-                    {Object.entries(
-                      surveyUrls.management || {}
-                    ).map(([label, url]) => (
-                      <div
-                        className="url-input-line"
-                        key={label}
-                      >
-                        <span>{label}</span>
-
-                        {/* <input
-                          type="text"
-                          value={url}
-                          readOnly
-                        /> */}
-
-                        <button
-                          className="btn-url-copy"
-                          onClick={() => copyUrl(url)}
-                        >
-                          복사
-                        </button>
-                      </div>
-                    ))}
-
-                    <div className="kpi-input-line">
-                      <span>
-                        총 발송 인원 (KPI) :
-                      </span>
-
-                      <input
-                        type="number"
-                        value={kpiData.exec}
-                        onChange={(e) =>
-                          handleKpiChange(
-                            "exec",
-                            e.target.value
-                          )
-                        }
-                      />
-
-                      명
-                    </div>
-                  </div>
-
-                  {/* 외부 이해관계자 */}
-                  <div className="survey-row-box">
-                    <label>외부이해관계자</label>
-
-                    {Object.entries(
-                      surveyUrls.external || {}
-                    ).map(([label, url]) => (
-                      <div
-                        className="url-input-line"
-                        key={label}
-                      >
-                        <span>{label}</span>
-
-                        {/* <input
-                          type="text"
-                          value={url}
-                          readOnly
-                        /> */}
-
-                        <button
-                          className="btn-url-copy"
-                          onClick={() => copyUrl(url)}
-                        >
-                          복사
-                        </button>
-                      </div>
-                    ))}
-                    <div className="kpi-input-line">
-                      <span>
-                        총 발송 인원 (KPI) :
-                      </span>
-
-                      <input
-                        type="number"
-                        value={kpiData.ext}
-                        onChange={(e) =>
-                          handleKpiChange(
-                            "ext",
-                            e.target.value
-                          )
-                        }
-                      />
-
-                      명
-                    </div>
-                  </div>
-                </div>
+                {renderUrlArea()}
               </div>
             </div>
 

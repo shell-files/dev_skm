@@ -130,6 +130,13 @@ const initialState = {
     assignments: [],
   },
 
+  survey: {
+    form: null,
+    importResult: null,
+    scorePreview: null,
+    recalculateResult: null,
+  },
+
   approval: {
     projects: [],
     selectedProject: null,
@@ -189,6 +196,11 @@ const initialState = {
     ensureRollupResponseWorkspace: false,
     materialityResults: false,
     materialitySelectionProcess: false,
+    surveyForm: false,
+    surveyImport: false,
+    surveyScorePreview: false,
+    surveyRecalculate: false,
+    surveyRetry: false,
   },
 
   error: {
@@ -219,6 +231,11 @@ const initialState = {
     ensureRollupResponseWorkspace: null,
     materialityResults: null,
     materialitySelectionProcess: null,
+    surveyForm: null,
+    surveyImport: null,
+    surveyScorePreview: null,
+    surveyRecalculate: null,
+    surveyRetry: null,
   },
 };
 
@@ -833,6 +850,81 @@ export const fetchMaterialitySelectionProcess = createAsyncThunk(
   }
 );
 
+// ── Survey API ───────────────────────────────────────────────────
+// GET /survey/form/{runId}
+// form이 없을 때(404) Network.js는 {status:false}를 반환하므로 rejected 대신 null fulfilled로 처리
+export const fetchSurveyForm = createAsyncThunk(
+  "report/fetchSurveyForm",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const raw = await GET(`/survey/form/${runId}`);
+      if (raw?.status === false) {
+        return { success: true, data: null };
+      }
+      return normalizeDirectDtoResponse(raw);
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({ status: false, message: "설문 URL 정보를 불러오지 못했습니다." });
+    }
+  }
+);
+
+// POST /survey/form/{runId}/retry
+export const retrySurveyForm = createAsyncThunk(
+  "report/retrySurveyForm",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(await POST(`/survey/form/${runId}/retry`, {}));
+      return rejectIfFailed(res, rejectWithValue, "설문 URL 재시도에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({ status: false, message: "설문 URL 재시도에 실패했습니다." });
+    }
+  }
+);
+
+// POST /survey/form/{runId}/responses/import
+export const importSurveyResponses = createAsyncThunk(
+  "report/importSurveyResponses",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(await POST(`/survey/form/${runId}/responses/import`, {}));
+      return rejectIfFailed(res, rejectWithValue, "설문 응답 Import에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({ status: false, message: "설문 응답 Import에 실패했습니다." });
+    }
+  }
+);
+
+// GET /survey/form/{runId}/scores/preview
+export const previewSurveyScores = createAsyncThunk(
+  "report/previewSurveyScores",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(await GET(`/survey/form/${runId}/scores/preview`));
+      return rejectIfFailed(res, rejectWithValue, "설문 점수 Preview 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({ status: false, message: "설문 점수 Preview 조회에 실패했습니다." });
+    }
+  }
+);
+
+// POST /survey/form/{runId}/scores/recalculate
+export const recalculateSurveyScores = createAsyncThunk(
+  "report/recalculateSurveyScores",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = normalizeDirectDtoResponse(await POST(`/survey/form/${runId}/scores/recalculate`, {}));
+      return rejectIfFailed(res, rejectWithValue, "설문 점수 반영에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({ status: false, message: "설문 점수 반영에 실패했습니다." });
+    }
+  }
+);
+
 const setPending = (state, key) => {
   state.loading[key] = true;
   state.error[key] = null;
@@ -910,6 +1002,23 @@ const reportSlice = createSlice({
 
     clearApprovalDetail: (state) => {
       state.approval.selectedItemDetail = null;
+    },
+
+    clearSurveyState: (state) => {
+      state.survey.form = null;
+      state.survey.importResult = null;
+      state.survey.scorePreview = null;
+      state.survey.recalculateResult = null;
+      state.loading.surveyForm = false;
+      state.loading.surveyImport = false;
+      state.loading.surveyScorePreview = false;
+      state.loading.surveyRecalculate = false;
+      state.loading.surveyRetry = false;
+      state.error.surveyForm = null;
+      state.error.surveyImport = null;
+      state.error.surveyScorePreview = null;
+      state.error.surveyRecalculate = null;
+      state.error.surveyRetry = null;
     },
   },
   extraReducers: (builder) => {
@@ -1277,6 +1386,63 @@ const reportSlice = createSlice({
         setRejected(state, "materialitySelectionProcess", action);
         state.materialitySelectionProcess = null;
       });
+
+    builder
+      .addCase(fetchSurveyForm.pending, (state) => setPending(state, "surveyForm"))
+      .addCase(fetchSurveyForm.fulfilled, (state, action) => {
+        state.loading.surveyForm = false;
+        state.error.surveyForm = null;
+        state.survey.form = dataOf(action.payload);
+      })
+      .addCase(fetchSurveyForm.rejected, (state, action) => {
+        setRejected(state, "surveyForm", action);
+        state.survey.form = null;
+      });
+
+    builder
+      .addCase(retrySurveyForm.pending, (state) => setPending(state, "surveyRetry"))
+      .addCase(retrySurveyForm.fulfilled, (state, action) => {
+        state.loading.surveyRetry = false;
+        state.error.surveyRetry = null;
+        state.survey.form = dataOf(action.payload);
+      })
+      .addCase(retrySurveyForm.rejected, (state, action) => setRejected(state, "surveyRetry", action));
+
+    builder
+      .addCase(importSurveyResponses.pending, (state) => setPending(state, "surveyImport"))
+      .addCase(importSurveyResponses.fulfilled, (state, action) => {
+        state.loading.surveyImport = false;
+        state.error.surveyImport = null;
+        state.survey.importResult = dataOf(action.payload);
+      })
+      .addCase(importSurveyResponses.rejected, (state, action) => {
+        setRejected(state, "surveyImport", action);
+        state.survey.importResult = null;
+      });
+
+    builder
+      .addCase(previewSurveyScores.pending, (state) => setPending(state, "surveyScorePreview"))
+      .addCase(previewSurveyScores.fulfilled, (state, action) => {
+        state.loading.surveyScorePreview = false;
+        state.error.surveyScorePreview = null;
+        state.survey.scorePreview = dataOf(action.payload);
+      })
+      .addCase(previewSurveyScores.rejected, (state, action) => {
+        setRejected(state, "surveyScorePreview", action);
+        state.survey.scorePreview = null;
+      });
+
+    builder
+      .addCase(recalculateSurveyScores.pending, (state) => setPending(state, "surveyRecalculate"))
+      .addCase(recalculateSurveyScores.fulfilled, (state, action) => {
+        state.loading.surveyRecalculate = false;
+        state.error.surveyRecalculate = null;
+        state.survey.recalculateResult = dataOf(action.payload);
+      })
+      .addCase(recalculateSurveyScores.rejected, (state, action) => {
+        setRejected(state, "surveyRecalculate", action);
+        state.survey.recalculateResult = null;
+      });
   },
 });
 
@@ -1284,6 +1450,7 @@ export const {
   clearApprovalDetail,
   clearApprovalProject,
   clearReportError,
+  clearSurveyState,
   resetReportState,
   selectApprovalProject,
   setActiveBatchId,

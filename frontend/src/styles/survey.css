@@ -1258,3 +1258,169 @@
         width: 100%;
     }
 }
+
+/* ==========================================
+   S3 Survey Front API Wiring — 추가 클래스
+========================================== */
+
+.survey-action-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.survey-action-row .survey-btn {
+    margin-bottom: 0;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    min-width: 0;
+}
+
+.survey-status-box {
+    font-size: 0.85rem;
+    color: #64748b;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin: 0 0 8px;
+    line-height: 1.5;
+}
+
+.survey-error-box {
+    font-size: 0.82rem;
+    color: #dc2626;
+    background: #fff1f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 9px 13px;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.survey-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+.survey-url-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.survey-url-actions .btn-url-copy {
+    margin-bottom: 0;
+    padding: 5px 10px;
+}
+
+.survey-score-table {
+    min-width: 700px;
+}
+
+.survey-recalc-result {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 10px;
+    padding: 10px 14px;
+}
+
+.survey-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.survey-badge.white-badge {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #475569;
+    letter-spacing: 0.01em;
+    padding: 0 2px;
+}
+
+.kpi-input-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: #475569;
+}
+
+.kpi-input-line input {
+    width: 70px;
+    padding: 4px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    font-size: 0.82rem;
+    text-align: right;
+}
+
+.sheets-dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.chart-status-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.chart-header .label {
+    font-size: 0.75rem;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.chart-header .value {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.api-progress-container {
+    height: 5px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.api-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #03A94D, #017E3F);
+    border-radius: 4px;
+    transition: width 0.4s ease;
+    min-width: 0;
+}
+
+@media (max-width: 992px) {
+    .survey-metric-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .sheets-dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .survey-action-row {
+        flex-direction: column;
+    }
+    .survey-section-grid {
+        grid-template-columns: 1fr;
+    }
+}

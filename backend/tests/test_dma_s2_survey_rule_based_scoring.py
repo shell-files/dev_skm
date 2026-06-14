@@ -1342,10 +1342,12 @@ class TestGuards(unittest.TestCase):
         return result.stdout.strip()
 
     def test_80_no_frontend_diff(self):
+        # S3 Redux refactor: Survey.jsx + survey.css + reportSlice.js 의도적 수정 허용
+        ALLOWED = {"Survey.jsx", "survey.css", "reportSlice.js"}
         diff = self._git_diff_files("frontend")
         filtered = "\n".join(
             line for line in diff.splitlines()
-            if "Survey.jsx" not in line
+            if not any(a in line for a in ALLOWED)
         ).strip()
         self.assertEqual(filtered, "")
 

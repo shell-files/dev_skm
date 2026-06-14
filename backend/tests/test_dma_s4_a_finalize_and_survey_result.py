@@ -87,10 +87,12 @@ class TestFinalizeInsertsCalled(unittest.TestCase):
     @patch("src.services.materialities.service.replaceSelectedSubIssuesTx")
     @patch("src.services.materialities.service.listFinalTopSubIssues")
     @patch("src.services.materialities.service.findOne")
-    def test_02_finalize_calls_replace_tx(self, mock_run, mock_top, mock_replace):
+    @patch("src.services.materialities.service._initPostDmaScopeAfterFinalize")
+    def test_02_finalize_calls_replace_tx(self, mock_scope, mock_run, mock_top, mock_replace):
         mock_run.return_value = {"id": 1}
         mock_top.return_value = _make_score_summary_rows(5)
         mock_replace.return_value = None
+        mock_scope.return_value = None
 
         user = MagicMock()
         user.id = 42
@@ -106,6 +108,9 @@ class TestFinalizeInsertsCalled(unittest.TestCase):
         self.assertEqual(inserted[0]["selected_rank_no"], 1)
         self.assertEqual(inserted[4]["selected_rank_no"], 5)
         self.assertEqual(call_args[1]["userId"], 42)
+
+        # finalize는 선정 확정 직후 온보딩 지표 scope를 자동 초기화한다.
+        mock_scope.assert_called_once_with(1, 42)
 
 
 # ---------------------------------------------------------------------------

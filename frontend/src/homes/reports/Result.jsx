@@ -1156,6 +1156,10 @@ const Result = () => {
                         className={`shortcut-card ${item.path === "/draft" && isGenerating ? "shortcut-disabled" : ""}`}
                         onClick={() => {
                           if (item.path === "/draft" && isGenerating) return;
+                          if (item.path === "/onboard") {
+                            navigate("/onboard", { state: { preferredCycleType: "POST_DMA_DISCLOSURE", sourceMaterialityRunId: runId } });
+                            return;
+                          }
                           item.path === "/draft" ? handleGenerateReport() : navigate(item.path);
                         }}
                       >

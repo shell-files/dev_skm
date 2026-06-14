@@ -226,10 +226,60 @@ def buildStatusResponse(run: dict) -> ReportWorkflowResponseDto:
     return ReportWorkflowResponseDto(data=buildStatusDto(run, basisStatus))
 
 
+def _resolvePostDmaState(run: dict) -> tuple:
+    """
+    DB를 조회하여 DMA 선정/POST_DMA 온보딩 상태를 반환한다.
+    반환: (selectionSource, fallbackYn, selectedSubIssueCount, postDmaCycleId, postDmaScopeMetricCount, currentCycleType)
+    예외 발생 시 안전한 기본값(PRE_DMA_G0)을 반환한다.
+    """
+    try:
+        from src.utils.dmarepository import listSelectedSubIssues
+        from src.utils.onboardingscoperepository import getCycle, listMetricScopes
+
+        runId = int(run["id"])
+        companyId = int(run["company_id"])
+        reportingYear = int(run["reporting_year"])
+
+        selectedRows = listSelectedSubIssues(runId)
+        selectedSubIssueCount = len(selectedRows)
+
+        selectionSource = "TABLE" if selectedSubIssueCount > 0 else None
+        fallbackYn = False if selectedSubIssueCount > 0 else None
+
+        postDmaCycle = getCycle(companyId, reportingYear, "POST_DMA_DISCLOSURE")
+        postDmaCycleId = int(postDmaCycle["id"]) if postDmaCycle.get("id") is not None else None
+
+        postDmaScopeMetricCount = 0
+        if postDmaCycleId:
+            scopeRows = listMetricScopes(postDmaCycleId, companyId)
+            postDmaScopeMetricCount = len(scopeRows)
+
+        currentCycleType = None
+        if (
+            selectionSource == "TABLE"
+            and not fallbackYn
+            and selectedSubIssueCount >= 5
+            and postDmaCycleId is not None
+            and postDmaScopeMetricCount > 0
+        ):
+            currentCycleType = "POST_DMA_DISCLOSURE"
+
+        return selectionSource, fallbackYn, selectedSubIssueCount, postDmaCycleId, postDmaScopeMetricCount, currentCycleType
+
+    except Exception:
+        return None, None, 0, None, 0, None
+
+
 def buildStatusDto(run: dict, basisStatus: dict) -> ReportWorkflowStatusDto:
     reportBasisType = normalizeReportBasisType(run.get("report_basis_type"))
+    runId = int(run["id"]) if run.get("id") is not None else None
+
+    selectionSource, fallbackYn, selectedSubIssueCount, postDmaCycleId, postDmaScopeMetricCount, currentCycleType = (
+        _resolvePostDmaState(run) if runId else (None, None, 0, None, 0, None)
+    )
+
     return ReportWorkflowStatusDto(
-        runId=int(run["id"]) if run.get("id") is not None else None,
+        runId=runId,
         companyId=int(run["company_id"]),
         reportingYear=int(run["reporting_year"]),
         reportBasisType=reportBasisType,
@@ -242,6 +292,12 @@ def buildStatusDto(run: dict, basisStatus: dict) -> ReportWorkflowStatusDto:
             basisStatus.get("nextAction"),
         ),
         message=basisStatus.get("message") or "OK",
+        selectionSource=selectionSource,
+        fallbackYn=fallbackYn,
+        selectedSubIssueCount=selectedSubIssueCount,
+        postDmaCycleId=postDmaCycleId,
+        postDmaScopeMetricCount=postDmaScopeMetricCount,
+        currentCycleType=currentCycleType,
     )
 
 

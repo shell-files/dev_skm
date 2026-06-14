@@ -122,18 +122,57 @@ const normalizeInviteStatus = (status) => {
   return normalized;
 };
 
-const resolveOnboardingCycleType = (workflow, requestedCycleType) => {
+const resolveOnboardingCycleType = (workflow, requestedCycleType, preferredCycleType) => {
+  // 1. URL query override (QA/debug 전용)
   const requested = String(requestedCycleType || "").trim().toUpperCase();
   if (requested === "POST_DMA_DISCLOSURE") return "POST_DMA_DISCLOSURE";
   if (requested === "PRE_DMA_G0") return "PRE_DMA_G0";
 
-  const workflowValue = String(
+  // 2. navigation state hint (Result 등에서 navigate state로 전달)
+  const preferred = String(preferredCycleType || "").trim().toUpperCase();
+  if (preferred === "POST_DMA_DISCLOSURE") return "POST_DMA_DISCLOSURE";
+  if (preferred === "PRE_DMA_G0") return "PRE_DMA_G0";
+
+  // 3. workflow가 명시적으로 반환한 currentCycleType
+  const explicitCycle = String(
+    workflow?.currentCycleType ||
     workflow?.cycleType ||
     workflow?.onboardingCycleType ||
-    workflow?.currentCycleType ||
     ""
   ).trim().toUpperCase();
-  return workflowValue === "POST_DMA_DISCLOSURE" ? "POST_DMA_DISCLOSURE" : "PRE_DMA_G0";
+  if (explicitCycle === "POST_DMA_DISCLOSURE") return "POST_DMA_DISCLOSURE";
+
+  // 4. nextAction 기반 판단 (POST_DMA 단계 nextAction이면 POST_DMA)
+  const nextAction = String(workflow?.nextAction || "").trim().toUpperCase();
+  if (
+    [
+      "POST_DMA_INPUT",
+      "POST_DMA_ASSIGNMENT",
+      "POST_DMA_DISCLOSURE",
+      "REPORT_DISCLOSURE_INPUT",
+      "REPORT_DISCLOSURE_ROLLUP",
+    ].includes(nextAction)
+  ) {
+    return "POST_DMA_DISCLOSURE";
+  }
+
+  // 5. 복합 상태 체크: TABLE 선정 + POST_DMA cycle + scope 존재
+  const selectionSource = String(workflow?.selectionSource || "").trim().toUpperCase();
+  const fallbackYn = workflow?.fallbackYn === true;
+  const selectedCount = Number(workflow?.selectedSubIssueCount || 0);
+  const postDmaCycleId = workflow?.postDmaCycleId;
+  const postDmaScopeMetricCount = Number(workflow?.postDmaScopeMetricCount || 0);
+
+  if (
+    selectionSource === "TABLE" &&
+    !fallbackYn &&
+    selectedCount >= 5 &&
+    (postDmaCycleId || postDmaScopeMetricCount > 0)
+  ) {
+    return "POST_DMA_DISCLOSURE";
+  }
+
+  return "PRE_DMA_G0";
 };
 
 const resolveRollupContext = (cycleType) => {
@@ -590,6 +629,7 @@ const OnBoard = () => {
   // const reportingYearQuery = searchParams.get("reportingYear");
   const reportingYearQuery = useSelector((state) => state.report.currentYear);
   const cycleTypeQuery = searchParams.get("cycleType");
+  const preferredCycleType = location.state?.preferredCycleType ?? null;
   const reportingYear = reportingYearQuery ? parseInt(reportingYearQuery, 10) : null;
   useEffect(() => {
     console.log(reportingYearQuery);
@@ -626,9 +666,9 @@ const OnBoard = () => {
   const activeCycleType = useMemo(
     () => {
       if (viewMode === "ROLLUP_RESPONSE") return "ROLLUP_RESPONSE";
-      return resolveOnboardingCycleType(displayWorkflow, cycleTypeQuery);
+      return resolveOnboardingCycleType(displayWorkflow, cycleTypeQuery, preferredCycleType);
     },
-    [viewMode, displayWorkflow, cycleTypeQuery]
+    [viewMode, displayWorkflow, cycleTypeQuery, preferredCycleType]
   );
   const activeRollupContext = useMemo(
     () => resolveRollupContext(activeCycleType),
@@ -791,7 +831,7 @@ const OnBoard = () => {
         return;
       }
 
-      const nextCycleType = resolveOnboardingCycleType(nextWorkflow, cycleTypeQuery);
+      const nextCycleType = resolveOnboardingCycleType(nextWorkflow, cycleTypeQuery, preferredCycleType);
       const nextRollupContext = resolveRollupContext(nextCycleType);
       const runId = nextWorkflow.runId;
       let sourceCycleId;
@@ -842,7 +882,7 @@ const OnBoard = () => {
     } catch (error) {
       console.error(error);
     }
-  }, [companyId, cycleTypeQuery, reportingYear, location.search, viewMode, rollupResponseBatchId, canManageAssignments]);
+  }, [companyId, cycleTypeQuery, preferredCycleType, reportingYear, location.search, viewMode, rollupResponseBatchId, canManageAssignments]);
 
   useEffect(() => {
     dispatch(resetReportState());
@@ -870,6 +910,13 @@ const OnBoard = () => {
       : displayWorkflow?.reportBasisType === "ENTITY"
         ? "별도기준"
         : "미확정";
+
+  const cycleModeLabel =
+    activeCycleType === "POST_DMA_DISCLOSURE"
+      ? "선정 이슈 지표 입력"
+      : activeCycleType === "ROLLUP_RESPONSE"
+        ? "자회사 데이터 입력"
+        : "경영일반 입력";
 
   const handleCtaClick = () => {
     if (!displayWorkflow || isNoRunWorkflow(displayWorkflow)) {
@@ -1183,7 +1230,7 @@ const OnBoard = () => {
         <div className="ob1-header-left" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <PageHeader
             category="온보딩 단계"
-            title={`온보딩 [${viewMode === "ROLLUP_RESPONSE" ? "요청 대응" : basisLabel}]`}
+            title={`온보딩 [${viewMode === "ROLLUP_RESPONSE" ? "요청 대응" : basisLabel}] · ${cycleModeLabel}`}
             iconClass={viewMode === "ROLLUP_RESPONSE" ? "bi-chat-left-text-fill" : "bi-diagram-3-fill"}
           />
 

@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
+import { useSelector } from "react-redux";
 import "@styles/media.css";
 import robot from "@assets/images/robot/robot_media_t.png";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
-
-const IS_DUMMY = true;
+import { GET, POST } from "@utils/Network";
 
 // 정적 데이터 정의 (컴포넌트 외부에 두어 불필요한 재렌더링 방지)
 const STEPS = [
@@ -15,25 +15,41 @@ const STEPS = [
   { id: 5, title: "보고서 초안", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>, path: "/draft" },
 ];
 
-const DASHBOARD_MOCK_DATA = {
-  stats: {
-    press: { count: "78건", sub: "관측 이슈 19건" },
-    expert: { count: "4건", sub: "반영 이슈 6건" },
-    regulation: { count: "4건", sub: "반영 이슈 6건" },
-    total: { count: "29개" }
-  },
-  sourceTable: [
-    { source: "언론 기사", count: "78건", issues: "19개", method: "실제 기사 기반" },
-    { source: "전문 기관", count: "4건", issues: "6개", method: "고가중치 정성 보정" },
-    { source: "규제 관례", count: "4건", issues: "12개", method: "고정 Rule Base" }
-  ],
-  topIssues: [
-    { rank: 1, name: "온실가스 배출 감축", impact: "", financial: "9.7", source: "언론,규제" },
-    { rank: 2, name: "에너지 전환/ 재생에너지 확대", impact: "9.7", financial: "7.6", source: "언론,전문가" },
-    { rank: 3, name: "공급망 ESG 관리 강화", impact: "7.4", financial: "6.9", source: "언론,전문기관,규제" },
-    { rank: 4, name: "정보공개 / 공시 투명성", impact: "7.2", financial: "4.3", source: "전문기관, 규제" },
-    { rank: 5, name: "이사회 다양성 및 독립성", impact: "3.3", financial: "4.9", source: "전문기관" }
-  ]
+const mapMediaResultToDashboard = (crawlDto, mediaDto) => {
+  const summary = mediaDto?.summary || {};
+  const sourceBreakdown = mediaDto?.sourceBreakdown || [];
+  const topIssues = mediaDto?.topIssues || [];
+
+  return {
+    stats: {
+      press: {
+        count: `${summary.articleCount ?? crawlDto?.articleCount ?? 0}건`,
+        sub: `관측 이슈 ${summary.observedSubIssueCount ?? 0}건`,
+      },
+      expert: {
+        count: `${summary.agencyCount ?? 0}건`,
+        sub: `반영 이슈 ${sourceBreakdown.find((s) => s.sourceType === "agency")?.observedIssueCount ?? 0}건`,
+      },
+      regulation: {
+        count: `${summary.regulationFrameCount ?? 0}건`,
+        sub: `반영 이슈 ${sourceBreakdown.find((s) => s.sourceType === "regulation")?.observedIssueCount ?? 0}건`,
+      },
+      total: { count: `${topIssues.length}개` },
+    },
+    sourceTable: sourceBreakdown.map((sb) => ({
+      source: sb.sourceLabel,
+      count: `${sb.collectedCount}건`,
+      issues: `${sb.observedIssueCount}개`,
+      method: sb.appliedMethod,
+    })),
+    topIssues: topIssues.map((item, i) => ({
+      rank: item.rankNo ?? i + 1,
+      name: item.displaySubIssueName || item.subIssueCode,
+      impact: item.mediaImpactScore05 != null ? String(item.mediaImpactScore05) : "",
+      financial: item.mediaFinancialScore05 != null ? String(item.mediaFinancialScore05) : "",
+      source: (item.sourceTypes || []).join(", "),
+    })),
+  };
 };
 
 const REFLECT_METHODS = [
@@ -123,6 +139,8 @@ const Media = () => {
   const navigate = useNavigate();
   const particleRef = useRef(null);
   const timerRef = useRef(null);
+  const progressTimerRef = useRef(null);
+  const currentRunId = useSelector((state) => state.report.currentRunId);
 
   const activeIndex = 1;
 
@@ -132,6 +150,7 @@ const Media = () => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [dashboardData, setDashboardData] = useState(null);
   const [loadingTitle, setLoadingTitle] = useState("미디어 수집 현황 대기 중");
   const [loadingDesc, setLoadingDesc] = useState("상단의 수집 시작 버튼을 누르면 실시간 크롤링 및 파싱이 가동됩니다.");
 
@@ -221,27 +240,9 @@ const Media = () => {
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    let interval;
-    if (isAnalyzing) {
-      interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setStatus({ press: "complete", reg: "complete", expert: "complete" });
-            setShowResult(true);
-            setIsAnalyzing(false);
-            return 100;
-          }
-          return prev + 2;
-        });
-      }, 50);
-    }
-    return () => clearInterval(interval);
-  }, [isAnalyzing]);
 
   const createParticles = () => {
     if (!particleRef.current) return;
@@ -274,9 +275,14 @@ const Media = () => {
     navigate(STEPS[index].path);
   };
 
-  const startMediaCollection = () => {
+  const startMediaCollection = async () => {
     if (isAnalyzing) return;
 
+    const runId = Number(currentRunId);
+    if (!Number.isInteger(runId) || runId <= 0) {
+      showDefaultAlert("프로젝트 선택 필요", "현재 보고서 프로젝트를 먼저 선택해주세요.", "warning");
+      return;
+    }
     if (selectedPress.length === 0) {
       showDefaultAlert("입력 오류", "수집 언론사를 선택해주세요.", "warning");
       return;
@@ -306,18 +312,60 @@ const Media = () => {
     setDashboardOpen(true);
     setShowResult(false);
     createParticles();
-
-    setStatus({
-      press: "ing",
-      reg: "ing",
-      expert: "ready",
-    });
-
+    setProgress(0);
+    setStatus({ press: "ing", reg: "ing", expert: "ready" });
     setLoadingTitle("실시간 크롤링 엔진 가동 중...");
     setLoadingDesc("네이버 뉴스 API 및 공공 데이터 포털 커넥터를 통해 웹 파싱을 실행하고 있습니다.");
-
-    setProgress(0);
     showDefaultAlert("분석 시작", "실시간 미디어 및 외부 데이터 수집을 시작합니다.", "success");
+
+    // 크롤링 대기 중 점진적 progress (최대 75%까지만)
+    progressTimerRef.current = setInterval(() => {
+      setProgress((prev) => (prev < 75 ? prev + 1 : prev));
+    }, 400);
+
+    try {
+      const crawlRes = await POST("/media/news/crawl-and-analyze", {
+        runId,
+        sources: selectedPress,
+        dateFrom: formData.pressStartDate,
+        dateTo: formData.pressEndDate,
+      });
+
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+
+      if (!crawlRes || crawlRes.status === false) {
+        throw new Error(crawlRes?.message || crawlRes?.detail || "미디어 분석에 실패했습니다.");
+      }
+
+      setProgress(85);
+      setStatus({ press: "complete", reg: "ing", expert: "ing" });
+      setLoadingTitle("규제·기관 데이터 통합 중...");
+      setLoadingDesc("규제 프레임 및 전문기관 평가 데이터를 통합하여 최종 점수를 산정하고 있습니다.");
+
+      const mediaRes = await GET(`/materiality/media/${runId}`);
+
+      if (!mediaRes || mediaRes.status === false) {
+        throw new Error("미디어 분석 결과 조회에 실패했습니다.");
+      }
+
+      setProgress(100);
+      setStatus({ press: "complete", reg: "complete", expert: "complete" });
+
+      const crawlDto = crawlRes.data ?? crawlRes;
+      const mediaDto = mediaRes.data ?? mediaRes;
+      setDashboardData(mapMediaResultToDashboard(crawlDto, mediaDto));
+      setIsAnalyzing(false);
+      setShowResult(true);
+    } catch (err) {
+      clearInterval(progressTimerRef.current);
+      progressTimerRef.current = null;
+      console.error(err);
+      setStatus({ press: "ready", reg: "ready", expert: "ready" });
+      showDefaultAlert("분석 오류", err.message || "미디어 분석 중 오류가 발생했습니다.", "error");
+      setIsAnalyzing(false);
+      setShowResult(false);
+    }
   };
 
   const getStatusText = (type) => {
@@ -747,31 +795,31 @@ const Media = () => {
                       <div className="stat-icon-wrap">📰</div>
                       <div>
                         <div className="stat-label">언론 기사</div>
-                        <div className="stat-value">{DASHBOARD_MOCK_DATA.stats.press.count}</div>
-                        <div className="stat-sub">{DASHBOARD_MOCK_DATA.stats.press.sub}</div>
+                        <div className="stat-value">{dashboardData?.stats?.press?.count ?? "0건"}</div>
+                        <div className="stat-sub">{dashboardData?.stats?.press?.sub ?? ""}</div>
                       </div>
                     </div>
                     <div className="result-stat-card">
                       <div className="stat-icon-wrap">🏛️</div>
                       <div>
                         <div className="stat-label">전문기관 자료</div>
-                        <div className="stat-value">{DASHBOARD_MOCK_DATA.stats.expert.count}</div>
-                        <div className="stat-sub">{DASHBOARD_MOCK_DATA.stats.expert.sub}</div>
+                        <div className="stat-value">{dashboardData?.stats?.expert?.count ?? "0건"}</div>
+                        <div className="stat-sub">{dashboardData?.stats?.expert?.sub ?? ""}</div>
                       </div>
                     </div>
                     <div className="result-stat-card">
                       <div className="stat-icon-wrap">⚖️</div>
                       <div>
                         <div className="stat-label">규제 프레임</div>
-                        <div className="stat-value">{DASHBOARD_MOCK_DATA.stats.regulation.count}</div>
-                        <div className="stat-sub">{DASHBOARD_MOCK_DATA.stats.regulation.sub}</div>
+                        <div className="stat-value">{dashboardData?.stats?.regulation?.count ?? "0건"}</div>
+                        <div className="stat-sub">{dashboardData?.stats?.regulation?.sub ?? ""}</div>
                       </div>
                     </div>
                     <div className="result-stat-card">
                       <div className="stat-icon-wrap">🔗</div>
                       <div>
-                        <div className="stat-label">반영 방식 안내</div>
-                        <div className="stat-value">{DASHBOARD_MOCK_DATA.stats.total.count}</div>
+                        <div className="stat-label">반영 이슈 총계</div>
+                        <div className="stat-value">{dashboardData?.stats?.total?.count ?? "0개"}</div>
                       </div>
                     </div>
                   </div>
@@ -788,7 +836,7 @@ const Media = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {DASHBOARD_MOCK_DATA.sourceTable.map((row, i) => (
+                          {(dashboardData?.sourceTable ?? []).map((row, i) => (
                             <tr key={i}>
                               <td>{row.source}</td>
                               <td>{row.count}</td>
@@ -807,7 +855,7 @@ const Media = () => {
                       <table className="issue-table">
                         <thead></thead>
                         <tbody>
-                          {DASHBOARD_MOCK_DATA.topIssues.map((item) => (
+                          {(dashboardData?.topIssues ?? []).map((item) => (
                             <tr key={item.rank}>
                               <td>{item.rank}</td>
                               <td>{item.name}</td>

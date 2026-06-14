@@ -562,19 +562,6 @@ const Result = () => {
     }
   };
 
-  const goToMetricAssignment = () => {
-    navigate(`/onboard?cycleType=POST_DMA_DISCLOSURE&runId=${runId}`);
-  };
-
-  // 선정 확정 상태: finalize 시 시스템이 지표 scope를 자동 생성하므로 별도 버튼 없이 상태만 표시한다.
-  const nextStep = materialityResults?.nextStep;
-  const selectionConfirmed =
-    materialityResults?.selectionSource === "TABLE" &&
-    materialityResults?.fallbackYn === false;
-  const requiredMetricCount = nextStep?.requiredMetricCount ?? 0;
-  const onboardingMissingCount = nextStep?.onboardingMissingCount ?? 0;
-  const scopeGeneratedCount = Math.max(0, requiredMetricCount - onboardingMissingCount);
-  const scopeReady = selectionConfirmed && requiredMetricCount > 0 && onboardingMissingCount === 0;
 
   // matrixItems → 10점 원본값 그대로 (차트 도메인이 동적으로 맞춤)
   const apiMatrixPoints = materialityResults?.matrixItems?.map((item) => ({
@@ -875,41 +862,6 @@ const Result = () => {
                   </div>
                 )}
 
-                {/* 선정 확정 → 지표 범위 자동 생성 상태 (POST_DMA_DISCLOSURE)
-                    finalize 시 시스템이 지표 scope를 자동 생성하므로 별도 버튼 없이 상태만 표시한다. */}
-                {selectionConfirmed && (
-                  <div className="postdma-scope-status">
-                    <div className="postdma-scope-status-main">
-                      <span className="postdma-scope-check">✓</span>
-                      <div className="postdma-scope-status-text">
-                        <div className="postdma-scope-title">
-                          최종 선정 이슈 {materialityResults?.selectedSubIssueCount ?? 0}개 확정 완료
-                        </div>
-                        <div className="postdma-scope-desc">
-                          {requiredMetricCount > 0
-                            ? "보고서 입력 지표 범위가 자동 생성되었습니다."
-                            : "선정 이슈에 매핑된 입력 지표가 없습니다. 지표 매핑을 확인하세요."}
-                        </div>
-                      </div>
-                    </div>
-                    {requiredMetricCount > 0 && (
-                      <div className="postdma-scope-metrics">
-                        <div className="postdma-scope-metric">
-                          <span className="postdma-scope-metric-num">{requiredMetricCount}</span>
-                          <span className="postdma-scope-metric-label">필요한 지표</span>
-                        </div>
-                        <div className="postdma-scope-metric-divider" />
-                        <div className="postdma-scope-metric">
-                          <span className="postdma-scope-metric-num" style={{ color: scopeReady ? "#16a34a" : "#03A94D" }}>{scopeGeneratedCount}</span>
-                          <span className="postdma-scope-metric-label">입력 완료</span>
-                        </div>
-                        <button className="postdma-scope-btn postdma-scope-btn--go" onClick={goToMetricAssignment}>
-                          지표 담당자 할당으로 이동
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 <div className="card-container">
                   <div className="card-title">최종 Top 이슈 점수 분해</div>

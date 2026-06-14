@@ -135,17 +135,12 @@ const requestApi = {
   const [loading, setLoading] = useState(false);
   const authData = useAuth();
   useEffect(() => {
-    if (isAuthReady) 
-      // console.log(userName, selectedCompany, companies);
-    // console.log(userData.name)
-    // --- 여기 추가 ---
-    // console.log("=== 지금 보내려는 user 객체 내용 ===", authData);
     setUserData({
       name: userName || '사용자',
       email: selectedCompany?.email || user?.email || '-',
-      role: selectedCompany?.role_name 
+      role: selectedCompany?.role_name,
     });
-  }, [user, selectedCompany]);
+  }, [user, selectedCompany, userName, isAuthReady]);
 
   // ── Handlers ──
 

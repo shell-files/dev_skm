@@ -377,11 +377,63 @@ const Benchmarking = () => {
       </header>
 
       <main className="Bench-main-content">
-        <div className="Bench-input-card" style={{ marginBottom: "50px" }}>
-          <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px" }}>벤치마킹 분석</h2>
-          <p style={{ color: "#64748b", fontSize: "0.9rem", marginBottom: "4px" }}>
-            산업군 리더 기업들의 공시 지표를 수집하고 우리 기업과의 격차 분석을 시작합니다.
-          </p>
+        <div className="Bench-input-card">
+
+          {/* ── 페이지 헤더 ── */}
+          <div className="bench-page-header">
+            <div className="bench-page-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" />
+                <line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" />
+                <line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" />
+              </svg>
+            </div>
+            <div className="bench-page-text">
+              <h2 className="bench-page-title">벤치마킹 분석</h2>
+              <p className="bench-page-desc">
+                지속가능경영보고서(SR) PDF를 업로드하면 AI가 자동으로 ESG 이슈를 파싱하고,
+                리더·피어·자회사 간 공시 현황과 격차(Gap)를 비교·분석합니다.
+                각 그룹별 최근 <strong>3개년치</strong> 보고서를 등록하면 분석이 시작됩니다.
+              </p>
+              <div className="bench-tag-row">
+                <span className="bench-tag bench-tag-green">PDF 자동 파싱</span>
+                <span className="bench-tag bench-tag-blue">ESG 이슈 자동 식별</span>
+                <span className="bench-tag bench-tag-purple">공시 Gap 분석</span>
+                <span className="bench-tag bench-tag-orange">3개년 비교</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 분석 대상 유형 안내 카드 ── */}
+          <div className="bench-type-grid">
+            <div className="bench-type-card bench-type-card--green">
+              <div className="bench-type-card-head">
+                <span className="bench-type-badge bench-type-badge--green">L</span>
+                <span className="bench-type-label bench-type-label--green">리더 (Leader)</span>
+              </div>
+              <p className="bench-type-desc">
+                동일 산업군 내 ESG 공시 수준이 가장 높은 벤치마크 기업입니다. 글로벌 표준에 근접한 공시 체계를 목표 기준으로 삼아 자사의 공시 완성도와 개선 방향을 가늠합니다.
+              </p>
+            </div>
+            <div className="bench-type-card bench-type-card--blue">
+              <div className="bench-type-card-head">
+                <span className="bench-type-badge bench-type-badge--blue">P</span>
+                <span className="bench-type-label bench-type-label--blue">피어 (Peer)</span>
+              </div>
+              <p className="bench-type-desc">
+                자사와 업종·규모가 유사한 동종 비교 기업입니다. 시장 내 동등한 위치의 기업과 나란히 비교해 상대적 강·약점을 확인하고 실질적인 개선 여지를 파악합니다.
+              </p>
+            </div>
+            <div className="bench-type-card bench-type-card--orange">
+              <div className="bench-type-card-head">
+                <span className="bench-type-badge bench-type-badge--orange">S</span>
+                <span className="bench-type-label bench-type-label--orange">자회사 (Subsidiary)</span>
+              </div>
+              <p className="bench-type-desc">
+                그룹 내 계열사 또는 종속 기업입니다. 연결 공시 관점에서 그룹 전체 ESG 보고서의 품질을 점검하고, 자회사별 누락 공시 항목을 식별합니다.
+              </p>
+            </div>
+          </div>
 
           <div className="Bench-upload-section-grid">
             {renderUploadGroup("leader", "리더", "회사이름 필수 입력")}

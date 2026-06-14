@@ -392,16 +392,55 @@ const Media = () => {
         <main className="media-main-content">
           {/* 전체 콘텐츠를 감싸고, 중앙 정렬 & 최대 너비 부여 */}
           <div className="media-input-card">
-            <div style={{ marginBottom: "18px" }}>
-              <h2 style={{ fontSize: "1.4rem", fontWeight: 850, marginBottom: "6px", color: "#0f172a" }}>
-                미디어 및 기관별 필터 수집 설정
-              </h2>
-              <p style={{ color: "#64748b", fontSize: "0.9rem", margin: 0, lineHeight: 1.5 }}>
-                언론사 뉴스, 정부 규제 데이터 및 ESG 전문기관의 평가 피드를 동기화하여 부정 위험성 및 공시 트렌드를 실시간 모니터링합니다.
-              </p>
+            <div className="media-page-header">
+              <div className="media-page-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0284c7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                  <polyline points="5,13 8,10 11,12 14,8 19,6" />
+                </svg>
+              </div>
+              <div className="media-page-text">
+                <h2 className="media-page-title">미디어 및 외부 시그널 분석</h2>
+                <p className="media-page-desc">
+                  언론 기사, 정부 규제 데이터, ESG 전문기관 평가 피드를 동기화하여 ESG 이슈의 외부 중요도를 산정합니다.
+                  각 데이터 소스별 가중치가 자동 적용되어 기업의 <strong>미디어 리스크·공시 트렌드·재무 영향도</strong>를 종합 분석합니다.
+                </p>
+                <div className="media-tag-row">
+                  <span className="media-tag media-tag-blue">실시간 크롤링</span>
+                  <span className="media-tag media-tag-green">규제 룰 기반</span>
+                  <span className="media-tag media-tag-purple">전문기관 보정</span>
+                  <span className="media-tag media-tag-orange">이슈 매핑</span>
+                </div>
+              </div>
             </div>
 
-            <div className="media-compact-workspace" style={{ width: "100%", textAlign: "left" }}>
+            <div className="media-source-grid">
+              <div className="media-source-card media-source-card--blue">
+                <div className="media-source-card-head">
+                  <span className="media-source-badge media-source-badge--blue">언론</span>
+                  <span className="media-source-label media-source-label--blue">언론 기사 (Press)</span>
+                </div>
+                <p className="media-source-desc">임팩트온·ESG경제 등 ESG 전문 언론의 기사를 수집·파싱합니다. 기사 빈도와 임팩트 점수를 종합해 외부 관심도를 산정합니다.</p>
+              </div>
+              <div className="media-source-card media-source-card--red">
+                <div className="media-source-card-head">
+                  <span className="media-source-badge media-source-badge--red">규제</span>
+                  <span className="media-source-label media-source-label--red">규제 기관 (Regulation)</span>
+                </div>
+                <p className="media-source-desc">CBAM·CSRD·DPP 등 EU 핵심 규제 프레임워크를 Rule Base로 반영합니다. 해당 규제에 연결된 이슈는 고정 점수로 가중치가 부여됩니다.</p>
+              </div>
+              <div className="media-source-card media-source-card--purple">
+                <div className="media-source-card-head">
+                  <span className="media-source-badge media-source-badge--purple">기관</span>
+                  <span className="media-source-label media-source-label--purple">전문 평가기관 (Institution)</span>
+                </div>
+                <p className="media-source-desc">KCGS ESG 등급 추이와 KIS 자동차산업 평가방법론을 반영합니다. 전문기관 데이터는 정성 보정 방식으로 높은 가중치가 적용됩니다.</p>
+              </div>
+            </div>
+
+            <div className="media-compact-workspace">
               {/* 좌측 패널 */}
               <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
                 <div className="media-compact-tabs">

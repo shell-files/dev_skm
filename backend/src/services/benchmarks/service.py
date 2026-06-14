@@ -14,6 +14,7 @@ from src.utils.dmarepository import (
     saveSignals,
     step4ReplaceBenchmarkShadowTracesTx,
 )
+from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
 from src.utils.dmascoring import scoreSignals
 from src.services.benchmarks.adapter import convertToDmaSignals, step0NormalizeBenchmarkFacts
 from src.services.materialities.orchestrator import (
@@ -22,10 +23,63 @@ from src.services.materialities.orchestrator import (
 )
 from src.utils.subissuemaster import subissueMaster
 
+
+def _writeBenchmarkWorkflowStatus(
+    *,
+    runId: int,
+    overallStatus: str,
+    currentStage: str,
+    progressPercent: int,
+    progressMode: str = "MILESTONE",
+    processedCount=None,
+    totalCount=None,
+    errorStage=None,
+    errorMessage=None,
+    startedYn: bool = False,
+    completedYn: bool = False,
+) -> None:
+    upsertDmaWorkflowStatus(
+        runId=runId,
+        workflowType="BENCHMARK",
+        overallStatus=overallStatus,
+        currentStage=currentStage,
+        progressPercent=progressPercent,
+        progressMode=progressMode,
+        processedCount=processedCount,
+        totalCount=totalCount,
+        errorStage=errorStage,
+        errorMessage=errorMessage,
+        startedYn=startedYn,
+        completedYn=completedYn,
+    )
+
+
+def _recordBenchmarkWorkflowFailureBestEffort(
+    *,
+    runId: int,
+    currentStage: str,
+    progressPercent: int,
+    error: Exception,
+) -> None:
+    try:
+        _writeBenchmarkWorkflowStatus(
+            runId=runId,
+            overallStatus="FAILED",
+            currentStage=currentStage,
+            progressPercent=progressPercent,
+            errorStage=currentStage,
+            errorMessage=str(error)[:1000],
+        )
+    except Exception as statusError:
+        print(
+            f"Warning: BENCHMARK workflow FAILED status write failed: {statusError}"
+        )
+
+
 def normalizeSourceType(value: str) -> str:
     if not value:
         raise ValueError("sourceType is required. Provide sourceType or TE_SR_FILE.type.")
-        
+
     mapping = {
         "Leader": "leader_sr",
         "leader": "leader_sr",
@@ -41,17 +95,18 @@ def normalizeSourceType(value: str) -> str:
         "regulation": "regulation",
     }
     normalized = mapping.get(value, value)
-    
+
     ALLOWED_SOURCE_TYPES = {
         "leader_sr", "peer_sr", "own_sr",
         "news", "agency", "regulation",
         "survey_employee", "survey_management", "survey_external"
     }
-    
+
     if normalized not in ALLOWED_SOURCE_TYPES:
         raise ValueError(f"Invalid source_type: {value} (normalized to: {normalized})")
-        
+
     return normalized
+
 
 def uploadSr(fileModel: FileModel, userModel: UserModel):
     files = fileModel.file
@@ -87,95 +142,120 @@ def uploadSr(fileModel: FileModel, userModel: UserModel):
             saved_files.append({"fileName": fileName, "origin": file.filename})
         else:
             return ResponseModel(False, f"파일 업로드에 실패했습니다. {file.filename}")
-            
+
     return ResponseModel(True, "파일이 성공적으로 업로드되었습니다.", {"files": saved_files, "page": fileModel.page})
-    
-# 파일 찾기
+
+
 async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
     UPLOAD_DIR = Path(settings.file_dir)
     results = []
     filePaths = []
     fileMetaByName = {}
-    
-    for file in fileFindModel.file:
-        fileIdSql = f"""
-                SELECT id, aes_d( `origin` , '{settings.maria_db_key}' ) AS `origin`
-                    ,aes_d( `file_name` , '{settings.maria_db_key}' ) AS `file_name`
-                    ,aes_d( `type` , '{settings.maria_db_key}' ) AS `type`
-                    ,aes_d( `company_name` , '{settings.maria_db_key}' ) AS `company_name`
-                    ,`create_user_id`
-                FROM skm.`TE_{fileFindModel.page}_FILE`
-                WHERE file_name = aes_e(?, '{settings.maria_db_key}') AND create_user_id = ? AND delete_yn = 0;            
-                """
-        fileIdParams = (file, userModel.id)
-        result = findOne(fileIdSql, fileIdParams)
-        if not result:
-            return ResponseModel(False, f"존재하지 않는 파일이 포함되어 있습니다: {file}")
 
-        dbFileName = result["file_name"]
-        
-        fileId = result["id"]
-        sourceTitle = result["origin"]
+    runId = fileFindModel.esgMaterialityRunId
+    currentStage = "PREPARE"
+    currentProgress = 20
 
-        if isinstance(dbFileName, bytes):
-            dbFileName = dbFileName.decode('utf-8')
-        dbFileName = dbFileName.replace('\x00', '').strip()
-        filePath = UPLOAD_DIR / dbFileName
-        
-        if not filePath.exists():
-            return ResponseModel(False, f"서버에서 {dbFileName}파일을 찾을 수 없습니다.")
-            
-        # source_type 처리: DB type 우선, request sourceType은 fallback
-        sourceTypeRaw = result.get("type") or fileFindModel.sourceType
-        sourceType = normalizeSourceType(sourceTypeRaw)
-        
-        # 결과 리스트에 source_step, source_type 주입
-        result["source_step"] = fileFindModel.sourceStep
-        result["source_type"] = sourceType
-        
-        results.append(result)
-        filePaths.append(str(filePath))
-        
-        # 메타데이터 맵에 저장
-        fileMetaByName[dbFileName] = {
-            "fileId": fileId,
-            "sourceTitle": sourceTitle,
-            "sourceType": sourceType,
-        }
-        
-    finalResult = await gemini(results, filePaths)
+    _writeBenchmarkWorkflowStatus(
+        runId=runId,
+        overallStatus="RUNNING",
+        currentStage=currentStage,
+        progressPercent=currentProgress,
+        startedYn=True,
+    )
 
-    if not finalResult:
-        return ResponseModel(False, "파일 분석에 실패했습니다. 다시 시도해주세요.")
-    
-    # 결과(BENCHMK TABLE)DB 저장
-    if finalResult:
-        shadowFactBuildFailedYn = False
+    try:
+        for file in fileFindModel.file:
+            fileIdSql = f"""
+                    SELECT id, aes_d( `origin` , '{settings.maria_db_key}' ) AS `origin`
+                        ,aes_d( `file_name` , '{settings.maria_db_key}' ) AS `file_name`
+                        ,aes_d( `type` , '{settings.maria_db_key}' ) AS `type`
+                        ,aes_d( `company_name` , '{settings.maria_db_key}' ) AS `company_name`
+                        ,`create_user_id`
+                    FROM skm.`TE_{fileFindModel.page}_FILE`
+                    WHERE file_name = aes_e(?, '{settings.maria_db_key}') AND create_user_id = ? AND delete_yn = 0;
+                    """
+            fileIdParams = (file, userModel.id)
+            result = findOne(fileIdSql, fileIdParams)
+            if not result:
+                raise RuntimeError(f"존재하지 않는 파일이 포함되어 있습니다: {file}")
+
+            dbFileName = result["file_name"]
+            fileId = result["id"]
+            sourceTitle = result["origin"]
+
+            if isinstance(dbFileName, bytes):
+                dbFileName = dbFileName.decode('utf-8')
+            dbFileName = dbFileName.replace('\x00', '').strip()
+            filePath = UPLOAD_DIR / dbFileName
+
+            if not filePath.exists():
+                raise RuntimeError(f"서버에서 {dbFileName}파일을 찾을 수 없습니다.")
+
+            sourceTypeRaw = result.get("type") or fileFindModel.sourceType
+            try:
+                sourceType = normalizeSourceType(sourceTypeRaw)
+            except ValueError as e:
+                raise RuntimeError(str(e)) from e
+
+            result["source_step"] = fileFindModel.sourceStep
+            result["source_type"] = sourceType
+
+            results.append(result)
+            filePaths.append(str(filePath))
+
+            fileMetaByName[dbFileName] = {
+                "fileId": fileId,
+                "sourceTitle": sourceTitle,
+                "sourceType": sourceType,
+            }
+
+        currentStage = "DOCUMENT_ANALYSIS"
+        currentProgress = 35
+
+        _writeBenchmarkWorkflowStatus(
+            runId=runId,
+            overallStatus="RUNNING",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+        )
+
+        finalResult = await gemini(results, filePaths)
+
+        if not finalResult:
+            raise RuntimeError("파일 분석에 실패했습니다. 다시 시도해주세요.")
+
+        currentStage = "BENCHMARK_SCORING"
+        currentProgress = 80
+
+        _writeBenchmarkWorkflowStatus(
+            runId=runId,
+            overallStatus="RUNNING",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+        )
+
         factPayloads = []
+        totalCount = len(finalResult["data"])
+        processedCount = 0
+
         for item in finalResult["data"]:
-            if item == None:
+            if item is None:
                 continue
             dbFileName = item.get("fileName")
-            domainResult = "test" # 이건 나중에 AI 연결하면 변경
-            resultList = item.get("result",[])
+            resultList = item.get("result", [])
 
-            # 파일 저장 실패 알림
             if not resultList or item.get("type") == "ERROR":
                 raise Exception(f"{dbFileName} 파일 분석 중 AI 엔진 내부 오류가 발생했습니다.")
 
-            # fileMetaByName에서 메타데이터 찾기
             fileMeta = fileMetaByName.get(dbFileName, {})
             fileId = fileMeta.get("fileId")
             sourceTitle = fileMeta.get("sourceTitle", dbFileName)
             sourceType = fileMeta.get("sourceType")
 
-            # DMASignal 객체 리스트로 변환
             signalsToSave = convertToDmaSignals(resultList, fileId)
-
-            # Rule Engine을 호출하여 점수 산출
             scoredSignals = scoreSignals(signalsToSave)
 
-            # Repository를 통해 DB에 저장(동적으로 run_id 전달)
             try:
                 saveSignals(
                     runId=fileFindModel.esgMaterialityRunId,
@@ -197,31 +277,68 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
                             sourceChannel="benchmark",
                         ))
                 except Exception as shadowError:
-                    shadowFactBuildFailedYn = True
-                    print(f"Warning: Benchmark v1.3 shadow fact build failed: {shadowError}")
+                    raise RuntimeError(f"Benchmark v1.3 shadow fact build failed: {shadowError}") from shadowError
+            except RuntimeError:
+                raise
             except Exception as e:
                 raise Exception(f"{dbFileName} 파일 분석 후 DB 저장 중 오류가 발생했습니다: {e}")
 
-        # Fact Build 실패 시 기존 활성 Shadow Set 보호 — Replace Transaction 전체 Skip
-        if shadowFactBuildFailedYn:
-            print("Warning: Benchmark v1.3 shadow replace skipped because fact build failed")
-        else:
-            # 모든 Legacy 파일 저장 성공 후 Shadow Replace Transaction 요청당 1회 실행
-            try:
-                universeSubIssueCodes = [
-                    code for code, meta in subissueMaster.items()
-                    if meta.get("materiality_issue_pool_yn") == "Y"
-                ]
-                screeningPayloads = step2BuildBenchmarkScreeningPayloads(factPayloads, universeSubIssueCodes)
-                step4ReplaceBenchmarkShadowTracesTx(
-                    runId=fileFindModel.esgMaterialityRunId,
-                    factPayloads=factPayloads,
-                    screeningPayloads=screeningPayloads,
-                    expectedScreeningCount=len(universeSubIssueCodes),
-                )
-            except Exception as shadowError:
-                print(f"Warning: Benchmark v1.3 shadow replace transaction failed: {shadowError}")
+            processedCount += 1
+            currentProgress = 80 + min(10, int(processedCount / max(totalCount, 1) * 10))
+
+            _writeBenchmarkWorkflowStatus(
+                runId=runId,
+                overallStatus="RUNNING",
+                currentStage=currentStage,
+                progressPercent=currentProgress,
+                progressMode="ACTUAL_COUNT",
+                processedCount=processedCount,
+                totalCount=totalCount,
+            )
+
+        currentStage = "BENCHMARK_SHADOW"
+        currentProgress = 95
+
+        _writeBenchmarkWorkflowStatus(
+            runId=runId,
+            overallStatus="RUNNING",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+        )
+
+        try:
+            universeSubIssueCodes = [
+                code for code, meta in subissueMaster.items()
+                if meta.get("materiality_issue_pool_yn") == "Y"
+            ]
+            screeningPayloads = step2BuildBenchmarkScreeningPayloads(factPayloads, universeSubIssueCodes)
+            step4ReplaceBenchmarkShadowTracesTx(
+                runId=fileFindModel.esgMaterialityRunId,
+                factPayloads=factPayloads,
+                screeningPayloads=screeningPayloads,
+                expectedScreeningCount=len(universeSubIssueCodes),
+            )
+        except Exception as shadowError:
+            raise RuntimeError(f"Benchmark v1.3 shadow replace transaction failed: {shadowError}") from shadowError
+
+        currentStage = "COMPLETED"
+        currentProgress = 100
+
+        _writeBenchmarkWorkflowStatus(
+            runId=runId,
+            overallStatus="COMPLETED",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+            completedYn=True,
+        )
 
         return ResponseModel(True, "분석이 성공적으로 완료되었습니다.", finalResult)
-           
-    return finalResult
+
+    except Exception as e:
+        _recordBenchmarkWorkflowFailureBestEffort(
+            runId=runId,
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+            error=e,
+        )
+        raise

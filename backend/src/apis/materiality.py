@@ -11,6 +11,7 @@ from src.models.materialitycontext import (
     CompanyContextModifierResponseDto,
     CompanyContextProfileResponseDto,
 )
+from src.models.dmaworkflowstatus import DmaWorkflowStatusResponseDto
 from src.services.materialities.context import applyCompanyContextModifiers, getCompanyContextProfile
 from src.services.materialities.service import (
     getBenchmarkResult,
@@ -21,6 +22,7 @@ from src.services.materialities.service import (
     getSurveyResult,
 )
 from src.utils.auth import get_token
+from src.utils.dmaworkflowrepository import getDmaWorkflowStatusOrDefault
 
 
 router = APIRouter(tags=["materiality"])
@@ -100,5 +102,19 @@ async def apply_company_context_modifiers(runId: int, userModel=Depends(get_toke
 async def get_company_context_profile(runId: int, userModel=Depends(get_token)):
     try:
         return getCompanyContextProfile(runId, userModel)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/workflow-status/{runId}/{workflowType}",
+    response_model=DmaWorkflowStatusResponseDto,
+    summary="DMA 워크플로우 진행 상태 조회",
+)
+async def get_dma_workflow_status(runId: int, workflowType: str, userModel=Depends(get_token)):
+    try:
+        return getDmaWorkflowStatusOrDefault(runId=runId, workflowType=workflowType)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

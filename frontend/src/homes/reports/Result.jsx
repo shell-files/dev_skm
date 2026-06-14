@@ -48,6 +48,45 @@ const toImportanceLevel = (v10) => {
 const domainColor = { E: "#22c55e", S: "#f59e0b", G: "#3b82f6" };
 const getDomainColor = (domain) => domainColor[domain] ?? "#94a3b8";
 
+// ── 분석축 기여도 계산 헬퍼 ──────────────────────────────────────
+// 존재하는(>0) 값들만 평균. 모두 없으면 null
+const avgPresent = (...values) => {
+  const nums = values
+    .map(Number)
+    .filter((v) => Number.isFinite(v) && v > 0);
+  if (nums.length === 0) return null;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+};
+
+// 각 stage raw score → 비율(%). 값 없는 stage는 0%, 합계 항상 100 보장.
+const toContributionPct = ({ bench, media, survey }) => {
+  const entries = [
+    ["bench", bench],
+    ["media", media],
+    ["survey", survey],
+  ].filter(([, value]) => value != null && value > 0);
+
+  if (entries.length === 0) {
+    return { bench: 0, media: 0, survey: 0, hasData: false };
+  }
+
+  const total = entries.reduce((sum, [, value]) => sum + value, 0);
+  const result = { bench: 0, media: 0, survey: 0, hasData: true };
+
+  let allocated = 0;
+  entries.forEach(([key, value], idx) => {
+    if (idx === entries.length - 1) {
+      // 반올림 오차를 마지막 non-zero 축에 보정 → 합계 100
+      result[key] = 100 - allocated;
+    } else {
+      result[key] = Math.round((value / total) * 100);
+      allocated += result[key];
+    }
+  });
+
+  return result;
+};
+
 // Fallback 데이터 (API 미연결 시 사용) ───────────────────────────
 // 선정된 이슈 데이터 (x: 재무중요성, y: 영향중요성, 1~3 스케일)
 const MATRIX_POINTS = [
@@ -378,20 +417,6 @@ const DoubleMaterialityMatrix = ({ data = MATRIX_POINTS }) => {
   );
 };
 
-const CONTRIBUTION_DATA = [
-  { rank: 1, rankColor: "#22c55e", name: "기후변화 대응", bench: 45, media: 30, survey: 25 },
-  { rank: 2, rankColor: "#f59e0b", name: "에너지 전환", bench: 30, media: 20, survey: 50 },
-  { rank: 3, rankColor: "#22c55e", name: "인적자본 개발", bench: 25, media: 15, survey: 60 },
-  { rank: 4, rankColor: "#f59e0b", name: "공급망 ESG 관리", bench: 40, media: 25, survey: 35 },
-  { rank: 5, rankColor: "#f59e0b", name: "제품 안전 및 품질", bench: 20, media: 30, survey: 50 },
-];
-
-const BLIND_SPOTS = [
-  { rank: 1, rankColor: "#22c55e", name: "생물다양성 보호", desc: "이해관계자(설문) 관심은 높으나, 외부 미디어 및 벤치마킹 반영 낮음", badge: "설문-벤치 격차 +1.8", badgeBg: "#dcfce7", badgeColor: "#16a34a" },
-  { rank: 2, rankColor: "#f59e0b", name: "데이터 프라이버시", desc: "미디어에서 주목도 높으나, 이해관계자 관심 및 벤치마킹 낮음", badge: "미디어-설문 격차 +1.6", badgeBg: "#fef3c7", badgeColor: "#d97706" },
-  { rank: 3, rankColor: "#3b82f6", name: "수자원 관리", desc: "벤치마킹 반영도는 높으나, 이해관계자 관심 미흡", badge: "벤치-설문 격차 +1.2", badgeBg: "#dbeafe", badgeColor: "#2563eb" },
-];
-
 const MATRIX_ZONES = [
   {
     label: "High - High 영역", labelColor: "#ef4444", bg: "#fff5f5", border: "#fecaca",
@@ -574,51 +599,79 @@ const Result = () => {
   const flowScoredCount = materialitySelectionProcess?.scoredCount ?? 25;
   const flowSelectedCount = materialitySelectionProcess?.selectedCount ?? 10;
 
-  // 최종 Top 이슈 점수 분해 (topIssues[])
-  const topIssueScores = materialityResults?.topIssues?.map((item) => ({
-    name: item.displaySubIssueName,
-    finalScore: item.finalScore05?.toFixed(2) ?? "-",
-    impact: item.finalImpactScore05?.toFixed(2) ?? "-",
-    financial: item.finalFinancialScore05?.toFixed(2) ?? "-",
-    benchmark: item.benchmarkImpactScore05?.toFixed(2) ?? "-",
-    media: item.mediaImpactScore05?.toFixed(2) ?? "-",
-    survey: item.surveyImpactScore05?.toFixed(2) ?? "-",
-  }));
+  // 점수 포맷 헬퍼
+  const fmtScore = (v) => (v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : "-");
 
-  // 분석축 기여도 (API topIssues 기반 계산)
-  const contributionData = materialityResults?.topIssues?.map((item, idx) => {
-    const bench = (item.benchmarkImpactScore05 ?? 0) + (item.benchmarkFinancialScore05 ?? 0);
-    const media = (item.mediaImpactScore05 ?? 0) + (item.mediaFinancialScore05 ?? 0);
-    const survey = (item.surveyImpactScore05 ?? 0) + (item.surveyFinancialScore05 ?? 0);
-    const total = bench + media + survey || 1;
+  // 단계 점수(benchmark/media/survey)는 items[](MaterialityResultItemDto)에만 존재.
+  // topIssues[](TopIssueDto)에는 final 점수만 있으므로 subIssueCode로 join한다.
+  const itemByCode = {};
+  (materialityResults?.items ?? []).forEach((it) => {
+    if (it?.subIssueCode) itemByCode[it.subIssueCode] = it;
+  });
+
+  // Top 이슈 소스: topIssues → selected items → []
+  // 절대 items.slice(0,5)로 무조건 자르지 않는다.
+  const topSource =
+    materialityResults?.topIssues?.length
+      ? materialityResults.topIssues
+      : (materialityResults?.items?.filter((it) => it.selectedYn) ?? []);
+
+  // 최종 Top 이슈 점수 분해 (final은 topIssues, 단계 점수는 items join)
+  const topIssueScores = topSource.map((issue) => {
+    const it = itemByCode[issue.subIssueCode] ?? {};
     return {
-      rank: idx + 1,
-      rankColor: getDomainColor(item.domain),
-      name: item.displaySubIssueName,
-      bench: Math.round((bench / total) * 100),
-      media: Math.round((media / total) * 100),
-      survey: Math.round((survey / total) * 100),
+      name: issue.displaySubIssueName ?? issue.subIssueCode,
+      finalScore: fmtScore(issue.finalScore05 ?? it.finalScore05),
+      impact: fmtScore(issue.finalImpactScore05 ?? it.finalImpactScore05),
+      financial: fmtScore(issue.finalFinancialScore05 ?? it.finalFinancialScore05),
+      benchmark: fmtScore(it.benchmarkImpactScore05),
+      media: fmtScore(it.mediaImpactScore05),
+      survey: fmtScore(it.surveyImpactScore05),
     };
-  }) ?? CONTRIBUTION_DATA;
+  });
 
-  // Blind Spot (분석축 간 점수 격차가 큰 이슈)
-  const blindSpots = materialityResults?.topIssues?.reduce((acc, item) => {
-    const bench = ((item.benchmarkImpactScore05 ?? 0) + (item.benchmarkFinancialScore05 ?? 0)) / 2;
-    const media = ((item.mediaImpactScore05 ?? 0) + (item.mediaFinancialScore05 ?? 0)) / 2;
-    const survey = ((item.surveyImpactScore05 ?? 0) + (item.surveyFinancialScore05 ?? 0)) / 2;
-    const scores = [bench, media, survey].filter((s) => s > 0);
-    if (scores.length < 2) return acc;
-    const maxVal = Math.max(...scores);
-    const minVal = Math.min(...scores);
+  // 분석축 기여도 (items join으로 단계 점수 확보 후 비율 계산)
+  const contributionData = topSource.map((issue, idx) => {
+    const it = itemByCode[issue.subIssueCode] ?? {};
+    const bench = avgPresent(it.benchmarkImpactScore05, it.benchmarkFinancialScore05);
+    const media = avgPresent(it.mediaImpactScore05, it.mediaFinancialScore05);
+    const survey = avgPresent(it.surveyImpactScore05, it.surveyFinancialScore05);
+    const pct = toContributionPct({ bench, media, survey });
+    return {
+      rank: issue.rankNo ?? idx + 1,
+      rankColor: getDomainColor(issue.domain),
+      name: issue.displaySubIssueName ?? issue.subIssueCode,
+      bench: pct.bench,
+      media: pct.media,
+      survey: pct.survey,
+      hasData: pct.hasData,
+    };
+  });
+  const contributionHasAnyData = contributionData.some((r) => r.hasData);
+
+  // Blind Spot (분석축 간 점수 격차가 큰 이슈, 2개 이상 stage 값 보유시)
+  const blindSpots = topSource.reduce((acc, issue) => {
+    const it = itemByCode[issue.subIssueCode] ?? {};
+    const bench = avgPresent(it.benchmarkImpactScore05, it.benchmarkFinancialScore05);
+    const media = avgPresent(it.mediaImpactScore05, it.mediaFinancialScore05);
+    const survey = avgPresent(it.surveyImpactScore05, it.surveyFinancialScore05);
+    const present = [
+      ["벤치마킹", bench],
+      ["미디어", media],
+      ["설문", survey],
+    ].filter(([, v]) => v != null && v > 0);
+    if (present.length < 2) return acc;
+    const vals = present.map(([, v]) => v);
+    const maxVal = Math.max(...vals);
+    const minVal = Math.min(...vals);
     const gap = maxVal - minVal;
     if (gap >= 0.5) {
-      const labels = ["벤치마킹", "미디어", "설문"];
-      const maxLabel = labels[[bench, media, survey].indexOf(maxVal)];
-      const minLabel = labels[[bench, media, survey].indexOf(minVal)];
+      const maxLabel = present.find(([, v]) => v === maxVal)[0];
+      const minLabel = present.find(([, v]) => v === minVal)[0];
       acc.push({
-        rank: item.rankNo,
-        rankColor: getDomainColor(item.domain),
-        name: item.displaySubIssueName,
+        rank: issue.rankNo,
+        rankColor: getDomainColor(issue.domain),
+        name: issue.displaySubIssueName ?? issue.subIssueCode,
         desc: `${maxLabel} 점수 높음, ${minLabel} 점수 낮음`,
         badge: `${maxLabel}-${minLabel} 격차 +${gap.toFixed(1)}`,
         badgeBg: "#f1f5f9",
@@ -626,7 +679,7 @@ const Result = () => {
       });
     }
     return acc;
-  }, []) ?? BLIND_SPOTS;
+  }, []);
 
   // 선정 사유 (selectionReasons[])
   const selectionReasonItems = materialityResults?.selectionReasons;
@@ -816,7 +869,7 @@ const Result = () => {
                         <tr><th>이슈</th><th>최종점수</th><th>영향</th><th>재무</th><th>벤치마킹</th><th>미디어</th><th>설문</th></tr>
                       </thead>
                       <tbody>
-                        {topIssueScores
+                        {topIssueScores.length > 0
                           ? topIssueScores.map((row, i) => (
                             <tr key={i}>
                               <td className="issue-name">{row.name}</td>
@@ -828,10 +881,13 @@ const Result = () => {
                               <td>{row.survey}</td>
                             </tr>
                           ))
-                          : <>
-                            <tr><td className="issue-name">기후변화 대응</td><td className="score-main">4.61</td><td>4.40</td><td>4.75</td><td>4.20</td><td>4.60</td><td>4.70</td></tr>
-                            <tr><td className="issue-name">에너지 관리</td><td className="score-highlight">4.34</td><td>4.10</td><td>4.50</td><td>4.00</td><td>4.30</td><td>4.40</td></tr>
-                          </>
+                          : (
+                            <tr>
+                              <td colSpan={7} style={{ textAlign: "center", color: "#94a3b8", padding: "20px", fontSize: "0.82rem" }}>
+                                최종 이슈 데이터가 없습니다. 최종 Top 5 이슈 확정 후 다시 확인하세요.
+                              </td>
+                            </tr>
+                          )
                         }
                       </tbody>
                     </table>
@@ -1012,19 +1068,29 @@ const Result = () => {
                     ))}
                   </div>
                   <div id="contribution-list">
-                    {contributionData.map((item) => (
-                      <div key={item.rank} className="contribution-row">
-                        <div className="contribution-label">
-                          <span className="rank-circle" style={{ background: item.rankColor }}>{item.rank}</span>
-                          <span className="contribution-name">{item.name}</span>
+                    {topSource.length === 0 ? (
+                      <div className="contrib-empty">최종 이슈 데이터가 없습니다. 최종 Top 5 이슈 확정 후 다시 확인하세요.</div>
+                    ) : !contributionHasAnyData ? (
+                      <div className="contrib-empty">분석축 점수 데이터가 없습니다. 벤치마킹/미디어/설문 점수 반영 상태를 확인하세요.</div>
+                    ) : (
+                      contributionData.map((item) => (
+                        <div key={item.rank} className="contribution-row">
+                          <div className="contribution-label">
+                            <span className="rank-circle" style={{ background: item.rankColor }}>{item.rank}</span>
+                            <span className="contribution-name">{item.name}</span>
+                          </div>
+                          {item.hasData ? (
+                            <div className="contribution-bar">
+                              <div className="bar-seg bench" style={{ width: `${item.bench}%` }}>{item.bench > 0 ? `${item.bench}%` : ""}</div>
+                              <div className="bar-seg media" style={{ width: `${item.media}%` }}>{item.media > 0 ? `${item.media}%` : ""}</div>
+                              <div className="bar-seg survey" style={{ width: `${item.survey}%` }}>{item.survey > 0 ? `${item.survey}%` : ""}</div>
+                            </div>
+                          ) : (
+                            <div className="contribution-bar contribution-bar--empty">점수 데이터 없음</div>
+                          )}
                         </div>
-                        <div className="contribution-bar">
-                          <div className="bar-seg bench" style={{ width: `${item.bench}%` }}>{item.bench}%</div>
-                          <div className="bar-seg media" style={{ width: `${item.media}%` }}>{item.media}%</div>
-                          <div className="bar-seg survey" style={{ width: `${item.survey}%` }}>{item.survey}%</div>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </section>
 

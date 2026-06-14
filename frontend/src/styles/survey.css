@@ -753,6 +753,51 @@
     padding-left: 42px;
 }
 
+.stakeholder-top-issues {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding-left: 46px;
+    margin-top: 6px;
+}
+
+.stakeholder-top-issue-row {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.76rem;
+}
+
+.stakeholder-issue-rank {
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 99px;
+}
+
+.stakeholder-issue-name {
+    flex: 1;
+    color: #334155;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stakeholder-issue-score {
+    flex-shrink: 0;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.stakeholder-top-empty {
+    padding-left: 46px;
+    margin-top: 4px;
+    font-size: 0.73rem;
+    color: #94a3b8;
+}
+
 .dashboard-handle {
     flex-shrink: 0;
 

@@ -463,6 +463,10 @@ def finalizeSelectedSubIssues(runId: int, userModel) -> FinalizeSelectedSubIssue
 
     replaceSelectedSubIssuesTx(runId, rowsToInsert, userId=userId)
 
+    # 선정 확정 직후 온보딩 지표 scope 자동 초기화 (idempotent).
+    # 사용자가 별도 버튼을 누르는 것이 아니라, Top 5 확정의 후속 단계로 시스템이 자동 처리한다.
+    _initPostDmaScopeAfterFinalize(runId, userId)
+
     selectedIssues = [
         FinalizeSelectedSubIssueItemDto(
             subIssueCode=row["sub_issue_code"],
@@ -482,6 +486,18 @@ def finalizeSelectedSubIssues(runId: int, userModel) -> FinalizeSelectedSubIssue
         fallbackYn=False,
         selectedIssues=selectedIssues,
     )
+
+
+def _initPostDmaScopeAfterFinalize(runId: int, userId: Optional[int]) -> None:
+    """선정 확정 후 온보딩 지표 scope를 자동 초기화한다.
+
+    reportworkflows 서비스의 idempotent scope 초기화 로직을 재사용한다.
+    (지연 import로 materialities ↔ reportworkflows 순환 참조 방지)
+    동일 runId 재호출 시 기존 cycle/scope를 재사용하므로 중복 생성되지 않는다.
+    """
+    from src.services.reportworkflows.service import initializePostDmaDisclosureScope
+
+    initializePostDmaDisclosureScope(runId, userId)
 
 
 def _buildResultItem(row: dict, selectedCodes: list[str]) -> MaterialityResultItemDto:

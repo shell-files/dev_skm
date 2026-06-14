@@ -207,9 +207,17 @@ const Survey = () => {
     }
   };
 
-  const handleImport = async () => {
+  const handleSyncSurveyResponses = async () => {
     if (!currentRunId || surveyActionLoading) return;
-    const ok = await showConfirmAlert("응답 가져오기", "Google Sheet의 최신 설문 응답을 DB로 가져올까요?", "question");
+    if (!isReady) {
+      await showDefaultAlert("확인 필요", "READY 상태의 설문 폼이 필요합니다.", "warning");
+      return;
+    }
+    const ok = await showConfirmAlert(
+      "설문 응답 동기화",
+      "Google Sheet의 최신 설문 응답을 DB로 가져오고 응답 현황을 갱신할까요?",
+      "question"
+    );
     if (!ok) return;
     const res = await dispatch(importSurveyResponsesThunk({ runId: currentRunId }));
     if (importSurveyResponsesThunk.fulfilled.match(res)) {
@@ -217,11 +225,12 @@ const Survey = () => {
       const empC  = raw?.respondentCounts?.employee   ?? 0;
       const mgmtC = raw?.respondentCounts?.management ?? 0;
       const extC  = raw?.respondentCounts?.external   ?? 0;
-      console.debug("[Survey] import:", raw);
+      console.debug("[Survey] sync:", raw);
       await showDefaultAlert("응답 동기화 완료", `임직원 ${empC}명 / 경영진 ${mgmtC}명 / 외부 ${extC}명`, "success");
       dispatch(fetchSurveyResponseStatusThunk({ runId: currentRunId }));
+      dispatch(fetchMaterialitySurveyResultThunk({ runId: currentRunId }));
     } else {
-      await showDefaultAlert("실패", "설문 응답 가져오기에 실패했습니다.", "error");
+      await showDefaultAlert("실패", "설문 응답 동기화에 실패했습니다.", "error");
     }
   };
 
@@ -581,19 +590,12 @@ const Survey = () => {
               {/* 액션 버튼 */}
               <div className="sv-panel-body">
                 <div className="sv-action-row">
-                  <button className="sv-action-btn sv-action-btn--outline" onClick={handleRefreshStatus} disabled={!currentRunId || responseStatusLoading}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
-                      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-                    </svg>
-                    {responseStatusLoading ? "갱신 중..." : "응답 현황 갱신"}
-                  </button>
-                  <button className="sv-action-btn sv-action-btn--outline" onClick={handleImport} disabled={isActionDisabled} title={!isReady ? "READY 상태 설문 폼이 필요합니다." : ""}>
+                  <button className="sv-action-btn sv-action-btn--outline" onClick={handleSyncSurveyResponses} disabled={isActionDisabled} title={!isReady ? "READY 상태 설문 폼이 필요합니다." : "Google Sheet 응답을 가져오고 현황을 갱신합니다."}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                       <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                     </svg>
-                    {surveyActionLoading ? "처리 중..." : "응답 가져오기"}
+                    {surveyActionLoading ? "동기화 중..." : "설문 응답 동기화"}
                   </button>
                   <button className="sv-action-btn sv-action-btn--green" onClick={handleRecalculate} disabled={isActionDisabled} title={!isReady ? "READY 상태 설문 폼이 필요합니다." : ""}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

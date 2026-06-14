@@ -642,7 +642,8 @@ class PhaseC312ServiceHookTest(unittest.TestCase):
              deps[0], deps[1], deps[2], deps[3], \
              patch.object(svc, "refreshRegulationShadowForRun", return_value=0) as refresh, \
              patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
-             patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0):
+             patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0), \
+             patch.object(svc, "ensureSurveyFormForRun", return_value=None):
             svc.runMediaCrawlAndAnalyze(self._request())
         refresh.assert_called_once_with(RUN_ID)
 
@@ -673,7 +674,8 @@ class PhaseC312ServiceHookTest(unittest.TestCase):
              deps[0], deps[1], deps[2], deps[3], \
              patch.object(svc, "refreshRegulationShadowForRun", return_value=0) as refresh, \
              patch.object(svc, "refreshKcgsShadowForRun", return_value=0), \
-             patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0):
+             patch.object(svc, "refreshMediaExternalMaxForRun", return_value=0), \
+             patch.object(svc, "ensureSurveyFormForRun", return_value=None):
             svc.runMediaCrawlAndAnalyze(self._request())
         refresh.assert_called_once_with(RUN_ID)
 

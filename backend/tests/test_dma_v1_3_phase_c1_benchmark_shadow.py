@@ -192,12 +192,14 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
         source = Path(root, "src/services/benchmarks/service.py").read_text(encoding="utf-8")
 
         self.assertLess(source.index("saveSignals("), source.index("step4ReplaceBenchmarkShadowTracesTx("))
-        self.assertIn("Warning: Benchmark v1.3 shadow", source)
+        # F1-A: shadow paths now fail-closed (RuntimeError) — warnings removed
+        self.assertIn("RuntimeError", source)
         self.assertNotIn("benchmark_v13_shadow", source)
         # Legacy append-only writer must NOT be imported in runtime service
         self.assertNotIn("step4SaveBenchmarkShadowTraces", source)
 
-    def test_transaction_failure_keeps_legacy_success_response(self):
+    def test_transaction_failure_raises_runtime_error(self):
+        # F1-A: Replace TX failure is now fail-closed — RuntimeError propagates
         service = self.loadService()
         finalResult = {
             "status": True,
@@ -223,12 +225,11 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
                 service, "step2BuildBenchmarkScreeningPayloads", return_value=[]
             ), patch.object(
                 service, "step4ReplaceBenchmarkShadowTracesTx", side_effect=RuntimeError("tx failed")
-            ) as writer, patch("builtins.print") as printed:
-                response = asyncio.run(service.findSr(fileFindModel, userModel))
+            ) as writer, patch.object(service, "upsertDmaWorkflowStatus"):
+                with self.assertRaises(RuntimeError):
+                    asyncio.run(service.findSr(fileFindModel, userModel))
 
-        self.assertTrue(response["status"])
         self.assertEqual(writer.call_count, 1)
-        self.assertIn("shadow replace transaction failed", printed.call_args[0][0])
 
     def test_legacy_save_failure_skips_replace_transaction(self):
         service = self.loadService()
@@ -250,13 +251,15 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
                 service, "convertToDmaSignals", return_value=[]
             ), patch.object(service, "scoreSignals", return_value=[]), patch.object(
                 service, "saveSignals", side_effect=RuntimeError("legacy failed")
-            ), patch.object(service, "step4ReplaceBenchmarkShadowTracesTx") as writer:
+            ), patch.object(service, "step4ReplaceBenchmarkShadowTracesTx") as writer, \
+               patch.object(service, "upsertDmaWorkflowStatus"):
                 with self.assertRaises(Exception):
                     asyncio.run(service.findSr(fileFindModel, userModel))
 
         writer.assert_not_called()
 
-    def test_fact_build_failure_skips_replace_transaction(self):
+    def test_fact_build_failure_raises_runtime_error(self):
+        # F1-A: Fact build failure is now fail-closed — RuntimeError propagates
         service = self.loadService()
         finalResult = {
             "status": True,
@@ -278,21 +281,13 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
                 service, "saveSignals", return_value=None
             ), patch.object(
                 service, "step0NormalizeBenchmarkFacts", side_effect=RuntimeError("fact build exploded")
-            ), patch.object(service, "step4ReplaceBenchmarkShadowTracesTx") as txWriter, patch(
-                "builtins.print"
-            ) as printed:
-                response = asyncio.run(service.findSr(fileFindModel, userModel))
+            ), patch.object(service, "step4ReplaceBenchmarkShadowTracesTx") as txWriter, \
+               patch.object(service, "upsertDmaWorkflowStatus"):
+                with self.assertRaises(RuntimeError):
+                    asyncio.run(service.findSr(fileFindModel, userModel))
 
-        # Legacy response succeeds — shadow failure is isolated
-        self.assertTrue(response["status"])
-        # Replace Transaction must be skipped when fact build fails
+        # Replace Transaction must NOT be called when fact build fails
         txWriter.assert_not_called()
-        # Warning must be emitted
-        warning_messages = [call[0][0] for call in printed.call_args_list if call[0]]
-        self.assertTrue(
-            any("shadow replace skipped" in m for m in warning_messages),
-            f"Expected 'shadow replace skipped' warning, got: {warning_messages}",
-        )
 
     def test_replace_transaction_runs_once_per_request_after_multiple_files(self):
         service = self.loadService()
@@ -326,7 +321,7 @@ class PhaseC1BenchmarkServiceHookTest(unittest.TestCase):
                 service, "step2BuildBenchmarkScreeningPayloads", return_value=[buildPayload()]
             ) as buildScreening, patch.object(
                 service, "step4ReplaceBenchmarkShadowTracesTx", return_value=3
-            ) as txWriter:
+            ) as txWriter, patch.object(service, "upsertDmaWorkflowStatus"):
                 response = asyncio.run(service.findSr(fileFindModel, userModel))
 
         self.assertTrue(response["status"])

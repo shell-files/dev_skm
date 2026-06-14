@@ -57,6 +57,62 @@ const ROLLUP_API_ROOT = "/api/v1/rollups";
 const ONBOARDING_APPROVAL_API_ROOT = "/api/v1/onboarding-approvals";
 const REPORT_WORKFLOW_API_ROOT = "/api/v1/report-workflow";
 
+const normalizeRollupPurposeCode = (code) =>
+  String(code || "DMA_PRECHECK").trim().toUpperCase();
+
+const assertRollupId = (value, name) => {
+  const normalized = Number(value);
+  if (!Number.isFinite(normalized) || normalized <= 0) {
+    throw new Error(`${name} is required`);
+  }
+  return normalized;
+};
+
+const buildRollupLookupParams = ({
+  runId,
+  sourceCycleId,
+  rollupPurposeCode,
+  metricScopeCode,
+} = {}) => {
+  const purposeCode = normalizeRollupPurposeCode(rollupPurposeCode);
+  const params = {};
+
+  if (rollupPurposeCode) params.rollupPurposeCode = purposeCode;
+  if (metricScopeCode) params.metricScopeCode = metricScopeCode;
+
+  if (purposeCode === "REPORT_DISCLOSURE") {
+    params.sourceCycleId = assertRollupId(sourceCycleId, "sourceCycleId");
+    return params;
+  }
+
+  params.runId = assertRollupId(runId, "runId");
+  return params;
+};
+
+const buildRollupBatchBody = ({
+  runId,
+  sourceCycleId,
+  sourceCompanyIds,
+  rollupPurposeCode,
+  metricScopeCode,
+} = {}) => {
+  const purposeCode = normalizeRollupPurposeCode(rollupPurposeCode);
+  const body = {
+    sourceCompanyIds: Array.isArray(sourceCompanyIds) ? sourceCompanyIds : [],
+  };
+
+  if (rollupPurposeCode) body.rollupPurposeCode = purposeCode;
+  if (metricScopeCode) body.metricScopeCode = metricScopeCode;
+
+  if (purposeCode === "REPORT_DISCLOSURE") {
+    body.sourceCycleId = assertRollupId(sourceCycleId, "sourceCycleId");
+    return body;
+  }
+
+  body.runId = assertRollupId(runId, "runId");
+  return body;
+};
+
 const rejectIfFailed = (res, rejectWithValue, fallbackMessage) => {
   if (isApiFailed(res)) {
     return rejectWithValue(toApiError(res, fallbackMessage));
@@ -530,20 +586,16 @@ export const fetchApprovalProjects = createAsyncThunk(
 
 export const fetchRollupSubsidiaries = createAsyncThunk(
   "report/fetchRollupSubsidiaries",
-  async ({ runId, sourceCycleId, rollupPurposeCode, metricScopeCode } = {}, { rejectWithValue }) => {
-    const params = {};
-    if (runId != null) params.runId = runId;
-    if (sourceCycleId != null) params.sourceCycleId = sourceCycleId;
-    if (rollupPurposeCode) params.rollupPurposeCode = rollupPurposeCode;
-    if (metricScopeCode) params.metricScopeCode = metricScopeCode;
+  async (payload = {}, { rejectWithValue }) => {
     try {
+      const params = buildRollupLookupParams(payload);
       const res = await GET(`${ROLLUP_API_ROOT}/subsidiaries`, params);
       return rejectIfFailed(res, rejectWithValue, "자회사 목록 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "자회사 목록 조회 중 오류가 발생했습니다.",
+        message: error?.message || "자회사 목록 조회 중 오류가 발생했습니다.",
       });
     }
   }
@@ -553,13 +605,14 @@ export const fetchRollupScopePreview = createAsyncThunk(
   "report/fetchRollupScopePreview",
   async (payload = {}, { rejectWithValue }) => {
     try {
-      const res = await GET(`${ROLLUP_API_ROOT}/scope-preview`, payload);
+      const params = buildRollupLookupParams(payload);
+      const res = await GET(`${ROLLUP_API_ROOT}/scope-preview`, params);
       return rejectIfFailed(res, rejectWithValue, "롤업 범위 미리보기 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "롤업 범위 미리보기 조회 중 오류가 발생했습니다.",
+        message: error?.message || "롤업 범위 미리보기 조회 중 오류가 발생했습니다.",
       });
     }
   }
@@ -569,13 +622,14 @@ export const createRollupBatch = createAsyncThunk(
   "report/createRollupBatch",
   async (payload, { rejectWithValue }) => {
     try {
-      const res = await POST(`${ROLLUP_API_ROOT}/batches`, payload);
+      const body = buildRollupBatchBody(payload);
+      const res = await POST(`${ROLLUP_API_ROOT}/batches`, body);
       return rejectIfFailed(res, rejectWithValue, "자회사 데이터 요청에 실패했습니다.");
     } catch (error) {
       console.error(error);
       return rejectWithValue({
         status: false,
-        message: "자회사 데이터 요청 중 오류가 발생했습니다.",
+        message: error?.message || "자회사 데이터 요청 중 오류가 발생했습니다.",
       });
     }
   }
@@ -585,7 +639,8 @@ export const fetchActiveRollupBatch = createAsyncThunk(
   "report/fetchActiveRollupBatch",
   async (payload, { rejectWithValue }) => {
     try {
-      const res = await GET(`${ROLLUP_API_ROOT}/batches/active`, payload);
+      const params = buildRollupLookupParams(payload);
+      const res = await GET(`${ROLLUP_API_ROOT}/batches/active`, params);
       return rejectIfFailed(res, rejectWithValue, "진행 중인 롤업 배치 조회에 실패했습니다.");
     } catch (error) {
       console.error(error);
@@ -1035,6 +1090,27 @@ const reportSlice = createSlice({
       state.rollup.activeBatchId = action.payload ?? null;
     },
 
+    clearRollupTransientState: (state) => {
+      state.rollup.subsidiaries = [];
+      state.rollup.scopePreview = null;
+      state.rollup.selectedRequestDetail = null;
+      state.rollup.batchSources = [];
+      state.rollup.activeBatchId = null;
+      state.rollup.batchStatus = null;
+      state.loading.subsidiaries = false;
+      state.loading.rollupScopePreview = false;
+      state.loading.createBatch = false;
+      state.loading.rollupBatchSources = false;
+      state.loading.batchStatus = false;
+      state.loading.fetchActiveRollupBatch = false;
+      state.error.subsidiaries = null;
+      state.error.rollupScopePreview = null;
+      state.error.createBatch = null;
+      state.error.rollupBatchSources = null;
+      state.error.batchStatus = null;
+      state.error.fetchActiveRollupBatch = null;
+    },
+
     clearReportError: (state, action) => {
       const key = action.payload;
       if (key && Object.prototype.hasOwnProperty.call(state.error, key)) {
@@ -1298,6 +1374,9 @@ const reportSlice = createSlice({
       })
       .addCase(fetchActiveRollupBatch.rejected, (state, action) => {
         setRejected(state, "fetchActiveRollupBatch", action);
+        state.rollup.activeBatchId = null;
+        state.rollup.batchStatus = null;
+        state.rollup.batchSources = [];
       })
 
       .addCase(fetchRollupRequests.pending, (state) => setPending(state, "requests"))
@@ -1578,6 +1657,7 @@ export const {
   clearApprovalDetail,
   clearApprovalProject,
   clearReportError,
+  clearRollupTransientState,
   clearSurveyState,
   resetReportState,
   selectApprovalProject,

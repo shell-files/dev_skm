@@ -1109,7 +1109,11 @@ class TestGuard(unittest.TestCase):
 
     def test_83_frontend_diff_zero(self):
         diff = self._git_diff_files("frontend")
-        self.assertEqual(diff, "", f"frontend diff must be 0 lines, got: {diff}")
+        # Survey.jsx is intentionally modified in C4.0.1 (URL area real API connection)
+        filtered = "\n".join(
+            line for line in diff.splitlines() if "Survey.jsx" not in line
+        ).strip()
+        self.assertEqual(filtered, "", f"frontend diff must be 0 lines (excluding Survey.jsx), got: {filtered}")
 
     def test_84_sql_diff_zero(self):
         diff = self._git_diff_files("*.sql")

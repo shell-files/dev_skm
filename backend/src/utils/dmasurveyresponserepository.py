@@ -12,11 +12,10 @@ WHERE esg_materiality_run_id = ?
   AND delete_yn = 0
 """
 
-_SOFT_DELETE_RESPONSES_SQL = """
-UPDATE ESG_DMA_SURVEY_RESPONSE
-SET delete_yn = 1
+_DELETE_RESPONSES_SQL = """
+DELETE FROM ESG_DMA_SURVEY_RESPONSE
 WHERE survey_form_id = ?
-  AND delete_yn = 0
+  AND esg_materiality_run_id = ?
 """
 
 _INSERT_RESPONSE_SQL = """
@@ -103,10 +102,12 @@ def replaceSurveyResponsesForFormTx(
     if conn is None:
         raise RuntimeError("DB connection unavailable")
     conn.autocommit = False
+    deleted_count = 0
     try:
-        # Step 1: Soft-delete existing active responses for this form
+        # Step 1: Physical delete all existing rows for this form+run (idempotent)
         with conn.cursor() as cur:
-            cur.execute(_SOFT_DELETE_RESPONSES_SQL, (surveyFormId,))
+            cur.execute(_DELETE_RESPONSES_SQL, (surveyFormId, runId))
+            deleted_count = cur.rowcount if cur.rowcount is not None else 0
 
         # Step 2: Bulk insert new rows
         if rows:
@@ -131,7 +132,7 @@ def replaceSurveyResponsesForFormTx(
                 cur.executemany(_INSERT_RESPONSE_SQL, params)
 
         conn.commit()
-        return {"insertedCount": len(rows), "updatedCount": 0}
+        return {"insertedCount": len(rows), "deletedCount": deleted_count, "updatedCount": 0}
     except Exception:
         try:
             conn.rollback()

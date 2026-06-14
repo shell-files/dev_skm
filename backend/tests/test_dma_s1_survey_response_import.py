@@ -669,7 +669,7 @@ class TestRepository(unittest.TestCase):
                 repo.replaceSurveyResponsesForFormTx(runId=1, surveyFormId=1, rows=[])
             self.assertIn("DB connection unavailable", str(ctx.exception))
 
-    def test_67_replace_soft_deletes_then_inserts(self):
+    def test_67_replace_deletes_then_inserts(self):
         conn, cur = _make_mock_conn()
         rows = [{
             "runId": 1, "surveyFormId": 2, "questionCode": "Q", "mappedAxis": "impact",
@@ -678,6 +678,8 @@ class TestRepository(unittest.TestCase):
         with patch("src.utils.dmasurveyresponserepository.getConn", return_value=conn):
             result = repo.replaceSurveyResponsesForFormTx(runId=1, surveyFormId=2, rows=rows)
         self.assertEqual(result["insertedCount"], 1)
+        cur.execute.assert_called_once()       # physical DELETE
+        cur.executemany.assert_called_once()   # bulk INSERT
         conn.commit.assert_called_once()
 
     def test_68_replace_rollback_on_insert_failure(self):
@@ -1044,6 +1046,93 @@ class TestParseResponseSheets(unittest.TestCase):
             result = imp.previewSurveyResponses(1)
 
         self.assertLessEqual(len(result["previewRows"]), 20)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# §S2.5-C  Idempotency — physical DELETE replaces soft-delete
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestReplaceIdempotency(unittest.TestCase):
+
+    _ROWS = [{
+        "runId": 1, "surveyFormId": 2, "questionCode": "Q", "mappedAxis": "impact",
+        "respondentGroup": "employee", "sourceResponseKey": "KEY1",
+    }]
+
+    def _call(self, rows=None):
+        if rows is None:
+            rows = self._ROWS
+        conn, cur = _make_mock_conn()
+        with patch("src.utils.dmasurveyresponserepository.getConn", return_value=conn):
+            result = repo.replaceSurveyResponsesForFormTx(runId=1, surveyFormId=2, rows=rows)
+        return result, conn, cur
+
+    def test_130_first_import_succeeds(self):
+        result, _, _ = self._call()
+        self.assertEqual(result["insertedCount"], 1)
+
+    def test_131_second_import_same_rows_no_exception(self):
+        self._call()
+        result2, _, _ = self._call()
+        self.assertEqual(result2["insertedCount"], 1)
+
+    def test_132_no_soft_delete_in_source(self):
+        src = (ROOT / "src/utils/dmasurveyresponserepository.py").read_text(encoding="utf-8")
+        self.assertNotIn("SET delete_yn = 1", src, "Soft delete must be removed")
+
+    def test_133_physical_delete_in_source(self):
+        src = (ROOT / "src/utils/dmasurveyresponserepository.py").read_text(encoding="utf-8")
+        self.assertIn("DELETE FROM ESG_DMA_SURVEY_RESPONSE", src)
+
+    def test_134_delete_where_includes_run_id(self):
+        src = (ROOT / "src/utils/dmasurveyresponserepository.py").read_text(encoding="utf-8")
+        idx = src.index("DELETE FROM ESG_DMA_SURVEY_RESPONSE")
+        block = src[idx:idx + 300]
+        self.assertIn("esg_materiality_run_id", block)
+
+    def test_135_delete_where_includes_survey_form_id(self):
+        src = (ROOT / "src/utils/dmasurveyresponserepository.py").read_text(encoding="utf-8")
+        idx = src.index("DELETE FROM ESG_DMA_SURVEY_RESPONSE")
+        block = src[idx:idx + 300]
+        self.assertIn("survey_form_id", block)
+
+    def test_136_empty_rows_deletes_and_commits(self):
+        result, conn, cur = self._call(rows=[])
+        self.assertEqual(result["insertedCount"], 0)
+        cur.execute.assert_called_once()    # DELETE
+        cur.executemany.assert_not_called() # no INSERT
+        conn.commit.assert_called_once()
+
+    def test_137_result_contains_deleted_count(self):
+        result, _, _ = self._call(rows=[])
+        self.assertIn("deletedCount", result)
+
+    def test_138_delete_called_with_form_id_and_run_id(self):
+        conn, cur = _make_mock_conn()
+        with patch("src.utils.dmasurveyresponserepository.getConn", return_value=conn):
+            repo.replaceSurveyResponsesForFormTx(runId=7, surveyFormId=42, rows=[])
+        args = cur.execute.call_args
+        params = args[0][1] if args else ()
+        self.assertIn(42, params)
+        self.assertIn(7, params)
+
+    def test_139_rollback_on_delete_failure(self):
+        conn, cur = _make_mock_conn()
+        cur.execute.side_effect = RuntimeError("delete failed")
+        with patch("src.utils.dmasurveyresponserepository.getConn", return_value=conn):
+            with self.assertRaises(RuntimeError):
+                repo.replaceSurveyResponsesForFormTx(runId=1, surveyFormId=2, rows=[])
+        conn.rollback.assert_called()
+
+    def test_140_conn_closed_after_delete_failure(self):
+        conn, cur = _make_mock_conn()
+        cur.execute.side_effect = RuntimeError("delete failed")
+        with patch("src.utils.dmasurveyresponserepository.getConn", return_value=conn):
+            try:
+                repo.replaceSurveyResponsesForFormTx(runId=1, surveyFormId=2, rows=[])
+            except RuntimeError:
+                pass
+        conn.close.assert_called_once()
 
 
 # ══════════════════════════════════════════════════════════════════════════════

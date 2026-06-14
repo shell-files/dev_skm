@@ -35,6 +35,7 @@ import {
   fetchRollupRequestDetail,
   ensureRollupResponseWorkspace,
   initializePostDmaDisclosureScope,
+  clearRollupTransientState,
   resetReportState,
   saveOnboardingMetric,
   setActiveBatchId,
@@ -720,12 +721,22 @@ const OnBoard = () => {
     () => resolveRollupContext(activeCycleType),
     [activeCycleType]
   );
+  const modalRollupPurposeCode =
+    activeCycleType === "POST_DMA_DISCLOSURE"
+      ? "REPORT_DISCLOSURE"
+      : activeRollupContext.rollupPurposeCode;
+  const modalMetricScopeCode =
+    activeCycleType === "POST_DMA_DISCLOSURE"
+      ? "SELECTED_DISCLOSURE"
+      : activeRollupContext.metricScopeCode;
+  const expectedPostDmaCycleId = Number(displayWorkflow?.postDmaCycleId || 0) || null;
   const isPostDmaRollupContext =
     viewMode === "MY_PROJECT" &&
     activeCycleType === "POST_DMA_DISCLOSURE" &&
     displayWorkflow?.reportBasisType === "CONSOLIDATED";
   const shouldShowRollupPanel = canManageRollup && isPostDmaRollupContext;
   const hasActiveRollupBatch = Boolean(activeBatchId);
+  const workflowRunId = displayWorkflow?.runId;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -823,6 +834,11 @@ const OnBoard = () => {
     return transferStatus === "SENT" || transferStatus === "RECEIVED";
   }, [selectedRequestDetail]);
 
+  useEffect(() => {
+    setActiveSourceCycleId(null);
+    dispatch(clearRollupTransientState());
+  }, [dispatch, companyId, reportingYear, workflowRunId, activeCycleType]);
+
   const initializeOnboarding = useCallback(async () => {
     if (!companyId) {
       dispatch(resetReportState());
@@ -887,19 +903,36 @@ const OnBoard = () => {
       const nextRollupContext = resolveRollupContext(nextCycleType);
       const runId = nextWorkflow.runId;
       let sourceCycleId = null;
+      let initializedScope = null;
 
       if (nextCycleType === "POST_DMA_DISCLOSURE") {
-        sourceCycleId = nextWorkflow?.postDmaCycleId || null;
         const initializedRes = await dispatch(
           initializePostDmaDisclosureScope({ runId })
         ).unwrap();
 
-        const initializedScope = initializedRes?.data || initializedRes;
-        sourceCycleId =
+        initializedScope = initializedRes?.data || initializedRes;
+      }
+
+      const metricId = searchParams.get("metricId");
+      const metricsRes = await dispatch(
+        fetchOnboardingMetrics({ companyId, reportingYear, cycleType: nextCycleType, metricId })
+      ).unwrap();
+      const metricsPayload = metricsRes?.data || metricsRes;
+
+      if (nextCycleType === "POST_DMA_DISCLOSURE") {
+        const resolvedPostDmaCycleId = Number(
+          nextWorkflow?.postDmaCycleId ||
           initializedScope?.cycleId ||
           initializedScope?.data?.cycleId ||
-          sourceCycleId;
+          metricsPayload?.cycleId ||
+          0
+        );
+        sourceCycleId =
+          Number.isFinite(resolvedPostDmaCycleId) && resolvedPostDmaCycleId > 0
+            ? resolvedPostDmaCycleId
+            : null;
       }
+
       setActiveSourceCycleId(sourceCycleId ?? null);
 
       const requiresSourceCycle =
@@ -932,17 +965,12 @@ const OnBoard = () => {
           }
         } catch (activeBatchError) {
           console.error(activeBatchError);
-          dispatch(setActiveBatchId(null));
+          dispatch(clearRollupTransientState());
         }
       } else {
-        dispatch(setActiveBatchId(null));
+        dispatch(clearRollupTransientState());
       }
 
-      const metricId = searchParams.get("metricId");
-
-      await dispatch(
-        fetchOnboardingMetrics({ companyId, reportingYear, cycleType: nextCycleType, metricId })
-      ).unwrap();
       if (canManageAssignments) {
         await dispatch(
           fetchOnboardingAssignments({ companyId, reportingYear, cycleType: nextCycleType })
@@ -1010,10 +1038,22 @@ const OnBoard = () => {
   };
 
   const handleOpenSubsidiaryRequest = () => {
-    if (!activeSourceCycleId) {
+    if (activeCycleType === "POST_DMA_DISCLOSURE" && !activeSourceCycleId) {
       showDefaultAlert(
         "확인 필요",
         "POST-DMA 지표 범위 cycle을 확인하지 못했습니다. 새로고침 후 다시 시도하세요.",
+        "warning"
+      );
+      return;
+    }
+    if (
+      activeCycleType === "POST_DMA_DISCLOSURE" &&
+      expectedPostDmaCycleId &&
+      Number(activeSourceCycleId) !== Number(expectedPostDmaCycleId)
+    ) {
+      showDefaultAlert(
+        "확인 필요",
+        "현재 프로젝트의 POST-DMA cycle과 요청 cycle이 일치하지 않습니다. 새로고침 후 다시 시도하세요.",
         "warning"
       );
       return;
@@ -1532,11 +1572,12 @@ const OnBoard = () => {
       <SubsidiaryRequestModal
         isOpen={isSubReqModalOpen}
         onClose={() => setIsSubReqModalOpen(false)}
-        runId={workflow?.runId}
+        runId={displayWorkflow?.runId}
         reportingYear={reportingYear}
         sourceCycleId={activeSourceCycleId}
-        rollupPurposeCode={activeRollupContext.rollupPurposeCode}
-        metricScopeCode={activeRollupContext.metricScopeCode}
+        expectedPostDmaCycleId={expectedPostDmaCycleId}
+        rollupPurposeCode={modalRollupPurposeCode}
+        metricScopeCode={modalMetricScopeCode}
         onRequested={async (batchId) => {
           if (batchId) {
             dispatch(setActiveBatchId(batchId));

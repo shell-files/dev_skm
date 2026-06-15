@@ -6,6 +6,7 @@ from typing import Any, Optional
 
 from src.utils.calculationengine import (
     STATUS_CALCULATED,
+    STATUS_NOT_APPLICABLE,
     calculateRule,
     groupSourcesByRule,
     normalizeSources,
@@ -19,6 +20,12 @@ class CalculationError(Exception):
         self.code = code
         self.message = message
 
+
+# 전년도 연결 baseline(ESG_GROUP_ROLLUP_RESULT)이 없어 YoY 비교를 산정할 수 없는 상태.
+# 전체 batch를 막는 hard failure가 아니라 해당 rule만 분리하는 non-blocking status다.
+STATUS_BASELINE_REQUIRED = "BASELINE_REQUIRED"
+# batch 전체 실패로 처리하지 않고 warning으로만 내려보내는 status 집합.
+NON_BLOCKING_STATUSES = {STATUS_BASELINE_REQUIRED, STATUS_NOT_APPLICABLE}
 
 FORMULA_ROLLUP_SUM = "ROLLUP_SUM"
 FORMULA_ROLLUP_REFERENCE_COPY = "ROLLUP_REFERENCE_COPY"
@@ -226,13 +233,14 @@ def calculateConsolidatedRulesByYear(
         value = getFactValue(fact) if fact else None
         if value is None:
             return {
-                "status": "CALCULATION_SOURCE_NOT_READY",
+                "status": STATUS_BASELINE_REQUIRED,
                 "fact": None,
                 "trace": {
                     "atomicMetricId": atomicId,
                     "evaluatedYear": year,
                     "sourceScope": "CONSOLIDATED",
                     "missingConsolidatedSource": True,
+                    "requiredReportingYear": year,
                 },
             }
         numericValue = fact.get("valueNumeric") if fact.get("valueNumeric") is not None else fact.get("value_numeric")
@@ -258,8 +266,18 @@ def calculateConsolidatedRulesByYear(
         year: int,
         contextRule: Optional[dict] = None,
         sourceScope: Optional[str] = None,
+        sourceTiming: Optional[str] = None,
     ) -> dict:
         memoKey = (int(year), atomicId)
+        normalizedScope = str(sourceScope or "").strip().upper()
+        normalizedTiming = str(sourceTiming or "").strip().lower()
+
+        # PRIOR + CONSOLIDATED: 전년도 연결값은 producer rule 재계산보다 persisted baseline
+        # (ESG_GROUP_ROLLUP_RESULT)을 우선한다. baseline이 없으면 2025 ENTITY 입력을 억지로
+        # 다시 계산하지 않고 BASELINE_REQUIRED를 반환한다.
+        if normalizedScope == "CONSOLIDATED" and normalizedTiming == "prior":
+            return resolveConsolidatedSourceAtYear(atomicId, year)
+
         producerCode = producerByAtomicId.get(atomicId)
         if producerCode:
             if memoKey not in atomicMemo:
@@ -294,7 +312,7 @@ def calculateConsolidatedRulesByYear(
                     }
             return atomicMemo[memoKey]
 
-        if str(sourceScope or "").strip().upper() == "CONSOLIDATED":
+        if normalizedScope == "CONSOLIDATED":
             return resolveConsolidatedSourceAtYear(atomicId, year)
 
         return aggregateEntityFactsAtYear(
@@ -328,29 +346,42 @@ def calculateConsolidatedRulesByYear(
             sourceCompanyValuesTrace = {}
             dependencyTrace = []
 
+            nonBlockingSourceStatus = None
+
             if isYoyFormula(rule):
                 currentSources, priorSources = splitYoySources(ruleSources)
                 for source in currentSources:
-                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year, rule, source.get("sourceScope"))
+                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year, rule, source.get("sourceScope"), "current")
                     dependencyTrace.append(traceSource(source, sourceResult, year, "current"))
                     if sourceResult["status"] == STATUS_CALCULATED:
                         engineFactMap[source["sourceAtomicMetricId"]] = normalizeEngineFact(sourceResult["fact"])
                         sourceCompanyValuesTrace[source["sourceAtomicMetricId"]] = sourceCompanyValues(sourceResult)
+                    elif sourceResult["status"] in NON_BLOCKING_STATUSES:
+                        nonBlockingSourceStatus = nonBlockingSourceStatus or sourceResult["status"]
                 for source in priorSources:
-                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year - 1, rule, source.get("sourceScope"))
+                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year - 1, rule, source.get("sourceScope"), "prior")
                     dependencyTrace.append(traceSource(source, sourceResult, year - 1, "prior"))
                     if sourceResult["status"] == STATUS_CALCULATED:
                         enginePriorFactMap[source["sourceAtomicMetricId"]] = normalizeEngineFact(sourceResult["fact"])
+                    elif sourceResult["status"] in NON_BLOCKING_STATUSES:
+                        nonBlockingSourceStatus = nonBlockingSourceStatus or sourceResult["status"]
             else:
                 for source in ruleSources:
-                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year, rule, source.get("sourceScope"))
+                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year, rule, source.get("sourceScope"), "current")
                     dependencyTrace.append(traceSource(source, sourceResult, year, "current"))
                     if sourceResult["status"] == STATUS_CALCULATED:
                         engineFactMap[source["sourceAtomicMetricId"]] = normalizeEngineFact(sourceResult["fact"])
                         sourceCompanyValuesTrace[source["sourceAtomicMetricId"]] = sourceCompanyValues(sourceResult)
+                    elif sourceResult["status"] in NON_BLOCKING_STATUSES:
+                        nonBlockingSourceStatus = nonBlockingSourceStatus or sourceResult["status"]
 
             engineResult = calculateRule(rule, ruleSources, engineFactMap, enginePriorFactMap)
-            result = buildRuleResult(rule, ruleSources, engineResult.get("calculationStatus"), year)
+            resolvedStatus = engineResult.get("calculationStatus")
+            # engine이 source 누락(SOURCE_NOT_READY)으로 막혔지만 그 원인이 전년도 baseline
+            # 부재 등 non-blocking source라면 rule status를 non-blocking으로 승격한다.
+            if resolvedStatus != STATUS_CALCULATED and nonBlockingSourceStatus:
+                resolvedStatus = nonBlockingSourceStatus
+            result = buildRuleResult(rule, ruleSources, resolvedStatus, year)
             result.update(
                 {
                     "valueNumeric": engineResult.get("valueNumeric"),
@@ -400,10 +431,22 @@ def calculateConsolidatedRulesByYear(
         code = ruleCode(rule)
         result = evaluateRuleAtYear(code, reportingYear)
         results.append(result)
-        if result.get("calculationStatus") != STATUS_CALCULATED:
-            errorCode = result.get("calculationStatus") or "CALCULATION_ENGINE_ERROR"
-            warnings.append({"ruleCode": code, "error": errorCode, "message": errorCode})
-            return results, warnings, False
+        status = result.get("calculationStatus")
+        if status == STATUS_CALCULATED:
+            continue
+        warnings.append({
+            "ruleCode": code,
+            "groupMetricId": result.get("groupMetricId"),
+            "groupAtomicMetricId": result.get("groupAtomicMetricId"),
+            "error": status or "CALCULATION_ENGINE_ERROR",
+            "message": status or "CALCULATION_ENGINE_ERROR",
+            "trace": result.get("calculationTrace"),
+        })
+        # BASELINE_REQUIRED / NOT_APPLICABLE 은 해당 rule만 분리하고 batch는 계속 계산한다.
+        # 그 외(SOURCE_NOT_READY, RULE_CYCLE, FORMULA_NOT_SUPPORTED 등)는 hard failure.
+        if status in NON_BLOCKING_STATUSES:
+            continue
+        return results, warnings, False
 
     return results, warnings, True
 
@@ -506,6 +549,7 @@ def traceSource(source: dict, sourceResult: dict, year: int, sourceTiming: str) 
         "sourceCompanyValues": trace.get("sourceCompanyValues"),
         "missingCompanyIds": trace.get("missingCompanyIds"),
         "missingConsolidatedSource": trace.get("missingConsolidatedSource"),
+        "requiredReportingYear": trace.get("requiredReportingYear"),
         "sourceScope": trace.get("sourceScope"),
         "producerRuleCode": trace.get("producerRuleCode"),
     }
@@ -555,4 +599,6 @@ __all__ = [
     "calculateConsolidatedRulesByYear",
     "resolveHistoricalLookbackDepth",
     "CalculationError",
+    "STATUS_BASELINE_REQUIRED",
+    "NON_BLOCKING_STATUSES",
 ]

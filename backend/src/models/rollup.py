@@ -74,10 +74,12 @@ class RollupResultDto(RollupBaseModel):
     unit: Optional[str] = None
     sourceCompanyValues: Optional[dict] = None
     calculationWarnings: Optional[list[str]] = None
+    calculationStatus: Optional[str] = None
 
 
 class RollupCalculateStatusDto(RollupBatchStatusDto):
     results: list[RollupResultDto]
+    warnings: list[dict] = Field(default_factory=list)
 
 
 class RollupCalculateResponseDto(RollupBaseModel):

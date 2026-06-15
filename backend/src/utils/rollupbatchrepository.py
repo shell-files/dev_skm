@@ -624,6 +624,60 @@ def buildResultCode(batchId: int, groupAtomicMetricId: str) -> str:
     base = f"{batchId}_{groupAtomicMetricId}"
     return f"RR_{hashlib.md5(base.encode()).hexdigest()[:8].upper()}"
 
+# ESG_GROUP_ROLLUP_RESULT.calculation_trace(TEXT) 저장용 compact trace의 안전 상한.
+# 초과 시 dependencySummary를 절단하고 무거운 원문(pre-aggregated map/engineTrace)은 절대 저장하지 않는다.
+CALCULATION_TRACE_MAX_BYTES = 60000
+
+
+def compactCalculationTrace(result: dict) -> dict:
+    """
+    DB 저장용 compact trace를 만든다. full trace(currentPreAggregatedMap,
+    priorPreAggregatedMap, engineTrace 원문 등)는 TEXT 컬럼 한계를 넘으므로 저장하지 않고,
+    상태/연도/의존성 요약만 남긴다. (API response warning trace 는 별도로 full 유지)
+    """
+    trace = result.get("calculationTrace") or {}
+    dependencySummary = [
+        {
+            "sourceAtomicMetricId": dependency.get("sourceAtomicMetricId"),
+            "sourceTiming": dependency.get("sourceTiming"),
+            "evaluatedYear": dependency.get("evaluatedYear"),
+            "status": dependency.get("status"),
+            "sourceScope": dependency.get("sourceScope"),
+            "missingCompanyIds": dependency.get("missingCompanyIds"),
+            "missingConsolidatedSource": dependency.get("missingConsolidatedSource"),
+            "requiredReportingYear": dependency.get("requiredReportingYear"),
+        }
+        for dependency in trace.get("historicalDependencies") or []
+    ]
+    compact = {
+        "calculationStatus": result.get("calculationStatus"),
+        "formulaType": result.get("formulaType"),
+        "reportingYear": trace.get("reportingYear"),
+        "evaluatedYear": trace.get("evaluatedYear"),
+        "historicalLookbackDepth": trace.get("historicalLookbackDepth"),
+        "sourceAtomicMetricIds": result.get("sourceAtomicMetricIds") or [],
+        "dependencySummary": dependencySummary,
+        "engineStatus": (trace.get("engineTrace") or {}).get("calculationStatus"),
+    }
+
+    # optional safety: compact 가 여전히 상한을 넘으면 dependencySummary 만 절단해 남긴다.
+    # 무거운 원문 맵/engineTrace 는 애초에 compact 에 포함하지 않으므로 절대 저장되지 않는다.
+    if len(_jsonDumps(compact).encode("utf-8")) > CALCULATION_TRACE_MAX_BYTES:
+        compact = {
+            "calculationStatus": compact["calculationStatus"],
+            "formulaType": compact["formulaType"],
+            "reportingYear": compact["reportingYear"],
+            "evaluatedYear": compact["evaluatedYear"],
+            "historicalLookbackDepth": compact["historicalLookbackDepth"],
+            "sourceAtomicMetricIds": compact["sourceAtomicMetricIds"],
+            "engineStatus": compact["engineStatus"],
+            "dependencyCount": len(dependencySummary),
+            "dependencySummary": dependencySummary[:50],
+            "traceTruncatedYn": True,
+        }
+    return compact
+
+
 def resultParams(
     batch: dict,
     result: dict,
@@ -649,7 +703,7 @@ def resultParams(
         result.get("unit") or "KRW",
         _jsonDumps(result.get("sourceCompanyValues") or {}),
         result.get("formulaType"),
-        _jsonDumps(result.get("calculationTrace") or {}),
+        _jsonDumps(compactCalculationTrace(result)),
         actorUserId,
     )
     return baseParams

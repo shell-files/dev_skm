@@ -31,7 +31,10 @@ def run():
 
     # CORS 설정
     origins = ["http://localhost", settings.host_ip,
-                f"http://skm.{settings.domain}"
+                f"http://skm.{settings.domain}",
+                f"http://skm.{settings.skm_domain}",
+                f"http://capybara.{settings.domain}",
+                f"http://capybara.{settings.skm_domain}",
                 # f"http://hg.{settings.domain}", f"http://tv.{settings.domain}"
                 ]
     app.add_middleware(

@@ -719,8 +719,12 @@ class PhaseC24ServiceHookTest(unittest.TestCase):
             runMediaAnalysis(articles=[], runId=1, shadowReplaceYn=False)
             mock_tx.assert_not_called()
 
-    # --- Shadow TX exception propagates from runMediaAnalysis (#45) ---
-    def test_45_shadow_replace_exception_propagates(self):
+    # --- Shadow TX exception does NOT abort runMediaAnalysis (#45) ---
+    #     S5-B16 / Phase C2.4.1 Runtime Safety: News canonical shadow replace 실패는
+    #     smoke/fallback 분석(scoredSignals 반환)을 중단시키지 않는다.
+    #     _replaceMediaNewsShadowFromPipelineResults 자체는 여전히 예외를 전파하지만
+    #     (test_46 참조), runMediaAnalysis 가 이를 흡수하고 경고만 남긴다.
+    def test_45_shadow_replace_exception_does_not_abort(self):
         from src.services.medias.service import runMediaAnalysis
 
         with patch("src.services.medias.service.processMediaPipeline", return_value=[]), \
@@ -728,9 +732,10 @@ class PhaseC24ServiceHookTest(unittest.TestCase):
              patch("src.services.medias.service.applyMediaBaseline", return_value=[]), \
              patch("src.services.medias.service.scoreSignals", return_value=[]), \
              patch("src.services.medias.service._replaceMediaNewsShadowFromPipelineResults",
-                   side_effect=RuntimeError("TX kaboom")):
-            with self.assertRaises(RuntimeError):
-                runMediaAnalysis(articles=[], runId=1, shadowReplaceYn=True)
+                   side_effect=RuntimeError("TX kaboom")), \
+             patch("builtins.print"):
+            result = runMediaAnalysis(articles=[], runId=1, shadowReplaceYn=True)
+        self.assertEqual(result, [])
 
     # --- step1BuildMediaNewsCanonicalPayloads failure propagates from _replaceMediaNewsShadowFromPipelineResults (#46) ---
     def test_46_canonical_build_failure_propagates(self):

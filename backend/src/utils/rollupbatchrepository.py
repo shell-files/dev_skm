@@ -624,6 +624,60 @@ def buildResultCode(batchId: int, groupAtomicMetricId: str) -> str:
     base = f"{batchId}_{groupAtomicMetricId}"
     return f"RR_{hashlib.md5(base.encode()).hexdigest()[:8].upper()}"
 
+# ESG_GROUP_ROLLUP_RESULT.calculation_trace(TEXT) 저장용 compact trace의 안전 상한.
+# 초과 시 dependencySummary를 절단하고 무거운 원문(pre-aggregated map/engineTrace)은 절대 저장하지 않는다.
+CALCULATION_TRACE_MAX_BYTES = 60000
+
+
+def compactCalculationTrace(result: dict) -> dict:
+    """
+    DB 저장용 compact trace를 만든다. full trace(currentPreAggregatedMap,
+    priorPreAggregatedMap, engineTrace 원문 등)는 TEXT 컬럼 한계를 넘으므로 저장하지 않고,
+    상태/연도/의존성 요약만 남긴다. (API response warning trace 는 별도로 full 유지)
+    """
+    trace = result.get("calculationTrace") or {}
+    dependencySummary = [
+        {
+            "sourceAtomicMetricId": dependency.get("sourceAtomicMetricId"),
+            "sourceTiming": dependency.get("sourceTiming"),
+            "evaluatedYear": dependency.get("evaluatedYear"),
+            "status": dependency.get("status"),
+            "sourceScope": dependency.get("sourceScope"),
+            "missingCompanyIds": dependency.get("missingCompanyIds"),
+            "missingConsolidatedSource": dependency.get("missingConsolidatedSource"),
+            "requiredReportingYear": dependency.get("requiredReportingYear"),
+        }
+        for dependency in trace.get("historicalDependencies") or []
+    ]
+    compact = {
+        "calculationStatus": result.get("calculationStatus"),
+        "formulaType": result.get("formulaType"),
+        "reportingYear": trace.get("reportingYear"),
+        "evaluatedYear": trace.get("evaluatedYear"),
+        "historicalLookbackDepth": trace.get("historicalLookbackDepth"),
+        "sourceAtomicMetricIds": result.get("sourceAtomicMetricIds") or [],
+        "dependencySummary": dependencySummary,
+        "engineStatus": (trace.get("engineTrace") or {}).get("calculationStatus"),
+    }
+
+    # optional safety: compact 가 여전히 상한을 넘으면 dependencySummary 만 절단해 남긴다.
+    # 무거운 원문 맵/engineTrace 는 애초에 compact 에 포함하지 않으므로 절대 저장되지 않는다.
+    if len(_jsonDumps(compact).encode("utf-8")) > CALCULATION_TRACE_MAX_BYTES:
+        compact = {
+            "calculationStatus": compact["calculationStatus"],
+            "formulaType": compact["formulaType"],
+            "reportingYear": compact["reportingYear"],
+            "evaluatedYear": compact["evaluatedYear"],
+            "historicalLookbackDepth": compact["historicalLookbackDepth"],
+            "sourceAtomicMetricIds": compact["sourceAtomicMetricIds"],
+            "engineStatus": compact["engineStatus"],
+            "dependencyCount": len(dependencySummary),
+            "dependencySummary": dependencySummary[:50],
+            "traceTruncatedYn": True,
+        }
+    return compact
+
+
 def resultParams(
     batch: dict,
     result: dict,
@@ -649,7 +703,7 @@ def resultParams(
         result.get("unit") or "KRW",
         _jsonDumps(result.get("sourceCompanyValues") or {}),
         result.get("formulaType"),
-        _jsonDumps(result.get("calculationTrace") or {}),
+        _jsonDumps(compactCalculationTrace(result)),
         actorUserId,
     )
     return baseParams
@@ -730,3 +784,278 @@ def upsertGroupRollupResultsTx(
                 """,
                 resultParams(batch, result, includedCompanyIds, actorUserId),
             )
+
+
+CONSOLIDATED_RESULT_READY_STATUSES = ("approved", "completed", "calculated")
+
+
+def listConsolidatedRollupResultsByYearTx(
+    cur,
+    parentCompanyId: int,
+    reportingYear: int,
+    groupAtomicMetricIds: list[str],
+) -> list[dict]:
+    """
+    ESG_GROUP_ROLLUP_RESULT 에서 parent company 의 연결 결과값을 연도별로 조회한다.
+    source_scope=CONSOLIDATED 인 source(예: 전년도 연결 기준값) 의 입력으로 사용된다.
+    동일 (parent, year, group_atomic) 에 여러 batch 결과가 있으면 최신(id DESC) 1건만 사용한다.
+    """
+    cleaned = [
+        str(atomicId or "").strip()
+        for atomicId in groupAtomicMetricIds or []
+        if str(atomicId or "").strip()
+    ]
+    if not cleaned:
+        return []
+    placeholders = ", ".join(["?"] * len(cleaned))
+    statusPlaceholders = ", ".join(["?"] * len(CONSOLIDATED_RESULT_READY_STATUSES))
+    cur.execute(
+        f"""
+        SELECT g.group_atomic_metric_id, g.value_numeric, g.value_text, g.unit
+        FROM ESG_GROUP_ROLLUP_RESULT g
+        INNER JOIN (
+            SELECT group_atomic_metric_id, MAX(id) AS max_id
+            FROM ESG_GROUP_ROLLUP_RESULT
+            WHERE parent_company_id = ?
+              AND reporting_year = ?
+              AND group_atomic_metric_id IN ({placeholders})
+              AND LOWER(COALESCE(rollup_status, '')) IN ({statusPlaceholders})
+              AND delete_yn = 0
+            GROUP BY group_atomic_metric_id
+        ) latest
+          ON latest.group_atomic_metric_id = g.group_atomic_metric_id
+         AND latest.max_id = g.id
+        """,
+        (parentCompanyId, reportingYear, *cleaned, *CONSOLIDATED_RESULT_READY_STATUSES),
+    )
+    return cur.fetchall() or []
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# S5-B14 PRIOR_YEAR_BASELINE: 전년도 연결 기준값을 신규 테이블 없이 ESG_KPI_FACT 에
+# 저장/조회한다. parent company 의 consolidated baseline fact 로 처리하며, 일반 ENTITY
+# 운영 fact 와는 value_source_type / company_scope_type 로 구분한다.
+# ──────────────────────────────────────────────────────────────────────────
+PRIOR_YEAR_BASELINE_VALUE_SOURCE_TYPE = "PRIOR_YEAR_BASELINE_INPUT"
+CONSOLIDATED_BASELINE_SCOPE_TYPE = "CONSOLIDATED_BASELINE"
+CONSOLIDATED_BASELINE_SCOPE_TYPES = ("CONSOLIDATED", "CONSOLIDATED_BASELINE")
+
+
+def listConsolidatedBaselineFactsTx(
+    cur,
+    parentCompanyId: int,
+    reportingYear: int,
+    atomicMetricIds: list[str],
+) -> list[dict]:
+    """
+    ESG_KPI_FACT 에서 parent company 의 연결 baseline 입력값을 조회한다.
+    company_scope_type IN (CONSOLIDATED, CONSOLIDATED_BASELINE), approved, delete_yn=0.
+    PRIOR + CONSOLIDATED source 평가용 consolidatedFactMapsByYear seed 로 사용된다.
+    동일 (company, year, atomic) 에 여러 row 가 있으면 최신(id DESC) 1건만 사용한다.
+    반환 행은 buildConsolidatedFactMap 이 바로 사용할 수 있도록 group_atomic_metric_id 로 alias.
+    """
+    cleaned = [
+        str(atomicId or "").strip()
+        for atomicId in atomicMetricIds or []
+        if str(atomicId or "").strip()
+    ]
+    if not cleaned:
+        return []
+    placeholders = ", ".join(["?"] * len(cleaned))
+    scopeUpper = tuple(scope.upper() for scope in CONSOLIDATED_BASELINE_SCOPE_TYPES)
+    scopePlaceholders = ", ".join(["?"] * len(scopeUpper))
+    cur.execute(
+        f"""
+        SELECT f.atomic_metric_id AS group_atomic_metric_id,
+               f.value_numeric,
+               f.value_text,
+               f.unit
+        FROM ESG_KPI_FACT f
+        INNER JOIN (
+            SELECT atomic_metric_id, MAX(id) AS max_id
+            FROM ESG_KPI_FACT
+            WHERE company_id = ?
+              AND reporting_year = ?
+              AND atomic_metric_id IN ({placeholders})
+              AND UPPER(COALESCE(company_scope_type, '')) IN ({scopePlaceholders})
+              AND LOWER(COALESCE(approval_status, '')) = 'approved'
+              AND delete_yn = 0
+            GROUP BY atomic_metric_id
+        ) latest
+          ON latest.atomic_metric_id = f.atomic_metric_id
+         AND latest.max_id = f.id
+        """,
+        (parentCompanyId, reportingYear, *cleaned, *scopeUpper),
+    )
+    return cur.fetchall() or []
+
+
+def listConsolidatedBaselineDetailsTx(
+    cur,
+    parentCompanyId: int,
+    reportingYear: int,
+    atomicMetricIds: list[str],
+) -> dict[str, dict]:
+    """
+    baseline-requirements API 용. 입력 atomic 별 현재 저장된 baseline 값 상세를
+    atomicMetricId -> {valueNumeric, valueText, unit, valueSourceType} 맵으로 반환한다.
+    """
+    cleaned = [
+        str(atomicId or "").strip()
+        for atomicId in atomicMetricIds or []
+        if str(atomicId or "").strip()
+    ]
+    if not cleaned:
+        return {}
+    placeholders = ", ".join(["?"] * len(cleaned))
+    scopeUpper = tuple(scope.upper() for scope in CONSOLIDATED_BASELINE_SCOPE_TYPES)
+    scopePlaceholders = ", ".join(["?"] * len(scopeUpper))
+    cur.execute(
+        f"""
+        SELECT f.atomic_metric_id,
+               f.value_numeric,
+               f.value_text,
+               f.unit,
+               f.value_source_type
+        FROM ESG_KPI_FACT f
+        INNER JOIN (
+            SELECT atomic_metric_id, MAX(id) AS max_id
+            FROM ESG_KPI_FACT
+            WHERE company_id = ?
+              AND reporting_year = ?
+              AND atomic_metric_id IN ({placeholders})
+              AND UPPER(COALESCE(company_scope_type, '')) IN ({scopePlaceholders})
+              AND LOWER(COALESCE(approval_status, '')) = 'approved'
+              AND delete_yn = 0
+            GROUP BY atomic_metric_id
+        ) latest
+          ON latest.atomic_metric_id = f.atomic_metric_id
+         AND latest.max_id = f.id
+        """,
+        (parentCompanyId, reportingYear, *cleaned, *scopeUpper),
+    )
+    rows = cur.fetchall() or []
+    details: dict[str, dict] = {}
+    for row in rows:
+        atomicId = str(row.get("atomic_metric_id") or "").strip()
+        if not atomicId:
+            continue
+        details[atomicId] = {
+            "valueNumeric": row.get("value_numeric"),
+            "valueText": row.get("value_text"),
+            "unit": row.get("unit"),
+            "valueSourceType": row.get("value_source_type"),
+        }
+    return details
+
+
+def upsertConsolidatedBaselineFactTx(
+    cur,
+    *,
+    parentCompanyId: int,
+    reportingYear: int,
+    metricId: Optional[str],
+    atomicMetricId: str,
+    valueNumeric: Optional[float],
+    valueText: Optional[str],
+    unit: Optional[str],
+    actorUserId: Optional[int],
+) -> str:
+    """
+    prior-year 연결 baseline 을 ESG_KPI_FACT 에 upsert 한다.
+    - 기존 row 가 없으면 INSERT.
+    - 기존 row 가 PRIOR_YEAR_BASELINE_INPUT 이거나 company_scope_type 이 CONSOLIDATED% 면 UPDATE.
+    - 일반 운영 ENTITY fact 면 덮어쓰지 않고 'conflict_protected' 를 반환한다.
+    반환: 'inserted' | 'updated' | 'conflict_protected'
+    """
+    atomicId = str(atomicMetricId or "").strip()
+    if not atomicId:
+        return "conflict_protected"
+
+    cur.execute(
+        """
+        SELECT id, company_scope_type, value_source_type
+        FROM ESG_KPI_FACT
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND atomic_metric_id = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (parentCompanyId, reportingYear, atomicId),
+    )
+    existing = cur.fetchone()
+
+    if existing:
+        scope = str(existing.get("company_scope_type") or "").strip().upper()
+        srcType = str(existing.get("value_source_type") or "").strip().upper()
+        protected = (
+            srcType != PRIOR_YEAR_BASELINE_VALUE_SOURCE_TYPE
+            and not scope.startswith("CONSOLIDATED")
+        )
+        if protected:
+            return "conflict_protected"
+        cur.execute(
+            """
+            UPDATE ESG_KPI_FACT
+            SET source_input_value_id = NULL,
+                company_scope_type = ?,
+                metric_id = ?,
+                value_numeric = ?,
+                value_text = ?,
+                unit = ?,
+                value_source_type = ?,
+                approval_status = 'approved',
+                approved_by_user_id = ?,
+                approved_at = CURRENT_TIMESTAMP,
+                delete_yn = 0,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (
+                CONSOLIDATED_BASELINE_SCOPE_TYPE,
+                metricId,
+                valueNumeric,
+                valueText,
+                unit,
+                PRIOR_YEAR_BASELINE_VALUE_SOURCE_TYPE,
+                actorUserId,
+                int(existing["id"]),
+            ),
+        )
+        return "updated"
+
+    cur.execute(
+        """
+        INSERT INTO ESG_KPI_FACT (
+            source_input_value_id,
+            company_id,
+            reporting_year,
+            company_scope_type,
+            metric_id,
+            atomic_metric_id,
+            value_numeric,
+            value_text,
+            unit,
+            value_source_type,
+            approval_status,
+            approved_by_user_id,
+            approved_at,
+            delete_yn
+        ) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, CURRENT_TIMESTAMP, 0)
+        """,
+        (
+            parentCompanyId,
+            reportingYear,
+            CONSOLIDATED_BASELINE_SCOPE_TYPE,
+            metricId,
+            atomicId,
+            valueNumeric,
+            valueText,
+            unit,
+            PRIOR_YEAR_BASELINE_VALUE_SOURCE_TYPE,
+            actorUserId,
+        ),
+    )
+    return "inserted"

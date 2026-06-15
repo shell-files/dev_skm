@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import "@styles/media.css";
 import robot from "@assets/images/robot/robot_media_t.png";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
-import { GET, POST } from "@utils/Network";
+import {
+  fetchCurrentWorkflow,
+  runMediaCrawlAndAnalyze,
+  fetchMediaResult,
+  fetchDmaWorkflowStatus,
+  selectCanRunDmaStage,
+  selectDmaGateReason,
+} from "@stores/reportSlice";
 
 // 정적 데이터 정의 (컴포넌트 외부에 두어 불필요한 재렌더링 방지)
 const STEPS = [
@@ -49,6 +56,22 @@ const mapMediaResultToDashboard = (crawlDto, mediaDto) => {
       financial: item.mediaFinancialScore05 != null ? String(item.mediaFinancialScore05) : "",
       source: (item.sourceTypes || []).join(", "),
     })),
+  };
+};
+
+// S5-B16: MEDIA workflow-status 의 progressPercent/overallStatus 를 좌측 단계 배지로 변환한다.
+// 단계 진행(백엔드): PREPARE 10 → NEWS_CRAWL 30 → NEWS_ANALYSIS 55 → REGULATION_REFRESH 70
+//                  → KCGS_REFRESH 80 → EXTERNAL_MAX_SUMMARY 95 → COMPLETED 100
+const mapMediaStageToStatus = (progressPercent, overallStatus) => {
+  const status = String(overallStatus || "").toUpperCase();
+  const pct = Number(progressPercent || 0);
+  if (status === "COMPLETED") {
+    return { press: "complete", reg: "complete", expert: "complete" };
+  }
+  return {
+    press: pct >= 70 ? "complete" : pct >= 30 ? "ing" : "ready",
+    reg: pct >= 80 ? "complete" : pct >= 70 ? "ing" : "ready",
+    expert: pct >= 95 ? "ing" : "ready",
   };
 };
 
@@ -137,10 +160,15 @@ const TabIcons = {
 
 const Media = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const particleRef = useRef(null);
   const timerRef = useRef(null);
-  const progressTimerRef = useRef(null);
+  const mediaPollTimerRef = useRef(null);
+  const mediaWorkflowErrorRef = useRef(null);
   const currentRunId = useSelector((state) => state.report.currentRunId);
+  const workflow = useSelector((state) => state.report.workflow.current);
+  const canRunDma = useSelector(selectCanRunDmaStage);
+  const gateReason = useSelector(selectDmaGateReason);
 
   const activeIndex = 1;
 
@@ -237,12 +265,57 @@ const Media = () => {
     pressEndDate: "",
   });
 
+  const stopMediaPolling = () => {
+    if (mediaPollTimerRef.current !== null) {
+      clearInterval(mediaPollTimerRef.current);
+      mediaPollTimerRef.current = null;
+    }
+  };
+
+  const fetchMediaWorkflowStatus = async (runId) => {
+    try {
+      return await dispatch(
+        fetchDmaWorkflowStatus({ runId, workflowType: "MEDIA" })
+      ).unwrap();
+    } catch {
+      return null;
+    }
+  };
+
+  const startMediaPolling = (runId) => {
+    stopMediaPolling();
+    mediaPollTimerRef.current = setInterval(async () => {
+      const dto = await fetchMediaWorkflowStatus(runId);
+      if (!dto) {
+        mediaWorkflowErrorRef.current = "미디어 분석 상태 조회에 실패했습니다.";
+        stopMediaPolling();
+        return;
+      }
+
+      setProgress((prev) => Math.max(prev, Number(dto.progressPercent || 0)));
+      setStatus(mapMediaStageToStatus(dto.progressPercent, dto.overallStatus));
+
+      if (dto.overallStatus === "COMPLETED" || dto.overallStatus === "FAILED") {
+        stopMediaPolling();
+        if (dto.overallStatus === "FAILED") {
+          mediaWorkflowErrorRef.current =
+            dto.errorMessage || "미디어 분석에 실패했습니다.";
+        }
+      }
+    }, 1000);
+  };
+
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
-      if (progressTimerRef.current) clearInterval(progressTimerRef.current);
+      stopMediaPolling();
     };
   }, []);
+
+  // 진입 시 reportWorkflow.current 를 확보한다. (G0/롤업 완료 게이트 판정용)
+  useEffect(() => {
+    if (!workflow) dispatch(fetchCurrentWorkflow());
+  }, [dispatch, workflow]);
 
   const createParticles = () => {
     if (!particleRef.current) return;
@@ -283,6 +356,11 @@ const Media = () => {
       showDefaultAlert("프로젝트 선택 필요", "현재 보고서 프로젝트를 먼저 선택해주세요.", "warning");
       return;
     }
+    // G0/롤업 완료 게이트: DMA 단계 진입 전에는 미디어 분석 실행 금지
+    if (!canRunDma) {
+      showDefaultAlert("실행 불가", gateReason, "warning");
+      return;
+    }
     if (selectedPress.length === 0) {
       showDefaultAlert("입력 오류", "수집 언론사를 선택해주세요.", "warning");
       return;
@@ -308,49 +386,60 @@ const Media = () => {
       return;
     }
 
+    stopMediaPolling();
+    mediaWorkflowErrorRef.current = null;
+
     setIsAnalyzing(true);
     setDashboardOpen(true);
     setShowResult(false);
     createParticles();
     setProgress(0);
-    setStatus({ press: "ing", reg: "ing", expert: "ready" });
+    setStatus({ press: "ing", reg: "ready", expert: "ready" });
     setLoadingTitle("실시간 크롤링 엔진 가동 중...");
     setLoadingDesc("네이버 뉴스 API 및 공공 데이터 포털 커넥터를 통해 웹 파싱을 실행하고 있습니다.");
     showDefaultAlert("분석 시작", "실시간 미디어 및 외부 데이터 수집을 시작합니다.", "success");
 
-    // 크롤링 대기 중 점진적 progress (최대 75%까지만)
-    progressTimerRef.current = setInterval(() => {
-      setProgress((prev) => (prev < 75 ? prev + 1 : prev));
-    }, 400);
-
     try {
-      const crawlRes = await POST("/media/news/crawl-and-analyze", {
-        runId,
-        sources: selectedPress,
-        dateFrom: formData.pressStartDate,
-        dateTo: formData.pressEndDate,
-      });
+      // 미디어 분석 실행 + MEDIA workflow-status polling 을 동시에 가동한다.
+      const crawlPromise = dispatch(
+        runMediaCrawlAndAnalyze({
+          runId,
+          sources: selectedPress,
+          dateFrom: formData.pressStartDate,
+          dateTo: formData.pressEndDate,
+        })
+      ).unwrap();
 
-      clearInterval(progressTimerRef.current);
-      progressTimerRef.current = null;
+      startMediaPolling(runId);
 
-      if (!crawlRes || crawlRes.status === false) {
-        throw new Error(crawlRes?.message || crawlRes?.detail || "미디어 분석에 실패했습니다.");
+      let crawlRes;
+      try {
+        crawlRes = await crawlPromise;
+      } catch (crawlErr) {
+        throw new Error(
+          mediaWorkflowErrorRef.current ||
+            crawlErr?.message ||
+            "미디어 분석에 실패했습니다."
+        );
       }
 
-      setProgress(85);
-      setStatus({ press: "complete", reg: "ing", expert: "ing" });
-      setLoadingTitle("규제·기관 데이터 통합 중...");
-      setLoadingDesc("규제 프레임 및 전문기관 평가 데이터를 통합하여 최종 점수를 산정하고 있습니다.");
-
-      const mediaRes = await GET(`/materiality/media/${runId}`);
-
-      if (!mediaRes || mediaRes.status === false) {
-        throw new Error("미디어 분석 결과 조회에 실패했습니다.");
+      if (mediaWorkflowErrorRef.current) {
+        throw new Error(mediaWorkflowErrorRef.current);
       }
 
+      // 최종 진행 상태 확인 (polling 이 COMPLETED 를 놓쳤을 수 있으므로 한 번 더 조회)
+      const finalWorkflow = await fetchMediaWorkflowStatus(runId);
+      if (finalWorkflow && finalWorkflow.overallStatus === "FAILED") {
+        throw new Error(finalWorkflow.errorMessage || "미디어 분석에 실패했습니다.");
+      }
+
+      stopMediaPolling();
       setProgress(100);
       setStatus({ press: "complete", reg: "complete", expert: "complete" });
+      setLoadingTitle("규제·기관 데이터 통합 완료");
+      setLoadingDesc("규제 프레임 및 전문기관 평가 데이터를 통합하여 최종 점수를 산정했습니다.");
+
+      const mediaRes = await dispatch(fetchMediaResult({ runId })).unwrap();
 
       const crawlDto = crawlRes.data ?? crawlRes;
       const mediaDto = mediaRes.data ?? mediaRes;
@@ -358,8 +447,7 @@ const Media = () => {
       setIsAnalyzing(false);
       setShowResult(true);
     } catch (err) {
-      clearInterval(progressTimerRef.current);
-      progressTimerRef.current = null;
+      stopMediaPolling();
       console.error(err);
       setStatus({ press: "ready", reg: "ready", expert: "ready" });
       showDefaultAlert("분석 오류", err.message || "미디어 분석 중 오류가 발생했습니다.", "error");
@@ -657,10 +745,21 @@ const Media = () => {
                       ))}
                     </div>
                     {/* CTA 버튼 (체크리스트 바로 우측) */}
-                    <div className="media-cta-wrapper" style={{ margin: 0, display: "flex", alignItems: "stretch" }}>
-                      <button className="Bench-btn" onClick={startMediaCollection} style={{ margin: 0, height: "100%", padding: "0 24px", whiteSpace: "nowrap" }}>
+                    <div className="media-cta-wrapper" style={{ margin: 0, display: "flex", flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: "6px" }}>
+                      <button
+                        className="Bench-btn"
+                        onClick={startMediaCollection}
+                        disabled={!canRunDma || isAnalyzing}
+                        title={!canRunDma ? gateReason : ""}
+                        style={{ margin: 0, height: "100%", padding: "0 24px", whiteSpace: "nowrap" }}
+                      >
                         실시간 AI 분석 시작
                       </button>
+                      {!canRunDma && (
+                        <span style={{ fontSize: "0.72rem", color: "#b45309", fontWeight: 600, maxWidth: "180px", lineHeight: 1.3 }}>
+                          {gateReason}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>

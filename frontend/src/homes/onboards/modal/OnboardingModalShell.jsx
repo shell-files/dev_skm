@@ -529,7 +529,7 @@ export default function OnboardingModalShell({
       <div className="ob-side-card">
         <h4>증빙 자료 (Evidence)</h4>
         <div className="ob-file-upload-btn" onClick={() => {}} style={{ opacity: 0.5, cursor: "not-allowed" }} title="증빙 API 연결 후 활성화">
-          + 파일 업로드 또는 링크 추가 (준비중)
+          + 파일 업로드 또는 링크 추가 
         </div>
 
         {uploadedFiles.length > 0 && (

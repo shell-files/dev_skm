@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, Fragment } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useLocation } from "react-router";
 import Observing from "@assets/icons/result_page/observe.png";
 import Chain from "@assets/icons/result_page/valuechain.png";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
@@ -536,7 +536,15 @@ const Result = () => {
   const [loading, setLoading] = useState(false);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const activeIndex = 3;
+
+  // S5-B14: RollupSummaryPanel "보고서 생성하기" 진입 시 "점수 해석"(index 2) 탭으로 시작
+  const rawInitialLeftTab = Number(location.state?.initialLeftTab ?? 0);
+  const safeInitialLeftTab =
+    Number.isInteger(rawInitialLeftTab) && rawInitialLeftTab >= 0 && rawInitialLeftTab <= 2
+      ? rawInitialLeftTab
+      : 0;
 
   // ── API 데이터 ──────────────────────────────────────────────────
   const runId = useSelector((state) => state.report.currentRunId);
@@ -712,7 +720,7 @@ const Result = () => {
   ];
 
 
-  const [leftTab, setLeftTab] = useState(0);
+  const [leftTab, setLeftTab] = useState(safeInitialLeftTab);
   const [rightTab, setRightTab] = useState(0);
   const [openSections, setOpenSections] = useState({ 1: true, 2: true });
 

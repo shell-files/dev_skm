@@ -5,6 +5,13 @@ import json
 
 from src.models.rollup import (
     RollupActiveBatchResponseDto,
+    RollupBaselineRequirementItemDto,
+    RollupBaselineRequirementListDto,
+    RollupBaselineRequirementResponseDto,
+    RollupBaselineSaveResponseDto,
+    RollupBaselineSaveResultDto,
+    RollupBaselineSaveResultItemDto,
+    RollupBaselineValuesRequestDto,
     RollupBatchRequestDto,
     RollupBatchResponseDto,
     RollupBatchSourceItemDto,
@@ -32,7 +39,7 @@ from src.models.rollup import (
     RollupSubsidiaryResponseDto,
 )
 from src.utils.companyscope import checkScope, resolveScope
-from src.utils.calculationengine import normalizeSource
+from src.utils.calculationengine import normalizeSource, STATUS_CALCULATED
 
 class RollupError(Exception):
     def __init__(self, statusCode: int, code: str, message: str, data: Optional[dict] = None):
@@ -260,16 +267,19 @@ def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseD
                 directMetricIds=metricIds,
             )
 
-            # Determine readiness from Tx
-            requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
-            requiredAtomicCount = len(requiredAtomicIds)
+            # Determine readiness from Tx.
+            # resolveExternalEntitySourceAtomicIdsTx 는 source_scope=CONSOLIDATED source
+            # (예: 연결 기준값 E1-06__G0003)를 제외한 ENTITY 입력 대상만 반환한다.
+            # 따라서 회사별 missing(missing_atomic_metric_ids_json) 기록도 ENTITY source로 한정된다.
+            requiredEntityAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
+            requiredAtomicCount = len(requiredEntityAtomicIds)
 
             sourceStatuses = []
             for sourceCompanyId in includedCompanyIds:
                 # Pre-calculate missing count for status insertion
-                facts = rollupRepository.listApprovedFactsByCompany([sourceCompanyId], reportingYear, requiredAtomicIds)
+                facts = rollupRepository.listApprovedFactsByCompany([sourceCompanyId], reportingYear, requiredEntityAtomicIds)
                 approvedKeys = {f["atomicMetricId"] for f in facts}
-                missingAtomicIds = [a for a in requiredAtomicIds if a not in approvedKeys]
+                missingAtomicIds = [a for a in requiredEntityAtomicIds if a not in approvedKeys]
 
                 approvedCount = requiredAtomicCount - len(missingAtomicIds)
                 readyYn = approvedCount == requiredAtomicCount
@@ -353,15 +363,45 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
             rules, ruleSources = rollupRepository.resolveConsolidatedRulesFromBatchScopeTx(cur, batchId)
             requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
 
+            # source_scope=CONSOLIDATED source(예: 전년도 연결 기준값 E1-06__G0003)는 회사별
+            # ENTITY KPI_FACT가 아니라 ESG_GROUP_ROLLUP_RESULT의 연결 결과로 평가한다.
+            # 따라서 회사별 ENTITY fact 조회 대상(requiredEntityAtomicIds)에서는 제외한다.
+            consolidatedSourceAtomicIds = rollupRepository.resolveConsolidatedSourceAtomicIdsFromRuleSources(ruleSources)
+            consolidatedSourceAtomicIdSet = set(consolidatedSourceAtomicIds)
+            requiredEntityAtomicIds = [
+                atomicId for atomicId in requiredAtomicIds if atomicId not in consolidatedSourceAtomicIdSet
+            ]
+
             historicalDepth = rollupCalculator.resolveHistoricalLookbackDepth(rules, ruleSources)
             entityFactMapsByYear = {}
+            consolidatedFactMapsByYear = {}
             for factYear in range(reportingYear, reportingYear - historicalDepth - 1, -1):
-                facts = rollupRepository.listApprovedFactsByCompany(includedCompanyIds, factYear, requiredAtomicIds)
+                facts = rollupRepository.listApprovedFactsByCompany(includedCompanyIds, factYear, requiredEntityAtomicIds)
                 entityFactMapsByYear[factYear] = rollupCalculator.buildMultiCompanyFactMap(
                     includedCompanyIds,
-                    requiredAtomicIds,
+                    requiredEntityAtomicIds,
                     facts,
                 )
+                if consolidatedSourceAtomicIds:
+                    # S5-B14: 전년도 연결 baseline 조회 우선순위
+                    #   1) ESG_KPI_FACT 의 수동입력 baseline (CONSOLIDATED/CONSOLIDATED_BASELINE)
+                    #   2) ESG_GROUP_ROLLUP_RESULT 의 과거 연결 결과 (fallback)
+                    # KPI_FACT 수동입력값이 있으면 그 값이 rollup result 를 덮어쓴다.
+                    consolidatedRows = rollupRepository.listConsolidatedRollupResultsByYearTx(
+                        cur,
+                        parentCompanyId,
+                        factYear,
+                        consolidatedSourceAtomicIds,
+                    )
+                    factMap = rollupCalculator.buildConsolidatedFactMap(consolidatedRows)
+                    baselineRows = rollupRepository.listConsolidatedBaselineFactsTx(
+                        cur,
+                        parentCompanyId,
+                        factYear,
+                        consolidatedSourceAtomicIds,
+                    )
+                    factMap.update(rollupCalculator.buildConsolidatedFactMap(baselineRows))
+                    consolidatedFactMapsByYear[factYear] = factMap
 
             cur.execute("SELECT id FROM ESG_MATERIALITY_RUN WHERE required_rollup_batch_id = ?", (batchId,))
             r = cur.fetchone()
@@ -373,6 +413,7 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
                 rules=rules,
                 sources=ruleSources,
                 entityFactMapsByYear=entityFactMapsByYear,
+                consolidatedFactMapsByYear=consolidatedFactMapsByYear,
                 reportingYear=reportingYear,
                 companyIds=includedCompanyIds,
             )
@@ -380,16 +421,24 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
             if not allSuccess:
                 raise RollupError(422, "ROLLUP_CALCULATION_NOT_READY", "Calculation failed due to unready sources or calculation errors.", {"warnings": warnings})
 
+            # BASELINE_REQUIRED / NOT_APPLICABLE 등 non-blocking 결과는 ESG_GROUP_ROLLUP_RESULT에
+            # approved로 저장하지 않고 response warning으로만 반환한다.
+            # (예: 전년도 연결 baseline이 없는 ROLLUP_YOY_DIFF)
+            calculatedResults = [
+                res for res in results
+                if str(res.get("calculationStatus") or "") == STATUS_CALCULATED
+            ]
+
             if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
-                for res in results:
+                for res in calculatedResults:
                     res["groupMetricId"] = res.get("groupMetricId") or "G0-02"
             else:
-                for res in results:
+                for res in calculatedResults:
                     if not res.get("groupMetricId"):
                         raise RollupError(500, "ROLLUP_RESULT_ERROR", "Group Metric ID is required for generic rollup.")
 
             actorUserId = getActorUserId(userModel)
-            rollupRepository.upsertGroupRollupResultsTx(cur, batch, results, includedCompanyIds, actorUserId)
+            rollupRepository.upsertGroupRollupResultsTx(cur, batch, calculatedResults, includedCompanyIds, actorUserId)
 
             rollupRepository.updateSourceStatusTx(cur, batchId, len(requiredAtomicIds))
 
@@ -427,9 +476,11 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
                     unit=result.get("unit"),
                     sourceCompanyValues=result.get("sourceCompanyValues"),
                     calculationWarnings=result.get("calculationWarnings"),
+                    calculationStatus=result.get("calculationStatus"),
                 )
                 for result in results
             ],
+            warnings=warnings,
         )
     )
 
@@ -1094,6 +1145,198 @@ def ensureRollupResponseWorkspace(batchId: int, userModel) -> RollupRequestDetai
 
     return getRequestDetail(batchId, userModel)
 
+def resolveBaselineRequirementTuples(rollupCalculator, rules: list[dict], ruleSources: list[dict]) -> list[tuple]:
+    """
+    YoY rule(ROLLUP_YOY_DIFF / ROLLUP_YOY_RATE) 의 source_scope=CONSOLIDATED source 를
+    전년도 baseline 요구 항목으로 추출한다.
+    반환: [(ruleCode, rule, sourceAtomicMetricId), ...] (중복 제거)
+    """
+    rulesByCode = {}
+    for rule in rules or []:
+        code = str(rule.get("calculation_rule_code") or "").strip()
+        if code:
+            rulesByCode[code] = rule
+
+    sourcesByRule: dict[str, list[dict]] = {}
+    for src in ruleSources or []:
+        normalized = normalizeSource(src)
+        code = normalized.get("ruleCode")
+        if code:
+            sourcesByRule.setdefault(code, []).append(normalized)
+
+    requirementTuples = []
+    seen = set()
+    for code, rule in rulesByCode.items():
+        if not rollupCalculator.isYoyFormula(rule):
+            continue
+        for normalized in sourcesByRule.get(code, []):
+            if normalized.get("sourceScope") != "CONSOLIDATED":
+                continue
+            sourceAtomicId = normalized.get("sourceAtomicMetricId")
+            if not sourceAtomicId:
+                continue
+            key = (code, sourceAtomicId)
+            if key in seen:
+                continue
+            seen.add(key)
+            requirementTuples.append((code, rule, sourceAtomicId))
+    return requirementTuples
+
+def getBaselineRequirements(batchId: int, userModel) -> RollupBaselineRequirementResponseDto:
+    rollupRepository = loadRepository()
+    rollupCalculator = loadCalculator()
+
+    batch = rollupRepository.getBatch(batchId)
+    if not batch:
+        raise RollupError(404, "ROLLUP_BATCH_NOT_FOUND", "Rollup batch was not found.")
+    parentCompanyId = int(batch["parent_company_id"])
+    reportingYear = int(batch["reporting_year"])
+    checkScope(parentCompanyId, userModel)
+    requiredYear = reportingYear - 1
+
+    items = []
+    conn = rollupRepository.getConn()
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            try:
+                rules, ruleSources = rollupRepository.resolveConsolidatedRulesFromBatchScopeTx(cur, batchId)
+            except ValueError:
+                rules, ruleSources = [], []
+
+            requirementTuples = resolveBaselineRequirementTuples(rollupCalculator, rules, ruleSources)
+            baselineAtomicIds = sorted({sourceAtomicId for _, _, sourceAtomicId in requirementTuples})
+
+            metaByAtomic = {}
+            details = {}
+            if baselineAtomicIds:
+                metaList = rollupRepository.listAtomicMetadata(baselineAtomicIds)
+                metaByAtomic = {str(m.get("atomicMetricId")): m for m in metaList}
+                details = rollupRepository.listConsolidatedBaselineDetailsTx(
+                    cur, parentCompanyId, requiredYear, baselineAtomicIds
+                )
+
+            for code, rule, sourceAtomicId in requirementTuples:
+                meta = metaByAtomic.get(sourceAtomicId, {})
+                detail = details.get(sourceAtomicId)
+                unit = (detail or {}).get("unit") or rule.get("output_unit") or rule.get("unit")
+                items.append(RollupBaselineRequirementItemDto(
+                    ruleCode=code,
+                    metricId=rule.get("metric_id"),
+                    targetAtomicMetricId=rule.get("target_atomic_metric_id"),
+                    sourceMetricId=meta.get("metricId"),
+                    sourceAtomicMetricId=sourceAtomicId,
+                    sourceAtomicName=meta.get("atomicName"),
+                    requiredReportingYear=requiredYear,
+                    unit=unit,
+                    status="READY" if detail else "MISSING",
+                    valueNumeric=(detail or {}).get("valueNumeric"),
+                    valueText=(detail or {}).get("valueText"),
+                    valueSourceType=(detail or {}).get("valueSourceType"),
+                ))
+    finally:
+        conn.close()
+
+    return RollupBaselineRequirementResponseDto(
+        data=RollupBaselineRequirementListDto(
+            batchId=batchId,
+            parentCompanyId=parentCompanyId,
+            reportingYear=reportingYear,
+            items=items,
+        )
+    )
+
+def saveBaselineValues(batchId: int, request: RollupBaselineValuesRequestDto, userModel) -> RollupBaselineSaveResponseDto:
+    rollupRepository = loadRepository()
+    rollupCalculator = loadCalculator()
+
+    batch = rollupRepository.getBatch(batchId)
+    if not batch:
+        raise RollupError(404, "ROLLUP_BATCH_NOT_FOUND", "Rollup batch was not found.")
+    parentCompanyId = int(batch["parent_company_id"])
+    reportingYear = int(batch["reporting_year"])
+    checkScope(parentCompanyId, userModel)
+    actorUserId = getActorUserId(userModel)
+    requiredYear = reportingYear - 1
+
+    values = request.values or []
+    if not values:
+        raise RollupError(422, "ROLLUP_BASELINE_VALUE_REQUIRED", "At least one baseline value is required.")
+
+    saveItems = []
+    savedCount = 0
+    conn = rollupRepository.getConn()
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            try:
+                rules, ruleSources = rollupRepository.resolveConsolidatedRulesFromBatchScopeTx(cur, batchId)
+            except ValueError:
+                rules, ruleSources = [], []
+
+            requirementTuples = resolveBaselineRequirementTuples(rollupCalculator, rules, ruleSources)
+            allowedAtomicIds = {sourceAtomicId for _, _, sourceAtomicId in requirementTuples}
+
+            for value in values:
+                atomicMetricId = str(value.atomicMetricId or "").strip()
+                inputYear = int(value.reportingYear)
+
+                # 저장 기준연도는 반드시 batch.reporting_year - 1 이어야 한다.
+                if inputYear != requiredYear:
+                    raise RollupError(
+                        422,
+                        "ROLLUP_BASELINE_YEAR_INVALID",
+                        f"Baseline reportingYear must be {requiredYear}.",
+                        {"atomicMetricId": atomicMetricId, "reportingYear": inputYear, "requiredReportingYear": requiredYear},
+                    )
+                # 실제 YoY prior consolidated source 인지 검증.
+                if atomicMetricId not in allowedAtomicIds:
+                    raise RollupError(
+                        422,
+                        "ROLLUP_BASELINE_ATOMIC_INVALID",
+                        "Atomic is not a prior-year consolidated baseline source for this batch.",
+                        {"atomicMetricId": atomicMetricId},
+                    )
+
+                result = rollupRepository.upsertConsolidatedBaselineFactTx(
+                    cur,
+                    parentCompanyId=parentCompanyId,
+                    reportingYear=inputYear,
+                    metricId=value.metricId,
+                    atomicMetricId=atomicMetricId,
+                    valueNumeric=value.valueNumeric,
+                    valueText=value.valueText,
+                    unit=value.unit,
+                    actorUserId=actorUserId,
+                )
+                saved = result in ("inserted", "updated")
+                if saved:
+                    savedCount += 1
+                saveItems.append(RollupBaselineSaveResultItemDto(
+                    atomicMetricId=atomicMetricId,
+                    reportingYear=inputYear,
+                    result=result,
+                    saved=saved,
+                ))
+
+            conn.commit()
+    except RollupError:
+        conn.rollback()
+        raise
+    except Exception as e:
+        conn.rollback()
+        raise RollupError(500, "ROLLUP_BASELINE_SAVE_FAILED", f"Failed to save prior-year baseline values: {e}")
+    finally:
+        conn.close()
+
+    return RollupBaselineSaveResponseDto(
+        data=RollupBaselineSaveResultDto(
+            batchId=batchId,
+            parentCompanyId=parentCompanyId,
+            reportingYear=reportingYear,
+            savedCount=savedCount,
+            items=saveItems,
+        )
+    )
+
 def loadCalculator():
     from src.utils import rollupcalculator
     return rollupcalculator
@@ -1111,5 +1354,7 @@ __all__ = [
     "sendSource",
     "getStatus",
     "getActiveBatchStatus",
+    "getBaselineRequirements",
+    "saveBaselineValues",
     "RollupError",
 ]

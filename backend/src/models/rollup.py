@@ -74,10 +74,12 @@ class RollupResultDto(RollupBaseModel):
     unit: Optional[str] = None
     sourceCompanyValues: Optional[dict] = None
     calculationWarnings: Optional[list[str]] = None
+    calculationStatus: Optional[str] = None
 
 
 class RollupCalculateStatusDto(RollupBatchStatusDto):
     results: list[RollupResultDto]
+    warnings: list[dict] = Field(default_factory=list)
 
 
 class RollupCalculateResponseDto(RollupBaseModel):
@@ -269,3 +271,65 @@ class RollupBatchSummaryDto(RollupBaseModel):
 class RollupBatchSummaryResponseDto(RollupBaseModel):
     success: bool = True
     data: RollupBatchSummaryDto
+
+
+# ── S5-B14 Prior-year baseline (전년도 연결 기준값 수동입력) ──────────────────
+class RollupBaselineRequirementItemDto(RollupBaseModel):
+    ruleCode: str
+    metricId: Optional[str] = None
+    targetAtomicMetricId: Optional[str] = None
+    sourceMetricId: Optional[str] = None
+    sourceAtomicMetricId: str
+    sourceAtomicName: Optional[str] = None
+    requiredReportingYear: int
+    unit: Optional[str] = None
+    status: str = "MISSING"
+    valueNumeric: Optional[float | int] = None
+    valueText: Optional[str] = None
+    valueSourceType: Optional[str] = None
+
+
+class RollupBaselineRequirementListDto(RollupBaseModel):
+    batchId: int
+    parentCompanyId: int
+    reportingYear: int
+    items: list[RollupBaselineRequirementItemDto] = Field(default_factory=list)
+
+
+class RollupBaselineRequirementResponseDto(RollupBaseModel):
+    success: bool = True
+    data: RollupBaselineRequirementListDto
+
+
+class RollupBaselineValueInputDto(RollupBaseModel):
+    metricId: Optional[str] = None
+    atomicMetricId: str
+    reportingYear: int
+    valueNumeric: Optional[float | int] = None
+    valueText: Optional[str] = None
+    unit: Optional[str] = None
+    sourceNote: Optional[str] = None
+
+
+class RollupBaselineValuesRequestDto(RollupBaseModel):
+    values: list[RollupBaselineValueInputDto] = Field(..., min_length=1)
+
+
+class RollupBaselineSaveResultItemDto(RollupBaseModel):
+    atomicMetricId: str
+    reportingYear: int
+    result: str
+    saved: bool
+
+
+class RollupBaselineSaveResultDto(RollupBaseModel):
+    batchId: int
+    parentCompanyId: int
+    reportingYear: int
+    savedCount: int = 0
+    items: list[RollupBaselineSaveResultItemDto] = Field(default_factory=list)
+
+
+class RollupBaselineSaveResponseDto(RollupBaseModel):
+    success: bool = True
+    data: RollupBaselineSaveResultDto

@@ -1368,11 +1368,12 @@ def ensureRollupResponseWorkspaceTx(
         WHERE company_id = ?
           AND reporting_year = ?
           AND cycle_type = ?
+          AND parent_rollup_batch_id = ?
           AND delete_yn = 0
         ORDER BY id DESC
         LIMIT 1
         """,
-        (companyId, reportingYear, CYCLE_TYPE_ROLLUP_RESPONSE),
+        (companyId, reportingYear, CYCLE_TYPE_ROLLUP_RESPONSE, batchId),
     )
     cycle = cur.fetchone()
     if not cycle:
@@ -1403,25 +1404,11 @@ def ensureRollupResponseWorkspaceTx(
         )
         cycleId = cur.lastrowid
     else:
+        # ROLLUP_RESPONSE cycle은 batch별 workspace이다.
+        # 조회를 parent_rollup_batch_id로 한정했으므로 이 cycle은 이미 해당 batch 전용이다.
+        # 따라서 다른 batch로의 재바인딩은 하지 않으며(batch19/batch20 분리 유지),
+        # 재진입 시 scope만 비활성화한 뒤 아래에서 batch source 기준으로 재시드한다.
         cycleId = cycle["id"]
-        existingBatchId = cycle.get("parent_rollup_batch_id")
-        if existingBatchId is not None and int(existingBatchId) != int(batchId):
-            err = ValueError(
-                "ROLLUP_RESPONSE_WORKSPACE_BATCH_CONFLICT: "
-                f"cycleId={cycleId}, "
-                f"existingBatchId={existingBatchId}, "
-                f"requestedBatchId={batchId}"
-            )
-            err.statusCode = 409
-            raise err
-        cur.execute(
-            """
-            UPDATE ESG_ONBOARDING_CYCLE
-            SET parent_rollup_batch_id = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE id = ?
-            """,
-            (batchId, cycleId)
-        )
         cur.execute(
             """
             UPDATE ESG_ONBOARDING_CYCLE_METRIC_SCOPE

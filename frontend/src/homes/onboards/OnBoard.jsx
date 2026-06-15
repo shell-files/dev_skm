@@ -828,9 +828,13 @@ const OnBoard = () => {
         let responseYear = detail?.reportingYear || reportingYear;
 
         if (!readOnlyYn) {
-          const ensuredRes = await dispatch(ensureRollupResponseWorkspace({ batchId })).unwrap();
-          const ensured = ensuredRes?.data || ensuredRes;
-          responseYear = ensured?.reportingYear || responseYear;
+          try {
+            const ensuredRes = await dispatch(ensureRollupResponseWorkspace({ batchId })).unwrap();
+            const ensured = ensuredRes?.data || ensuredRes;
+            responseYear = ensured?.reportingYear || responseYear;
+          } catch (ensureError) {
+            console.warn("[ROLLUP_ENSURE] workspace ensure failed, treating as read-only:", ensureError?.message ?? ensureError);
+          }
         }
 
         const metricId = searchParams.get("metricId");
@@ -866,11 +870,14 @@ const OnBoard = () => {
       let initializedScope = null;
 
       if (nextCycleType === "POST_DMA_DISCLOSURE") {
-        const initializedRes = await dispatch(
-          initializePostDmaDisclosureScope({ runId })
-        ).unwrap();
-
-        initializedScope = initializedRes?.data || initializedRes;
+        try {
+          const initializedRes = await dispatch(
+            initializePostDmaDisclosureScope({ runId })
+          ).unwrap();
+          initializedScope = initializedRes?.data || initializedRes;
+        } catch (scopeError) {
+          console.warn("[POST_DMA_SCOPE] initializePostDmaDisclosureScope failed, continuing:", scopeError?.message ?? scopeError);
+        }
       }
 
       const metricId = searchParams.get("metricId");
@@ -881,16 +888,22 @@ const OnBoard = () => {
 
       if (nextCycleType === "POST_DMA_DISCLOSURE") {
         const resolvedPostDmaCycleId = Number(
-          nextWorkflow?.postDmaCycleId ||
+          metricsPayload?.cycleId ||
           initializedScope?.cycleId ||
           initializedScope?.data?.cycleId ||
-          metricsPayload?.cycleId ||
+          nextWorkflow?.postDmaCycleId ||
           0
         );
         sourceCycleId =
           Number.isFinite(resolvedPostDmaCycleId) && resolvedPostDmaCycleId > 0
             ? resolvedPostDmaCycleId
             : null;
+        console.log("[POST_DMA_SOURCE_CYCLE]", {
+          workflowPostDmaCycleId: nextWorkflow?.postDmaCycleId,
+          initializedCycleId: initializedScope?.cycleId || initializedScope?.data?.cycleId,
+          onboardingCycleId: metricsPayload?.cycleId,
+          resolvedSourceCycleId: sourceCycleId,
+        });
       }
 
       setActiveSourceCycleId(sourceCycleId ?? null);
@@ -961,20 +974,6 @@ const OnBoard = () => {
   }, [initializeOnboarding]);
 
   const profileStats = calculateProfileStats(filteredG0ItemsForUser);
-  const basisLabel =
-    displayWorkflow?.reportBasisType === "CONSOLIDATED"
-      ? "연결기준"
-      : displayWorkflow?.reportBasisType === "ENTITY"
-        ? "별도기준"
-        : "미확정";
-
-  const cycleModeLabel =
-    activeCycleType === "POST_DMA_DISCLOSURE"
-      ? "선정 이슈 지표 입력"
-      : activeCycleType === "ROLLUP_RESPONSE"
-        ? "자회사 데이터 입력"
-        : "경영일반 입력";
-
   const handleCtaClick = () => {
     if (!displayWorkflow || isNoRunWorkflow(displayWorkflow)) {
       setIsBasisModalOpen(true);
@@ -1311,7 +1310,7 @@ const OnBoard = () => {
         <div className="ob1-header-left" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <PageHeader
             category="온보딩 단계"
-            title={`온보딩 [${viewMode === "ROLLUP_RESPONSE" ? "요청 대응" : basisLabel}] · ${cycleModeLabel}`}
+            title="온보딩"
             iconClass={viewMode === "ROLLUP_RESPONSE" ? "bi-chat-left-text-fill" : "bi-diagram-3-fill"}
           />
 
@@ -1340,9 +1339,6 @@ const OnBoard = () => {
                     </svg>
                     <span style={{ color: '#15803d', fontWeight: '600', fontSize: '13px' }}>진행률 {percent}% · {statusInfo.label}</span>
                   </div>
-                  {viewMode === "ROLLUP_RESPONSE" && isRollupResponseReadOnly && (
-                    <div style={{ fontSize: '11px', color: '#94a3b8', padding: '2px 8px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px' }}>Read-only</div>
-                  )}
                   <button
                     type="button"
                     style={{ padding: '5px 12px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: 'pointer', color: '#374151', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px', width: '100%', justifyContent: 'center' }}

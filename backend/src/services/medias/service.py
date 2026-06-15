@@ -35,12 +35,74 @@ from src.utils.dmarepository import (
     step4ReplaceMediaExternalMaxShadowAndSummaryTx,
 )
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
+from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
 from src.utils.subissuemaster import getSubIssueDisplayName
 from src.services.surveys.formservice import ensureSurveyFormForRun
 
 
-MVP_DEMO_COMPANY_KEYWORDS = ["현대자동차"]
+MVP_DEMO_COMPANY_KEYWORDS = ["현대모비스"]
 MVP_DEMO_INDUSTRY_KEYWORDS = ["자동차부품산업"]
+
+
+def _writeMediaWorkflowStatus(
+    *,
+    runId: int,
+    overallStatus: str,
+    currentStage: str,
+    progressPercent: int,
+    progressMode: str = "MILESTONE",
+    processedCount=None,
+    totalCount=None,
+    errorStage=None,
+    errorMessage=None,
+    startedYn: bool = False,
+    completedYn: bool = False,
+) -> None:
+    """
+    S5-B16: 미디어 분석 진행 상태를 ESG_DMA_WORKFLOW_STATUS(workflow_type='MEDIA')에 기록한다.
+    벤치마킹(_writeBenchmarkWorkflowStatus)과 동일한 polling 구조를 위해 단계별로 호출된다.
+    산식/스코어링에는 관여하지 않으며 진행 상태만 기록한다.
+
+    진행 상태 기록은 보조적이므로 best-effort 로 처리한다. status write 실패가
+    미디어 분석 critical path(크롤링/shadow/external max)를 중단시켜서는 안 된다.
+    """
+    try:
+        upsertDmaWorkflowStatus(
+            runId=runId,
+            workflowType="MEDIA",
+            overallStatus=overallStatus,
+            currentStage=currentStage,
+            progressPercent=progressPercent,
+            progressMode=progressMode,
+            processedCount=processedCount,
+            totalCount=totalCount,
+            errorStage=errorStage,
+            errorMessage=errorMessage,
+            startedYn=startedYn,
+            completedYn=completedYn,
+        )
+    except Exception as statusError:
+        print(f"Warning: MEDIA workflow status write skipped ({currentStage}): {statusError}")
+
+
+def _recordMediaWorkflowFailureBestEffort(
+    *,
+    runId: int,
+    currentStage: str,
+    progressPercent: int,
+    error: Exception,
+) -> None:
+    try:
+        _writeMediaWorkflowStatus(
+            runId=runId,
+            overallStatus="FAILED",
+            currentStage=currentStage,
+            progressPercent=progressPercent,
+            errorStage=currentStage,
+            errorMessage=str(error)[:1000],
+        )
+    except Exception as statusError:
+        print(f"Warning: MEDIA workflow FAILED status write failed: {statusError}")
 
 
 def runMediaAnalysis(
@@ -72,7 +134,13 @@ def runMediaAnalysis(
         saveSignals(runId=runId, signals=scoredSignals, fileId=None, sourceTitle="Media Analysis")
 
     if shadowReplaceYn:
-        _replaceMediaNewsShadowFromPipelineResults(runId=runId, pipelineResults=pipelineResults)
+        # News canonical shadow replace 는 보조 경로다. canonical builder / bundle TX 실패가
+        # smoke/fallback 분석(scoredSignals 저장·반환)을 중단시켜서는 안 된다. 실패는 경고로만
+        # 남기고 분석 응답은 유지한다. (산식/summary/regulation/KCGS/external max 미변경)
+        try:
+            _replaceMediaNewsShadowFromPipelineResults(runId=runId, pipelineResults=pipelineResults)
+        except Exception as shadowError:
+            print(f"Warning: media news shadow replace skipped: {shadowError}")
 
     return scoredSignals
 
@@ -96,86 +164,164 @@ def buildMediaAnalyzeResponse(
 def runMediaCrawlAndAnalyze(
     request: MediaNewsCrawlAnalyzeRequest,
 ) -> MediaNewsCrawlAnalyzeResponse:
+    # 입력 검증은 workflow status 기록 이전에 수행한다. (잘못된 날짜는 400으로 처리하고
+    # MEDIA workflow row 를 생성하지 않는다.)
     dateFrom = _parseRequestDate(request.dateFrom, "dateFrom")
     dateTo = _parseRequestDate(request.dateTo, "dateTo")
     if dateFrom > dateTo:
         raise ValueError("dateFrom must be earlier than or equal to dateTo.")
 
-    crawlResult = crawlNewsArticles(
-        sources=request.sources,
-        dateFrom=dateFrom,
-        dateTo=dateTo,
-        companyKeywords=MVP_DEMO_COMPANY_KEYWORDS,
-        industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
+    # S5-B16: MEDIA workflow 진행 상태를 단계별로 기록한다. (벤치마킹과 동일한 polling 구조)
+    runId = request.runId
+    currentStage = "PREPARE"
+    currentProgress = 10
+    _writeMediaWorkflowStatus(
+        runId=runId,
+        overallStatus="RUNNING",
+        currentStage=currentStage,
+        progressPercent=currentProgress,
+        startedYn=True,
     )
 
-    crawlCompleteYn = _isCrawlComplete(crawlResult)
-    scoredSignals = []
-    savedSignalCountsBySource = {}
-    if crawlResult.articles:
-        scoredSignals = runMediaAnalysis(
-            articles=crawlResult.articles,
-            runId=request.runId,
-            keywords=MVP_DEMO_COMPANY_KEYWORDS,
-            industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
-            shadowReplaceYn=crawlCompleteYn,
+    try:
+        currentStage = "NEWS_CRAWL"
+        currentProgress = 30
+        _writeMediaWorkflowStatus(
+            runId=runId,
+            overallStatus="RUNNING",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
         )
-        savedSignalCountsBySource = _countSavedSignalsBySource(scoredSignals)
-    elif crawlCompleteYn:
-        # Complete crawl with no articles — empty-clear is critical path.
-        # Failure propagates; External MAX must not run against a stale news shadow.
-        _replaceMediaNewsShadowFromPipelineResults(runId=request.runId, pipelineResults=[])
 
-    # Refresh Regulation and KCGS source shadows — run regardless of crawl result.
-    _shadowRefreshErrors: list[tuple[str, Exception]] = []
+        crawlResult = crawlNewsArticles(
+            sources=request.sources,
+            dateFrom=dateFrom,
+            dateTo=dateTo,
+            companyKeywords=MVP_DEMO_COMPANY_KEYWORDS,
+            industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
+        )
 
-    try:
-        refreshRegulationShadowForRun(request.runId)
-    except Exception as _exc:
-        _shadowRefreshErrors.append(("regulation", _exc))
-
-    try:
-        refreshKcgsShadowForRun(request.runId)
-    except Exception as _exc:
-        _shadowRefreshErrors.append(("kcgs", _exc))
-
-    # External MAX is gated on news canonical freshness (crawlCompleteYn).
-    # Partial/failed crawl: skip External MAX; existing Summary/Final/Rank preserved unchanged.
-    if crawlCompleteYn:
-        if _shadowRefreshErrors:
-            raise RuntimeError(
-                "media_external source refresh failed; externalMax summary update aborted: "
-                + "; ".join(f"{k}: {v}" for k, v in _shadowRefreshErrors)
+        crawlCompleteYn = _isCrawlComplete(crawlResult)
+        scoredSignals = []
+        savedSignalCountsBySource = {}
+        if crawlResult.articles:
+            currentStage = "NEWS_ANALYSIS"
+            currentProgress = 55
+            _writeMediaWorkflowStatus(
+                runId=runId,
+                overallStatus="RUNNING",
+                currentStage=currentStage,
+                progressPercent=currentProgress,
             )
-        # media_external External MAX Shadow + Summary + Final + Rank — critical path.
-        refreshMediaExternalMaxForRun(request.runId)
-        ensureSurveyFormForRun(request.runId)
+            scoredSignals = runMediaAnalysis(
+                articles=crawlResult.articles,
+                runId=request.runId,
+                keywords=MVP_DEMO_COMPANY_KEYWORDS,
+                industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
+                shadowReplaceYn=crawlCompleteYn,
+            )
+            savedSignalCountsBySource = _countSavedSignalsBySource(scoredSignals)
+        elif crawlCompleteYn:
+            # Complete crawl with no articles — empty-clear is critical path.
+            # Failure propagates; External MAX must not run against a stale news shadow.
+            _replaceMediaNewsShadowFromPipelineResults(runId=request.runId, pipelineResults=[])
 
-    sourceBreakdown = applySavedSignalCounts(
-        crawlResult.sourceBreakdown,
-        savedSignalCountsBySource,
-    )
-    coverageInfo = getMediaCoverage(request.runId)
-    savedSignalCount = len(scoredSignals) if scoredSignals else 0
+        # Refresh Regulation and KCGS source shadows — run regardless of crawl result.
+        _shadowRefreshErrors: list[tuple[str, Exception]] = []
 
-    return MediaNewsCrawlAnalyzeResponse(
-        runId=request.runId,
-        requestedSources=crawlResult.requestedSources,
-        allowedSources=crawlResult.allowedSources,
-        rejectedSources=crawlResult.rejectedSources,
-        companyKeywords=MVP_DEMO_COMPANY_KEYWORDS,
-        industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
-        collectedArticleCount=crawlResult.collectedArticleCount,
-        filteredArticleCount=crawlResult.filteredArticleCount,
-        articleCount=crawlResult.filteredArticleCount,
-        savedSignalCount=savedSignalCount,
-        observedSubIssueCount=countMediaSubIssues(request.runId),
-        sourceBreakdown=sourceBreakdown,
-        topIssues=_buildMediaTopIssues(request.runId),
-        coverage=coverageInfo,
-        coverageStatus=coverageInfo["coverageStatus"],
-        errors=crawlResult.errors,
-    )
+        currentStage = "REGULATION_REFRESH"
+        currentProgress = 70
+        _writeMediaWorkflowStatus(
+            runId=runId,
+            overallStatus="RUNNING",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+        )
+
+        try:
+            refreshRegulationShadowForRun(request.runId)
+        except Exception as _exc:
+            _shadowRefreshErrors.append(("regulation", _exc))
+
+        currentStage = "KCGS_REFRESH"
+        currentProgress = 80
+        _writeMediaWorkflowStatus(
+            runId=runId,
+            overallStatus="RUNNING",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+        )
+
+        try:
+            refreshKcgsShadowForRun(request.runId)
+        except Exception as _exc:
+            _shadowRefreshErrors.append(("kcgs", _exc))
+
+        # External MAX is gated on news canonical freshness (crawlCompleteYn).
+        # Partial/failed crawl: skip External MAX; existing Summary/Final/Rank preserved unchanged.
+        if crawlCompleteYn:
+            if _shadowRefreshErrors:
+                raise RuntimeError(
+                    "media_external source refresh failed; externalMax summary update aborted: "
+                    + "; ".join(f"{k}: {v}" for k, v in _shadowRefreshErrors)
+                )
+            currentStage = "EXTERNAL_MAX_SUMMARY"
+            currentProgress = 95
+            _writeMediaWorkflowStatus(
+                runId=runId,
+                overallStatus="RUNNING",
+                currentStage=currentStage,
+                progressPercent=currentProgress,
+            )
+            # media_external External MAX Shadow + Summary + Final + Rank — critical path.
+            refreshMediaExternalMaxForRun(request.runId)
+            ensureSurveyFormForRun(request.runId)
+
+        sourceBreakdown = applySavedSignalCounts(
+            crawlResult.sourceBreakdown,
+            savedSignalCountsBySource,
+        )
+        coverageInfo = getMediaCoverage(request.runId)
+        savedSignalCount = len(scoredSignals) if scoredSignals else 0
+
+        response = MediaNewsCrawlAnalyzeResponse(
+            runId=request.runId,
+            requestedSources=crawlResult.requestedSources,
+            allowedSources=crawlResult.allowedSources,
+            rejectedSources=crawlResult.rejectedSources,
+            companyKeywords=MVP_DEMO_COMPANY_KEYWORDS,
+            industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
+            collectedArticleCount=crawlResult.collectedArticleCount,
+            filteredArticleCount=crawlResult.filteredArticleCount,
+            articleCount=crawlResult.filteredArticleCount,
+            savedSignalCount=savedSignalCount,
+            observedSubIssueCount=countMediaSubIssues(request.runId),
+            sourceBreakdown=sourceBreakdown,
+            topIssues=_buildMediaTopIssues(request.runId),
+            coverage=coverageInfo,
+            coverageStatus=coverageInfo["coverageStatus"],
+            errors=crawlResult.errors,
+        )
+
+        currentStage = "COMPLETED"
+        currentProgress = 100
+        _writeMediaWorkflowStatus(
+            runId=runId,
+            overallStatus="COMPLETED",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+            completedYn=True,
+        )
+
+        return response
+    except Exception as e:
+        _recordMediaWorkflowFailureBestEffort(
+            runId=runId,
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+            error=e,
+        )
+        raise
 
 
 def _buildMediaTopIssues(runId: int) -> list[MediaTopIssue]:

@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import {
   calculateRollupBatch,
+  fetchRollupBaselineRequirements,
   fetchRollupBatchSources,
   fetchRollupBatchStatus,
+  saveRollupBaselineValues,
 } from "@stores/reportSlice";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
 import "@styles/onboarding1.css";
@@ -56,6 +59,7 @@ const RollupSummaryPanel = ({
   onSendSource,
 }) => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const reduxStatusInfo = useSelector((state) => state.report.rollup.batchStatus);
   const batchSources = useSelector((state) => state.report.rollup.batchSources);
   const loadingStatus = useSelector((state) => state.report.loading.batchStatus);
@@ -66,6 +70,36 @@ const RollupSummaryPanel = ({
   const [showManageModal, setShowManageModal] = useState(false);
   const [calculating, setCalculating] = useState(false);
   const [error, setError] = useState(null);
+
+  // S5-B14: 전년도 연결 기준값(BASELINE_REQUIRED) 수동입력 카드 상태
+  const [showBaselineCard, setShowBaselineCard] = useState(false);
+  const [baselineItems, setBaselineItems] = useState([]);
+  const [baselineInputs, setBaselineInputs] = useState({});
+  const [savingBaseline, setSavingBaseline] = useState(false);
+
+  const loadBaselineRequirements = useCallback(async () => {
+    if (!batchId) return [];
+    try {
+      const res = await dispatch(fetchRollupBaselineRequirements({ batchId })).unwrap();
+      const data = res?.data || res;
+      const items = Array.isArray(data?.items) ? data.items : [];
+      const missing = items.filter(
+        (it) => String(it.status || "").toUpperCase() === "MISSING"
+      );
+      setBaselineItems(missing);
+      setBaselineInputs((prev) => {
+        const next = { ...prev };
+        missing.forEach((it) => {
+          if (next[it.sourceAtomicMetricId] == null) next[it.sourceAtomicMetricId] = "";
+        });
+        return next;
+      });
+      return missing;
+    } catch (err) {
+      console.error(err);
+      return [];
+    }
+  }, [batchId, dispatch]);
 
   const statusInfo = useMemo(() => reduxStatusInfo, [reduxStatusInfo]);
   const canCreateRequest =
@@ -140,13 +174,13 @@ const RollupSummaryPanel = ({
   const isCalculated = batchStatus === "completed" || batchStatus === "calculated";
   const isCalculating = calculating || calculatingRedux;
 
-  const handleCalc = async () => {
+  const handleCalc = async ({ force = false } = {}) => {
     if (onCalculate) {
       onCalculate(batchId);
       return;
     }
 
-    if (isCalculated) return;
+    if (isCalculated && !force) return;
 
     if (!calculateReadyYn) {
       showDefaultAlert(
@@ -159,18 +193,80 @@ const RollupSummaryPanel = ({
 
     setCalculating(true);
     try {
-      await dispatch(calculateRollupBatch({ batchId })).unwrap();
+      const calcRes = await dispatch(calculateRollupBatch({ batchId })).unwrap();
+      const calcData = calcRes?.data || calcRes;
+      const warnings = Array.isArray(calcData?.warnings) ? calcData.warnings : [];
+      const hasBaselineRequired = warnings.some(
+        (w) => String(w?.error || "").toUpperCase() === "BASELINE_REQUIRED"
+      );
       await Promise.all([
         dispatch(fetchRollupBatchStatus({ batchId })).unwrap(),
         dispatch(fetchRollupBatchSources({ batchId })).unwrap(),
       ]);
-      showDefaultAlert("성공", "데이터 취합이 완료되었습니다.", "success");
-      onCalculated?.();
+      if (hasBaselineRequired) {
+        await loadBaselineRequirements();
+        setShowBaselineCard(true);
+        showDefaultAlert(
+          "전년도 기준값 입력 필요",
+          "전년 대비 지표 산정을 위해 전년도 연결 기준값을 입력한 뒤 다시 데이터 취합을 실행하세요.",
+          "warning"
+        );
+      } else {
+        setShowBaselineCard(false);
+        setBaselineItems([]);
+        showDefaultAlert("성공", "데이터 취합이 완료되었습니다.", "success");
+        onCalculated?.();
+      }
     } catch (err) {
       console.error(err);
       showDefaultAlert("오류", err?.message || "데이터 취합에 실패했습니다.", "error");
     } finally {
       setCalculating(false);
+    }
+  };
+
+  const handleSaveBaseline = async () => {
+    const values = baselineItems
+      .map((it) => {
+        const raw = baselineInputs[it.sourceAtomicMetricId];
+        const numeric = raw === "" || raw == null ? null : Number(raw);
+        return {
+          metricId: it.sourceMetricId || it.metricId,
+          atomicMetricId: it.sourceAtomicMetricId,
+          reportingYear: it.requiredReportingYear,
+          valueNumeric: numeric,
+          unit: it.unit,
+        };
+      })
+      .filter((v) => v.valueNumeric != null && !Number.isNaN(v.valueNumeric));
+
+    if (values.length === 0) {
+      showDefaultAlert("입력 필요", "전년도 기준값을 입력하세요.", "warning");
+      return;
+    }
+
+    setSavingBaseline(true);
+    try {
+      await dispatch(saveRollupBaselineValues({ batchId, values })).unwrap();
+      const stillMissing = await loadBaselineRequirements();
+      if (stillMissing.length === 0) {
+        showDefaultAlert(
+          "저장 완료",
+          "전년도 기준값이 모두 입력되었습니다. 다시 데이터 취합을 실행하세요.",
+          "success"
+        );
+      } else {
+        showDefaultAlert(
+          "저장 완료",
+          "전년도 기준값이 저장되었습니다. 다시 데이터 취합을 실행하세요.",
+          "success"
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      showDefaultAlert("오류", err?.message || "전년도 기준값 저장에 실패했습니다.", "error");
+    } finally {
+      setSavingBaseline(false);
     }
   };
 
@@ -235,6 +331,17 @@ const RollupSummaryPanel = ({
     btnDisabled = true;
   }
 
+  // S5-B14: REPORT_DISCLOSURE 데이터 취합 완료 후에는 "보고서 생성하기"로 전환하고
+  // /result 의 "점수 해석" 탭으로 이동한다. (DMA_PRECHECK 는 기존 동작 유지)
+  const isReportDisclosure =
+    String(rollupPurposeCode || "").toUpperCase() === "REPORT_DISCLOSURE";
+  if (batchId && isCalculated && isReportDisclosure && !isCalculating && !showBaselineCard && baselineItems.length === 0) {
+    btnText = "보고서 생성하기";
+    btnClass = "primary";
+    btnDisabled = false;
+    btnAction = () => navigate("/result", { state: { initialLeftTab: 2 } });
+  }
+
   const finalStepLabel =
     rollupPurposeCode === "REPORT_DISCLOSURE"
       ? "보고서 생성 준비"
@@ -279,6 +386,113 @@ const RollupSummaryPanel = ({
           </button>
         </div>
       </div>
+
+      {showBaselineCard && (
+        <div
+          style={{
+            marginTop: "16px",
+            border: "1px solid #fcd34d",
+            background: "#fffbeb",
+            borderRadius: "10px",
+            padding: "16px 18px",
+          }}
+        >
+          {baselineItems.length > 0 ? (
+            <>
+              <div style={{ marginBottom: "10px" }}>
+                <strong style={{ color: "#b45309", fontSize: "0.95rem" }}>
+                  전년도 기준값 입력 필요
+                </strong>
+                <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#92400e", lineHeight: 1.5 }}>
+                  전년 대비 지표 산정을 위해 전년도 연결 기준값을 입력하세요.
+                  <br />
+                  이 값은 현재 프로젝트에서 입력하지만, 데이터 기준연도는 전년도로 저장됩니다.
+                </p>
+              </div>
+
+              <div className="ob1-table-container" style={{ overflowX: "auto" }}>
+                <table className="ob1-table" style={{ minWidth: "640px" }}>
+                  <thead>
+                    <tr>
+                      <th>지표</th>
+                      <th>기준 항목</th>
+                      <th>기준연도</th>
+                      <th>입력값</th>
+                      <th>단위</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {baselineItems.map((it) => (
+                      <tr key={`${it.ruleCode}-${it.sourceAtomicMetricId}`}>
+                        <td>{it.metricId || it.sourceMetricId || "-"}</td>
+                        <td>
+                          {it.sourceAtomicName || it.sourceAtomicMetricId}
+                          <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                            {it.sourceAtomicMetricId}
+                          </div>
+                        </td>
+                        <td>{it.requiredReportingYear}</td>
+                        <td>
+                          <input
+                            type="number"
+                            className="ob1-input"
+                            value={baselineInputs[it.sourceAtomicMetricId] ?? ""}
+                            onChange={(e) =>
+                              setBaselineInputs((prev) => ({
+                                ...prev,
+                                [it.sourceAtomicMetricId]: e.target.value,
+                              }))
+                            }
+                            style={{ width: "140px", padding: "6px 8px" }}
+                            placeholder="기준값"
+                          />
+                        </td>
+                        <td>{it.unit || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "12px" }}>
+                <button
+                  type="button"
+                  className="ob1-rollup-btn primary"
+                  onClick={handleSaveBaseline}
+                  disabled={savingBaseline}
+                >
+                  {savingBaseline ? "저장 중..." : "전년도 기준값 저장"}
+                </button>
+                <button
+                  type="button"
+                  className="ob1-rollup-btn"
+                  onClick={() => handleCalc({ force: true })}
+                  disabled={isCalculating || savingBaseline}
+                >
+                  {isCalculating ? "취합 중..." : "다시 데이터 취합 실행"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
+              <div>
+                <strong style={{ color: "#065f46", fontSize: "0.95rem" }}>전년도 기준값 저장 완료</strong>
+                <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#064e3b", lineHeight: 1.5 }}>
+                  모든 기준값이 저장되었습니다. 데이터 취합을 다시 실행해야 전년 대비 지표가 반영됩니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="ob1-rollup-btn primary"
+                onClick={() => handleCalc({ force: true })}
+                disabled={isCalculating}
+              >
+                {isCalculating ? "취합 중..." : "다시 데이터 취합 실행"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {showManageModal && createPortal(
         <div className="ob-modal-overlay" onClick={() => setShowManageModal(false)}>

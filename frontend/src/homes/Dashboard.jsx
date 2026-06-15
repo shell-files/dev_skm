@@ -27,11 +27,11 @@ const MOCK_PROJECTS = [
 ];
 
 const ONBOARDING_ROWS = [
-  { name: "??", e: true, s: true, g: false, count: "?개", done: "?/?", doneColor: "#ef4444" },
-  { name: "??", e: false, s: true, g: true, count: "?개", done: "?/?", doneColor: "#ef4444" },
-  { name: "??", e: false, s: false, g: true, count: "?개", done: "?/?", doneColor: "#ef4444" },
-  { name: "??", e: false, s: true, g: false, count: "?개", done: "?/?", doneColor: "#475569" },
-  { name: "??", e: true, s: false, g: false, count: "?개", done: "?/?", doneColor: "#ef4444" },
+  { name: "??", pct: 0, doneRaw: 0, totalRaw: 0, doneLabel: "?/?", doneColor: "#ef4444" },
+  { name: "??", pct: 0, doneRaw: 0, totalRaw: 0, doneLabel: "?/?", doneColor: "#ef4444" },
+  { name: "??", pct: 0, doneRaw: 0, totalRaw: 0, doneLabel: "?/?", doneColor: "#ef4444" },
+  { name: "??", pct: 0, doneRaw: 0, totalRaw: 0, doneLabel: "?/?", doneColor: "#475569" },
+  { name: "??", pct: 0, doneRaw: 0, totalRaw: 0, doneLabel: "?/?", doneColor: "#ef4444" },
 ];
 
 /* ── Module cards data ── */
@@ -99,20 +99,21 @@ const NOTICE_ITEMS = [
 
 /* ── materiality results + onboarding-progress → 이슈별 행 ── */
 const buildMaterialityRows = (matItems = [], progressItems = []) => {
-  const progressMap = new Map(
-    progressItems.map((p) => [p.subIssueCode, p])
-  );
+  const progressMap = new Map(progressItems.map((p) => [p.subIssueCode, p]));
   return matItems
     .filter((it) => it.selectedYn)
     .map((it) => {
       const p = progressMap.get(it.subIssueCode);
-      const total = p?.totalCount ?? null;
-      const done = p?.doneCount ?? null;
+      const totalRaw = p?.totalCount ?? 0;
+      const doneRaw = p?.doneCount ?? 0;
+      const pct = totalRaw > 0 ? Math.round((doneRaw / totalRaw) * 100) : 0;
       return {
         name: it.displaySubIssueName || it.subIssueCode,
-        count: total != null ? `${total}개` : "-",
-        done: done != null ? `${done}/${total}` : "-",
-        doneColor: done != null && done === total ? "#475569" : "#ef4444",
+        totalRaw,
+        doneRaw,
+        pct,
+        doneLabel: totalRaw > 0 ? `${doneRaw}/${totalRaw}` : "-",
+        doneColor: doneRaw === totalRaw && totalRaw > 0 ? "#475569" : "#ef4444",
       };
     });
 };
@@ -316,37 +317,81 @@ const Dashboard = () => {
 
           {/* ── 프로젝트 진행 현황 ── */}
           <div className="home-dashboard-progress-card">
-            {/* 필요 온보딩 지표 */}
-              <div className="db-notice-header">
-                <p className="db-section-title">필요 온보딩 지표</p>
-                <button className="db-notice-view-all" onClick={() => navigate("/onboard")}>
-                  전체 보기 →
-                </button>
+            <div className="home-dashboard-progress-header">
+              <h3>프로젝트 진행 현황</h3>
+              <div className="home-dashboard-progress-header-right">
+                <span className="home-dashboard-stage-link">상세 단계</span>
+                <span className="home-dashboard-stage-pill">
+                  {getStageLabel(displayProject.currentStageLabel)}
+                </span>
               </div>
-              {onboardingLoading ? (
-                <div style={{ padding: "24px 0", textAlign: "center", fontSize: "0.82rem", color: "#94a3b8" }}>
-                  지표 불러오는 중...
-                </div>
-              ) : (
-                <table className="db-onboard-table">
-                  <thead>
-                    <tr>
-                      <th>이슈</th>
-                      <th>전체</th>
-                      <th>입력완료</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {onboardingRows.map((row, i) => (
-                      <tr key={i}>
-                        <td>{row.name}</td>
-                        <td className="db-onboard-count">{row.count}</td>
-                        <td className="db-onboard-done" style={{ color: row.doneColor }}>{row.done}</td>
-                      </tr>
+            </div>
+
+            {onboardingLoading ? (
+              <div style={{ padding: "32px 0", textAlign: "center", fontSize: "0.82rem", color: "#94a3b8" }}>
+                지표 불러오는 중...
+              </div>
+            ) : (() => {
+              const totalDone = onboardingRows.reduce((s, r) => s + r.doneRaw, 0);
+              const totalAll  = onboardingRows.reduce((s, r) => s + r.totalRaw, 0);
+
+              if (totalAll === 0) {
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px", padding: "32px 0", textAlign: "center" }}>
+                    <div style={{ width: "48px", height: "48px", borderRadius: "50%", background: "#f1f5f9", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p style={{ fontSize: "0.88rem", fontWeight: 700, color: "#334155", margin: "0 0 4px" }}>이중 중대성 평가 미실시 상태</p>
+                      <p style={{ fontSize: "0.78rem", color: "#94a3b8", margin: 0 }}>중대성 평가를 완료하면 이슈별 진행률이 표시됩니다.</p>
+                    </div>
+                  </div>
+                );
+              }
+
+              const overallPct = Math.round((totalDone / totalAll) * 100);
+              const ringDeg = (overallPct / 100) * 360;
+              return (
+                <div className="home-dashboard-progress-body">
+                  {/* 원형 전체 진행률 */}
+                  <div className="home-dashboard-progress-ring">
+                    <div
+                      className="home-dashboard-progress-ring-circle"
+                      style={{
+                        background: `conic-gradient(var(--home-green) 0deg, var(--home-green) ${ringDeg}deg, #e8ecf1 ${ringDeg}deg, #e8ecf1 360deg)`
+                      }}
+                    >
+                      <div className="home-dashboard-progress-ring-inner">
+                        <span className="home-dashboard-progress-ring-value">{overallPct}%</span>
+                        <span className="home-dashboard-progress-ring-label">전체 진행률</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 이슈별 진행 바 */}
+                  <div className="home-dashboard-progress-list">
+                    {onboardingRows.map((row) => (
+                      <div key={row.name} className="home-dashboard-progress-item">
+                        <span className="home-dashboard-progress-item-label">{row.name}</span>
+                        <div className="home-dashboard-progress-bar-track">
+                          <div
+                            className="home-dashboard-progress-bar-fill"
+                            style={{ width: `${row.pct}%` }}
+                          />
+                        </div>
+                        <span className="home-dashboard-progress-item-value" style={{ color: row.doneColor }}>
+                          {row.doneLabel}
+                        </span>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* ── 처음이신가요? 4단계 가이드 ── */}
@@ -384,7 +429,7 @@ const Dashboard = () => {
         {/* ═══════════════════════════════════════════════════════
             NOTICE STRIP
         ═══════════════════════════════════════════════════════ */}
-        <div className="home-dashboard-notice-strip">
+        {/* <div className="home-dashboard-notice-strip">
           <div className="home-dashboard-notice-title">
             공지사항
             <span className="home-dashboard-notice-count">{NOTICE_ITEMS.length}</span>
@@ -401,7 +446,7 @@ const Dashboard = () => {
           <button className="home-dashboard-notice-more">
             전체 보기 &gt;
           </button>
-        </div>
+        </div> */}
 
       </div>
 

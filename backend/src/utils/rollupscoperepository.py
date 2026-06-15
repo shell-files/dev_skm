@@ -371,6 +371,22 @@ def resolveExternalEntitySourceAtomicIdsFromScopes(scopes: list[dict]) -> list[s
     consolidatedTargetAtomicIds = set(resolveConsolidatedTargetAtomicIdsFromScopes(scopes))
     return sorted(allRuleSourceAtomicIds - consolidatedTargetAtomicIds)
 
+def resolveConsolidatedSourceAtomicIdsFromRuleSources(ruleSources: list[dict]) -> list[str]:
+    """
+    rule source 메타데이터(source_scope 보존)에서 source_scope=CONSOLIDATED 인
+    source atomic id 집합을 반환한다.
+    이 atomic 들은 회사별 ENTITY KPI_FACT 가 아니라 ESG_GROUP_ROLLUP_RESULT 의
+    연결 결과값으로 평가되어야 한다.
+    """
+    atomicIds = set()
+    for source in ruleSources or []:
+        normalized = normalizeSource(source)
+        if normalized.get("sourceScope") == "CONSOLIDATED":
+            atomicId = normalized.get("sourceAtomicMetricId")
+            if atomicId:
+                atomicIds.add(atomicId)
+    return sorted(atomicIds)
+
 def resolveAllRuleSourceAtomicIdsTx(cur, batchId: int) -> list[str]:
     return resolveAllRuleSourceAtomicIdsFromScopes(listScopeTx(cur, batchId))
 

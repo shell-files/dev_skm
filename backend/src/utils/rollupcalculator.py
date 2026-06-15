@@ -115,6 +115,31 @@ def calculateConsolidatedRules(
     )
 
 
+def buildConsolidatedFactMap(rows: list[dict]) -> dict[str, dict]:
+    """
+    ESG_GROUP_ROLLUP_RESULT 조회 행을 atomicId -> fact dict 로 변환한다.
+    source_scope=CONSOLIDATED source 평가용 연결 결과 맵으로 사용된다.
+    """
+    factMap: dict[str, dict] = {}
+    for row in rows or []:
+        atomicId = (
+            row.get("groupAtomicMetricId")
+            or row.get("group_atomic_metric_id")
+            or row.get("atomicMetricId")
+            or row.get("atomic_metric_id")
+        )
+        if not atomicId:
+            continue
+        atomicId = str(atomicId)
+        factMap[atomicId] = {
+            "atomicMetricId": atomicId,
+            "valueNumeric": row.get("valueNumeric") if row.get("valueNumeric") is not None else row.get("value_numeric"),
+            "valueText": row.get("valueText") if row.get("valueText") is not None else row.get("value_text"),
+            "unit": row.get("unit"),
+        }
+    return factMap
+
+
 def resolveHistoricalLookbackDepth(rules: list[dict], sources: list[dict]) -> int:
     ruleByCode = {ruleCode(rule): rule for rule in rules or [] if ruleCode(rule)}
     producerByAtomicId = {
@@ -166,6 +191,7 @@ def calculateConsolidatedRulesByYear(
     entityFactMapsByYear: dict[int, dict[tuple[int, str], dict]],
     reportingYear: int,
     companyIds: list[int],
+    consolidatedFactMapsByYear: Optional[dict[int, dict[str, dict]]] = None,
 ) -> tuple[list[dict], list[dict], bool]:
     normalizedSources = normalizeSources(sources)
     groupedSources = groupSourcesByRule(normalizedSources)
@@ -182,12 +208,57 @@ def calculateConsolidatedRulesByYear(
     except ValueError as error:
         return [], [{"ruleCode": "GRAPH", "error": str(error), "message": str(error)}], False
 
+    # source_scope=CONSOLIDATED source(예: 전년도 연결 기준값)는 ESG_GROUP_ROLLUP_RESULT
+    # 에서 조회한 연결 결과로 시드한다. 이번 batch에서 producer rule이 산출하는 연결값은
+    # 계산 중 같은 맵에 누적되어 후속 rule이 참조한다.
+    seededConsolidated = consolidatedFactMapsByYear or {}
     consolidatedFactMapsByYear: dict[int, dict[str, dict]] = defaultdict(dict)
+    for seedYear, seedFacts in seededConsolidated.items():
+        for seedAtomicId, seedFact in (seedFacts or {}).items():
+            consolidatedFactMapsByYear[int(seedYear)][str(seedAtomicId)] = seedFact
     atomicMemo: dict[tuple[int, str], dict] = {}
     ruleMemo: dict[tuple[int, str], dict] = {}
     activeRuleStack: set[tuple[int, str]] = set()
 
-    def evaluateAtomicAtYear(atomicId: str, year: int, contextRule: Optional[dict] = None) -> dict:
+    def resolveConsolidatedSourceAtYear(atomicId: str, year: int) -> dict:
+        factsForYear = consolidatedFactMapsByYear.get(int(year), {})
+        fact = factsForYear.get(atomicId)
+        value = getFactValue(fact) if fact else None
+        if value is None:
+            return {
+                "status": "CALCULATION_SOURCE_NOT_READY",
+                "fact": None,
+                "trace": {
+                    "atomicMetricId": atomicId,
+                    "evaluatedYear": year,
+                    "sourceScope": "CONSOLIDATED",
+                    "missingConsolidatedSource": True,
+                },
+            }
+        numericValue = fact.get("valueNumeric") if fact.get("valueNumeric") is not None else fact.get("value_numeric")
+        textValue = fact.get("valueText") if fact.get("valueText") is not None else fact.get("value_text")
+        return {
+            "status": STATUS_CALCULATED,
+            "fact": {
+                "atomicMetricId": atomicId,
+                "valueNumeric": numericValue,
+                "valueText": textValue,
+                "unit": fact.get("unit"),
+            },
+            "trace": {
+                "atomicMetricId": atomicId,
+                "evaluatedYear": year,
+                "sourceScope": "CONSOLIDATED",
+                "valueNumeric": numericValue,
+            },
+        }
+
+    def evaluateAtomicAtYear(
+        atomicId: str,
+        year: int,
+        contextRule: Optional[dict] = None,
+        sourceScope: Optional[str] = None,
+    ) -> dict:
         memoKey = (int(year), atomicId)
         producerCode = producerByAtomicId.get(atomicId)
         if producerCode:
@@ -223,6 +294,9 @@ def calculateConsolidatedRulesByYear(
                     }
             return atomicMemo[memoKey]
 
+        if str(sourceScope or "").strip().upper() == "CONSOLIDATED":
+            return resolveConsolidatedSourceAtYear(atomicId, year)
+
         return aggregateEntityFactsAtYear(
             atomicId=atomicId,
             year=year,
@@ -257,19 +331,19 @@ def calculateConsolidatedRulesByYear(
             if isYoyFormula(rule):
                 currentSources, priorSources = splitYoySources(ruleSources)
                 for source in currentSources:
-                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year, rule)
+                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year, rule, source.get("sourceScope"))
                     dependencyTrace.append(traceSource(source, sourceResult, year, "current"))
                     if sourceResult["status"] == STATUS_CALCULATED:
                         engineFactMap[source["sourceAtomicMetricId"]] = normalizeEngineFact(sourceResult["fact"])
                         sourceCompanyValuesTrace[source["sourceAtomicMetricId"]] = sourceCompanyValues(sourceResult)
                 for source in priorSources:
-                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year - 1, rule)
+                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year - 1, rule, source.get("sourceScope"))
                     dependencyTrace.append(traceSource(source, sourceResult, year - 1, "prior"))
                     if sourceResult["status"] == STATUS_CALCULATED:
                         enginePriorFactMap[source["sourceAtomicMetricId"]] = normalizeEngineFact(sourceResult["fact"])
             else:
                 for source in ruleSources:
-                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year, rule)
+                    sourceResult = evaluateAtomicAtYear(source["sourceAtomicMetricId"], year, rule, source.get("sourceScope"))
                     dependencyTrace.append(traceSource(source, sourceResult, year, "current"))
                     if sourceResult["status"] == STATUS_CALCULATED:
                         engineFactMap[source["sourceAtomicMetricId"]] = normalizeEngineFact(sourceResult["fact"])
@@ -431,6 +505,8 @@ def traceSource(source: dict, sourceResult: dict, year: int, sourceTiming: str) 
         "valueNumeric": fact.get("valueNumeric"),
         "sourceCompanyValues": trace.get("sourceCompanyValues"),
         "missingCompanyIds": trace.get("missingCompanyIds"),
+        "missingConsolidatedSource": trace.get("missingConsolidatedSource"),
+        "sourceScope": trace.get("sourceScope"),
         "producerRuleCode": trace.get("producerRuleCode"),
     }
 
@@ -474,6 +550,7 @@ def getFactValue(fact: Optional[dict]) -> Any:
 
 __all__ = [
     "buildMultiCompanyFactMap",
+    "buildConsolidatedFactMap",
     "calculateConsolidatedRules",
     "calculateConsolidatedRulesByYear",
     "resolveHistoricalLookbackDepth",

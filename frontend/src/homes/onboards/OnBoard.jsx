@@ -1339,9 +1339,6 @@ const OnBoard = () => {
                     </svg>
                     <span style={{ color: '#15803d', fontWeight: '600', fontSize: '13px' }}>진행률 {percent}% · {statusInfo.label}</span>
                   </div>
-                  {viewMode === "ROLLUP_RESPONSE" && isRollupResponseReadOnly && (
-                    <div style={{ fontSize: '11px', color: '#94a3b8', padding: '2px 8px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px' }}>Read-only</div>
-                  )}
                   <button
                     type="button"
                     style={{ padding: '5px 12px', fontSize: '13px', border: '1px solid #d1d5db', borderRadius: '6px', background: '#fff', cursor: 'pointer', color: '#374151', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '5px', width: '100%', justifyContent: 'center' }}

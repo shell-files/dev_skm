@@ -153,6 +153,7 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
     fileMetaByName = {}
 
     runId = fileFindModel.esgMaterialityRunId
+    print(f"[findSr] received runId={runId!r} (type={type(runId).__name__})")
     currentStage = "PREPARE"
     currentProgress = 20
 

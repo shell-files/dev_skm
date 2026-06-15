@@ -62,7 +62,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 40px;
-  padding: 56px 48px 40px;
+  padding: 28px 48px 40px;
   min-height: 340px;
   position: relative;
   overflow: hidden;
@@ -307,7 +307,6 @@
   grid-template-columns: 5fr 7fr;
   gap: 24px;
   padding: 28px 48px 0;
-  align-items: start;
 }
 
 /* ── Shared card base ── */
@@ -318,6 +317,8 @@
   border-radius: var(--home-radius-card);
   padding: 28px;
   box-shadow: var(--home-shadow-card);
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Progress Card ── */

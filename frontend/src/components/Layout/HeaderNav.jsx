@@ -38,8 +38,8 @@ const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
                 dispatch(setMaterialityRunId(firstActive.runId));
             })
             .catch(() => {
-                // API 실패 시 mock 값을 Redux/localStorage에 저장하지 않음
-                // (잘못된 runId가 벤치마킹 등 하위 API에 전달되는 것을 방지)
+                const staleId = Number(localStorage.getItem("currentRunId"));
+                if (staleId === 1) dispatch(setMaterialityRunId(null));
             });
     }, [companyId, dispatch]);
 

@@ -1,5 +1,5 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
-import { GET, POST, PUT, PATCH } from "@utils/Network";
+import { GET, POST, POST_FORM, PUT, PATCH } from "@utils/Network";
 
 export const DEFAULT_REPORTING_YEAR = new Date().getFullYear();
 
@@ -213,6 +213,17 @@ const initialState = {
     batchSources: [],
     activeBatchId: null,
     batchStatus: null,
+  },
+  rollupBaseline: {
+    loading: false,
+    saving: false,
+    dataByBatchId: {},
+    error: null,
+  },
+  // S5-B16: DMA 외부 시그널 단계(벤치마킹/미디어)의 진행상태·결과를 Redux로 통일 관리한다.
+  dmaStages: {
+    benchmark: { workflowStatus: null, result: null, loading: false, error: null },
+    media: { workflowStatus: null, result: null, loading: false, error: null },
   },
   currentYear: localStorage.getItem("currentYear"),
   currentRunId: localStorage.getItem("currentRunId"),
@@ -784,6 +795,159 @@ export const calculateRollupBatch = createAsyncThunk(
   }
 );
 
+export const fetchRollupBaselineRequirements = createAsyncThunk(
+  "report/fetchRollupBaselineRequirements",
+  async ({ batchId }, { rejectWithValue }) => {
+    try {
+      const res = await GET(`${ROLLUP_API_ROOT}/batches/${batchId}/baseline-requirements`);
+      return rejectIfFailed(res, rejectWithValue, "전년도 기준값 요구 항목 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: apiErrorMessage(error, "전년도 기준값 요구 항목 조회 중 오류가 발생했습니다."),
+      });
+    }
+  }
+);
+
+export const saveRollupBaselineValues = createAsyncThunk(
+  "report/saveRollupBaselineValues",
+  async ({ batchId, values }, { rejectWithValue }) => {
+    try {
+      const res = await POST(`${ROLLUP_API_ROOT}/batches/${batchId}/baseline-values`, { values });
+      return rejectIfFailed(res, rejectWithValue, "전년도 기준값 저장에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: apiErrorMessage(error, "전년도 기준값 저장 중 오류가 발생했습니다."),
+      });
+    }
+  }
+);
+
+// ── S5-B16: DMA 외부 시그널 단계(벤치마킹/미디어) thunk ──
+// 컴포넌트(BenchMarking.jsx/Media.jsx)에서 직접 GET/POST/PUT/POST_FORM 을 호출하지 않고
+// 모든 네트워크를 이 thunk 들로 흡수한다.
+
+const DMA_WORKFLOW_TYPES = new Set(["BENCHMARK", "MEDIA", "SURVEY_FORM"]);
+
+export const fetchDmaWorkflowStatus = createAsyncThunk(
+  "report/fetchDmaWorkflowStatus",
+  async ({ runId, workflowType }, { rejectWithValue }) => {
+    try {
+      const normalizedType = String(workflowType || "").trim().toUpperCase();
+      if (!DMA_WORKFLOW_TYPES.has(normalizedType)) {
+        return rejectWithValue({ status: false, message: `잘못된 workflowType: ${workflowType}` });
+      }
+      const res = await GET(`/materiality/workflow-status/${runId}/${normalizedType}`);
+      return rejectIfFailed(res, rejectWithValue, "분석 진행 상태 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: apiErrorMessage(error, "분석 진행 상태 조회 중 오류가 발생했습니다."),
+      });
+    }
+  }
+);
+
+export const uploadBenchmarkGroup = createAsyncThunk(
+  "report/uploadBenchmarkGroup",
+  async ({ fileType, companyName, files, page = "SR" }, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+      (files || []).forEach((file) => formData.append("file", file));
+      formData.append("fileType", fileType);
+      formData.append("companyName", companyName);
+      formData.append("page", page);
+      const res = await POST_FORM("/benchmk", formData);
+      return rejectIfFailed(res, rejectWithValue, "벤치마킹 파일 업로드에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: apiErrorMessage(error, "벤치마킹 파일 업로드 중 오류가 발생했습니다."),
+      });
+    }
+  }
+);
+
+export const runBenchmarkAnalysis = createAsyncThunk(
+  "report/runBenchmarkAnalysis",
+  async ({ runId, fileNames, page = "SR", sourceStep = "benchmark" }, { rejectWithValue }) => {
+    try {
+      const res = await PUT("/benchmk", {
+        file: fileNames,
+        page,
+        esgMaterialityRunId: runId,
+        sourceStep,
+      });
+      return rejectIfFailed(res, rejectWithValue, "벤치마킹 분석에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: apiErrorMessage(error, "벤치마킹 분석 중 오류가 발생했습니다."),
+      });
+    }
+  }
+);
+
+export const fetchBenchmarkResult = createAsyncThunk(
+  "report/fetchBenchmarkResult",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = await GET(`/materiality/benchmark/${runId}`);
+      return rejectIfFailed(res, rejectWithValue, "벤치마킹 결과 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: apiErrorMessage(error, "벤치마킹 결과 조회 중 오류가 발생했습니다."),
+      });
+    }
+  }
+);
+
+export const runMediaCrawlAndAnalyze = createAsyncThunk(
+  "report/runMediaCrawlAndAnalyze",
+  async ({ runId, sources, dateFrom, dateTo }, { rejectWithValue }) => {
+    try {
+      const res = await POST("/media/news/crawl-and-analyze", {
+        runId,
+        sources,
+        dateFrom,
+        dateTo,
+      });
+      return rejectIfFailed(res, rejectWithValue, "미디어 분석에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: apiErrorMessage(error, "미디어 분석 중 오류가 발생했습니다."),
+      });
+    }
+  }
+);
+
+export const fetchMediaResult = createAsyncThunk(
+  "report/fetchMediaResult",
+  async ({ runId }, { rejectWithValue }) => {
+    try {
+      const res = await GET(`/materiality/media/${runId}`);
+      return rejectIfFailed(res, rejectWithValue, "미디어 분석 결과 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: apiErrorMessage(error, "미디어 분석 결과 조회 중 오류가 발생했습니다."),
+      });
+    }
+  }
+);
+
 export const submitOnboardingApproval = createAsyncThunk(
   "report/submitOnboardingApproval",
   async ({ payload, batchId }, { rejectWithValue }) => {
@@ -1053,6 +1217,14 @@ const setPending = (state, key) => {
 const setRejected = (state, key, action) => {
   state.loading[key] = false;
   state.error[key] = action.payload || action.error || null;
+};
+
+// S5-B16: workflowType(BENCHMARK/MEDIA) → dmaStages 키 매핑
+const stageKeyForWorkflowType = (workflowType) => {
+  const type = String(workflowType || "").trim().toUpperCase();
+  if (type === "BENCHMARK") return "benchmark";
+  if (type === "MEDIA") return "media";
+  return null;
 };
 
 const setApprovalMutationPending = (state, key) => {
@@ -1457,6 +1629,103 @@ const reportSlice = createSlice({
       .addCase(calculateRollupBatch.rejected, (state, action) => setRejected(state, "calculateBatch", action));
 
     builder
+      .addCase(fetchRollupBaselineRequirements.pending, (state) => {
+        state.rollupBaseline.loading = true;
+        state.rollupBaseline.error = null;
+      })
+      .addCase(fetchRollupBaselineRequirements.fulfilled, (state, action) => {
+        state.rollupBaseline.loading = false;
+        state.rollupBaseline.error = null;
+        const data = dataOf(action.payload);
+        const batchId = data?.batchId ?? action.meta.arg?.batchId;
+        if (batchId != null) {
+          state.rollupBaseline.dataByBatchId[batchId] = data;
+        }
+      })
+      .addCase(fetchRollupBaselineRequirements.rejected, (state, action) => {
+        state.rollupBaseline.loading = false;
+        state.rollupBaseline.error = action.payload || action.error || null;
+      });
+
+    builder
+      .addCase(saveRollupBaselineValues.pending, (state) => {
+        state.rollupBaseline.saving = true;
+        state.rollupBaseline.error = null;
+      })
+      .addCase(saveRollupBaselineValues.fulfilled, (state) => {
+        state.rollupBaseline.saving = false;
+        state.rollupBaseline.error = null;
+      })
+      .addCase(saveRollupBaselineValues.rejected, (state, action) => {
+        state.rollupBaseline.saving = false;
+        state.rollupBaseline.error = action.payload || action.error || null;
+      });
+
+    // S5-B16: DMA 외부 시그널 단계(벤치마킹/미디어) reducers
+    builder
+      .addCase(fetchDmaWorkflowStatus.fulfilled, (state, action) => {
+        const dto = dataOf(action.payload);
+        const type = String(dto?.workflowType || action.meta.arg?.workflowType || "")
+          .trim()
+          .toUpperCase();
+        const stageKey = stageKeyForWorkflowType(type);
+        if (stageKey) {
+          state.dmaStages[stageKey].workflowStatus = dto;
+        }
+      })
+      .addCase(fetchDmaWorkflowStatus.rejected, (state, action) => {
+        const type = String(action.meta.arg?.workflowType || "").trim().toUpperCase();
+        const stageKey = stageKeyForWorkflowType(type);
+        if (stageKey) {
+          state.dmaStages[stageKey].error = action.payload || action.error || null;
+        }
+      });
+
+    builder
+      .addCase(runBenchmarkAnalysis.pending, (state) => {
+        state.dmaStages.benchmark.loading = true;
+        state.dmaStages.benchmark.error = null;
+      })
+      .addCase(runBenchmarkAnalysis.fulfilled, (state) => {
+        state.dmaStages.benchmark.loading = false;
+      })
+      .addCase(runBenchmarkAnalysis.rejected, (state, action) => {
+        state.dmaStages.benchmark.loading = false;
+        state.dmaStages.benchmark.error = action.payload || action.error || null;
+      });
+
+    builder
+      .addCase(fetchBenchmarkResult.fulfilled, (state, action) => {
+        state.dmaStages.benchmark.result = dataOf(action.payload);
+        state.dmaStages.benchmark.error = null;
+      })
+      .addCase(fetchBenchmarkResult.rejected, (state, action) => {
+        state.dmaStages.benchmark.error = action.payload || action.error || null;
+      });
+
+    builder
+      .addCase(runMediaCrawlAndAnalyze.pending, (state) => {
+        state.dmaStages.media.loading = true;
+        state.dmaStages.media.error = null;
+      })
+      .addCase(runMediaCrawlAndAnalyze.fulfilled, (state) => {
+        state.dmaStages.media.loading = false;
+      })
+      .addCase(runMediaCrawlAndAnalyze.rejected, (state, action) => {
+        state.dmaStages.media.loading = false;
+        state.dmaStages.media.error = action.payload || action.error || null;
+      });
+
+    builder
+      .addCase(fetchMediaResult.fulfilled, (state, action) => {
+        state.dmaStages.media.result = dataOf(action.payload);
+        state.dmaStages.media.error = null;
+      })
+      .addCase(fetchMediaResult.rejected, (state, action) => {
+        state.dmaStages.media.error = action.payload || action.error || null;
+      });
+
+    builder
       .addCase(submitOnboardingApproval.pending, (state) =>
         setApprovalMutationPending(state, "onboardingApprovalSubmit")
       )
@@ -1667,5 +1936,50 @@ export const {
   setReportParams,
 } = reportSlice.actions;
 
+
+// ── S5-B16: DMA 외부 시그널 단계 게이트/상태 selector ──
+//
+// 벤치마킹·미디어 분석은 G0/롤업(연결 재무기준)이 끝난 DMA 단계에서만 실행해야 한다.
+// reportWorkflow.current 의 basisStatus(ENTITY_READY/CONSOLIDATED_READY)와 nextAction 으로
+// 판정한다. (reportworkflows/service.resolveNextAction 에서 두 상태는 START_DMA 로 매핑된다.)
+const DMA_READY_BASIS_STATUSES = new Set(["ENTITY_READY", "CONSOLIDATED_READY"]);
+const PRE_DMA_NEXT_ACTIONS = new Set([
+  "SELECT_REPORT_BASIS",
+  "OPEN_G0_ONBOARDING",
+  "REQUEST_ROLLUP",
+  "WAIT_ROLLUP",
+]);
+const upperStr = (value) => String(value || "").trim().toUpperCase();
+
+export const selectCurrentWorkflow = (state) => state.report.workflow.current;
+
+export const selectCanRunDmaStage = (state) => {
+  const workflow = state.report.workflow.current;
+  if (!workflow) return false;
+  const basisStatus = upperStr(workflow.basisStatus);
+  const nextAction = upperStr(workflow.nextAction);
+  const workflowStep = upperStr(workflow.workflowStep);
+  if (PRE_DMA_NEXT_ACTIONS.has(nextAction)) return false;
+  if (DMA_READY_BASIS_STATUSES.has(basisStatus)) return true;
+  if (workflowStep === "DMA_READY") return true;
+  return false;
+};
+
+export const selectDmaGateReason = (state) => {
+  const workflow = state.report.workflow.current;
+  const nextAction = upperStr(workflow?.nextAction);
+  if (!workflow || nextAction === "SELECT_REPORT_BASIS") {
+    return "보고서 기준(개별/연결)을 먼저 선택한 뒤 G0 온보딩을 완료해주세요.";
+  }
+  if (nextAction === "OPEN_G0_ONBOARDING") {
+    return "G0 온보딩(재무 기준 데이터 입력)을 먼저 완료해주세요.";
+  }
+  if (nextAction === "REQUEST_ROLLUP" || nextAction === "WAIT_ROLLUP") {
+    return "자회사 데이터 취합(롤업)이 완료된 후 분석을 실행할 수 있습니다.";
+  }
+  return "G0 재무 기준 준비가 완료된 후 분석을 실행할 수 있습니다.";
+};
+
+export const selectDmaStage = (stageKey) => (state) => state.report.dmaStages[stageKey];
 
 export default reportSlice.reducer;

@@ -371,6 +371,52 @@ def resolveExternalEntitySourceAtomicIdsFromScopes(scopes: list[dict]) -> list[s
     consolidatedTargetAtomicIds = set(resolveConsolidatedTargetAtomicIdsFromScopes(scopes))
     return sorted(allRuleSourceAtomicIds - consolidatedTargetAtomicIds)
 
+def resolveConsolidatedSourceAtomicIdsFromRuleSources(ruleSources: list[dict]) -> list[str]:
+    """
+    rule source 메타데이터(source_scope 보존)에서 source_scope=CONSOLIDATED 인
+    source atomic id 집합을 반환한다.
+    이 atomic 들은 회사별 ENTITY KPI_FACT 가 아니라 ESG_GROUP_ROLLUP_RESULT 의
+    연결 결과값으로 평가되어야 한다.
+    """
+    atomicIds = set()
+    for source in ruleSources or []:
+        normalized = normalizeSource(source)
+        if normalized.get("sourceScope") == "CONSOLIDATED":
+            atomicId = normalized.get("sourceAtomicMetricId")
+            if atomicId:
+                atomicIds.add(atomicId)
+    return sorted(atomicIds)
+
+def resolveConsolidatedSourceAtomicIdsFromBatchTx(cur, batchId: int) -> list[str]:
+    """
+    batch scope의 consolidated rule source 메타데이터에서 source_scope=CONSOLIDATED 인
+    source atomic id 를 추출한다. (검증 없이 readiness 계산용 경량 조회)
+    """
+    from src.utils.calculationrepository import listActiveRulesByTargetAtomicIdsTx, listRuleSourcesTx
+
+    targetAtomicIds = resolveConsolidatedTargetAtomicIdsFromScopes(listScopeTx(cur, batchId))
+    if not targetAtomicIds:
+        return []
+    rules = listActiveRulesByTargetAtomicIdsTx(cur, targetAtomicIds, executionScope="CONSOLIDATED")
+    ruleCodes = sorted({
+        str(rule.get("calculation_rule_code") or "").strip()
+        for rule in rules
+        if str(rule.get("calculation_rule_code") or "").strip()
+    })
+    if not ruleCodes:
+        return []
+    ruleSources = listRuleSourcesTx(cur, ruleCodes)
+    return resolveConsolidatedSourceAtomicIdsFromRuleSources(ruleSources)
+
+def resolveConsolidatedSourceAtomicIdsFromBatch(batchId: int) -> list[str]:
+    from src.utils.db import getConn
+    conn = getConn()
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            return resolveConsolidatedSourceAtomicIdsFromBatchTx(cur, batchId)
+    finally:
+        conn.close()
+
 def resolveAllRuleSourceAtomicIdsTx(cur, batchId: int) -> list[str]:
     return resolveAllRuleSourceAtomicIdsFromScopes(listScopeTx(cur, batchId))
 
@@ -378,10 +424,16 @@ def resolveAllRuleSourceAtomicIds(batchId: int) -> list[str]:
     return resolveAllRuleSourceAtomicIdsFromScopes(listScope(batchId))
 
 def resolveExternalEntitySourceAtomicIdsTx(cur, batchId: int) -> list[str]:
-    return resolveExternalEntitySourceAtomicIdsFromScopes(listScopeTx(cur, batchId))
+    # source_scope=CONSOLIDATED source(예: 연결 기준값 E1-06__G0003)는 회사별 ENTITY
+    # KPI_FACT 입력 대상이 아니므로 readiness/missing 계산에서 제외한다.
+    entityCandidates = resolveExternalEntitySourceAtomicIdsFromScopes(listScopeTx(cur, batchId))
+    consolidatedSet = set(resolveConsolidatedSourceAtomicIdsFromBatchTx(cur, batchId))
+    return [atomicId for atomicId in entityCandidates if atomicId not in consolidatedSet]
 
 def resolveExternalEntitySourceAtomicIds(batchId: int) -> list[str]:
-    return resolveExternalEntitySourceAtomicIdsFromScopes(listScope(batchId))
+    entityCandidates = resolveExternalEntitySourceAtomicIdsFromScopes(listScope(batchId))
+    consolidatedSet = set(resolveConsolidatedSourceAtomicIdsFromBatch(batchId))
+    return [atomicId for atomicId in entityCandidates if atomicId not in consolidatedSet]
 
 def resolveExternalEntitySourceAtomicIdsByMetricTx(
     cur,

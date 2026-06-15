@@ -320,7 +320,16 @@ class KisCapabilityNonWiringGuardTest(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         # survey.py is intentionally modified in C4.0 — exclude it from guard
-        changed = [f for f in (result.stdout or "").strip().splitlines() if "survey.py" not in f]
+        # S5-B16: 벤치마킹/미디어 API 를 Redux(reportSlice.js)로 통일하면서 허용된 프론트 파일은 제외
+        _S5B16_ALLOWED_FRONTEND = {
+            "frontend/src/stores/reportSlice.js",
+            "frontend/src/homes/reports/BenchMarking.jsx",
+            "frontend/src/homes/reports/Media.jsx",
+        }
+        changed = [
+            f for f in (result.stdout or "").strip().splitlines()
+            if "survey.py" not in f and f not in _S5B16_ALLOWED_FRONTEND
+        ]
         self.assertEqual(changed, [])
 
 

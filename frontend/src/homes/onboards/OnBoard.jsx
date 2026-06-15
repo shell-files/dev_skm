@@ -691,11 +691,11 @@ const OnBoard = () => {
       ? "SELECTED_DISCLOSURE"
       : activeRollupContext.metricScopeCode;
   const expectedPostDmaCycleId = Number(displayWorkflow?.postDmaCycleId || 0) || null;
-  const isPostDmaRollupContext =
+  const isConsolidatedRollupContext =
     viewMode === "MY_PROJECT" &&
-    activeCycleType === "POST_DMA_DISCLOSURE" &&
-    displayWorkflow?.reportBasisType === "CONSOLIDATED";
-  const shouldShowRollupPanel = canManageRollup && isPostDmaRollupContext;
+    displayWorkflow?.reportBasisType === "CONSOLIDATED" &&
+    (activeCycleType === "PRE_DMA_G0" || activeCycleType === "POST_DMA_DISCLOSURE");
+  const shouldShowRollupPanel = canManageRollup && isConsolidatedRollupContext;
   const workflowRunId = displayWorkflow?.runId;
 
   const [isModalOpen, setIsModalOpen] = useState(false);

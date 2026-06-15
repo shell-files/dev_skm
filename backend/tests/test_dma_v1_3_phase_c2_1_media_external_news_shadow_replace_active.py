@@ -394,8 +394,9 @@ class PhaseC21ServiceHookTest(unittest.TestCase):
         self.assertTrue(all(ch == "media_external" for ch in capturedChannels))
         self.assertGreater(len(capturedChannels), 0)
 
-    # 18. Normalize 실패 → RuntimeError 전파, Replace TX 미호출
-    def test_normalize_failure_propagates_as_runtime_error(self):
+    # 18. Normalize 실패 → (Phase C2.4.1 Runtime Safety / S5-B16) 분석 중단 없이 경고 처리, Replace TX 미호출
+    #     News canonical shadow replace 실패는 smoke/fallback 분석(scoredSignals 반환)을 중단시키지 않는다.
+    def test_normalize_failure_does_not_abort_analysis(self):
         svc = self._service
         scored = self._makeScored()
         with patch.object(svc, "processMediaPipeline", return_value=[]), \
@@ -404,19 +405,22 @@ class PhaseC21ServiceHookTest(unittest.TestCase):
              patch.object(svc, "scoreSignals", return_value=scored), \
              patch.object(svc, "saveSignals"), \
              patch.object(svc, "step0NormalizeMediaFacts", side_effect=RuntimeError("norm fail")), \
-             patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx") as txMock:
-            with self.assertRaises(RuntimeError):
-                svc.runMediaAnalysis(articles=[], runId=99)
+             patch.object(svc, "step4ReplaceMediaNewsShadowBundleTx") as txMock, \
+             patch("builtins.print"):
+            result = svc.runMediaAnalysis(articles=[], runId=99)
+        self.assertEqual(result, scored)
         txMock.assert_not_called()
 
-    # 19. Replace TX 실패 → RuntimeError 전파 (complete crawl shadow replace 실패)
-    def test_tx_failure_propagates_as_runtime_error(self):
+    # 19. Replace TX 실패 → (Phase C2.4.1 Runtime Safety / S5-B16) 분석 중단 없이 scoredSignals 유지
+    #     shadow bundle TX 실패는 smoke/fallback 분석 응답을 중단시키지 않는다.
+    def test_tx_failure_does_not_abort_analysis(self):
         scored = self._makeScored()
-        with self.assertRaises(RuntimeError):
-            self._runWithPatches(
-                scoredReturn=scored,
-                txSideEffect=RuntimeError("tx boom"),
-            )
+        result, _, _, txMock, _ = self._runWithPatches(
+            scoredReturn=scored,
+            txSideEffect=RuntimeError("tx boom"),
+        )
+        self.assertEqual(result, scored)
+        txMock.assert_called_once()
 
     # 20. Legacy saveSignals 실패 → Replace TX 미호출, 기존 실패 유지
     def test_legacy_save_failure_skips_shadow_tx(self):

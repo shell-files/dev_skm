@@ -62,6 +62,8 @@ from src.utils.dmaworkflowrepository import (  # noqa: E402
 
 _FRONTEND_DIR = Path(__file__).resolve().parents[2] / "frontend" / "src"
 _BENCH_JSX = _FRONTEND_DIR / "homes" / "reports" / "BenchMarking.jsx"
+# S5-B16: workflow-status polling endpoint 는 reportSlice.js fetchDmaWorkflowStatus thunk 로 통일됨.
+_SLICE_JS = _FRONTEND_DIR / "stores" / "reportSlice.js"
 
 # ── fake DB helpers ────────────────────────────────────────────────────────────
 
@@ -683,6 +685,10 @@ def _jsx() -> str:
     return _BENCH_JSX.read_text(encoding="utf-8")
 
 
+def _slice() -> str:
+    return _SLICE_JS.read_text(encoding="utf-8")
+
+
 class TestF1BFrontendStatic(unittest.TestCase):
     """#57-#77 BenchMarking.jsx source code assertions."""
 
@@ -705,7 +711,10 @@ class TestF1BFrontendStatic(unittest.TestCase):
         self.assertIn("startBenchmarkPolling", _jsx())
 
     def test_63_polling_url_contains_workflow_status_benchmark(self):
-        self.assertIn("/materiality/workflow-status/", _jsx())
+        # S5-B16: workflow-status URL 은 reportSlice.js fetchDmaWorkflowStatus thunk 로 이동.
+        # 컴포넌트는 workflowType "BENCHMARK" 로 polling thunk 를 dispatch 한다.
+        self.assertIn("/materiality/workflow-status/", _slice())
+        self.assertIn("fetchDmaWorkflowStatus", _jsx())
         self.assertIn("BENCHMARK", _jsx())
 
     def test_64_set_interval_used_for_polling(self):

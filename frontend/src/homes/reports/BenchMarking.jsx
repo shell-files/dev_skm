@@ -1,6 +1,6 @@
 import { useRef, useState, Fragment, useEffect } from "react";
 import { useNavigate } from "react-router";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import "@styles/benchmarking.css";
 import robot from "@assets/images/robot/robot_repoting_transparent.png";
 import {
@@ -8,7 +8,15 @@ import {
   showConfirmAlert,
 } from "@components/UI/ServiceAlert";
 
-import { GET, POST_FORM, PUT } from "@utils/Network";
+import {
+  fetchCurrentWorkflow,
+  uploadBenchmarkGroup,
+  runBenchmarkAnalysis,
+  fetchBenchmarkResult,
+  fetchDmaWorkflowStatus,
+  selectCanRunDmaStage,
+  selectDmaGateReason,
+} from "@stores/reportSlice";
 
 const BENCHMARK_GROUP_CONFIG = {
   leader: { fileType: "Leader", label: "리더" },
@@ -45,7 +53,11 @@ const mapBenchmarkResultToDashboard = (dto) => ({
 });
 
 const Benchmarking = () => {
+  const dispatch = useDispatch();
   const currentRunId = useSelector((state) => state.report.currentRunId);
+  const workflow = useSelector((state) => state.report.workflow.current);
+  const canRunDma = useSelector(selectCanRunDmaStage);
+  const gateReason = useSelector(selectDmaGateReason);
 
   const [fileStorage, setFileStorage] = useState({
     leader: [],
@@ -79,8 +91,13 @@ const Benchmarking = () => {
   };
 
   const fetchBenchmarkWorkflowStatus = async (runId) => {
-    const res = await GET(`/materiality/workflow-status/${runId}/BENCHMARK`);
-    return res && !res.error ? res : null;
+    try {
+      return await dispatch(
+        fetchDmaWorkflowStatus({ runId, workflowType: "BENCHMARK" })
+      ).unwrap();
+    } catch {
+      return null;
+    }
   };
 
   const startBenchmarkPolling = (runId) => {
@@ -106,6 +123,11 @@ const Benchmarking = () => {
   };
 
   useEffect(() => () => stopBenchmarkPolling(), []);
+
+  // 진입 시 reportWorkflow.current 를 확보한다. (G0/롤업 완료 게이트 판정용)
+  useEffect(() => {
+    if (!workflow) dispatch(fetchCurrentWorkflow());
+  }, [dispatch, workflow]);
 
   const steps = [
     { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
@@ -180,7 +202,7 @@ const Benchmarking = () => {
     }));
   };
 
-  const uploadBenchmarkGroup = async (groupKey) => {
+  const uploadGroupFiles = async (groupKey) => {
     const group = BENCHMARK_GROUP_CONFIG[groupKey];
     const files = fileStorage[groupKey] || [];
 
@@ -193,16 +215,14 @@ const Benchmarking = () => {
       throw new Error(`${group.label} 기업명을 입력해주세요.`);
     }
 
-    const formData = new FormData();
-    files.forEach((file) => { formData.append("file", file); });
-    formData.append("fileType", group.fileType);
-    formData.append("companyName", companyName);
-    formData.append("page", "SR");
-
-    const response = await POST_FORM("/benchmk", formData);
-    if (!response || response.status === false) {
-      throw new Error(response?.message || `${group.label} 업로드에 실패했습니다.`);
-    }
+    const response = await dispatch(
+      uploadBenchmarkGroup({
+        fileType: group.fileType,
+        companyName,
+        files,
+        page: "SR",
+      })
+    ).unwrap();
 
     const storedFiles = response.data?.files || [];
     if (storedFiles.length !== files.length) {
@@ -218,6 +238,12 @@ const Benchmarking = () => {
     const runId = Number(currentRunId);
     if (!Number.isInteger(runId) || runId <= 0) {
       showDefaultAlert("프로젝트 선택 필요", "현재 보고서 프로젝트를 먼저 선택해주세요.", "warning");
+      return;
+    }
+
+    // G0/롤업 완료 게이트: DMA 단계 진입 전에는 벤치마킹 실행 금지
+    if (!canRunDma) {
+      showDefaultAlert("실행 불가", gateReason, "warning");
       return;
     }
 
@@ -245,29 +271,30 @@ const Benchmarking = () => {
 
       const uploadedFileNames = [];
       for (const groupKey of ["leader", "peer", "sub"]) {
-        const storedNames = await uploadBenchmarkGroup(groupKey);
+        const storedNames = await uploadGroupFiles(groupKey);
         uploadedFileNames.push(...storedNames);
       }
 
       setProgress(15);
 
-      const analyzePromise = PUT("/benchmk", {
-        file: uploadedFileNames,
-        page: "SR",
-        esgMaterialityRunId: runId,
-        sourceStep: "benchmark",
-      });
+      const analyzePromise = dispatch(
+        runBenchmarkAnalysis({ runId, fileNames: uploadedFileNames })
+      ).unwrap();
 
       startBenchmarkPolling(runId);
 
-      const analyzeResponse = await analyzePromise;
+      try {
+        await analyzePromise;
+      } catch (analyzeErr) {
+        throw new Error(
+          benchmarkWorkflowErrorRef.current ||
+            analyzeErr?.message ||
+            "벤치마킹 분석에 실패했습니다."
+        );
+      }
 
       if (benchmarkWorkflowErrorRef.current) {
         throw new Error(benchmarkWorkflowErrorRef.current);
-      }
-
-      if (!analyzeResponse || analyzeResponse.status === false) {
-        throw new Error(analyzeResponse?.message || "벤치마킹 분석에 실패했습니다.");
       }
 
       const finalWorkflow = await fetchBenchmarkWorkflowStatus(runId);
@@ -282,12 +309,7 @@ const Benchmarking = () => {
       stopBenchmarkPolling();
       setProgress(100);
 
-      const resultResponse = await GET(`/materiality/benchmark/${runId}`);
-
-      if (!resultResponse || resultResponse.status === false) {
-        throw new Error(resultResponse?.message || "벤치마킹 결과 조회에 실패했습니다.");
-      }
-
+      const resultResponse = await dispatch(fetchBenchmarkResult({ runId })).unwrap();
       const dto = resultResponse.data ?? resultResponse;
       setDashboardData(mapBenchmarkResultToDashboard(dto));
       setIsAnalyzing(false);
@@ -441,7 +463,20 @@ const Benchmarking = () => {
             {renderUploadGroup("sub", "자사", "회사이름 필수 입력")}
           </div>
 
-          <button className="Bench-btn" id="bench-btn" onClick={runAnalysis}>실시간 AI 분석 시작</button>
+          {!canRunDma && (
+            <div style={{ marginTop: "10px", fontSize: "0.85rem", color: "#b45309", textAlign: "center", fontWeight: 600 }}>
+              {gateReason}
+            </div>
+          )}
+          <button
+            className="Bench-btn"
+            id="bench-btn"
+            onClick={runAnalysis}
+            disabled={!canRunDma || isAnalyzing}
+            title={!canRunDma ? gateReason : ""}
+          >
+            실시간 AI 분석 시작
+          </button>
         </div>
       </main>
 
@@ -582,6 +617,17 @@ const Benchmarking = () => {
                     ))}
                   </ul>
                 </div>
+              </div>
+
+              <div style={{ textAlign: "center", marginTop: "20px" }}>
+                <button
+                  type="button"
+                  className="Bench-btn"
+                  style={{ maxWidth: "320px", margin: "0 auto" }}
+                  onClick={() => navigate("/media")}
+                >
+                  다음 단계: 미디어 분석으로 이동
+                </button>
               </div>
             </div>
           )}

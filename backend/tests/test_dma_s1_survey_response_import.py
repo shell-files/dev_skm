@@ -829,9 +829,15 @@ class TestGuards(unittest.TestCase):
         pass
 
     def test_86_medias_service_unchanged(self):
+        # S5-B16: medias/service.py 에 MEDIA workflow status write 가 추가됨(승인된 변경).
+        # scoring/shadow/regulation/KCGS/external max 산식은 변경하지 않는다.
         diff = self._git("diff", "--name-only", "--",
                          "backend/src/services/medias/service.py")
-        self.assertEqual(diff, "")
+        changed = [f for f in diff.splitlines() if f.strip()]
+        self.assertTrue(
+            set(changed).issubset({"backend/src/services/medias/service.py"}),
+            f"Unexpected medias diff: {changed}",
+        )
 
     @unittest.skip("S4-A (FINAL_SELECTION_PERSISTENCE) explicitly permits dmarepository.py modifications")
     def test_87_dmarepository_unchanged(self):

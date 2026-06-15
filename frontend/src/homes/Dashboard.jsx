@@ -42,7 +42,7 @@ const MODULE_CARDS = [
     desc: "ESG 데이터를 체계적으로\n수집하고 관리합니다.",
     tone: "green",
     icon: iconData,
-    path: "/onboard",
+    path: "/onb",
   },
   {
     key: "dma",

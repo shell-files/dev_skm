@@ -40,7 +40,7 @@ from src.utils.subissuemaster import getSubIssueDisplayName
 from src.services.surveys.formservice import ensureSurveyFormForRun
 
 
-MVP_DEMO_COMPANY_KEYWORDS = []
+MVP_DEMO_COMPANY_KEYWORDS = ["현대모비스"]
 MVP_DEMO_INDUSTRY_KEYWORDS = ["자동차부품산업"]
 
 

@@ -460,6 +460,7 @@ body {
     color: #334155;
 }
 
+<<<<<<< HEAD
 #main_page .header-project-empty {
     background: #fffbeb;
     border-color: #fde68a;
@@ -473,6 +474,8 @@ body {
     white-space: nowrap;
 }
 
+=======
+>>>>>>> 0d2e3beff64378b963d05eb4bbdccf4a9b28f551
 /* 데스크탑 상단 토글 버튼 스타일 */
 #main_page .sidebar-toggle-btn {
     background: none;

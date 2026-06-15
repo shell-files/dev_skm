@@ -260,16 +260,19 @@ def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseD
                 directMetricIds=metricIds,
             )
 
-            # Determine readiness from Tx
-            requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
-            requiredAtomicCount = len(requiredAtomicIds)
+            # Determine readiness from Tx.
+            # resolveExternalEntitySourceAtomicIdsTx 는 source_scope=CONSOLIDATED source
+            # (예: 연결 기준값 E1-06__G0003)를 제외한 ENTITY 입력 대상만 반환한다.
+            # 따라서 회사별 missing(missing_atomic_metric_ids_json) 기록도 ENTITY source로 한정된다.
+            requiredEntityAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
+            requiredAtomicCount = len(requiredEntityAtomicIds)
 
             sourceStatuses = []
             for sourceCompanyId in includedCompanyIds:
                 # Pre-calculate missing count for status insertion
-                facts = rollupRepository.listApprovedFactsByCompany([sourceCompanyId], reportingYear, requiredAtomicIds)
+                facts = rollupRepository.listApprovedFactsByCompany([sourceCompanyId], reportingYear, requiredEntityAtomicIds)
                 approvedKeys = {f["atomicMetricId"] for f in facts}
-                missingAtomicIds = [a for a in requiredAtomicIds if a not in approvedKeys]
+                missingAtomicIds = [a for a in requiredEntityAtomicIds if a not in approvedKeys]
 
                 approvedCount = requiredAtomicCount - len(missingAtomicIds)
                 readyYn = approvedCount == requiredAtomicCount

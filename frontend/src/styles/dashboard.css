@@ -16,7 +16,7 @@
   --home-muted: #64748b;
   --home-border: #e5e7eb;
   --home-card: #ffffff;
-  --home-bg: #f8fafc;
+  --home-bg: #fff;
   --home-radius-card: 22px;
   --home-radius-sm: 14px;
   --home-shadow-card: 0 16px 45px rgba(15, 23, 42, 0.07);
@@ -50,8 +50,7 @@
   min-height: 100%;
   padding: 0 0 0;
   background:
-    radial-gradient(ellipse 70% 50% at 75% 5%, rgba(34, 197, 94, 0.07), transparent),
-    radial-gradient(ellipse 50% 40% at 95% 15%, rgba(59, 130, 246, 0.06), transparent),
+    radial-gradient(ellipse 70% 50% at 75% 5%, #fff, transparent),
     var(--home-bg);
 }
 
@@ -899,6 +898,95 @@
   .home-dashboard-notice-more {
     margin-left: 0;
   }
+}
+
+/* ============================================================
+   필요 온보딩 지표 카드 (db-card, db-onboard-*)
+============================================================ */
+.db-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 16px;
+}
+
+.db-notice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.db-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.db-notice-view-all {
+  background: none;
+  border: none;
+  color: #16a34a;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.db-notice-view-all:hover {
+  text-decoration: underline;
+}
+
+.db-onboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+  margin-top: 4px;
+}
+
+.db-onboard-table thead th {
+  padding: 6px 4px;
+  color: #64748b;
+  font-weight: 600;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.db-onboard-table thead th:first-child {
+  text-align: left;
+  padding-left: 0;
+}
+
+.db-onboard-table tbody td {
+  padding: 9px 4px;
+  border-bottom: 1px solid #f1f5f9;
+  text-align: center;
+  color: #374151;
+}
+
+.db-onboard-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.db-onboard-table tbody td:first-child {
+  text-align: left;
+  padding-left: 0;
+  font-weight: 500;
+  color: #1e293b;
+}
+
+.db-onboard-count {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.db-onboard-done {
+  font-weight: 700;
+  font-size: 0.78rem;
 }
 
 /* ============================================================

@@ -317,7 +317,6 @@ const Dashboard = () => {
           {/* ── 프로젝트 진행 현황 ── */}
           <div className="home-dashboard-progress-card">
             {/* 필요 온보딩 지표 */}
-            <div className="db-card">
               <div className="db-notice-header">
                 <p className="db-section-title">필요 온보딩 지표</p>
                 <button className="db-notice-view-all" onClick={() => navigate("/onboard")}>
@@ -348,10 +347,9 @@ const Dashboard = () => {
                   </tbody>
                 </table>
               )}
-            </div>
 
             {/* Project meta row */}
-            <div className="home-dashboard-project-meta">
+            {/* <div className="home-dashboard-project-meta">
               <div className="home-dashboard-project-meta-item">
                 <span className="home-dashboard-project-meta-label">보고 기준 연도</span>
                 <span className="home-dashboard-project-meta-value">
@@ -384,7 +382,7 @@ const Dashboard = () => {
                 </svg>
                 프로젝트 변경
               </button>
-            </div>
+            </div> */}
           </div>
 
           {/* ── 처음이신가요? 4단계 가이드 ── */}

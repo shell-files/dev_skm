@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import ApprovalProjectSelectModal from "@mains/modal/ApprovalProjectSelectModal";
 import { useAuth } from "@hooks/AuthContext";
 import { setCurruntYear, setMaterialityRunId, fetchApprovalProjects } from "@stores/reportSlice";
+import { GET } from "@utils/Network";
 import "@styles/dashboard.css";
 
 /* ── Image Assets ── */
@@ -23,6 +24,14 @@ const MOCK_PROJECTS = [
   { runId: 2, reportingYear: 2025, reportBasisType: "CONSOLIDATED", runStatus: "COMPLETED", currentStageLabel: "completed", pendingCount: 0, readOnlyYn: true },
   { runId: 3, reportingYear: 2026, reportBasisType: "ENTITY", runStatus: "ACTIVE", currentStageLabel: "데이터 수집", pendingCount: 0, readOnlyYn: false },
   { runId: 4, reportingYear: 2025, reportBasisType: "CONSOLIDATED", runStatus: "ARCHIVED", currentStageLabel: "규제 검토", pendingCount: 0, readOnlyYn: true },
+];
+
+const ONBOARDING_ROWS = [
+  { name: "??", e: true, s: true, g: false, count: "?개", done: "?/?", doneColor: "#ef4444" },
+  { name: "??", e: false, s: true, g: true, count: "?개", done: "?/?", doneColor: "#ef4444" },
+  { name: "??", e: false, s: false, g: true, count: "?개", done: "?/?", doneColor: "#ef4444" },
+  { name: "??", e: false, s: true, g: false, count: "?개", done: "?/?", doneColor: "#475569" },
+  { name: "??", e: true, s: false, g: false, count: "?개", done: "?/?", doneColor: "#ef4444" },
 ];
 
 /* ── Module cards data ── */
@@ -96,6 +105,26 @@ const NOTICE_ITEMS = [
   { id: 3, isNew: false, text: "2024 지속가능경영보고서 템플릿이 업데이트되었습니다.", date: "03-15" },
 ];
 
+/* ── materiality results + onboarding-progress → 이슈별 행 ── */
+const buildMaterialityRows = (matItems = [], progressItems = []) => {
+  const progressMap = new Map(
+    progressItems.map((p) => [p.subIssueCode, p])
+  );
+  return matItems
+    .filter((it) => it.selectedYn)
+    .map((it) => {
+      const p = progressMap.get(it.subIssueCode);
+      const total = p?.totalCount ?? null;
+      const done = p?.doneCount ?? null;
+      return {
+        name: it.displaySubIssueName || it.subIssueCode,
+        count: total != null ? `${total}개` : "-",
+        done: done != null ? `${done}/${total}` : "-",
+        doneColor: done != null && done === total ? "#475569" : "#ef4444",
+      };
+    });
+};
+
 /* ── Helpers (preserved) ── */
 const getBasisLabel = (basisType) => {
   if (basisType === "CONSOLIDATED") return "연결 기준";
@@ -135,11 +164,35 @@ const Dashboard = () => {
   const companyName = selectedCompany?.company_name || "A_GROUP";
   const currentYear = useSelector((state) => state.report.currentYear);
   const currentRunId = useSelector((state) => state.report.currentRunId);
+  const [onboardingLoading, setOnboardingLoading] = useState(false);
+  const [onboardingRows, setOnboardingRows] = useState(ONBOARDING_ROWS);
+
   const approvalProjects = useSelector((state) => state.report?.approval?.projects ?? []);
 
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [currentProject, setCurrentProject] = useState(null);
   const guideRef = useRef(null);
+
+  /* ── runId 변경 시 필요 온보딩 지표 API 호출 (이슈별 개별 카운트) ── */
+  useEffect(() => {
+    if (!currentRunId) return;
+    const load = async () => {
+      setOnboardingLoading(true);
+      try {
+        const [matRes, progressRes] = await Promise.all([
+          GET(`/materiality/results/${currentRunId}`),
+          GET(`/materiality/results/${currentRunId}/onboarding-progress`),
+        ]);
+        const rows = buildMaterialityRows(matRes?.items, progressRes?.items);
+        if (rows.length > 0) setOnboardingRows(rows);
+      } catch {
+        // fallback: mock 유지
+      } finally {
+        setOnboardingLoading(false);
+      }
+    };
+    load();
+  }, [currentRunId]);
 
   /* ── 회사 변경 시 프로젝트 목록 새로 불러오고 첫 활성 프로젝트 자동 선택 ── */
   useEffect(() => {
@@ -237,7 +290,7 @@ const Dashboard = () => {
         ═══════════════════════════════════════════════════════ */}
         <section className="home-dashboard-module-grid">
           {MODULE_CARDS.map((mod) => (
-            <div
+            <div  
               key={mod.key}
               className="home-dashboard-module-card"
               data-tone={mod.tone}
@@ -271,45 +324,39 @@ const Dashboard = () => {
 
           {/* ── 프로젝트 진행 현황 ── */}
           <div className="home-dashboard-progress-card">
-            <div className="home-dashboard-progress-header">
-              <h3>프로젝트 진행 현황</h3>
-              <div className="home-dashboard-progress-header-right">
-                <span className="home-dashboard-stage-link">상세 단계</span>
-                <span className="home-dashboard-stage-pill">
-                  {getStageLabel(displayProject.currentStageLabel)}
-                </span>
+            {/* 필요 온보딩 지표 */}
+            <div className="db-card">
+              <div className="db-notice-header">
+                <p className="db-section-title">필요 온보딩 지표</p>
+                <button className="db-notice-view-all" onClick={() => navigate("/onboard")}>
+                  전체 보기 →
+                </button>
               </div>
-            </div>
-
-            <div className="home-dashboard-progress-body">
-              {/* Circular progress ring */}
-              <div className="home-dashboard-progress-ring">
-                <div className="home-dashboard-progress-ring-circle">
-                  <div className="home-dashboard-progress-ring-inner">
-                    <span className="home-dashboard-progress-ring-value">{OVERALL_PROGRESS}%</span>
-                    <span className="home-dashboard-progress-ring-label">전체 진행률</span>
-                  </div>
+              {onboardingLoading ? (
+                <div style={{ padding: "24px 0", textAlign: "center", fontSize: "0.82rem", color: "#94a3b8" }}>
+                  지표 불러오는 중...
                 </div>
-              </div>
-
-              {/* Progress bars */}
-              <div className="home-dashboard-progress-list">
-                {PROGRESS_ITEMS.map((item) => (
-                  <div key={item.label} className="home-dashboard-progress-item">
-                    <span className="home-dashboard-progress-item-label">{item.label}</span>
-                    <div className="home-dashboard-progress-bar-track">
-                      <div
-                        className="home-dashboard-progress-bar-fill"
-                        style={{ width: `${item.value}%` }}
-                      />
-                    </div>
-                    <span className="home-dashboard-progress-item-value">{item.value}%</span>
-                  </div>
-                ))}
-              </div>
+              ) : (
+                <table className="db-onboard-table">
+                  <thead>
+                    <tr>
+                      <th>이슈</th>
+                      <th>전체</th>
+                      <th>입력완료</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {onboardingRows.map((row, i) => (
+                      <tr key={i}>
+                        <td>{row.name}</td>
+                        <td className="db-onboard-count">{row.count}</td>
+                        <td className="db-onboard-done" style={{ color: row.doneColor }}>{row.done}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
-
-            <div className="home-dashboard-progress-divider" />
 
             {/* Project meta row */}
             <div className="home-dashboard-project-meta">

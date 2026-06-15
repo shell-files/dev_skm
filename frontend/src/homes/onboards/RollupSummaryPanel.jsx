@@ -46,6 +46,7 @@ const numberOrZero = (value) => Number(value || 0);
 
 const RollupSummaryPanel = ({
   batchId,
+  sourceCycleId,
   onCalculated,
   rollupPurposeCode = "DMA_PRECHECK",
   metricScopeCode = "G0_02_FINANCIAL_BASIS",
@@ -67,6 +68,13 @@ const RollupSummaryPanel = ({
   const [error, setError] = useState(null);
 
   const statusInfo = useMemo(() => reduxStatusInfo, [reduxStatusInfo]);
+  const canCreateRequest =
+    workflow?.nextAction === "REQUEST_ROLLUP" ||
+    (
+      rollupPurposeCode === "REPORT_DISCLOSURE" &&
+      metricScopeCode === "SELECTED_DISCLOSURE" &&
+      sourceCycleId
+    );
 
   const fetchRollupState = useCallback(async () => {
     if (!batchId) return;
@@ -92,7 +100,7 @@ const RollupSummaryPanel = ({
     };
   }, [fetchRollupState]);
 
-  if (!batchId && workflow?.nextAction !== "REQUEST_ROLLUP") return null;
+  if (!batchId && !canCreateRequest) return null;
 
   if (batchId && (loadingStatus || loadingSources) && !statusInfo) {
     return (
@@ -207,6 +215,31 @@ const RollupSummaryPanel = ({
     btnAction = handleCalc;
   }
 
+  if (!batchId && canCreateRequest) {
+    btnText = "자회사 데이터 요청하기";
+    btnClass = "primary";
+    btnDisabled = false;
+    btnAction = onCtaClick;
+  } else if (batchId && isCalculated) {
+    btnText = "데이터 취합 완료";
+    btnClass = "calculated";
+    btnDisabled = true;
+  } else if (batchId && nextAction === "WAIT_ROLLUP" && calculateReadyYn) {
+    btnText = isCalculating ? "계산 중..." : "데이터 취합 실행";
+    btnClass = "primary";
+    btnDisabled = isCalculating;
+    btnAction = handleCalc;
+  } else if (batchId && nextAction === "WAIT_ROLLUP") {
+    btnText = "자회사 데이터 대기";
+    btnClass = "";
+    btnDisabled = true;
+  }
+
+  const finalStepLabel =
+    rollupPurposeCode === "REPORT_DISCLOSURE"
+      ? "보고서 생성 준비"
+      : "이중중대성평가 준비";
+
   return (
     <div className="ob1-rollup-panel ob1-rollup-panel-v2" style={{ flexDirection: "column", alignItems: "stretch" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "16px", width: "100%" }}>
@@ -220,7 +253,7 @@ const RollupSummaryPanel = ({
           <div className={`ob1-rollup-step ${calculateReadyYn ? "completed" : batchId ? "active" : ""}`}>자회사 전송</div>
           <div className={`ob1-rollup-step ${isCalculated ? "completed" : calculateReadyYn ? "active" : ""}`}>데이터 취합</div>
           <div className={`ob1-rollup-step ${nextAction === "START_DMA" ? "active" : dmaReadyYn || reportReadyYn ? "completed" : ""}`}>
-            {rollupPurposeCode === "REPORT_DISCLOSURE" ? "보고서 준비" : "이중중대성평가 준비"}
+            {finalStepLabel}
           </div>
         </div>
 

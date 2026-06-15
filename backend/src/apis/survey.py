@@ -4,6 +4,8 @@ from src.utils.auth import get_token
 from src.models.survey import SurveyCreateRequestDto
 from src.models.dmasurveyform import DmaSurveyFormResponseDto
 from src.models.dmasurveyresponseimport import SurveyImportResultDto, SurveyImportPreviewDto
+from src.models.dmasurveyscore import SurveyScorePreviewDto, SurveyScoreRecalculateResultDto
+from src.models.dmasurveyresponsestatus import SurveyResponseStatusDto, SurveyResponseTargetsRequestDto
 
 from src.services.surveys.service import exportCsvProcess, getRawProcess
 from src.services.surveys.formservice import createFormProcess, ensureSurveyFormForRun
@@ -11,6 +13,11 @@ from src.services.surveys.importservice import (
     importSurveyResponsesForRun,
     previewSurveyResponses,
 )
+from src.services.surveys.scoringservice import (
+    previewSurveyScores,
+    recalculateSurveyScoresForRun,
+)
+from src.services.surveys.statusservice import getSurveyResponseStatus, saveSurveyResponseTargets
 from src.utils.dmasurveyformrepository import getSurveyFormByRunId, toSurveyFormResponse
 
 router = APIRouter()
@@ -87,6 +94,66 @@ async def preview_survey_responses(runId: int, token=Depends(get_token)):
 async def import_survey_responses(runId: int, token=Depends(get_token)):
     try:
         return importSurveyResponsesForRun(runId)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/form/{runId}/scores/preview",
+    response_model=SurveyScorePreviewDto,
+    summary="Survey 점수 계산 Preview (DB 저장 없음)",
+)
+async def preview_survey_scores(runId: int, token=Depends(get_token)):
+    try:
+        return previewSurveyScores(runId)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/form/{runId}/scores/recalculate",
+    response_model=SurveyScoreRecalculateResultDto,
+    summary="Survey 점수 계산 및 Final Score / rank_no 재계산",
+)
+async def recalculate_survey_scores(runId: int, token=Depends(get_token)):
+    try:
+        return recalculateSurveyScoresForRun(runId)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get(
+    "/form/{runId}/response-status",
+    response_model=SurveyResponseStatusDto,
+    summary="설문 응답 현황 조회 (form 없어도 targets + zero counts 반환)",
+)
+async def get_survey_response_status(runId: int, token=Depends(get_token)):
+    try:
+        return getSurveyResponseStatus(runId)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put(
+    "/form/{runId}/response-targets",
+    response_model=SurveyResponseStatusDto,
+    summary="설문 목표 응답자 수 저장 후 최신 응답 현황 반환",
+)
+async def put_survey_response_targets(
+    runId: int,
+    req: SurveyResponseTargetsRequestDto,
+    token=Depends(get_token),
+):
+    try:
+        return saveSurveyResponseTargets(runId, req.targets)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

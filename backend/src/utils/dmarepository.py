@@ -581,6 +581,76 @@ def listSelectedSubIssues(runId: int) -> list:
     """
     return findAll(sql, (runId,)) or []
 
+
+def listFinalTopSubIssues(runId: int, limit: int = 5) -> list:
+    sql = """
+        SELECT
+            sub_issue_code,
+            rank_no,
+            final_score,
+            final_impact_score,
+            final_financial_score
+        FROM ESG_DMA_SCORE_SUMMARY
+        WHERE esg_materiality_run_id = ?
+          AND final_score IS NOT NULL
+        ORDER BY
+            CASE WHEN rank_no IS NULL THEN 1 ELSE 0 END,
+            rank_no ASC,
+            final_score DESC,
+            sub_issue_code ASC
+        LIMIT ?
+    """
+    return findAll(sql, (runId, limit)) or []
+
+
+def replaceSelectedSubIssuesTx(runId: int, selectedRows: list, userId=None) -> None:
+    """
+    Hard DELETE + INSERT for ESG_MATERIALITY_SELECTED_SUB_ISSUE.
+    Cannot use soft delete: unique key (esg_materiality_run_id, sub_issue_code) does not
+    include delete_yn, so soft-deleting then re-inserting the same sub_issue_code would
+    cause a duplicate key error.
+    """
+    conn = getConn()
+    if conn is None:
+        raise RuntimeError("DB connection is not available for finalize transaction")
+    try:
+        conn.autocommit = False
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                "DELETE FROM ESG_MATERIALITY_SELECTED_SUB_ISSUE WHERE esg_materiality_run_id = ?",
+                (runId,),
+            )
+            insertSql = """
+                INSERT INTO ESG_MATERIALITY_SELECTED_SUB_ISSUE (
+                    esg_materiality_run_id,
+                    sub_issue_code,
+                    selected_rank_no,
+                    selection_type,
+                    selection_reason,
+                    selected_by_user_id,
+                    selected_at,
+                    delete_yn
+                ) VALUES (?, ?, ?, ?, ?, ?, NOW(), 0)
+            """
+            for row in selectedRows:
+                cur.execute(insertSql, (
+                    runId,
+                    row["sub_issue_code"],
+                    row["selected_rank_no"],
+                    row.get("selection_type", "rank_based"),
+                    row.get("selection_reason", "최종 DMA 점수 기준 Top 5 자동 선정"),
+                    userId,
+                ))
+        conn.commit()
+    except Exception:
+        if hasattr(conn, "rollback"):
+            conn.rollback()
+        raise
+    finally:
+        if hasattr(conn, "close"):
+            conn.close()
+
+
 def listTopStageIssues(runId: int, stage: str, limit: int = 10) -> list:
     stageColumns = {
         "benchmark": ("benchmark_impact_score", "benchmark_financial_score"),
@@ -678,11 +748,12 @@ def listSurveyCounts(runId: int) -> list:
     sql = """
         SELECT
             respondent_group,
-            COUNT(*) AS response_count,
-            COUNT(DISTINCT respondent_user_id) AS unique_respondent_count
+            COUNT(DISTINCT source_response_key) AS response_count,
+            COUNT(DISTINCT source_response_key) AS unique_respondent_count
         FROM ESG_DMA_SURVEY_RESPONSE
         WHERE esg_materiality_run_id = ?
           AND delete_yn = 0
+          AND source_response_key IS NOT NULL
         GROUP BY respondent_group
     """
     return findAll(sql, (runId,)) or []
@@ -692,13 +763,16 @@ def listSurveyScores(runId: int) -> list:
         SELECT
             sub_issue_code,
             respondent_group,
+            mapped_axis,
             AVG(normalized_score) AS avg_score,
             COUNT(*) AS response_count
         FROM ESG_DMA_SURVEY_RESPONSE
         WHERE esg_materiality_run_id = ?
           AND sub_issue_code IS NOT NULL
+          AND mapped_axis IN ('impact', 'financial')
+          AND normalized_score IS NOT NULL
           AND delete_yn = 0
-        GROUP BY sub_issue_code, respondent_group
+        GROUP BY sub_issue_code, respondent_group, mapped_axis
     """
     return findAll(sql, (runId,)) or []
 

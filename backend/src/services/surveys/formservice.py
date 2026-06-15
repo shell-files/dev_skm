@@ -40,8 +40,15 @@ def loadSurveyTemplate() -> dict:
         return json.load(f)
 
 
+def isTop5Question(question: dict) -> bool:
+    return (
+        question.get("type") == "top5"
+        or question.get("code") == "RANKING_TOP5"
+    )
+
+
 def buildQuestion(question: dict, issues: list) -> dict:
-    if question.get("type") == "top5":
+    if isTop5Question(question):
         return {
             "type": "top5",
             "code": question["code"],

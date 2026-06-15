@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Routes, Route, Navigate, Outlet } from "react-router";
+import { Routes, Route, Outlet } from "react-router";
 import '@styles/App.css'
 import "@styles/mains.css";
 import NotFound from '@errors/NotFound.jsx';
@@ -92,7 +92,6 @@ const App = () => {
             <Route path="/media" element={<Media />} />
             <Route path="/draft" element={<Draft />} />
             <Route path="/survey" element={<Survey />} />
-            <Route path="/onboard" element={<Onboarding />} />
             <Route path="/mypage" element={<Mypage />} />
             <Route path="/manager" element={<Manager />} />
             <Route path="/managerData" element={<ManagerData />} />

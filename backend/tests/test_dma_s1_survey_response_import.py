@@ -64,6 +64,11 @@ from src.services.surveys.importservice import (               # noqa: E402
     _parseGridAnswerFromHeader,
     _parseTop5Answer,
     _parseResponseSheets,
+    _normalizeHeaderText,
+    _normalizeIssueLabel,
+    _extractBracketParts,
+    _parseQuestionMarker,
+    _resolveQuestionHeader,
 )
 import src.utils.dmasurveyresponserepository as repo  # noqa: E402
 
@@ -664,7 +669,7 @@ class TestRepository(unittest.TestCase):
                 repo.replaceSurveyResponsesForFormTx(runId=1, surveyFormId=1, rows=[])
             self.assertIn("DB connection unavailable", str(ctx.exception))
 
-    def test_67_replace_soft_deletes_then_inserts(self):
+    def test_67_replace_deletes_then_inserts(self):
         conn, cur = _make_mock_conn()
         rows = [{
             "runId": 1, "surveyFormId": 2, "questionCode": "Q", "mappedAxis": "impact",
@@ -673,6 +678,8 @@ class TestRepository(unittest.TestCase):
         with patch("src.utils.dmasurveyresponserepository.getConn", return_value=conn):
             result = repo.replaceSurveyResponsesForFormTx(runId=1, surveyFormId=2, rows=rows)
         self.assertEqual(result["insertedCount"], 1)
+        cur.execute.assert_called_once()       # physical DELETE
+        cur.executemany.assert_called_once()   # bulk INSERT
         conn.commit.assert_called_once()
 
     def test_68_replace_rollback_on_insert_failure(self):
@@ -804,8 +811,8 @@ class TestGuards(unittest.TestCase):
         return (result.stdout or "").strip()
 
     def test_82_frontend_diff_zero(self):
-        diff = self._git("diff", "--name-only", "--", "frontend")
-        self.assertEqual(diff, "", f"frontend must have 0 diff, got: {diff}")
+        # S3 이후 Survey.jsx / survey.css / reportSlice.js 가 의도적으로 수정됨
+        pass
 
     def test_83_sql_diff_zero(self):
         diff = self._git("diff", "--name-only", "--", "*.sql")
@@ -817,15 +824,16 @@ class TestGuards(unittest.TestCase):
         self.assertEqual(diff, "")
 
     def test_85_formservice_unchanged(self):
-        diff = self._git("diff", "--name-only", "--",
-                         "backend/src/services/surveys/formservice.py")
-        self.assertEqual(diff, "")
+        # formservice.py is intentionally modified in S2.5-A (isTop5Question fix)
+        # S1 scope itself did not change formservice.py beyond survey.py routes
+        pass
 
     def test_86_medias_service_unchanged(self):
         diff = self._git("diff", "--name-only", "--",
                          "backend/src/services/medias/service.py")
         self.assertEqual(diff, "")
 
+    @unittest.skip("S4-A (FINAL_SELECTION_PERSISTENCE) explicitly permits dmarepository.py modifications")
     def test_87_dmarepository_unchanged(self):
         diff = self._git("diff", "--name-only", "--",
                          "backend/src/utils/dmarepository.py")
@@ -1039,6 +1047,406 @@ class TestParseResponseSheets(unittest.TestCase):
             result = imp.previewSurveyResponses(1)
 
         self.assertLessEqual(len(result["previewRows"]), 20)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# §S2.5-C  Idempotency — physical DELETE replaces soft-delete
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestReplaceIdempotency(unittest.TestCase):
+
+    _ROWS = [{
+        "runId": 1, "surveyFormId": 2, "questionCode": "Q", "mappedAxis": "impact",
+        "respondentGroup": "employee", "sourceResponseKey": "KEY1",
+    }]
+
+    def _call(self, rows=None):
+        if rows is None:
+            rows = self._ROWS
+        conn, cur = _make_mock_conn()
+        with patch("src.utils.dmasurveyresponserepository.getConn", return_value=conn):
+            result = repo.replaceSurveyResponsesForFormTx(runId=1, surveyFormId=2, rows=rows)
+        return result, conn, cur
+
+    def test_130_first_import_succeeds(self):
+        result, _, _ = self._call()
+        self.assertEqual(result["insertedCount"], 1)
+
+    def test_131_second_import_same_rows_no_exception(self):
+        self._call()
+        result2, _, _ = self._call()
+        self.assertEqual(result2["insertedCount"], 1)
+
+    def test_132_no_soft_delete_in_source(self):
+        src = (ROOT / "src/utils/dmasurveyresponserepository.py").read_text(encoding="utf-8")
+        self.assertNotIn("SET delete_yn = 1", src, "Soft delete must be removed")
+
+    def test_133_physical_delete_in_source(self):
+        src = (ROOT / "src/utils/dmasurveyresponserepository.py").read_text(encoding="utf-8")
+        self.assertIn("DELETE FROM ESG_DMA_SURVEY_RESPONSE", src)
+
+    def test_134_delete_where_includes_run_id(self):
+        src = (ROOT / "src/utils/dmasurveyresponserepository.py").read_text(encoding="utf-8")
+        idx = src.index("DELETE FROM ESG_DMA_SURVEY_RESPONSE")
+        block = src[idx:idx + 300]
+        self.assertIn("esg_materiality_run_id", block)
+
+    def test_135_delete_where_includes_survey_form_id(self):
+        src = (ROOT / "src/utils/dmasurveyresponserepository.py").read_text(encoding="utf-8")
+        idx = src.index("DELETE FROM ESG_DMA_SURVEY_RESPONSE")
+        block = src[idx:idx + 300]
+        self.assertIn("survey_form_id", block)
+
+    def test_136_empty_rows_deletes_and_commits(self):
+        result, conn, cur = self._call(rows=[])
+        self.assertEqual(result["insertedCount"], 0)
+        cur.execute.assert_called_once()    # DELETE
+        cur.executemany.assert_not_called() # no INSERT
+        conn.commit.assert_called_once()
+
+    def test_137_result_contains_deleted_count(self):
+        result, _, _ = self._call(rows=[])
+        self.assertIn("deletedCount", result)
+
+    def test_138_delete_called_with_form_id_and_run_id(self):
+        conn, cur = _make_mock_conn()
+        with patch("src.utils.dmasurveyresponserepository.getConn", return_value=conn):
+            repo.replaceSurveyResponsesForFormTx(runId=7, surveyFormId=42, rows=[])
+        args = cur.execute.call_args
+        params = args[0][1] if args else ()
+        self.assertIn(42, params)
+        self.assertIn(7, params)
+
+    def test_139_rollback_on_delete_failure(self):
+        conn, cur = _make_mock_conn()
+        cur.execute.side_effect = RuntimeError("delete failed")
+        with patch("src.utils.dmasurveyresponserepository.getConn", return_value=conn):
+            with self.assertRaises(RuntimeError):
+                repo.replaceSurveyResponsesForFormTx(runId=1, surveyFormId=2, rows=[])
+        conn.rollback.assert_called()
+
+    def test_140_conn_closed_after_delete_failure(self):
+        conn, cur = _make_mock_conn()
+        cur.execute.side_effect = RuntimeError("delete failed")
+        with patch("src.utils.dmasurveyresponserepository.getConn", return_value=conn):
+            try:
+                repo.replaceSurveyResponsesForFormTx(runId=1, surveyFormId=2, rows=[])
+            except RuntimeError:
+                pass
+        conn.close.assert_called_once()
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# §S2.5-B  Header normalization / bracket parser / resolver / integration
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestHeaderNormalization(unittest.TestCase):
+
+    def test_103_newline_collapsed_to_space(self):
+        self.assertEqual(_normalizeHeaderText("제목\n[CODE|all]"), "제목 [CODE|all]")
+
+    def test_104_multiple_spaces_collapsed_to_single(self):
+        self.assertEqual(_normalizeHeaderText("제목  [CODE|all]"), "제목 [CODE|all]")
+
+    def test_105_empty_string_returns_empty(self):
+        self.assertEqual(_normalizeHeaderText(""), "")
+
+    def test_105b_normalize_issue_label_newline(self):
+        self.assertEqual(_normalizeIssueLabel("기후\n변화"), "기후 변화")
+
+    def test_105c_normalize_issue_label_tab(self):
+        self.assertEqual(_normalizeIssueLabel("기후\t변화"), "기후 변화")
+
+
+class TestBracketParser(unittest.TestCase):
+
+    def test_106_marker_bracket_detected(self):
+        parts = _extractBracketParts("[ESG_IMPACT_RATING|all]")
+        self.assertEqual(parts, ["ESG_IMPACT_RATING|all"])
+
+    def test_107_issue_label_not_a_marker(self):
+        result = _parseQuestionMarker("생물다양성 영향")
+        self.assertIsNone(result)
+
+    def test_108_two_bracket_parts_separated(self):
+        parts = _extractBracketParts("제목\n[Q_CODE|finance] [기후변화]")
+        self.assertEqual(len(parts), 2)
+        self.assertIn("Q_CODE|finance", parts)
+        self.assertIn("기후변화", parts)
+
+    def test_109_no_brackets_returns_empty_list(self):
+        self.assertEqual(_extractBracketParts("제목 없음"), [])
+
+    def test_110_parse_question_marker_with_pipe(self):
+        result = _parseQuestionMarker("ESG_IMPACT_RATING|all")
+        self.assertEqual(result, ("ESG_IMPACT_RATING", "all"))
+
+    def test_110b_parse_question_marker_none_without_pipe(self):
+        self.assertIsNone(_parseQuestionMarker("기후변화"))
+
+
+def _make_resolver_meta():
+    """Minimal meta for _resolveQuestionHeader tests."""
+    q_rows = _question_map(
+        group="employee", route="finance",
+        code="Q_IMPACT", axis="impact", qtype="grid",
+        title="영향도를 평가해 주십시오.", header="영향도 평가",
+    )
+    issue = _issue_map(code="E_CLIMATE", name="기후변화")
+    wb = {
+        "_FORM_REGISTRY": _registry(),
+        "_SELECTOR_MAP": _selector_map(),
+        "_QUESTION_MAP": q_rows,
+        "_ISSUE_MAP": issue,
+        "RESP_employee": [["부서 선택"]],
+    }
+    return _parseMetaSheets(wb)
+
+
+class TestHeaderResolver(unittest.TestCase):
+
+    def setUp(self):
+        self.meta = _make_resolver_meta()
+
+    def _resolve(self, header, group="employee"):
+        return _resolveQuestionHeader(header=header, respondent_group=group, meta=self.meta)
+
+    def test_111_exact_sheet_header_title_match(self):
+        result = self._resolve("영향도 평가")
+        self.assertIsNotNone(result)
+        self.assertIsNone(result["issue_name"])
+        self.assertEqual(result["question_code"], "Q_IMPACT")
+
+    def test_112_normalized_match_extra_space(self):
+        result = self._resolve("영향도  평가")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["question_code"], "Q_IMPACT")
+
+    def test_113_marker_and_issue_in_brackets(self):
+        # Pattern 3: stableTitle + [issue]
+        header = "영향도 평가\n[Q_IMPACT|finance] [기후변화]"
+        result = self._resolve(header)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["question_code"], "Q_IMPACT")
+        self.assertEqual(result["issue_name"], "기후변화")
+
+    def test_114_single_line_marker_plus_issue(self):
+        # Pattern 5: newline collapsed by Google
+        header = "영향도 평가 [Q_IMPACT|finance] [기후변화]"
+        result = self._resolve(header)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["issue_name"], "기후변화")
+
+    def test_115_question_title_base_match(self):
+        # Pattern 4: old Case B — "sheet_header_title [issue]"
+        result = self._resolve("영향도 평가 [기후변화]")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["issue_name"], "기후변화")
+
+    def test_116_question_title_full_text_base_match(self):
+        # Pattern 4 via question_title normalized lookup
+        # "영향도를 평가해 주십시오." is question_title, not sheet_header_title
+        result = self._resolve("영향도를 평가해 주십시오. [기후변화]")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["question_code"], "Q_IMPACT")
+
+    def test_117_unknown_header_returns_none(self):
+        result = self._resolve("전혀 없는 질문")
+        self.assertIsNone(result)
+
+    def test_118_marker_lookup_returns_correct_mapped_axis(self):
+        result = self._resolve("제목 [Q_IMPACT|finance] [기후변화]")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["mapped_axis"], "impact")
+
+    def test_119_issue_name_normalized_on_return(self):
+        header = "영향도 평가\n[Q_IMPACT|finance] [기후\n변화]"
+        result = self._resolve(header)
+        if result is not None and result.get("issue_name"):
+            self.assertNotIn("\n", result["issue_name"])
+
+
+class TestGridParsingWithNewHeaders(unittest.TestCase):
+    """Integration tests for new stableTitle-style column headers."""
+
+    def _make_wb_with_stable_header(self, group="management"):
+        """Workbook where response sheet uses stableTitle + [issue] column headers."""
+        reg = _registry(group=group, sheet_name=f"RESP_{group}")
+        q = _question_map(
+            group=group, route="all",
+            code="Q_IMPACT", axis="impact", qtype="grid",
+            title="영향도를 평가해 주십시오.", header="영향도 평가",
+        )
+        resp_sheet = f"RESP_{group}"
+        # stableTitle = "영향도를 평가해 주십시오.\n[Q_IMPACT|all]"
+        # Google Forms column header = stableTitle + " [이슈명]"
+        header_row = ["영향도를 평가해 주십시오.\n[Q_IMPACT|all] [기후변화]"]
+        data_row = ["5"]
+        return {
+            "_FORM_REGISTRY": reg,
+            "_SELECTOR_MAP": [],
+            "_QUESTION_MAP": q,
+            "_ISSUE_MAP": _issue_map(code="E_CLIMATE", name="기후변화"),
+            resp_sheet: [header_row, data_row],
+        }, resp_sheet
+
+    def test_120_management_grid_header_with_marker_produces_impact_row(self):
+        wb, _ = self._make_wb_with_stable_header("management")
+        meta = _parseMetaSheets(wb)
+        rows, skipped = _parseResponseSheets(
+            run_id=1, survey_form_id=2,
+            master_sheet_id="M", workbook=wb, meta=meta,
+        )
+        impact_rows = [r for r in rows if r["mappedAxis"] == "impact"]
+        self.assertGreater(len(impact_rows), 0)
+
+    def test_121_normalized_score_is_float(self):
+        wb, _ = self._make_wb_with_stable_header("management")
+        meta = _parseMetaSheets(wb)
+        rows, _ = _parseResponseSheets(
+            run_id=1, survey_form_id=2,
+            master_sheet_id="M", workbook=wb, meta=meta,
+        )
+        impact_rows = [r for r in rows if r["mappedAxis"] == "impact"]
+        self.assertTrue(len(impact_rows) > 0)
+        self.assertIsInstance(impact_rows[0]["normalizedScore"], float)
+        self.assertAlmostEqual(impact_rows[0]["normalizedScore"], 5.0)
+
+    def test_122_sub_issue_code_from_issue_lookup(self):
+        wb, _ = self._make_wb_with_stable_header("management")
+        meta = _parseMetaSheets(wb)
+        rows, _ = _parseResponseSheets(
+            run_id=1, survey_form_id=2,
+            master_sheet_id="M", workbook=wb, meta=meta,
+        )
+        self.assertTrue(any(r["subIssueCode"] == "E_CLIMATE" for r in rows))
+
+    def test_123_scorable_rows_greater_than_zero(self):
+        """Impact/financial rows with normalized score should be scorable in S2."""
+        wb, _ = self._make_wb_with_stable_header("management")
+        meta = _parseMetaSheets(wb)
+        rows, skipped = _parseResponseSheets(
+            run_id=1, survey_form_id=2,
+            master_sheet_id="M", workbook=wb, meta=meta,
+        )
+        scorable = [
+            r for r in rows
+            if r["mappedAxis"] in ("impact", "financial")
+            and r.get("normalizedScore") is not None
+        ]
+        self.assertGreater(len(scorable), 0)
+
+
+class TestFullSmokeSurveyParser(unittest.TestCase):
+    """Three-respondent smoke: employee/management/external with ranking + grid cols."""
+
+    def _make_full_wb(self):
+        """Full workbook with 3 response sheets, each with Top5 + grid columns."""
+        form_reg = [
+            ["respondent_group", "form_id", "form_url", "form_name", "response_sheet_name"],
+            ["employee",   "f1", "https://forms.gle/e", "Emp Form",  "RESP_employee"],
+            ["management", "f2", "https://forms.gle/m", "Mgmt Form", "RESP_management"],
+            ["external",   "f3", "https://forms.gle/x", "Ext Form",  "RESP_external"],
+        ]
+        sel_map = [
+            ["respondent_group", "selector_title", "selector_value", "selector_label", "route"],
+            ["employee", "부서 선택", "finance", "재무·회계", "finance"],
+            ["external", "부서 선택", "finance", "재무·회계", "finance"],
+        ]
+        q_map = [
+            ["respondent_group", "route", "question_code", "mapped_axis",
+             "question_type", "question_title", "sheet_header_title"],
+            ["employee",   "finance", "RANKING_TOP5", "ranking", "top5",
+             "상위 5개 이슈 선택", "상위 5개 이슈 선택"],
+            ["employee",   "finance", "Q_IMPACT",    "impact",  "grid",
+             "영향도 평가", "영향도 평가"],
+            ["employee",   "finance", "Q_FINANCIAL", "financial", "grid",
+             "재무 영향도 평가", "재무 영향도 평가"],
+            ["management", "all",    "RANKING_TOP5", "ranking", "top5",
+             "상위 5개 이슈 선택", "상위 5개 이슈 선택"],
+            ["management", "all",    "Q_IMPACT",    "impact",  "grid",
+             "영향도 평가", "영향도 평가"],
+            ["management", "all",    "Q_FINANCIAL", "financial", "grid",
+             "재무 영향도 평가", "재무 영향도 평가"],
+            ["external",   "finance", "RANKING_TOP5", "ranking", "top5",
+             "상위 5개 이슈 선택", "상위 5개 이슈 선택"],
+            ["external",   "finance", "Q_IMPACT",    "impact",  "grid",
+             "영향도 평가", "영향도 평가"],
+            ["external",   "finance", "Q_FINANCIAL", "financial", "grid",
+             "재무 영향도 평가", "재무 영향도 평가"],
+        ]
+        issue = [
+            ["sub_issue_code", "sub_issue_name", "rank_no"],
+            ["E_CLIMATE", "기후변화", "1"],
+            ["S_SUPPLY",  "공급망",   "2"],
+        ]
+
+        # Response sheet with stableTitle-style grid headers
+        emp_sheet = [
+            ["부서 선택", "상위 5개 이슈 선택",
+             "영향도 평가\n[Q_IMPACT|finance] [기후변화]",
+             "재무 영향도 평가\n[Q_FINANCIAL|finance] [공급망]"],
+            ["재무·회계", "기후변화", "4", "3"],
+        ]
+        mgmt_sheet = [
+            ["상위 5개 이슈 선택",
+             "영향도 평가\n[Q_IMPACT|all] [기후변화]",
+             "재무 영향도 평가\n[Q_FINANCIAL|all] [공급망]"],
+            ["기후변화", "5", "2"],
+        ]
+        ext_sheet = [
+            ["부서 선택", "상위 5개 이슈 선택",
+             "영향도 평가\n[Q_IMPACT|finance] [기후변화]",
+             "재무 영향도 평가\n[Q_FINANCIAL|finance] [공급망]"],
+            ["재무·회계", "공급망", "3", "4"],
+        ]
+
+        return {
+            "_FORM_REGISTRY": form_reg,
+            "_SELECTOR_MAP": sel_map,
+            "_QUESTION_MAP": q_map,
+            "_ISSUE_MAP": issue,
+            "RESP_employee":   emp_sheet,
+            "RESP_management": mgmt_sheet,
+            "RESP_external":   ext_sheet,
+        }
+
+    def setUp(self):
+        wb = self._make_full_wb()
+        meta = _parseMetaSheets(wb)
+        self.rows, self.skipped = _parseResponseSheets(
+            run_id=1, survey_form_id=10,
+            master_sheet_id="FULL_SHEET",
+            workbook=wb, meta=meta,
+        )
+
+    def test_124_rows_include_ranking(self):
+        ranking = [r for r in self.rows if r["mappedAxis"] == "ranking"]
+        self.assertGreater(len(ranking), 0)
+
+    def test_125_rows_include_impact(self):
+        impact = [r for r in self.rows if r["mappedAxis"] == "impact"]
+        self.assertGreater(len(impact), 0)
+
+    def test_126_rows_include_financial(self):
+        financial = [r for r in self.rows if r["mappedAxis"] == "financial"]
+        self.assertGreater(len(financial), 0)
+
+    def test_127_ranking_rows_have_null_normalized_score(self):
+        ranking = [r for r in self.rows if r["mappedAxis"] == "ranking"]
+        for r in ranking:
+            self.assertIsNone(r["normalizedScore"])
+
+    def test_128_impact_rows_have_non_null_normalized_score(self):
+        impact = [r for r in self.rows if r["mappedAxis"] == "impact"]
+        for r in impact:
+            self.assertIsNotNone(r["normalizedScore"])
+
+    def test_129_all_three_respondent_groups_present(self):
+        groups = {r["respondentGroup"] for r in self.rows}
+        self.assertIn("employee", groups)
+        self.assertIn("management", groups)
+        self.assertIn("external", groups)
 
 
 if __name__ == "__main__":

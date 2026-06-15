@@ -730,3 +730,48 @@ def upsertGroupRollupResultsTx(
                 """,
                 resultParams(batch, result, includedCompanyIds, actorUserId),
             )
+
+
+CONSOLIDATED_RESULT_READY_STATUSES = ("approved", "completed", "calculated")
+
+
+def listConsolidatedRollupResultsByYearTx(
+    cur,
+    parentCompanyId: int,
+    reportingYear: int,
+    groupAtomicMetricIds: list[str],
+) -> list[dict]:
+    """
+    ESG_GROUP_ROLLUP_RESULT 에서 parent company 의 연결 결과값을 연도별로 조회한다.
+    source_scope=CONSOLIDATED 인 source(예: 전년도 연결 기준값) 의 입력으로 사용된다.
+    동일 (parent, year, group_atomic) 에 여러 batch 결과가 있으면 최신(id DESC) 1건만 사용한다.
+    """
+    cleaned = [
+        str(atomicId or "").strip()
+        for atomicId in groupAtomicMetricIds or []
+        if str(atomicId or "").strip()
+    ]
+    if not cleaned:
+        return []
+    placeholders = ", ".join(["?"] * len(cleaned))
+    statusPlaceholders = ", ".join(["?"] * len(CONSOLIDATED_RESULT_READY_STATUSES))
+    cur.execute(
+        f"""
+        SELECT g.group_atomic_metric_id, g.value_numeric, g.value_text, g.unit
+        FROM ESG_GROUP_ROLLUP_RESULT g
+        INNER JOIN (
+            SELECT group_atomic_metric_id, MAX(id) AS max_id
+            FROM ESG_GROUP_ROLLUP_RESULT
+            WHERE parent_company_id = ?
+              AND reporting_year = ?
+              AND group_atomic_metric_id IN ({placeholders})
+              AND LOWER(COALESCE(rollup_status, '')) IN ({statusPlaceholders})
+              AND delete_yn = 0
+            GROUP BY group_atomic_metric_id
+        ) latest
+          ON latest.group_atomic_metric_id = g.group_atomic_metric_id
+         AND latest.max_id = g.id
+        """,
+        (parentCompanyId, reportingYear, *cleaned, *CONSOLIDATED_RESULT_READY_STATUSES),
+    )
+    return cur.fetchall() or []

@@ -353,15 +353,33 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
             rules, ruleSources = rollupRepository.resolveConsolidatedRulesFromBatchScopeTx(cur, batchId)
             requiredAtomicIds = rollupRepository.resolveExternalEntitySourceAtomicIdsTx(cur, batchId)
 
+            # source_scope=CONSOLIDATED source(예: 전년도 연결 기준값 E1-06__G0003)는 회사별
+            # ENTITY KPI_FACT가 아니라 ESG_GROUP_ROLLUP_RESULT의 연결 결과로 평가한다.
+            # 따라서 회사별 ENTITY fact 조회 대상(requiredEntityAtomicIds)에서는 제외한다.
+            consolidatedSourceAtomicIds = rollupRepository.resolveConsolidatedSourceAtomicIdsFromRuleSources(ruleSources)
+            consolidatedSourceAtomicIdSet = set(consolidatedSourceAtomicIds)
+            requiredEntityAtomicIds = [
+                atomicId for atomicId in requiredAtomicIds if atomicId not in consolidatedSourceAtomicIdSet
+            ]
+
             historicalDepth = rollupCalculator.resolveHistoricalLookbackDepth(rules, ruleSources)
             entityFactMapsByYear = {}
+            consolidatedFactMapsByYear = {}
             for factYear in range(reportingYear, reportingYear - historicalDepth - 1, -1):
-                facts = rollupRepository.listApprovedFactsByCompany(includedCompanyIds, factYear, requiredAtomicIds)
+                facts = rollupRepository.listApprovedFactsByCompany(includedCompanyIds, factYear, requiredEntityAtomicIds)
                 entityFactMapsByYear[factYear] = rollupCalculator.buildMultiCompanyFactMap(
                     includedCompanyIds,
-                    requiredAtomicIds,
+                    requiredEntityAtomicIds,
                     facts,
                 )
+                if consolidatedSourceAtomicIds:
+                    consolidatedRows = rollupRepository.listConsolidatedRollupResultsByYearTx(
+                        cur,
+                        parentCompanyId,
+                        factYear,
+                        consolidatedSourceAtomicIds,
+                    )
+                    consolidatedFactMapsByYear[factYear] = rollupCalculator.buildConsolidatedFactMap(consolidatedRows)
 
             cur.execute("SELECT id FROM ESG_MATERIALITY_RUN WHERE required_rollup_batch_id = ?", (batchId,))
             r = cur.fetchone()
@@ -373,6 +391,7 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
                 rules=rules,
                 sources=ruleSources,
                 entityFactMapsByYear=entityFactMapsByYear,
+                consolidatedFactMapsByYear=consolidatedFactMapsByYear,
                 reportingYear=reportingYear,
                 companyIds=includedCompanyIds,
             )

@@ -1,12 +1,23 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
 import ApprovalProjectSelectModal from "@mains/modal/ApprovalProjectSelectModal";
 import { useAuth } from "@hooks/AuthContext";
-import { GET } from "@utils/Network";
 import { setCurruntYear, setMaterialityRunId, fetchApprovalProjects } from "@stores/reportSlice";
 import "@styles/dashboard.css";
 
+/* ── Image Assets ── */
+import heroVisual from "@assets/home-dashboard/hero-esg-visual.png";
+import iconData from "@assets/home-dashboard/icon-data.png";
+import iconDma from "@assets/home-dashboard/icon-dma.png";
+import iconReport from "@assets/home-dashboard/icon-report.png";
+import iconApproval from "@assets/home-dashboard/icon-approval.png";
+import iconProject from "@assets/home-dashboard/icon-project.png";
+import iconDatabase from "@assets/home-dashboard/icon-database.png";
+import iconAnalysis from "@assets/home-dashboard/icon-analysis.png";
+import iconDocument from "@assets/home-dashboard/icon-document.png";
+
+/* ── Fallback project data ── */
 const MOCK_PROJECTS = [
   { runId: 1, reportingYear: 2026, reportBasisType: "CONSOLIDATED", runStatus: "ACTIVE", currentStageLabel: "플랫폼 소개", pendingCount: 0, readOnlyYn: false },
   { runId: 2, reportingYear: 2025, reportBasisType: "CONSOLIDATED", runStatus: "COMPLETED", currentStageLabel: "completed", pendingCount: 0, readOnlyYn: true },
@@ -14,17 +25,10 @@ const MOCK_PROJECTS = [
   { runId: 4, reportingYear: 2025, reportBasisType: "CONSOLIDATED", runStatus: "ARCHIVED", currentStageLabel: "규제 검토", pendingCount: 0, readOnlyYn: true },
 ];
 
-// Result.jsx 주석 처리된 "필요 온보딩 지표" 데이터 인용
-const ONBOARDING_ROWS = [
-  { name: "??", e: true, s: true, g: false, count: "?개", done: "?/?", doneColor: "#ef4444" },
-  { name: "??", e: false, s: true, g: true, count: "?개", done: "?/?", doneColor: "#ef4444" },
-  { name: "??", e: false, s: false, g: true, count: "?개", done: "?/?", doneColor: "#ef4444" },
-  { name: "??", e: false, s: true, g: false, count: "?개", done: "?/?", doneColor: "#475569" },
-  { name: "??", e: true, s: false, g: false, count: "?개", done: "?/?", doneColor: "#ef4444" },
-];
-
-const MODULES = [
+/* ── Module cards data ── */
+const MODULE_CARDS = [
   {
+    key: "data",
     title: "데이터 입력",
     desc: "ESG 데이터를 체계적으로 수집하고 관리합니다.",
     path: "/onb",
@@ -40,47 +44,62 @@ const MODULES = [
     ),
   },
   {
-    title: "이중중대성 평가",
-    desc: "재무적·비재무적 영향을 분석하여 우선순위를 도출합니다.",
+    key: "dma",
+    title: "이중 중요성 평가",
+    desc: "재무적·사회적 영향을 분석으로\n우선순위를 도출합니다.",
+    tone: "blue",
+    icon: iconDma,
     path: "/result",
-    iconStyle: { background: "#eff6ff" },
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="12" y1="3" x2="12" y2="21" />
-        <line x1="3" y1="8" x2="21" y2="8" />
-        <line x1="5" y1="8" x2="2" y2="14" /><line x1="5" y1="8" x2="5" y2="14" /><line x1="5" y1="8" x2="8" y2="14" />
-        <path d="M2 14 Q5 17 8 14" />
-        <line x1="19" y1="8" x2="16" y2="14" /><line x1="19" y1="8" x2="19" y2="14" /><line x1="19" y1="8" x2="22" y2="14" />
-        <path d="M16 14 Q19 17 22 14" />
-      </svg>
-    ),
   },
   {
+    key: "report",
     title: "보고서 생성",
-    desc: "보고서 템플릿을 기반으로 자동화된 보고서를 생성합니다.",
+    desc: "검증된 데이터와 기반으로\n보고서를 작성·생성합니다.",
+    tone: "purple",
+    icon: iconReport,
     path: "/draft",
-    iconStyle: { background: "#fff7ed" },
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
-      </svg>
-    ),
+  },
+  {
+    key: "approval",
+    title: "승인 워크플로우",
+    desc: "다단계 검토 및 승인으로\n신뢰도를 높입니다.",
+    tone: "orange",
+    icon: iconApproval,
+    // TODO: 승인 워크플로우 전용 route가 확정되면 교체
+    path: "/onboard",
   },
 ];
 
-const getProjectStatusLabel = (runStatus) => {
-  const s = String(runStatus || "ACTIVE").toUpperCase();
-  if (s === "COMPLETED") return "완료";
-  if (s === "ARCHIVED") return "보관됨";
-  return "진행중";
-};
+/* ── Guide steps data ── */
+const GUIDE_STEPS = [
+  { step: 1, title: "프로젝트 선택", desc: "보고할 프로젝트를\n선택합니다.", icon: iconProject, color: "green" },
+  { step: 2, title: "데이터 입력", desc: "ESG 데이터를\n입력합니다.", icon: iconDatabase, color: "green" },
+  { step: 3, title: "분석 실행", desc: "이중 중요성 평가를\n수행합니다.", icon: iconAnalysis, color: "blue" },
+  { step: 4, title: "보고서 생성", desc: "보고서 초안을\n확인하고 완성합니다.", icon: iconDocument, color: "purple" },
+];
 
+/* ── Progress data (static visual placeholder) ── */
+/* TODO: Dashboard Summary API 연결 시 실제 progress로 대체 */
+const PROGRESS_ITEMS = [
+  { label: "데이터 입력", value: 80 },
+  { label: "이중 중요성 평가", value: 65 },
+  { label: "보고서 초안 생성", value: 40 },
+  { label: "승인 및 발행", value: 0 },
+];
+
+const OVERALL_PROGRESS = 72;
+
+/* ── Notice data (static — no API) ── */
+const NOTICE_ITEMS = [
+  { id: 1, isNew: true, text: "ESG 보고 기준 가이드라인 v2.10 배포되었습니다.", date: "03-20" },
+  { id: 2, isNew: true, text: "시스템 점검 안내 (03/25 02:00~04:30)", date: "03-18" },
+  { id: 3, isNew: false, text: "2024 지속가능경영보고서 템플릿이 업데이트되었습니다.", date: "03-15" },
+];
+
+/* ── Helpers (preserved) ── */
 const getBasisLabel = (basisType) => {
-  if (basisType === "CONSOLIDATED") return "연결기준";
-  if (basisType === "ENTITY") return "독립기준";
+  if (basisType === "CONSOLIDATED") return "연결 기준";
+  if (basisType === "ENTITY") return "독립 기준";
   return "기준 미선택";
 };
 
@@ -91,27 +110,23 @@ const getStageLabel = (label) => {
   return label;
 };
 
-// materiality results + onboarding-progress → 이슈별 행
-const buildMaterialityRows = (matItems = [], progressItems = []) => {
-  // console.log(matItems, progressItems);
-  const progressMap = new Map(
-    progressItems.map((p) => [p.subIssueCode, p])
-  );
-  return matItems
-    .filter((it) => it.selectedYn)
-    .map((it) => {
-      const p = progressMap.get(it.subIssueCode);
-      const total = p?.totalCount ?? null;
-      const done = p?.doneCount ?? null;
-      return {
-        name: it.displaySubIssueName || it.subIssueCode,
-        count: total != null ? `${total}개` : "-",
-        done: done != null ? `${done}/${total}` : "-",
-        doneColor: done != null && done === total ? "#475569" : "#ef4444",
-      };
-    });
-};
+/* ── Arrow SVG helper ── */
+const ArrowRight = ({ size = 20, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 12h14" />
+    <path d="M12 5l7 7-7 7" />
+  </svg>
+);
 
+const ChevronRight = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 18l6-6-6-6" />
+  </svg>
+);
+
+/* ============================================================
+   DASHBOARD COMPONENT
+============================================================ */
 const Dashboard = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -121,14 +136,12 @@ const Dashboard = () => {
   const currentYear = useSelector((state) => state.report.currentYear);
   const currentRunId = useSelector((state) => state.report.currentRunId);
   const approvalProjects = useSelector((state) => state.report?.approval?.projects ?? []);
-  const approvalProjectsLoading = useSelector((state) => state.report?.loading?.approvalProjects ?? false);
 
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [currentProject, setCurrentProject] = useState(null);
-  const [onboardingRows, setOnboardingRows] = useState(ONBOARDING_ROWS);
-  const [onboardingLoading, setOnboardingLoading] = useState(false);
+  const guideRef = useRef(null);
 
-  // 회사 변경 시 프로젝트 목록 새로 불러오고 첫 활성 프로젝트 자동 선택
+  /* ── 회사 변경 시 프로젝트 목록 새로 불러오고 첫 활성 프로젝트 자동 선택 ── */
   useEffect(() => {
     if (!companyId) return;
     dispatch(fetchApprovalProjects({ companyId }))
@@ -144,34 +157,12 @@ const Dashboard = () => {
         dispatch(setMaterialityRunId(firstActive.runId));
       })
       .catch(() => {
-        // API 실패 시 mock 사용
         const fallback = MOCK_PROJECTS[0];
         setCurrentProject(fallback);
         dispatch(setCurruntYear(fallback.reportingYear));
         dispatch(setMaterialityRunId(fallback.runId));
       });
   }, [companyId, dispatch]);
-
-  useEffect(() => {
-    if (!currentRunId) return;
-    const load = async () => {
-      setOnboardingLoading(true);
-      try {
-        const [matRes, progressRes] = await Promise.all([
-          GET(`/materiality/results/${currentRunId}`),
-          GET(`/materiality/results/${currentRunId}/onboarding-progress`),
-        ]);
-        // console.log("[progress] full:", progressRes);
-        const rows = buildMaterialityRows(matRes?.items, progressRes?.items);
-        if (rows.length > 0) setOnboardingRows(rows);
-      } catch {
-        // fallback: mock 유지
-      } finally {
-        setOnboardingLoading(false);
-      }
-    };
-    load();
-  }, [currentRunId]);
 
   const handleSelectProject = (project) => {
     setCurrentProject(project);
@@ -183,135 +174,211 @@ const Dashboard = () => {
   const displayProject = currentProject ?? MOCK_PROJECTS[0];
   const projectList = approvalProjects.length > 0 ? approvalProjects : MOCK_PROJECTS;
 
+  /* ── CTA handlers ── */
+  const handleStartDataInput = () => {
+    navigate("/onboard");
+  };
+
+  const handleScrollToGuide = () => {
+    guideRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  /* ============================================================
+     RENDER
+  ============================================================ */
   return (
     <div id="dashboard_page">
-      {/* ── 현재 프로젝트 배너 ── */}
-      <section className="db-project-banner">
-        <div>
-          <p className="db-project-label">현재 보고서 프로젝트</p>
-          <h2 className="db-project-title">
-            {currentYear} 지속가능경영보고서
-          </h2>
-          <p className="db-project-meta">
-            {companyName} · {getBasisLabel(displayProject.reportBasisType)} · {getProjectStatusLabel(displayProject.runStatus)}
-          </p>
-        </div>
+      <div className="home-dashboard-page">
 
-        <div className="db-project-right">
-          <div className="db-flag-circle">
-            <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-              <line x1="4" y1="22" x2="4" y2="15" />
-            </svg>
-          </div>
-
-          <div className="db-project-actions">
-            <span className="db-stage-chip">
-              현재 단계: {getStageLabel(displayProject.currentStageLabel)}
-            </span>
-            <button className="db-change-btn" onClick={() => setShowProjectModal(true)}>
-              프로젝트 변경
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 소개 카드 3개 ── */}
-      <section className="db-info-grid">
-
-        {/* 플랫폼 소개 */}
-        <div className="db-card">
-          <div className="db-card-header">
-            <div className="db-icon-circle green">
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-            </div>
-            <h3 className="db-card-title">플랫폼 소개</h3>
-          </div>
-          <p className="db-card-desc">
-            ESG 데이터 수집부터 분석, 보고서 작성, 승인 워크플로우까지 통합 관리하는 플랫폼입니다.
-          </p>
-          <ul className="db-card-list">
-            <li>ESG 데이터 수집 및 관리</li>
-            <li>이중중대성(DMA) 분석 지원</li>
-            <li>보고서 자동화 및 템플릿 제공</li>
-            <li>승인 워크플로우 및 이력 관리</li>
-          </ul>
-        </div>
-
-        {/* 이용 방법 */}
-        <div className="db-card">
-          <div className="db-card-header">
-            <div className="db-icon-circle blue">
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-              </svg>
-            </div>
-            <h3 className="db-card-title">이용 방법</h3>
-          </div>
-          <div className="db-steps-list">
-            {[
-              ["프로젝트 선택", "보고할 프로젝트를 선택합니다."],
-              ["데이터 입력", "필요한 데이터를 입력하고 관리합니다."],
-              ["분석 실행", "분석을 실행하고 결과를 확인합니다."],
-              ["결과 검토", "결과를 검토하고 보고서를 완성합니다."],
-            ].map(([title, desc], i) => (
-              <div key={i} className="db-step-item">
-                <span className="db-step-num">{i + 1}</span>
-                <div>
-                  <span className="db-step-title">{title}</span>
-                  <span className="db-step-desc">{desc}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 빠른 안내 */}
-        <div className="db-card">
-          <div className="db-card-header">
-            <div className="db-icon-circle orange">
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ea580c" strokeWidth="2">
-                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-              </svg>
-            </div>
-            <h3 className="db-card-title">빠른 안내</h3>
-          </div>
-          <ul className="db-card-list">
-            <li>현재 화면은 소개 대시보드입니다.</li>
-            <li>좌측 메뉴에서 세부 기능으로 이동할 수 있습니다.</li>
-            <li>실제 데이터는 각 모듈에서 입력됩니다.</li>
-          </ul>
-        </div>
-      </section>
-
-      {/* ── 주요 모듈 + 최근 공지 ── */}
-      <section className="db-main-grid">
-
-        {/* 주요 모듈 — 3개 가로 배치 */}
-        <div className="db-card">
-          <p className="db-section-title">주요 모듈</p>
-          <div className="db-modules-grid">
-            {MODULES.map((mod) => (
-              <div
-                key={mod.title}
-                className="db-module-item"
-                onClick={() => navigate(mod.path)}
+        {/* ═══════════════════════════════════════════════════════
+            HERO SECTION
+        ═══════════════════════════════════════════════════════ */}
+        <section className="home-dashboard-hero">
+          <div className="home-dashboard-hero-copy">
+            <h1 className="home-dashboard-hero-title">
+              ESG 데이터를 통합 관리하고,<br />
+              신뢰받는 보고서를 완성하세요
+            </h1>
+            <p className="home-dashboard-hero-desc">
+              데이터 수집부터 인증 중요성 평가, 보고서 작성까지<br />
+              SKM 플랫폼이 함께합니다.
+            </p>
+            <div className="home-dashboard-hero-actions">
+              <button
+                className="home-dashboard-cta-primary"
+                onClick={handleStartDataInput}
               >
-                <div className="db-module-icon" style={mod.iconStyle}>
-                  {mod.icon}
-                </div>
-                <div>
-                  <div className="db-module-title">{mod.title}</div>
-                  <div className="db-module-desc">{mod.desc}</div>
+                데이터 입력 시작하기
+                <ArrowRight size={18} color="#fff" />
+              </button>
+              <button
+                className="home-dashboard-cta-secondary"
+                onClick={handleScrollToGuide}
+              >
+                이용 방법 보기
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div className="home-dashboard-hero-visual">
+            <img
+              src={heroVisual}
+              alt="ESG 데이터 관리 대시보드 일러스트레이션"
+              draggable="false"
+            />
+          </div>
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════
+            MODULE CARDS — 4개
+        ═══════════════════════════════════════════════════════ */}
+        <section className="home-dashboard-module-grid">
+          {MODULE_CARDS.map((mod) => (
+            <div
+              key={mod.key}
+              className="home-dashboard-module-card"
+              data-tone={mod.tone}
+              onClick={() => navigate(mod.path)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === "Enter" && navigate(mod.path)}
+            >
+              <div className="home-dashboard-module-icon">
+                <img src={mod.icon} alt={mod.title} />
+              </div>
+              <div className="home-dashboard-module-body">
+                <div className="home-dashboard-module-title">{mod.title}</div>
+                <div className="home-dashboard-module-desc">
+                  {mod.desc.split("\n").map((line, i) => (
+                    <span key={i}>{line}{i === 0 && <br />}</span>
+                  ))}
                 </div>
               </div>
-            ))}
+              <div className="home-dashboard-module-arrow">
+                <ChevronRight />
+              </div>
+            </div>
+          ))}
+        </section>
+
+        {/* ═══════════════════════════════════════════════════════
+            MAIN GRID — Progress + Guide
+        ═══════════════════════════════════════════════════════ */}
+        <section className="home-dashboard-main-grid">
+
+          {/* ── 프로젝트 진행 현황 ── */}
+          <div className="home-dashboard-progress-card">
+            <div className="home-dashboard-progress-header">
+              <h3>프로젝트 진행 현황</h3>
+              <div className="home-dashboard-progress-header-right">
+                <span className="home-dashboard-stage-link">상세 단계</span>
+                <span className="home-dashboard-stage-pill">
+                  {getStageLabel(displayProject.currentStageLabel)}
+                </span>
+              </div>
+            </div>
+
+            <div className="home-dashboard-progress-body">
+              {/* Circular progress ring */}
+              <div className="home-dashboard-progress-ring">
+                <div className="home-dashboard-progress-ring-circle">
+                  <div className="home-dashboard-progress-ring-inner">
+                    <span className="home-dashboard-progress-ring-value">{OVERALL_PROGRESS}%</span>
+                    <span className="home-dashboard-progress-ring-label">전체 진행률</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress bars */}
+              <div className="home-dashboard-progress-list">
+                {PROGRESS_ITEMS.map((item) => (
+                  <div key={item.label} className="home-dashboard-progress-item">
+                    <span className="home-dashboard-progress-item-label">{item.label}</span>
+                    <div className="home-dashboard-progress-bar-track">
+                      <div
+                        className="home-dashboard-progress-bar-fill"
+                        style={{ width: `${item.value}%` }}
+                      />
+                    </div>
+                    <span className="home-dashboard-progress-item-value">{item.value}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="home-dashboard-progress-divider" />
+
+            {/* Project meta row */}
+            <div className="home-dashboard-project-meta">
+              <div className="home-dashboard-project-meta-item">
+                <span className="home-dashboard-project-meta-label">보고 기준 연도</span>
+                <span className="home-dashboard-project-meta-value">
+                  {currentYear || "2024"}
+                </span>
+              </div>
+              <div className="home-dashboard-project-meta-item">
+                <span className="home-dashboard-project-meta-label">프로젝트</span>
+                <span className="home-dashboard-project-meta-value">
+                  {currentYear || "2024"} 지속가능경영보고서
+                </span>
+              </div>
+              <div className="home-dashboard-project-meta-item">
+                <span className="home-dashboard-project-meta-label">대상 회사</span>
+                <span className="home-dashboard-project-meta-value">{companyName}</span>
+              </div>
+              <div className="home-dashboard-project-meta-item">
+                <span className="home-dashboard-project-meta-label">보고 범위</span>
+                <span className="home-dashboard-project-meta-value">
+                  {getBasisLabel(displayProject.reportBasisType)}
+                </span>
+              </div>
+              <button
+                className="home-dashboard-project-change-btn"
+                onClick={() => setShowProjectModal(true)}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3" />
+                  <path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" />
+                </svg>
+                프로젝트 변경
+              </button>
+            </div>
           </div>
-        </div>
+
+          {/* ── 처음이신가요? 4단계 가이드 ── */}
+          <div className="home-dashboard-guide-card" ref={guideRef}>
+            <h3>처음이신가요? 4단계로 시작해 보세요</h3>
+            <div className="home-dashboard-guide-steps">
+              {GUIDE_STEPS.map((step, idx) => (
+                <div key={step.step} className="home-dashboard-guide-step">
+                  <div className={`home-dashboard-step-badge ${step.color}`}>
+                    {step.step}
+                  </div>
+                  <div className="home-dashboard-step-icon">
+                    <img src={step.icon} alt={step.title} />
+                  </div>
+                  <div className="home-dashboard-step-title">{step.title}</div>
+                  <div className="home-dashboard-step-desc">
+                    {step.desc.split("\n").map((line, i) => (
+                      <span key={i}>{line}{i === 0 && <br />}</span>
+                    ))}
+                  </div>
+                  {/* Arrow between steps (not after last) */}
+                  {idx < GUIDE_STEPS.length - 1 && (
+                    <span className="home-dashboard-step-arrow">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M9 18l6-6-6-6" />
+                      </svg>
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
 
         {/* 필요 온보딩 지표 */}
         <div className="db-card">
@@ -321,36 +388,23 @@ const Dashboard = () => {
               전체 보기 →
             </button>
           </div>
-          {onboardingLoading ? (
-            <div style={{ padding: "24px 0", textAlign: "center", fontSize: "0.82rem", color: "#94a3b8" }}>
-              지표 불러오는 중...
-            </div>
-          ) : (
-            <table className="db-onboard-table">
-              <thead>
-                <tr>
-                  <th>이슈</th>
-                  <th>전체</th>
-                  <th>입력완료</th>
-                </tr>
-              </thead>
-              <tbody>
-                {onboardingRows.map((row, i) => (
-                  <tr key={i}>
-                    <td>{row.name}</td>
-                    <td className="db-onboard-count">{row.count}</td>
-                    <td className="db-onboard-done" style={{ color: row.doneColor }}>{row.done}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <div className="home-dashboard-notice-list">
+            {NOTICE_ITEMS.map((item) => (
+              <div key={item.id} className="home-dashboard-notice-item">
+                {item.isNew && <span className="home-dashboard-notice-new">NEW</span>}
+                <span className="home-dashboard-notice-text">{item.text}</span>
+                <span className="home-dashboard-notice-date">{item.date}</span>
+              </div>
+            ))}
+          </div>
+          <button className="home-dashboard-notice-more">
+            전체 보기 &gt;
+          </button>
         </div>
-      </section>
 
+      </div>
 
-
-      {/* ── 프로젝트 선택 모달 ── */}
+      {/* ── 프로젝트 선택 모달 (기존 유지) ── */}
       <ApprovalProjectSelectModal
         isOpen={showProjectModal}
         projects={projectList}

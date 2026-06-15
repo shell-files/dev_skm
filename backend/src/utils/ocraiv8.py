@@ -388,8 +388,10 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                         except Exception:
                             pass
                         uploadedFile = None
-                    # 일일 할당량 초과 → 해당 키 소진 후 즉시 다음 키로 재시도
-                    if "429" in err_str and ("PerDay" in err_str or "FreeTier" in err_str):
+                    # 인증 실패 또는 일일 할당량 초과 → 해당 키 소진 후 즉시 다음 키로 재시도
+                    is_daily_quota = "429" in err_str and ("PerDay" in err_str or "FreeTier" in err_str)
+                    is_auth_error = "401" in err_str or "403" in err_str or "UNAUTHENTICATED" in err_str or "PERMISSION_DENIED" in err_str
+                    if is_daily_quota or is_auth_error:
                         _exhaust_key(key_idx)
                         continue
                     # 3번 다 실패하면 빈 결과를 내보냅니다.

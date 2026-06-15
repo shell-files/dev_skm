@@ -201,7 +201,7 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                     with open(filePath, "rb") as f:
                         uploadedFile = client.files.upload(file=f, config=fileConfig)
     
-                    maxAttempts = 120  # 3초 * 120 = 최대 360초 대기
+                    maxAttempts = 120  * 120 
                     attempts = 0
                     
                     # 파일 업로드 및 처리가 완료될 때까지 기다립니다.

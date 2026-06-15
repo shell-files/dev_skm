@@ -1110,10 +1110,13 @@ class TestGuard(unittest.TestCase):
     def test_83_frontend_diff_zero(self):
         diff = self._git_diff_files("frontend")
         # Survey.jsx is intentionally modified in C4.0.1 (URL area real API connection)
+        # S5-B16: 벤치마킹/미디어 API 를 Redux(reportSlice.js)로 통일하면서 허용된 프론트 파일은 제외
+        _S5B16_ALLOWED = ("reportSlice.js", "BenchMarking.jsx", "Media.jsx")
         filtered = "\n".join(
-            line for line in diff.splitlines() if "Survey.jsx" not in line
+            line for line in diff.splitlines()
+            if "Survey.jsx" not in line and not any(a in line for a in _S5B16_ALLOWED)
         ).strip()
-        self.assertEqual(filtered, "", f"frontend diff must be 0 lines (excluding Survey.jsx), got: {filtered}")
+        self.assertEqual(filtered, "", f"frontend diff must be 0 lines (excluding Survey.jsx + S5-B16), got: {filtered}")
 
     def test_84_sql_diff_zero(self):
         diff = self._git_diff_files("*.sql")

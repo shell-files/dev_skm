@@ -60,6 +60,8 @@ _BENCH_JSX = _FRONTEND_DIR / "homes" / "reports" / "BenchMarking.jsx"
 _NETWORK_JS = _FRONTEND_DIR / "utils" / "Network.js"
 _MEDIA_JSX  = _FRONTEND_DIR / "homes" / "reports" / "Media.jsx"
 _SURVEY_JSX = _FRONTEND_DIR / "homes" / "reports" / "Survey.jsx"
+# S5-B16: 벤치마킹/미디어 API 와이어링은 컴포넌트 직접 호출에서 reportSlice.js Redux thunk 로 통일됨.
+_SLICE_JS = _FRONTEND_DIR / "stores" / "reportSlice.js"
 
 
 def _jsx() -> str:
@@ -68,6 +70,10 @@ def _jsx() -> str:
 
 def _net() -> str:
     return _NETWORK_JS.read_text(encoding="utf-8")
+
+
+def _slice() -> str:
+    return _SLICE_JS.read_text(encoding="utf-8")
 
 
 def _makeFileFindModel(**overrides):
@@ -415,20 +421,28 @@ class NetworkJsContractTest(unittest.TestCase):
 
 
 class BenchMarkingJsxApiContractTest(unittest.TestCase):
-    """BenchMarking.jsx must use real API endpoints and Redux currentRunId."""
+    """BenchMarking.jsx must drive real API endpoints via Redux thunks (S5-B16).
+
+    API 와이어링(POST_FORM/PUT/GET endpoint)은 reportSlice.js thunk 로 이동했고,
+    컴포넌트는 dispatch + selector 로만 사용한다. 따라서 endpoint contract 는
+    reportSlice.js 기준으로 검증하고, 컴포넌트는 thunk dispatch 여부를 검증한다.
+    """
 
     def test_post_form_import(self):
-        self.assertIn("POST_FORM", _jsx())
+        # POST_FORM 사용처는 reportSlice.js 의 uploadBenchmarkGroup thunk 로 이동
+        self.assertIn("POST_FORM", _slice())
+        self.assertIn("uploadBenchmarkGroup", _jsx())
 
     def test_put_benchmk_call(self):
-        self.assertIn('PUT("/benchmk"', _jsx())
+        self.assertIn('PUT("/benchmk"', _slice())
+        self.assertIn("runBenchmarkAnalysis", _jsx())
 
     def test_get_materiality_benchmark_call(self):
-        src = _jsx()
-        self.assertIn("/materiality/benchmark/", src)
+        self.assertIn("/materiality/benchmark/", _slice())
+        self.assertIn("fetchBenchmarkResult", _jsx())
 
     def test_post_form_benchmk_upload_call(self):
-        self.assertIn('POST_FORM("/benchmk"', _jsx())
+        self.assertIn('POST_FORM("/benchmk"', _slice())
 
     def test_no_post_skm_legacy_call(self):
         self.assertNotIn('POST("skm"', _jsx())
@@ -454,11 +468,11 @@ class BenchMarkingJsxApiContractTest(unittest.TestCase):
         self.assertIn("Number.isInteger", src)
 
     def test_form_data_usage(self):
-        self.assertIn("new FormData()", _jsx())
+        # FormData 구성은 reportSlice.js uploadBenchmarkGroup thunk 로 이동
+        self.assertIn("new FormData()", _slice())
 
     def test_file_append_to_form_data(self):
-        src = _jsx()
-        self.assertIn('formData.append("file"', src)
+        self.assertIn('formData.append("file"', _slice())
 
     def test_leader_mapping(self):
         self.assertIn('"Leader"', _jsx())

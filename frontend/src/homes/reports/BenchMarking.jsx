@@ -55,6 +55,7 @@ const mapBenchmarkResultToDashboard = (dto) => ({
 const Benchmarking = () => {
   const dispatch = useDispatch();
   const currentRunId = useSelector((state) => state.report.currentRunId);
+  const approvalProjects = useSelector((state) => state.report?.approval?.projects ?? []);
   const workflow = useSelector((state) => state.report.workflow.current);
   const canRunDma = useSelector(selectCanRunDmaStage);
   const gateReason = useSelector(selectDmaGateReason);
@@ -238,6 +239,11 @@ const Benchmarking = () => {
     const runId = Number(currentRunId);
     if (!Number.isInteger(runId) || runId <= 0) {
       showDefaultAlert("프로젝트 선택 필요", "현재 보고서 프로젝트를 먼저 선택해주세요.", "warning");
+      return;
+    }
+    const validRunIds = approvalProjects.map((p) => p.runId);
+    if (validRunIds.length > 0 && !validRunIds.includes(runId)) {
+      showDefaultAlert("프로젝트 선택 필요", "유효하지 않은 프로젝트입니다. 헤더에서 프로젝트를 다시 선택해주세요.", "warning");
       return;
     }
 

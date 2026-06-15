@@ -32,7 +32,7 @@ from src.models.rollup import (
     RollupSubsidiaryResponseDto,
 )
 from src.utils.companyscope import checkScope, resolveScope
-from src.utils.calculationengine import normalizeSource
+from src.utils.calculationengine import normalizeSource, STATUS_CALCULATED
 
 class RollupError(Exception):
     def __init__(self, statusCode: int, code: str, message: str, data: Optional[dict] = None):
@@ -402,16 +402,24 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
             if not allSuccess:
                 raise RollupError(422, "ROLLUP_CALCULATION_NOT_READY", "Calculation failed due to unready sources or calculation errors.", {"warnings": warnings})
 
+            # BASELINE_REQUIRED / NOT_APPLICABLE 등 non-blocking 결과는 ESG_GROUP_ROLLUP_RESULT에
+            # approved로 저장하지 않고 response warning으로만 반환한다.
+            # (예: 전년도 연결 baseline이 없는 ROLLUP_YOY_DIFF)
+            calculatedResults = [
+                res for res in results
+                if str(res.get("calculationStatus") or "") == STATUS_CALCULATED
+            ]
+
             if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
-                for res in results:
+                for res in calculatedResults:
                     res["groupMetricId"] = res.get("groupMetricId") or "G0-02"
             else:
-                for res in results:
+                for res in calculatedResults:
                     if not res.get("groupMetricId"):
                         raise RollupError(500, "ROLLUP_RESULT_ERROR", "Group Metric ID is required for generic rollup.")
 
             actorUserId = getActorUserId(userModel)
-            rollupRepository.upsertGroupRollupResultsTx(cur, batch, results, includedCompanyIds, actorUserId)
+            rollupRepository.upsertGroupRollupResultsTx(cur, batch, calculatedResults, includedCompanyIds, actorUserId)
 
             rollupRepository.updateSourceStatusTx(cur, batchId, len(requiredAtomicIds))
 
@@ -449,9 +457,11 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
                     unit=result.get("unit"),
                     sourceCompanyValues=result.get("sourceCompanyValues"),
                     calculationWarnings=result.get("calculationWarnings"),
+                    calculationStatus=result.get("calculationStatus"),
                 )
                 for result in results
             ],
+            warnings=warnings,
         )
     )
 

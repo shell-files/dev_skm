@@ -44,7 +44,7 @@ async def crawl_and_analyze_media_news(
     userModel=Depends(get_token),
 ):
     try:
-        return runMediaCrawlAndAnalyze(request)
+        return runMediaCrawlAndAnalyze(request, userModel)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

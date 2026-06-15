@@ -302,7 +302,7 @@ const RollupSummaryPanel = ({
     btnText = "이중중대성평가 진행하기";
     btnClass = "primary";
     btnDisabled = false;
-    btnAction = onCtaClick;
+    btnAction = () => navigate("/benchmk");
   } else {
     btnText = isCalculating ? "계산 중..." : isCalculated ? "데이터 취합 완료" : calculateReadyYn ? "데이터 취합 실행" : "자회사 데이터 대기";
     btnDisabled = isCalculating || (!calculateReadyYn && !isCalculated);
@@ -316,7 +316,7 @@ const RollupSummaryPanel = ({
     btnClass = "primary";
     btnDisabled = false;
     btnAction = onCtaClick;
-  } else if (batchId && isCalculated) {
+  } else if (batchId && isCalculated && nextAction !== "START_DMA") {
     btnText = "데이터 취합 완료";
     btnClass = "calculated";
     btnDisabled = true;

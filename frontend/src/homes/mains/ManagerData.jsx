@@ -277,11 +277,11 @@ const ManagerData = () => {
   );
 
   useEffect(() => {
-    if (cycleTypeQuery === "ROLLUP_RESPONSE" && rollupResponseBatchId) {
+    if (cycleTypeQuery === "ROLLUP_RESPONSE") {
       queueMicrotask(() => {
-        setInputs([]);
         setSelectedIds([]);
         setDataPage(1);
+        setIsRejectModalOpen(false);
         setIsApprovalProjectModalOpen(false);
       });
       return;
@@ -342,6 +342,17 @@ const ManagerData = () => {
             currentStageLabel: "자회사 데이터 승인",
           })
         );
+        if (!cancelled) {
+          await dispatch(
+            fetchApprovalItems({
+              companyId,
+              reportingYear: detail?.reportingYear ?? reportingYear,
+              cycleType: "ROLLUP_RESPONSE",
+              assignedOnlyYn: true,
+              batchId: rollupResponseBatchId,
+            })
+          ).unwrap();
+        }
       } catch (error) {
         console.error("ROLLUP_RESPONSE approval context restore failed:", error);
       }
@@ -351,7 +362,7 @@ const ManagerData = () => {
     return () => {
       cancelled = true;
     };
-  }, [cycleTypeQuery, dispatch, reportingYear, rollupResponseBatchId]);
+  }, [companyId, cycleTypeQuery, dispatch, reportingYear, rollupResponseBatchId]);
 
   const fetchData = useCallback(async () => {
     if (!companyId || !hasValidApprovalContext) {

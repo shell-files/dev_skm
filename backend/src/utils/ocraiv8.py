@@ -240,7 +240,6 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                     # LLMExtractorOutput 스키마에 맞춰 JSON 형태로 결과를 달라고 강제합니다.
                     extractor_config = types.GenerateContentConfig(
                         temperature=0.1, # 창의성은 끄고(0.1) 정확하게 답변하게 함
-                        response_mime_type="application/json",
                         response_schema=LLMExtractorOutput,
                     )
                     extractor_res = client.models.generate_content(

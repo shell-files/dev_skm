@@ -8,6 +8,7 @@ from src.models.media import (
     MediaNewsCrawlAnalyzeResponse,
     MediaTopIssue,
 )
+from src.models.model import UserModel
 from src.services.medias.adapter import convertMediaToDmaSignals, step0NormalizeMediaFacts
 from src.services.medias.baseline import applyMediaBaseline
 from src.services.medias.crawler import applySavedSignalCounts, crawlNewsArticles
@@ -162,7 +163,7 @@ def buildMediaAnalyzeResponse(
 
 
 def runMediaCrawlAndAnalyze(
-    request: MediaNewsCrawlAnalyzeRequest,
+    request: MediaNewsCrawlAnalyzeRequest, userModel: UserModel
 ) -> MediaNewsCrawlAnalyzeResponse:
     # 입력 검증은 workflow status 기록 이전에 수행한다. (잘못된 날짜는 400으로 처리하고
     # MEDIA workflow row 를 생성하지 않는다.)

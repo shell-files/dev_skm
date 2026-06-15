@@ -174,13 +174,13 @@ const RollupSummaryPanel = ({
   const isCalculated = batchStatus === "completed" || batchStatus === "calculated";
   const isCalculating = calculating || calculatingRedux;
 
-  const handleCalc = async () => {
+  const handleCalc = async ({ force = false } = {}) => {
     if (onCalculate) {
       onCalculate(batchId);
       return;
     }
 
-    if (isCalculated) return;
+    if (isCalculated && !force) return;
 
     if (!calculateReadyYn) {
       showDefaultAlert(
@@ -248,12 +248,20 @@ const RollupSummaryPanel = ({
     setSavingBaseline(true);
     try {
       await dispatch(saveRollupBaselineValues({ batchId, values })).unwrap();
-      showDefaultAlert(
-        "저장 완료",
-        "전년도 기준값이 저장되었습니다. 다시 데이터 취합을 실행하세요.",
-        "success"
-      );
-      await loadBaselineRequirements();
+      const stillMissing = await loadBaselineRequirements();
+      if (stillMissing.length === 0) {
+        showDefaultAlert(
+          "저장 완료",
+          "전년도 기준값이 모두 입력되었습니다. 다시 데이터 취합을 실행하세요.",
+          "success"
+        );
+      } else {
+        showDefaultAlert(
+          "저장 완료",
+          "전년도 기준값이 저장되었습니다. 다시 데이터 취합을 실행하세요.",
+          "success"
+        );
+      }
     } catch (err) {
       console.error(err);
       showDefaultAlert("오류", err?.message || "전년도 기준값 저장에 실패했습니다.", "error");
@@ -327,7 +335,7 @@ const RollupSummaryPanel = ({
   // /result 의 "점수 해석" 탭으로 이동한다. (DMA_PRECHECK 는 기존 동작 유지)
   const isReportDisclosure =
     String(rollupPurposeCode || "").toUpperCase() === "REPORT_DISCLOSURE";
-  if (batchId && isCalculated && isReportDisclosure && !isCalculating) {
+  if (batchId && isCalculated && isReportDisclosure && !isCalculating && !showBaselineCard && baselineItems.length === 0) {
     btnText = "보고서 생성하기";
     btnClass = "primary";
     btnDisabled = false;
@@ -379,7 +387,7 @@ const RollupSummaryPanel = ({
         </div>
       </div>
 
-      {showBaselineCard && baselineItems.length > 0 && (
+      {showBaselineCard && (
         <div
           style={{
             marginTop: "16px",
@@ -389,79 +397,100 @@ const RollupSummaryPanel = ({
             padding: "16px 18px",
           }}
         >
-          <div style={{ marginBottom: "10px" }}>
-            <strong style={{ color: "#b45309", fontSize: "0.95rem" }}>
-              전년도 기준값 입력 필요
-            </strong>
-            <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#92400e", lineHeight: 1.5 }}>
-              전년 대비 지표 산정을 위해 전년도 연결 기준값을 입력하세요.
-              <br />
-              이 값은 현재 프로젝트에서 입력하지만, 데이터 기준연도는 전년도로 저장됩니다.
-            </p>
-          </div>
+          {baselineItems.length > 0 ? (
+            <>
+              <div style={{ marginBottom: "10px" }}>
+                <strong style={{ color: "#b45309", fontSize: "0.95rem" }}>
+                  전년도 기준값 입력 필요
+                </strong>
+                <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#92400e", lineHeight: 1.5 }}>
+                  전년 대비 지표 산정을 위해 전년도 연결 기준값을 입력하세요.
+                  <br />
+                  이 값은 현재 프로젝트에서 입력하지만, 데이터 기준연도는 전년도로 저장됩니다.
+                </p>
+              </div>
 
-          <div className="ob1-table-container" style={{ overflowX: "auto" }}>
-            <table className="ob1-table" style={{ minWidth: "640px" }}>
-              <thead>
-                <tr>
-                  <th>지표</th>
-                  <th>기준 항목</th>
-                  <th>기준연도</th>
-                  <th>입력값</th>
-                  <th>단위</th>
-                </tr>
-              </thead>
-              <tbody>
-                {baselineItems.map((it) => (
-                  <tr key={`${it.ruleCode}-${it.sourceAtomicMetricId}`}>
-                    <td>{it.metricId || it.sourceMetricId || "-"}</td>
-                    <td>
-                      {it.sourceAtomicName || it.sourceAtomicMetricId}
-                      <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
-                        {it.sourceAtomicMetricId}
-                      </div>
-                    </td>
-                    <td>{it.requiredReportingYear}</td>
-                    <td>
-                      <input
-                        type="number"
-                        className="ob1-input"
-                        value={baselineInputs[it.sourceAtomicMetricId] ?? ""}
-                        onChange={(e) =>
-                          setBaselineInputs((prev) => ({
-                            ...prev,
-                            [it.sourceAtomicMetricId]: e.target.value,
-                          }))
-                        }
-                        style={{ width: "140px", padding: "6px 8px" }}
-                        placeholder="기준값"
-                      />
-                    </td>
-                    <td>{it.unit || "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              <div className="ob1-table-container" style={{ overflowX: "auto" }}>
+                <table className="ob1-table" style={{ minWidth: "640px" }}>
+                  <thead>
+                    <tr>
+                      <th>지표</th>
+                      <th>기준 항목</th>
+                      <th>기준연도</th>
+                      <th>입력값</th>
+                      <th>단위</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {baselineItems.map((it) => (
+                      <tr key={`${it.ruleCode}-${it.sourceAtomicMetricId}`}>
+                        <td>{it.metricId || it.sourceMetricId || "-"}</td>
+                        <td>
+                          {it.sourceAtomicName || it.sourceAtomicMetricId}
+                          <div style={{ fontSize: "0.72rem", color: "#94a3b8" }}>
+                            {it.sourceAtomicMetricId}
+                          </div>
+                        </td>
+                        <td>{it.requiredReportingYear}</td>
+                        <td>
+                          <input
+                            type="number"
+                            className="ob1-input"
+                            value={baselineInputs[it.sourceAtomicMetricId] ?? ""}
+                            onChange={(e) =>
+                              setBaselineInputs((prev) => ({
+                                ...prev,
+                                [it.sourceAtomicMetricId]: e.target.value,
+                              }))
+                            }
+                            style={{ width: "140px", padding: "6px 8px" }}
+                            placeholder="기준값"
+                          />
+                        </td>
+                        <td>{it.unit || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "12px" }}>
-            <button
-              type="button"
-              className="ob1-rollup-btn primary"
-              onClick={handleSaveBaseline}
-              disabled={savingBaseline}
-            >
-              {savingBaseline ? "저장 중..." : "전년도 기준값 저장"}
-            </button>
-            <button
-              type="button"
-              className="ob1-rollup-btn"
-              onClick={handleCalc}
-              disabled={isCalculating || savingBaseline}
-            >
-              {isCalculating ? "취합 중..." : "다시 데이터 취합 실행"}
-            </button>
-          </div>
+              <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", marginTop: "12px" }}>
+                <button
+                  type="button"
+                  className="ob1-rollup-btn primary"
+                  onClick={handleSaveBaseline}
+                  disabled={savingBaseline}
+                >
+                  {savingBaseline ? "저장 중..." : "전년도 기준값 저장"}
+                </button>
+                <button
+                  type="button"
+                  className="ob1-rollup-btn"
+                  onClick={() => handleCalc({ force: true })}
+                  disabled={isCalculating || savingBaseline}
+                >
+                  {isCalculating ? "취합 중..." : "다시 데이터 취합 실행"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
+              <div>
+                <strong style={{ color: "#065f46", fontSize: "0.95rem" }}>전년도 기준값 저장 완료</strong>
+                <p style={{ margin: "6px 0 0", fontSize: "0.82rem", color: "#064e3b", lineHeight: 1.5 }}>
+                  모든 기준값이 저장되었습니다. 데이터 취합을 다시 실행해야 전년 대비 지표가 반영됩니다.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="ob1-rollup-btn primary"
+                onClick={() => handleCalc({ force: true })}
+                disabled={isCalculating}
+              >
+                {isCalculating ? "취합 중..." : "다시 데이터 취합 실행"}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

@@ -2,6 +2,7 @@ from google import genai
 from google.genai import types
 import json
 import asyncio
+import re
 from typing import List, Dict, Any
 from fastapi import APIRouter
 from sentence_transformers import SentenceTransformer
@@ -25,9 +26,27 @@ embedding_model = None
 # 최종 점수 계산은 파이썬 코드가 엄격한 수학 공식(Rule-based)으로 처리합니다.
 # ------------------------------------------------------------------
 
-# Gemini Client 설정 (구글의 AI 모델을 사용하기 위한 연결 고리)
-client = genai.Client(api_key=settings.gemini_api_key)
+# Gemini API 키 풀 — 일일 할당량 초과 시 다음 키로 자동 순환
+_API_KEYS: list[str] = [settings.gemini_api_key]
+if settings.gemini_api_keys:
+    _API_KEYS += [k.strip() for k in settings.gemini_api_keys.split(",") if k.strip()]
+_exhausted_key_indices: set[int] = set()
 modelName = settings.gemini_model
+
+
+def _get_active_client() -> tuple[int, genai.Client | None]:
+    """소진되지 않은 첫 번째 키로 클라이언트를 반환. 모두 소진되면 (None, None)."""
+    for i, key in enumerate(_API_KEYS):
+        if i not in _exhausted_key_indices:
+            return i, genai.Client(api_key=key)
+    return -1, None
+
+
+def _exhaust_key(idx: int) -> None:
+    """해당 인덱스의 키를 소진 처리하고 로그를 남긴다."""
+    _exhausted_key_indices.add(idx)
+    remaining = len(_API_KEYS) - len(_exhausted_key_indices)
+    print(f"[Gemini] 키 {idx + 1}/{len(_API_KEYS)} 일일 할당량 소진. 남은 키: {remaining}개")
 
 # 62개 서브이슈 캐싱 변수 (DB나 엑셀에서 읽어온 62개 표준 ESG 이슈 목록을 메모리에 저장해 둡니다)
 _ISSUE_DICTIONARY_STR = ""
@@ -189,9 +208,14 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
             source_step = result.get("source_step", "media_external")
             source_type = result.get("source_type", type)
             
-            # --- Retry 로직 --- 
+            # --- Retry 로직 ---
             # (AI 서버가 일시적으로 멈출 수 있으므로, 실패하면 3번까지 재시도합니다)
             for attempt in range(MAX_RETRIES):
+                # 매 시도마다 현재 사용 가능한 키로 클라이언트를 가져옵니다.
+                key_idx, gemini_client = _get_active_client()
+                if gemini_client is None:
+                    print(f'{fileName}: 모든 API 키의 일일 할당량이 소진되었습니다.')
+                    return {"fileName": fileName, "companyName": companyName, "type": type, "result": []}
                 try:
                     # ==================================================
                     # Step 1. Retriever / Chunker (데이터 확보)
@@ -199,14 +223,14 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                     # 파일을 구글 Gemini 서버로 안전하게 업로드합니다.
                     fileConfig = types.UploadFileConfig(mime_type="application/pdf")
                     with open(filePath, "rb") as f:
-                        uploadedFile = client.files.upload(file=f, config=fileConfig)
-    
-                    maxAttempts = 120  * 120 
+                        uploadedFile = gemini_client.files.upload(file=f, config=fileConfig)
+
+                    maxAttempts = 120  * 120
                     attempts = 0
-                    
+
                     # 파일 업로드 및 처리가 완료될 때까지 기다립니다.
                     while True:
-                        uploadedFile = client.files.get(name=uploadedFile.name)
+                        uploadedFile = gemini_client.files.get(name=uploadedFile.name)
                         if uploadedFile.state == types.FileState.ACTIVE:
                             break
                         elif uploadedFile.state == types.FileState.FAILED:
@@ -214,9 +238,9 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                         elif attempts >= maxAttempts:
                             raise Exception("구글 서버의 파일 가공 대기 시간이 초과되었습니다.")
                         await asyncio.sleep(3)
-                        uploadedFile = client.files.get(name=uploadedFile.name)
+                        uploadedFile = gemini_client.files.get(name=uploadedFile.name)
                         attempts += 1
-                
+
                     # ==================================================
                     # Step 2~4. LLM Extractor (추출기)
                     # ==================================================
@@ -225,10 +249,10 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                     extractor_prompt = f"""
                     Perform the role of a Double Materiality Assessment Extractor.
                     Analyze the provided document and extract key sustainability issues based ONLY on the provided Issue Dictionary.
-                    
+
                     [Issue Dictionary]
                     {issue_dict_str}
-                    
+
                     Do NOT score them from 1 to 5. Instead, strictly extract:
                     1. The raw issue labels as they appear in the text.
                     2. The most relevant candidate terms from the Issue Dictionary (up to 3).
@@ -236,21 +260,21 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                     4. Time Horizon Hint (short, mid, long).
                     5. Exact evidence spans from the document proving the issue.
                     """
-                    
+
                     # LLMExtractorOutput 스키마에 맞춰 JSON 형태로 결과를 달라고 강제합니다.
                     extractor_config = types.GenerateContentConfig(
                         temperature=0.1, # 창의성은 끄고(0.1) 정확하게 답변하게 함
                         response_schema=LLMExtractorOutput,
                     )
-                    extractor_res = client.models.generate_content(
+                    extractor_res = gemini_client.models.generate_content(
                         model=settings.gemini_model,
                         contents=[uploadedFile, extractor_prompt],
                         config=extractor_config
                     )
-                    
+
                     # 볼일 끝난 파일은 구글 서버에서 즉시 삭제하여 보안을 유지합니다.
                     if uploadedFile:
-                        client.files.delete(name=uploadedFile.name)
+                        gemini_client.files.delete(name=uploadedFile.name)
                         uploadedFile = None
                     
                     # LLM이 뽑아준 결과물을 파이썬 객체로 변환합니다.
@@ -356,18 +380,28 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                     return data
                     
                 except Exception as e:
-                    # 에러 발생 시 로그를 찍고 다음 Retry로 넘어갑니다.
-                    print(f'{fileName} (attempt {attempt+1}):', str(e))
+                    err_str = str(e)
+                    print(f'{fileName} (attempt {attempt+1}):', err_str)
                     if uploadedFile:
                         try:
-                            client.files.delete(name=uploadedFile.name)
+                            gemini_client.files.delete(name=uploadedFile.name)
                         except Exception:
-                            pass  
+                            pass
+                        uploadedFile = None
+                    # 일일 할당량 초과 → 해당 키 소진 후 즉시 다음 키로 재시도
+                    if "429" in err_str and ("PerDay" in err_str or "FreeTier" in err_str):
+                        _exhaust_key(key_idx)
+                        continue
                     # 3번 다 실패하면 빈 결과를 내보냅니다.
                     if attempt == MAX_RETRIES - 1:
-                        data = {"fileName": fileName, "companyName": companyName, "type": type, "result": []} 
-                        return data
-                    await asyncio.sleep(RETRY_DELAY)
+                        return {"fileName": fileName, "companyName": companyName, "type": type, "result": []}
+                    # 429 응답의 retryDelay를 파싱하여 API가 요구하는 시간만큼 대기 (최대 120초)
+                    retry_wait = RETRY_DELAY
+                    if "429" in err_str:
+                        m = re.search(r'retry in (\d+(?:\.\d+)?)\s*s', err_str, re.IGNORECASE)
+                        if m:
+                            retry_wait = min(float(m.group(1)) + 2, 120)
+                    await asyncio.sleep(retry_wait)
         
     tasks = [oneGemini(results[i], filePaths[i]) for i in range(len(filePaths))]
     

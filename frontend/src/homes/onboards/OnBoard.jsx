@@ -1457,6 +1457,7 @@ const OnBoard = () => {
                     sourceCycleId={activeSourceCycleId}
                     workflow={displayWorkflow}
                     onCtaClick={handleOpenSubsidiaryRequest}
+                    onStartDma={handleCtaClick}
                     onCalculated={() => initializeOnboarding()}
                     rollupPurposeCode={activeRollupContext.rollupPurposeCode}
                     metricScopeCode={activeRollupContext.metricScopeCode}

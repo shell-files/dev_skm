@@ -490,6 +490,7 @@
 }
 .ob1-rollup-btn:hover:not(:disabled) {
   background: #028a3e;
+  color: #fff;
 }
 .ob1-rollup-btn:disabled {
   cursor: not-allowed;

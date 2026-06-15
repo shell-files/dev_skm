@@ -246,7 +246,12 @@ def _resolvePostDmaState(run: dict) -> tuple:
         selectionSource = "TABLE" if selectedSubIssueCount > 0 else None
         fallbackYn = False if selectedSubIssueCount > 0 else None
 
-        postDmaCycle = getCycle(companyId, reportingYear, "POST_DMA_DISCLOSURE")
+        postDmaCycle = getCycle(
+            companyId,
+            reportingYear,
+            "POST_DMA_DISCLOSURE",
+            sourceMaterialityRunId=runId,
+        )
         postDmaCycleId = int(postDmaCycle["id"]) if postDmaCycle.get("id") is not None else None
 
         postDmaScopeMetricCount = 0

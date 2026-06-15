@@ -80,10 +80,16 @@ def listMetrics(
     userModel=None,
 ) -> OnboardingMetricsResponseDto:
     year = repo.resolveReportingYear(companyId, reportingYear)
+    sourceMaterialityRunId = resolveCycleSourceMaterialityRunId(companyId, year, cycleType)
     if cycleType == repo.CYCLE_TYPE_ROLLUP_RESPONSE and batchId:
         cycle = requireCycle(companyId, year, cycleType, batchId=batchId)
     else:
-        cycle = requireCycle(companyId, year, cycleType)
+        cycle = requireCycle(
+            companyId,
+            year,
+            cycleType,
+            sourceMaterialityRunId=sourceMaterialityRunId,
+        )
     allScopes = repo.listMetricScopes(int(cycle["id"]), companyId)
     if not allScopes:
         raise ValueError(scopeNotReadyMessage(cycle.get("cycle_type") or cycleType))
@@ -129,6 +135,7 @@ def listMetrics(
         cycleType=actualCycleType,
         assignedOnlyYn=False,
         batchId=batchId,
+        sourceMaterialityRunId=sourceMaterialityRunId,
     )
     approvalByMetric = {row["metricId"]: row.get("approvalStatus") for row in approvalSummaries}
 
@@ -379,13 +386,50 @@ def saveMetricValueGroups(groups: list[dict]) -> int:
     return repo.upsertMetricValueGroups(sanitizedGroups)
 
 
-def requireCycle(companyId: int, reportingYear: int, cycleType: str, batchId: Optional[int] = None) -> dict:
-    cycle = repo.getCycle(companyId, reportingYear, cycleType, batchId=batchId)
+def requireCycle(
+    companyId: int,
+    reportingYear: int,
+    cycleType: str,
+    batchId: Optional[int] = None,
+    sourceMaterialityRunId: Optional[int] = None,
+) -> dict:
+    effectiveRunId = resolveCycleSourceMaterialityRunId(
+        companyId,
+        reportingYear,
+        cycleType,
+        sourceMaterialityRunId=sourceMaterialityRunId,
+    )
+    cycle = repo.getCycle(
+        companyId,
+        reportingYear,
+        cycleType,
+        batchId=batchId,
+        sourceMaterialityRunId=effectiveRunId,
+    )
     if not cycle:
         raise ValueError(scopeNotReadyMessage(cycleType))
     if str(cycle.get("cycle_status") or "").strip().lower() != "active":
         raise ValueError(scopeNotReadyMessage(cycleType))
     return cycle
+
+
+def resolveCycleSourceMaterialityRunId(
+    companyId: int,
+    reportingYear: int,
+    cycleType: str,
+    sourceMaterialityRunId: Optional[int] = None,
+) -> Optional[int]:
+    if sourceMaterialityRunId is not None:
+        return int(sourceMaterialityRunId)
+    normalizedCycleType = str(cycleType or "").strip().upper()
+    if normalizedCycleType != CYCLE_TYPE_POST_DMA_DISCLOSURE:
+        return None
+    from src.utils import reportworkflowrepository
+
+    currentRun = reportworkflowrepository.getCurrent(companyId, reportingYear)
+    if currentRun.get("id") is None:
+        return 0
+    return int(currentRun["id"])
 
 
 def cycleNotReadyMessage(cycleType: str) -> str:
@@ -923,13 +967,16 @@ def listApprovals(
     batchId: Optional[int] = None,
 ) -> OnboardingApprovalListResponseDto:
     checkScope(companyId, userModel)
+    year = repo.resolveReportingYear(companyId, reportingYear)
+    sourceMaterialityRunId = resolveCycleSourceMaterialityRunId(companyId, year, cycleType)
     rows = repo.listCycleApprovalInboxRows(
         companyId=companyId,
-        reportingYear=reportingYear,
+        reportingYear=year,
         status=status,
         cycleType=cycleType,
         assignedOnlyYn=assignedOnlyYn,
         batchId=batchId,
+        sourceMaterialityRunId=sourceMaterialityRunId,
     )
     if isEmployee(userModel):
         rows = [row for row in rows if checkMetricStatusPermission(row, userModel)]
@@ -948,7 +995,15 @@ def getApprovalStatus(
     batchId: Optional[int] = None,
 ) -> OnboardingApprovalStatusResponseDto:
     checkScope(companyId, userModel)
-    summary = approvalService.buildMetricApprovalSummary(companyId, reportingYear, metricId, cycleType, batchId=batchId)
+    sourceMaterialityRunId = resolveCycleSourceMaterialityRunId(companyId, reportingYear, cycleType)
+    summary = approvalService.buildMetricApprovalSummary(
+        companyId,
+        reportingYear,
+        metricId,
+        cycleType,
+        batchId=batchId,
+        sourceMaterialityRunId=sourceMaterialityRunId,
+    )
     if not checkMetricStatusPermission(summary, userModel):
         raise PermissionError("Only approvers, reviewers, or the assigned employee can view approval status")
     return OnboardingApprovalStatusResponseDto(data=statusDto(summary, userModel))
@@ -963,8 +1018,22 @@ def getApprovalDetail(
     batchId: Optional[int] = None,
 ) -> OnboardingApprovalDetailResponseDto:
     checkScope(companyId, userModel)
-    cycle = requireCycle(companyId, reportingYear, cycleType, batchId=batchId)
-    summary = approvalService.buildMetricApprovalSummary(companyId, reportingYear, metricId, cycleType, batchId=batchId)
+    sourceMaterialityRunId = resolveCycleSourceMaterialityRunId(companyId, reportingYear, cycleType)
+    cycle = requireCycle(
+        companyId,
+        reportingYear,
+        cycleType,
+        batchId=batchId,
+        sourceMaterialityRunId=sourceMaterialityRunId,
+    )
+    summary = approvalService.buildMetricApprovalSummary(
+        companyId,
+        reportingYear,
+        metricId,
+        cycleType,
+        batchId=batchId,
+        sourceMaterialityRunId=sourceMaterialityRunId,
+    )
     if not checkMetricStatusPermission(summary, userModel):
         raise PermissionError("Only approvers, reviewers, or the assigned employee can view approval status")
     scopes = repo.listMetricScopes(int(cycle["id"]), companyId, metricId)

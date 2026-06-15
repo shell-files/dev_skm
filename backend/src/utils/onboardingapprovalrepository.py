@@ -63,13 +63,20 @@ def listCycleApprovalInboxRows(
     cycleType: Optional[str] = None,
     assignedOnlyYn: bool = True,
     batchId: Optional[int] = None,
+    sourceMaterialityRunId: Optional[int] = None,
 ) -> list[dict]:
     normalizedCycleType = str(cycleType or CYCLE_TYPE_PRE_DMA_G0).strip().upper()
     if normalizedCycleType not in {CYCLE_TYPE_PRE_DMA_G0, CYCLE_TYPE_POST_DMA_DISCLOSURE, CYCLE_TYPE_ROLLUP_RESPONSE}:
         return []
 
     year = scopeRepo.resolveReportingYear(companyId, reportingYear)
-    cycle = scopeRepo.getCycle(companyId, year, normalizedCycleType, batchId=batchId)
+    cycle = scopeRepo.getCycle(
+        companyId,
+        year,
+        normalizedCycleType,
+        batchId=batchId,
+        sourceMaterialityRunId=sourceMaterialityRunId,
+    )
     if not cycle or str(cycle.get("cycle_status") or "").strip().lower() != "active":
         return []
 
@@ -457,8 +464,15 @@ def buildApprovalSummary(
     metricId: str,
     cycleType: str = CYCLE_TYPE_PRE_DMA_G0,
     batchId: Optional[int] = None,
+    sourceMaterialityRunId: Optional[int] = None,
 ) -> dict:
-    cycle = scopeRepo.getCycle(companyId, reportingYear, cycleType, batchId=batchId) or {}
+    cycle = scopeRepo.getCycle(
+        companyId,
+        reportingYear,
+        cycleType,
+        batchId=batchId,
+        sourceMaterialityRunId=sourceMaterialityRunId,
+    ) or {}
     cycleId = int(cycle["id"]) if cycle.get("id") is not None else None
     scopes = scopeRepo.listMetricScopes(cycleId, companyId, metricId) if cycleId is not None else []
     scope = scopes[0] if scopes else {}

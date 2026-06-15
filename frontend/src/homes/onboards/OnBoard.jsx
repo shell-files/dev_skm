@@ -200,45 +200,6 @@ const resolveRollupContext = (cycleType) => {
   };
 };
 
-const PostDmaRollupRequestCard = ({
-  sourceCycleId,
-  rollupPurposeCode,
-  metricScopeCode,
-  onRequest,
-  disabled,
-}) => (
-  <div className="ob1-rollup-panel ob1-rollup-request-card">
-    <div className="ob1-rollup-request-main">
-      <div className="ob1-rollup-info">
-        <h3 className="ob1-rollup-title">자회사 데이터 요청</h3>
-        <p className="ob1-rollup-request-desc">
-          연결기준 보고서 작성을 위해 선정 이슈 기반 지표를 자회사에 요청합니다.
-        </p>
-      </div>
-      <div className="ob1-rollup-request-meta" aria-label="자회사 데이터 요청 정보">
-        <span><strong>sourceCycleId:</strong> {sourceCycleId || "-"}</span>
-        <span><strong>목적:</strong> {rollupPurposeCode}</span>
-        <span><strong>범위:</strong> {metricScopeCode}</span>
-      </div>
-      {!sourceCycleId && (
-        <p className="ob1-rollup-request-warning">
-          POST-DMA 지표 범위 cycle을 확인하지 못했습니다. 새로고침 후 다시 시도하세요.
-        </p>
-      )}
-    </div>
-    <div className="ob1-rollup-actions">
-      <button
-        type="button"
-        className="ob1-rollup-btn primary"
-        onClick={onRequest}
-        disabled={disabled}
-      >
-        자회사 데이터 요청 생성
-      </button>
-    </div>
-  </div>
-);
-
 const formatApiDetail = (detail) => {
   if (Array.isArray(detail)) {
     return detail
@@ -735,7 +696,6 @@ const OnBoard = () => {
     activeCycleType === "POST_DMA_DISCLOSURE" &&
     displayWorkflow?.reportBasisType === "CONSOLIDATED";
   const shouldShowRollupPanel = canManageRollup && isPostDmaRollupContext;
-  const hasActiveRollupBatch = Boolean(activeBatchId);
   const workflowRunId = displayWorkflow?.runId;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -1496,25 +1456,16 @@ const OnBoard = () => {
             ) : (
               <>
                 {shouldShowRollupPanel && (
-                  hasActiveRollupBatch ? (
-                    <RollupSummaryPanel
-                      batchId={activeBatchId}
-                      workflow={displayWorkflow}
-                      onCtaClick={handleOpenSubsidiaryRequest}
-                      onCalculated={() => initializeOnboarding()}
-                      rollupPurposeCode={activeRollupContext.rollupPurposeCode}
-                      metricScopeCode={activeRollupContext.metricScopeCode}
-                      onSendSource={handleOpenTransferModal}
-                    />
-                  ) : (
-                    <PostDmaRollupRequestCard
-                      sourceCycleId={activeSourceCycleId}
-                      rollupPurposeCode={activeRollupContext.rollupPurposeCode}
-                      metricScopeCode={activeRollupContext.metricScopeCode}
-                      onRequest={handleOpenSubsidiaryRequest}
-                      disabled={!activeSourceCycleId || loadingWorkflow}
-                    />
-                  )
+                  <RollupSummaryPanel
+                    batchId={activeBatchId}
+                    sourceCycleId={activeSourceCycleId}
+                    workflow={displayWorkflow}
+                    onCtaClick={handleOpenSubsidiaryRequest}
+                    onCalculated={() => initializeOnboarding()}
+                    rollupPurposeCode={activeRollupContext.rollupPurposeCode}
+                    metricScopeCode={activeRollupContext.metricScopeCode}
+                    onSendSource={handleOpenTransferModal}
+                  />
                 )}
 
                 <OnboardingMetricTable

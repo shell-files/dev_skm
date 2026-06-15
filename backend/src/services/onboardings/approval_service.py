@@ -86,6 +86,7 @@ def submitMetricApproval(
                     metricId,
                     cycle.get("cycle_type") or cycleType,
                     batchId=batchId,
+                    sourceMaterialityRunId=cycle.get("source_materiality_run_id"),
                 )
             if checkRowsAnyStatus(rows, requiredAtomicIds, {STATE_REVIEWED, STATE_APPROVED}):
                 raise ValueError(f"Cannot resubmit {metricId} from reviewed or approved status")
@@ -121,6 +122,7 @@ def submitMetricApproval(
             metricId,
             cycle.get("cycle_type") or cycleType,
             batchId=batchId,
+            sourceMaterialityRunId=cycle.get("source_materiality_run_id"),
         )
     except Exception:
         conn.rollback()
@@ -182,6 +184,7 @@ def reviewMetricApproval(
             metricId,
             cycle.get("cycle_type") or cycleType,
             batchId=batchId,
+            sourceMaterialityRunId=cycle.get("source_materiality_run_id"),
         )
     except Exception:
         conn.rollback()
@@ -251,6 +254,7 @@ def approveMetricApproval(
                     metricId,
                     cycle.get("cycle_type") or cycleType,
                     batchId=batchId,
+                    sourceMaterialityRunId=cycle.get("source_materiality_run_id"),
                 )
             if checkRowsAllStatus(rows, requiredAtomicIds, STATE_APPROVED):
                 calculationSummary = None
@@ -284,6 +288,7 @@ def approveMetricApproval(
                     cycle.get("cycle_type") or cycleType,
                     calculationSummary=calculationSummary,
                     batchId=batchId,
+                    sourceMaterialityRunId=cycle.get("source_materiality_run_id"),
                 )
             inputRepo.validateCompleteRows(rows, requiredAtomicIds, allowedStatuses={STATE_SUBMITTED, STATE_REVIEWED})
             calculationSummary = None
@@ -338,6 +343,7 @@ def approveMetricApproval(
             cycle.get("cycle_type") or cycleType,
             calculationSummary=calculationSummary,
             batchId=batchId,
+            sourceMaterialityRunId=cycle.get("source_materiality_run_id"),
         )
     except Exception:
         conn.rollback()
@@ -399,6 +405,7 @@ def rejectMetricApproval(
             metricId,
             cycle.get("cycle_type") or cycleType,
             batchId=batchId,
+            sourceMaterialityRunId=cycle.get("source_materiality_run_id"),
         )
     except Exception:
         conn.rollback()
@@ -414,8 +421,16 @@ def buildMetricApprovalSummary(
     cycleType: str = scopeRepo.CYCLE_TYPE_PRE_DMA_G0,
     calculationSummary: dict = None,
     batchId: Optional[int] = None,
+    sourceMaterialityRunId: Optional[int] = None,
 ) -> dict:
-    summary = approvalRepo.buildApprovalSummary(companyId, reportingYear, metricId, cycleType, batchId=batchId)
+    summary = approvalRepo.buildApprovalSummary(
+        companyId,
+        reportingYear,
+        metricId,
+        cycleType,
+        batchId=batchId,
+        sourceMaterialityRunId=sourceMaterialityRunId,
+    )
     if calculationSummary:
         summary["calculationReadyYn"] = calculationSummary.get("calculationReadyYn")
         summary["affectedRuleCount"] = calculationSummary.get("affectedRuleCount", 0)
@@ -446,12 +461,39 @@ def resolveActiveCycleTx(
             sourceMaterialityRunId,
             actorUserId,
         )
-    return resolveExistingActiveCycleTx(cur, companyId, reportingYear, normalizedCycleType, batchId=batchId)
+    return resolveExistingActiveCycleTx(
+        cur,
+        companyId,
+        reportingYear,
+        normalizedCycleType,
+        batchId=batchId,
+        sourceMaterialityRunId=sourceMaterialityRunId,
+    )
 
 
-def resolveExistingActiveCycleTx(cur, companyId: int, reportingYear: int, cycleType: str, batchId: Optional[int] = None) -> dict:
+def resolveExistingActiveCycleTx(
+    cur,
+    companyId: int,
+    reportingYear: int,
+    cycleType: str,
+    batchId: Optional[int] = None,
+    sourceMaterialityRunId: Optional[int] = None,
+) -> dict:
     normalizedCycleType = normalizeCycleType(cycleType)
-    cycle = scopeRepo.resolveCycle(cur, companyId, reportingYear, normalizedCycleType, batchId=batchId)
+    effectiveRunId = sourceMaterialityRunId
+    if effectiveRunId is None and normalizedCycleType == scopeRepo.CYCLE_TYPE_POST_DMA_DISCLOSURE:
+        from src.utils import reportworkflowrepository
+
+        currentRun = reportworkflowrepository.getCurrent(companyId, reportingYear)
+        effectiveRunId = int(currentRun["id"]) if currentRun.get("id") is not None else 0
+    cycle = scopeRepo.resolveCycle(
+        cur,
+        companyId,
+        reportingYear,
+        normalizedCycleType,
+        batchId=batchId,
+        sourceMaterialityRunId=effectiveRunId,
+    )
     if not cycle:
         raise ValueError(f"{normalizedCycleType} cycle was not found")
     if str(cycle.get("cycle_status") or "").strip().lower() != "active":

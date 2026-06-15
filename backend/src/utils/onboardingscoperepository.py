@@ -64,12 +64,21 @@ def resolveReportingYear(companyId: int, reportingYear: Optional[int] = None) ->
     ) or {}
     return int(row.get("reporting_year") or datetime.now().year)
 
-def getCycle(companyId: int, reportingYear: int, cycleType: str, batchId: Optional[int] = None) -> dict:
+def getCycle(
+    companyId: int,
+    reportingYear: int,
+    cycleType: str,
+    batchId: Optional[int] = None,
+    sourceMaterialityRunId: Optional[int] = None,
+) -> dict:
     requireRollupResponseBatchId(cycleType, batchId)
     batchFilter = "AND parent_rollup_batch_id = ?" if batchId is not None else ""
+    sourceRunFilter = "AND source_materiality_run_id = ?" if sourceMaterialityRunId is not None else ""
     params = [companyId, reportingYear, cycleType]
     if batchId is not None:
         params.append(batchId)
+    if sourceMaterialityRunId is not None:
+        params.append(sourceMaterialityRunId)
     return findOne(
         f"""
         SELECT *
@@ -78,6 +87,7 @@ def getCycle(companyId: int, reportingYear: int, cycleType: str, batchId: Option
           AND reporting_year = ?
           AND cycle_type = ?
           {batchFilter}
+          {sourceRunFilter}
           AND delete_yn = 0
         ORDER BY id DESC
         LIMIT 1
@@ -390,12 +400,22 @@ def cycleTypeFilter(cycleType: Optional[str]) -> str:
         return "AND 1 = 0"
     return f"AND (c.cycle_type = '{normalizedCycleType}' OR c.id IS NULL)"
 
-def resolveCycle(cur, companyId: int, reportingYear: int, cycleType: str = CYCLE_TYPE_PRE_DMA_G0, batchId: Optional[int] = None) -> dict:
+def resolveCycle(
+    cur,
+    companyId: int,
+    reportingYear: int,
+    cycleType: str = CYCLE_TYPE_PRE_DMA_G0,
+    batchId: Optional[int] = None,
+    sourceMaterialityRunId: Optional[int] = None,
+) -> dict:
     requireRollupResponseBatchId(cycleType, batchId)
     batchFilter = "AND parent_rollup_batch_id = ?" if batchId is not None else ""
+    sourceRunFilter = "AND source_materiality_run_id = ?" if sourceMaterialityRunId is not None else ""
     params = [companyId, reportingYear, cycleType]
     if batchId is not None:
         params.append(batchId)
+    if sourceMaterialityRunId is not None:
+        params.append(sourceMaterialityRunId)
     cur.execute(
         f"""
         SELECT *
@@ -404,6 +424,7 @@ def resolveCycle(cur, companyId: int, reportingYear: int, cycleType: str = CYCLE
           AND reporting_year = ?
           AND cycle_type = ?
           {batchFilter}
+          {sourceRunFilter}
           AND delete_yn = 0
         ORDER BY id DESC
         LIMIT 1
@@ -498,7 +519,12 @@ def ensurePostDmaDisclosureCycleTx(
         scopeRows=scopeRows,
         actorUserId=actorUserId,
     )
-    cycle = resolvePostDmaCycleTx(cur, companyId, reportingYear)
+    cycle = resolvePostDmaCycleTx(
+        cur,
+        companyId,
+        reportingYear,
+        sourceMaterialityRunId=sourceMaterialityRunId,
+    )
     return {
         "cycle": cycle,
         "selectedSubIssueCount": len(selectedRows),
@@ -622,7 +648,12 @@ def ensurePostDmaCycleTx(
     sourceMaterialityRunId: int,
     actorUserId: Optional[int],
 ) -> dict:
-    cycle = resolvePostDmaCycleTx(cur, companyId, reportingYear)
+    cycle = resolvePostDmaCycleTx(
+        cur,
+        companyId,
+        reportingYear,
+        sourceMaterialityRunId=sourceMaterialityRunId,
+    )
     if not cycle:
         insertPostDmaCycleTx(
             cur,
@@ -632,7 +663,12 @@ def ensurePostDmaCycleTx(
             sourceMaterialityRunId=sourceMaterialityRunId,
             actorUserId=actorUserId,
         )
-        cycle = resolvePostDmaCycleTx(cur, companyId, reportingYear)
+        cycle = resolvePostDmaCycleTx(
+            cur,
+            companyId,
+            reportingYear,
+            sourceMaterialityRunId=sourceMaterialityRunId,
+        )
         cycle["_createdYn"] = True
         return cycle
 
@@ -674,23 +710,38 @@ def ensurePostDmaCycleTx(
             """,
             tuple(params),
         )
-        cycle = resolvePostDmaCycleTx(cur, companyId, reportingYear)
+        cycle = resolvePostDmaCycleTx(
+            cur,
+            companyId,
+            reportingYear,
+            sourceMaterialityRunId=sourceMaterialityRunId,
+        )
     cycle["_createdYn"] = False
     return cycle
 
-def resolvePostDmaCycleTx(cur, companyId: int, reportingYear: int) -> dict:
+def resolvePostDmaCycleTx(
+    cur,
+    companyId: int,
+    reportingYear: int,
+    sourceMaterialityRunId: Optional[int] = None,
+) -> dict:
+    sourceRunFilter = "AND source_materiality_run_id = ?" if sourceMaterialityRunId is not None else ""
+    params = [companyId, reportingYear, CYCLE_TYPE_POST_DMA_DISCLOSURE]
+    if sourceMaterialityRunId is not None:
+        params.append(sourceMaterialityRunId)
     cur.execute(
-        """
+        f"""
         SELECT *
         FROM ESG_ONBOARDING_CYCLE
         WHERE company_id = ?
           AND reporting_year = ?
           AND cycle_type = ?
+          {sourceRunFilter}
           AND delete_yn = 0
         ORDER BY id DESC
         LIMIT 1
         """,
-        (companyId, reportingYear, CYCLE_TYPE_POST_DMA_DISCLOSURE),
+        tuple(params),
     )
     return cur.fetchone() or {}
 

@@ -347,42 +347,6 @@ const Dashboard = () => {
                   </tbody>
                 </table>
               )}
-
-            {/* Project meta row */}
-            {/* <div className="home-dashboard-project-meta">
-              <div className="home-dashboard-project-meta-item">
-                <span className="home-dashboard-project-meta-label">보고 기준 연도</span>
-                <span className="home-dashboard-project-meta-value">
-                  {currentYear || "2024"}
-                </span>
-              </div>
-              <div className="home-dashboard-project-meta-item">
-                <span className="home-dashboard-project-meta-label">프로젝트</span>
-                <span className="home-dashboard-project-meta-value">
-                  {currentYear || "2024"} 지속가능경영보고서
-                </span>
-              </div>
-              <div className="home-dashboard-project-meta-item">
-                <span className="home-dashboard-project-meta-label">대상 회사</span>
-                <span className="home-dashboard-project-meta-value">{companyName}</span>
-              </div>
-              <div className="home-dashboard-project-meta-item">
-                <span className="home-dashboard-project-meta-label">보고 범위</span>
-                <span className="home-dashboard-project-meta-value">
-                  {getBasisLabel(displayProject.reportBasisType)}
-                </span>
-              </div>
-              <button
-                className="home-dashboard-project-change-btn"
-                onClick={() => setShowProjectModal(true)}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3" />
-                  <path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" />
-                </svg>
-                프로젝트 변경
-              </button>
-            </div> */}
           </div>
 
           {/* ── 처음이신가요? 4단계 가이드 ── */}

@@ -177,7 +177,7 @@
   max-width: 520px;
   height: auto;
   object-fit: contain;
-  filter: drop-shadow(0 20px 40px rgba(9, 168, 87, 0.10));
+  mix-blend-mode: multiply;
 }
 
 @keyframes heroFloat {

@@ -214,6 +214,12 @@ const initialState = {
     activeBatchId: null,
     batchStatus: null,
   },
+  rollupBaseline: {
+    loading: false,
+    saving: false,
+    dataByBatchId: {},
+    error: null,
+  },
   currentYear: localStorage.getItem("currentYear"),
   currentRunId: localStorage.getItem("currentRunId"),
   generateReportStatus: { loading: false, data: null, error: null },
@@ -779,6 +785,38 @@ export const calculateRollupBatch = createAsyncThunk(
       return rejectWithValue({
         status: false,
         message: "데이터 취합 중 오류가 발생했습니다.",
+      });
+    }
+  }
+);
+
+export const fetchRollupBaselineRequirements = createAsyncThunk(
+  "report/fetchRollupBaselineRequirements",
+  async ({ batchId }, { rejectWithValue }) => {
+    try {
+      const res = await GET(`${ROLLUP_API_ROOT}/batches/${batchId}/baseline-requirements`);
+      return rejectIfFailed(res, rejectWithValue, "전년도 기준값 요구 항목 조회에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: apiErrorMessage(error, "전년도 기준값 요구 항목 조회 중 오류가 발생했습니다."),
+      });
+    }
+  }
+);
+
+export const saveRollupBaselineValues = createAsyncThunk(
+  "report/saveRollupBaselineValues",
+  async ({ batchId, values }, { rejectWithValue }) => {
+    try {
+      const res = await POST(`${ROLLUP_API_ROOT}/batches/${batchId}/baseline-values`, { values });
+      return rejectIfFailed(res, rejectWithValue, "전년도 기준값 저장에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: apiErrorMessage(error, "전년도 기준값 저장 중 오류가 발생했습니다."),
       });
     }
   }
@@ -1455,6 +1493,39 @@ const reportSlice = createSlice({
         state.rollup.batchStatus = dataOf(action.payload) || state.rollup.batchStatus;
       })
       .addCase(calculateRollupBatch.rejected, (state, action) => setRejected(state, "calculateBatch", action));
+
+    builder
+      .addCase(fetchRollupBaselineRequirements.pending, (state) => {
+        state.rollupBaseline.loading = true;
+        state.rollupBaseline.error = null;
+      })
+      .addCase(fetchRollupBaselineRequirements.fulfilled, (state, action) => {
+        state.rollupBaseline.loading = false;
+        state.rollupBaseline.error = null;
+        const data = dataOf(action.payload);
+        const batchId = data?.batchId ?? action.meta.arg?.batchId;
+        if (batchId != null) {
+          state.rollupBaseline.dataByBatchId[batchId] = data;
+        }
+      })
+      .addCase(fetchRollupBaselineRequirements.rejected, (state, action) => {
+        state.rollupBaseline.loading = false;
+        state.rollupBaseline.error = action.payload || action.error || null;
+      });
+
+    builder
+      .addCase(saveRollupBaselineValues.pending, (state) => {
+        state.rollupBaseline.saving = true;
+        state.rollupBaseline.error = null;
+      })
+      .addCase(saveRollupBaselineValues.fulfilled, (state) => {
+        state.rollupBaseline.saving = false;
+        state.rollupBaseline.error = null;
+      })
+      .addCase(saveRollupBaselineValues.rejected, (state, action) => {
+        state.rollupBaseline.saving = false;
+        state.rollupBaseline.error = action.payload || action.error || null;
+      });
 
     builder
       .addCase(submitOnboardingApproval.pending, (state) =>

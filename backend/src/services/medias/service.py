@@ -8,6 +8,7 @@ from src.models.media import (
     MediaNewsCrawlAnalyzeResponse,
     MediaTopIssue,
 )
+from src.models.model import UserModel
 from src.services.medias.adapter import convertMediaToDmaSignals, step0NormalizeMediaFacts
 from src.services.medias.baseline import applyMediaBaseline
 from src.services.medias.crawler import applySavedSignalCounts, crawlNewsArticles
@@ -94,7 +95,7 @@ def buildMediaAnalyzeResponse(
 
 
 def runMediaCrawlAndAnalyze(
-    request: MediaNewsCrawlAnalyzeRequest,
+    request: MediaNewsCrawlAnalyzeRequest, userModel: UserModel
 ) -> MediaNewsCrawlAnalyzeResponse:
     dateFrom = _parseRequestDate(request.dateFrom, "dateFrom")
     dateTo = _parseRequestDate(request.dateTo, "dateTo")

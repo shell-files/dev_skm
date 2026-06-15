@@ -460,6 +460,7 @@ body {
     color: #334155;
 }
 
+
 #main_page .header-project-empty {
     background: #fffbeb;
     border-color: #fde68a;
@@ -472,6 +473,7 @@ body {
     color: #92400e;
     white-space: nowrap;
 }
+
 
 /* 데스크탑 상단 토글 버튼 스타일 */
 #main_page .sidebar-toggle-btn {

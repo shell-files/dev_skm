@@ -5,6 +5,9 @@ from fastapi.responses import JSONResponse
 from src.utils.auth import get_token
 
 from src.models.rollup import (
+    RollupBaselineRequirementResponseDto,
+    RollupBaselineSaveResponseDto,
+    RollupBaselineValuesRequestDto,
     RollupBatchRequestDto,
     RollupBatchResponseDto,
     RollupActiveBatchResponseDto,
@@ -21,12 +24,14 @@ from src.services.rollups.service import (
     RollupError,
     calcBatch,
     getActiveBatchStatus,
+    getBaselineRequirements,
     getRequestDetail,
     getScopePreview,
     getStatus,
     listBatchSources,
     listRequestsForSource,
     listSubsidiaries,
+    saveBaselineValues,
     saveBatch,
     sendSource,
 )
@@ -231,6 +236,42 @@ async def sendSourceRoute(batchId: int, userModel=Depends(get_token)):
 async def getStatusRoute(batchId: int, userModel=Depends(get_token)):
     try:
         return getStatus(batchId, userModel)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except RollupError as e:
+        return buildErrorResponse(e)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@_actionRouter.get(
+    "/batches/{batchId}/baseline-requirements",
+    response_model=RollupBaselineRequirementResponseDto,
+    summary="List prior-year consolidated baseline requirements for YoY rules",
+)
+async def getBaselineRequirementsRoute(batchId: int, userModel=Depends(get_token)):
+    try:
+        return getBaselineRequirements(batchId, userModel)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+    except RollupError as e:
+        return buildErrorResponse(e)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@_actionRouter.post(
+    "/batches/{batchId}/baseline-values",
+    response_model=RollupBaselineSaveResponseDto,
+    summary="Save prior-year consolidated baseline values into ESG_KPI_FACT",
+)
+async def saveBaselineValuesRoute(
+    batchId: int,
+    request: RollupBaselineValuesRequestDto,
+    userModel=Depends(get_token),
+):
+    try:
+        return saveBaselineValues(batchId, request, userModel)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
     except RollupError as e:

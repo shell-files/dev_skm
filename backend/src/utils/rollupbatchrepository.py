@@ -829,3 +829,233 @@ def listConsolidatedRollupResultsByYearTx(
         (parentCompanyId, reportingYear, *cleaned, *CONSOLIDATED_RESULT_READY_STATUSES),
     )
     return cur.fetchall() or []
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# S5-B14 PRIOR_YEAR_BASELINE: 전년도 연결 기준값을 신규 테이블 없이 ESG_KPI_FACT 에
+# 저장/조회한다. parent company 의 consolidated baseline fact 로 처리하며, 일반 ENTITY
+# 운영 fact 와는 value_source_type / company_scope_type 로 구분한다.
+# ──────────────────────────────────────────────────────────────────────────
+PRIOR_YEAR_BASELINE_VALUE_SOURCE_TYPE = "PRIOR_YEAR_BASELINE_INPUT"
+CONSOLIDATED_BASELINE_SCOPE_TYPE = "CONSOLIDATED_BASELINE"
+CONSOLIDATED_BASELINE_SCOPE_TYPES = ("CONSOLIDATED", "CONSOLIDATED_BASELINE")
+
+
+def listConsolidatedBaselineFactsTx(
+    cur,
+    parentCompanyId: int,
+    reportingYear: int,
+    atomicMetricIds: list[str],
+) -> list[dict]:
+    """
+    ESG_KPI_FACT 에서 parent company 의 연결 baseline 입력값을 조회한다.
+    company_scope_type IN (CONSOLIDATED, CONSOLIDATED_BASELINE), approved, delete_yn=0.
+    PRIOR + CONSOLIDATED source 평가용 consolidatedFactMapsByYear seed 로 사용된다.
+    동일 (company, year, atomic) 에 여러 row 가 있으면 최신(id DESC) 1건만 사용한다.
+    반환 행은 buildConsolidatedFactMap 이 바로 사용할 수 있도록 group_atomic_metric_id 로 alias.
+    """
+    cleaned = [
+        str(atomicId or "").strip()
+        for atomicId in atomicMetricIds or []
+        if str(atomicId or "").strip()
+    ]
+    if not cleaned:
+        return []
+    placeholders = ", ".join(["?"] * len(cleaned))
+    scopeUpper = tuple(scope.upper() for scope in CONSOLIDATED_BASELINE_SCOPE_TYPES)
+    scopePlaceholders = ", ".join(["?"] * len(scopeUpper))
+    cur.execute(
+        f"""
+        SELECT f.atomic_metric_id AS group_atomic_metric_id,
+               f.value_numeric,
+               f.value_text,
+               f.unit
+        FROM ESG_KPI_FACT f
+        INNER JOIN (
+            SELECT atomic_metric_id, MAX(id) AS max_id
+            FROM ESG_KPI_FACT
+            WHERE company_id = ?
+              AND reporting_year = ?
+              AND atomic_metric_id IN ({placeholders})
+              AND UPPER(COALESCE(company_scope_type, '')) IN ({scopePlaceholders})
+              AND LOWER(COALESCE(approval_status, '')) = 'approved'
+              AND delete_yn = 0
+            GROUP BY atomic_metric_id
+        ) latest
+          ON latest.atomic_metric_id = f.atomic_metric_id
+         AND latest.max_id = f.id
+        """,
+        (parentCompanyId, reportingYear, *cleaned, *scopeUpper),
+    )
+    return cur.fetchall() or []
+
+
+def listConsolidatedBaselineDetailsTx(
+    cur,
+    parentCompanyId: int,
+    reportingYear: int,
+    atomicMetricIds: list[str],
+) -> dict[str, dict]:
+    """
+    baseline-requirements API 용. 입력 atomic 별 현재 저장된 baseline 값 상세를
+    atomicMetricId -> {valueNumeric, valueText, unit, valueSourceType} 맵으로 반환한다.
+    """
+    cleaned = [
+        str(atomicId or "").strip()
+        for atomicId in atomicMetricIds or []
+        if str(atomicId or "").strip()
+    ]
+    if not cleaned:
+        return {}
+    placeholders = ", ".join(["?"] * len(cleaned))
+    scopeUpper = tuple(scope.upper() for scope in CONSOLIDATED_BASELINE_SCOPE_TYPES)
+    scopePlaceholders = ", ".join(["?"] * len(scopeUpper))
+    cur.execute(
+        f"""
+        SELECT f.atomic_metric_id,
+               f.value_numeric,
+               f.value_text,
+               f.unit,
+               f.value_source_type
+        FROM ESG_KPI_FACT f
+        INNER JOIN (
+            SELECT atomic_metric_id, MAX(id) AS max_id
+            FROM ESG_KPI_FACT
+            WHERE company_id = ?
+              AND reporting_year = ?
+              AND atomic_metric_id IN ({placeholders})
+              AND UPPER(COALESCE(company_scope_type, '')) IN ({scopePlaceholders})
+              AND LOWER(COALESCE(approval_status, '')) = 'approved'
+              AND delete_yn = 0
+            GROUP BY atomic_metric_id
+        ) latest
+          ON latest.atomic_metric_id = f.atomic_metric_id
+         AND latest.max_id = f.id
+        """,
+        (parentCompanyId, reportingYear, *cleaned, *scopeUpper),
+    )
+    rows = cur.fetchall() or []
+    details: dict[str, dict] = {}
+    for row in rows:
+        atomicId = str(row.get("atomic_metric_id") or "").strip()
+        if not atomicId:
+            continue
+        details[atomicId] = {
+            "valueNumeric": row.get("value_numeric"),
+            "valueText": row.get("value_text"),
+            "unit": row.get("unit"),
+            "valueSourceType": row.get("value_source_type"),
+        }
+    return details
+
+
+def upsertConsolidatedBaselineFactTx(
+    cur,
+    *,
+    parentCompanyId: int,
+    reportingYear: int,
+    metricId: Optional[str],
+    atomicMetricId: str,
+    valueNumeric: Optional[float],
+    valueText: Optional[str],
+    unit: Optional[str],
+    actorUserId: Optional[int],
+) -> str:
+    """
+    prior-year 연결 baseline 을 ESG_KPI_FACT 에 upsert 한다.
+    - 기존 row 가 없으면 INSERT.
+    - 기존 row 가 PRIOR_YEAR_BASELINE_INPUT 이거나 company_scope_type 이 CONSOLIDATED% 면 UPDATE.
+    - 일반 운영 ENTITY fact 면 덮어쓰지 않고 'conflict_protected' 를 반환한다.
+    반환: 'inserted' | 'updated' | 'conflict_protected'
+    """
+    atomicId = str(atomicMetricId or "").strip()
+    if not atomicId:
+        return "conflict_protected"
+
+    cur.execute(
+        """
+        SELECT id, company_scope_type, value_source_type
+        FROM ESG_KPI_FACT
+        WHERE company_id = ?
+          AND reporting_year = ?
+          AND atomic_metric_id = ?
+          AND delete_yn = 0
+        ORDER BY id DESC
+        LIMIT 1
+        """,
+        (parentCompanyId, reportingYear, atomicId),
+    )
+    existing = cur.fetchone()
+
+    if existing:
+        scope = str(existing.get("company_scope_type") or "").strip().upper()
+        srcType = str(existing.get("value_source_type") or "").strip().upper()
+        protected = (
+            srcType != PRIOR_YEAR_BASELINE_VALUE_SOURCE_TYPE
+            and not scope.startswith("CONSOLIDATED")
+        )
+        if protected:
+            return "conflict_protected"
+        cur.execute(
+            """
+            UPDATE ESG_KPI_FACT
+            SET source_input_value_id = NULL,
+                company_scope_type = ?,
+                metric_id = ?,
+                value_numeric = ?,
+                value_text = ?,
+                unit = ?,
+                value_source_type = ?,
+                approval_status = 'approved',
+                approved_by_user_id = ?,
+                approved_at = CURRENT_TIMESTAMP,
+                delete_yn = 0,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (
+                CONSOLIDATED_BASELINE_SCOPE_TYPE,
+                metricId,
+                valueNumeric,
+                valueText,
+                unit,
+                PRIOR_YEAR_BASELINE_VALUE_SOURCE_TYPE,
+                actorUserId,
+                int(existing["id"]),
+            ),
+        )
+        return "updated"
+
+    cur.execute(
+        """
+        INSERT INTO ESG_KPI_FACT (
+            source_input_value_id,
+            company_id,
+            reporting_year,
+            company_scope_type,
+            metric_id,
+            atomic_metric_id,
+            value_numeric,
+            value_text,
+            unit,
+            value_source_type,
+            approval_status,
+            approved_by_user_id,
+            approved_at,
+            delete_yn
+        ) VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', ?, CURRENT_TIMESTAMP, 0)
+        """,
+        (
+            parentCompanyId,
+            reportingYear,
+            CONSOLIDATED_BASELINE_SCOPE_TYPE,
+            metricId,
+            atomicId,
+            valueNumeric,
+            valueText,
+            unit,
+            PRIOR_YEAR_BASELINE_VALUE_SOURCE_TYPE,
+            actorUserId,
+        ),
+    )
+    return "inserted"

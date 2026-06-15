@@ -23,6 +23,13 @@ class ReportWorkflowStatusDto(BaseModel):
     basisRequirementStatus: str
     nextAction: str
     message: str
+    # DMA 선정 및 POST_DMA 온보딩 상태 (자동 판단용)
+    selectionSource: Optional[str] = None
+    fallbackYn: Optional[bool] = None
+    selectedSubIssueCount: int = 0
+    postDmaCycleId: Optional[int] = None
+    postDmaScopeMetricCount: int = 0
+    currentCycleType: Optional[str] = None
 
 
 class ReportWorkflowResponseDto(BaseModel):

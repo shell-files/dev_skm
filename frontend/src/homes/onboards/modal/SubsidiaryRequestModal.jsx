@@ -32,6 +32,7 @@ const SubsidiaryRequestModal = ({
   runId,
   reportingYear,
   sourceCycleId,
+  expectedPostDmaCycleId,
   rollupPurposeCode = "DMA_PRECHECK",
   metricScopeCode = "G0_02_FINANCIAL_BASIS",
   onRequested,
@@ -46,7 +47,15 @@ const SubsidiaryRequestModal = ({
   const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState(null);
 
-  const requiresSourceCycle = rollupPurposeCode === "REPORT_DISCLOSURE";
+  const normalizedPurposeCode = String(rollupPurposeCode || "").trim().toUpperCase();
+  const requiresSourceCycle = normalizedPurposeCode === "REPORT_DISCLOSURE";
+  const normalizedSourceCycleId = Number(sourceCycleId) || null;
+  const normalizedExpectedPostDmaCycleId = Number(expectedPostDmaCycleId) || null;
+  const isPostDmaCycleMismatch =
+    requiresSourceCycle &&
+    normalizedExpectedPostDmaCycleId &&
+    normalizedSourceCycleId &&
+    normalizedSourceCycleId !== normalizedExpectedPostDmaCycleId;
   const previewMetricItems = useMemo(() => {
     const items = asItems(scopePreview);
     if (items.length > 0) return items;
@@ -72,19 +81,29 @@ const SubsidiaryRequestModal = ({
 
   const loadData = useCallback(async () => {
     if (!isOpen) return;
-    if (requiresSourceCycle && !sourceCycleId) {
+    if (requiresSourceCycle && !normalizedSourceCycleId) {
       setError("이중중대성평가 공시 연결기준은 sourceCycleId가 필요합니다.");
+      return;
+    }
+
+    if (isPostDmaCycleMismatch) {
+      setError("현재 프로젝트의 POST-DMA cycle과 요청 cycle이 일치하지 않습니다.");
       return;
     }
 
     setError(null);
     try {
-      const commonParams = {
-        runId,
-        sourceCycleId,
-        rollupPurposeCode,
-        metricScopeCode,
-      };
+      const commonParams = requiresSourceCycle
+        ? {
+          sourceCycleId: normalizedSourceCycleId,
+          rollupPurposeCode: normalizedPurposeCode,
+          metricScopeCode,
+        }
+        : {
+          runId,
+          rollupPurposeCode: normalizedPurposeCode,
+          metricScopeCode,
+        };
 
       const [, subsidiaryRes] = await Promise.all([
         dispatch(fetchRollupScopePreview(commonParams)).unwrap(),
@@ -103,7 +122,16 @@ const SubsidiaryRequestModal = ({
       console.error(err);
       setError(err?.message || "자회사 요청 정보 조회에 실패했습니다.");
     }
-  }, [dispatch, isOpen, metricScopeCode, requiresSourceCycle, rollupPurposeCode, runId, sourceCycleId]);
+  }, [
+    dispatch,
+    isOpen,
+    isPostDmaCycleMismatch,
+    metricScopeCode,
+    normalizedPurposeCode,
+    normalizedSourceCycleId,
+    requiresSourceCycle,
+    runId,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -131,21 +159,33 @@ const SubsidiaryRequestModal = ({
 
   const handleRequest = async () => {
     if (selectedIds.length === 0) return;
-    if (requiresSourceCycle && !sourceCycleId) {
+    if (requiresSourceCycle && !normalizedSourceCycleId) {
       showDefaultAlert("요청 불가", "이중중대성평가 공시 연결기준은 sourceCycleId가 필요합니다.", "warning");
+      return;
+    }
+
+    if (isPostDmaCycleMismatch) {
+      showDefaultAlert("요청 불가", "현재 프로젝트의 POST-DMA cycle과 요청 cycle이 일치하지 않습니다.", "warning");
       return;
     }
 
     setRequesting(true);
     try {
-      const res = await dispatch(
-        createRollupBatch({
-          runId,
-          sourceCycleId,
+      const requestBody = requiresSourceCycle
+        ? {
+          sourceCycleId: normalizedSourceCycleId,
           sourceCompanyIds: selectedIds,
-          rollupPurposeCode,
+          rollupPurposeCode: normalizedPurposeCode,
           metricScopeCode,
-        })
+        }
+        : {
+          runId,
+          sourceCompanyIds: selectedIds,
+          rollupPurposeCode: normalizedPurposeCode,
+          metricScopeCode,
+        };
+      const res = await dispatch(
+        createRollupBatch(requestBody)
       ).unwrap();
 
       const data = res?.data || res;
@@ -178,7 +218,7 @@ const SubsidiaryRequestModal = ({
     creatingBatch ||
     Boolean(error) ||
     selectedIds.length === 0 ||
-    (requiresSourceCycle && !sourceCycleId);
+    (requiresSourceCycle && !normalizedSourceCycleId);
 
   return createPortal(
     <div className="ob1-modal-overlay">

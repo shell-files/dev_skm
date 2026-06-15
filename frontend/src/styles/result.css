@@ -235,16 +235,7 @@
 .legend-item { display: flex; align-items: center; gap: 5px; }
 .legend-dot  { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
 
-.contrib-list     { display: flex; flex-direction: column; gap: 10px; }
-.contrib-row      { display: flex; align-items: center; gap: 10px; }
-.contrib-label    { display: flex; align-items: center; gap: 6px; min-width: 130px; }
-.rank-dot         { width: 22px; height: 22px; border-radius: 50%; color: #fff; font-size: 0.7rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.contrib-name     { font-size: 0.78rem; font-weight: 600; color: #1e293b; white-space: nowrap; }
-.contrib-bar-wrap { flex: 1; display: flex; border-radius: 6px; overflow: hidden; height: 28px; }
-.bar-seg          { display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 700; color: #fff; }
-.bar-bench  { background: #22c55e; }
-.bar-media  { background: #3b82f6; }
-.bar-survey { background: #f59e0b; }
+/* NOTE: 분석축 기여도 바 스타일은 .contribution-* 네이밍으로 통일 (아래 "탭 2-1" 블록 참고) */
 
 .blind-spot-list         { display: flex; flex-direction: column; gap: 10px; }
 .blind-spot-rank         { width: 24px; height: 24px; border-radius: 50%; color: #fff; font-size: 0.72rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -784,13 +775,15 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .contribution-label {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-width: 130px;
+  min-width: 160px;
+  max-width: 220px;
 }
 
 .rank-circle {
@@ -817,14 +810,18 @@
   font-weight: 600;
   color: #1e293b;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .contribution-bar {
   flex: 1;
+  min-width: 0;
   display: flex;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
   height: 28px;
+  background: #f1f5f9;
 }
 
 .bar-seg {
@@ -834,11 +831,29 @@
   font-size: 0.72rem;
   font-weight: 700;
   color: #fff;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .bar-seg.bench  { background: #22c55e; }
 .bar-seg.media  { background: #3b82f6; }
 .bar-seg.survey { background: #f59e0b; }
+
+/* 0% / 데이터 없음 처리 */
+.contribution-bar--empty {
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.contrib-empty {
+  color: #94a3b8;
+  font-size: 0.82rem;
+  padding: 12px 0;
+}
 
 /* ───── 탭 2-2: Blind Spot ───── */
 #blind-spot-list {
@@ -1311,3 +1326,13 @@
 .priority-issue-wrap { display: inline-flex; align-items: center; gap: 8px; }
 .priority-rank-dot   { width: 22px; height: 22px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .priority-cat-badge  { padding: 2px 6px; border-radius: 5px; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+
+/* ───── 테이블 수평 스크롤 래퍼 ───── */
+.result-table-scroll { width: 100%; overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; }
+.result-table-scroll .result-table,
+.result-table-scroll .issue-table-inner { min-width: 760px; }
+@media (max-width: 768px) {
+  .result-table-scroll .result-table,
+  .result-table-scroll .issue-table-inner { min-width: 680px; }
+}
+.result-tab-pane { min-width: 0; }

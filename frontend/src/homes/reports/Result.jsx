@@ -4,7 +4,7 @@ import Observing from "@assets/icons/result_page/observe.png";
 import Chain from "@assets/icons/result_page/valuechain.png";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
 import { useDispatch, useSelector } from "react-redux";
-import { generateReport, fetchMaterialityResults, fetchMaterialitySelectionProcess } from "@stores/reportSlice";
+import { generateReport, fetchMaterialityResults, fetchMaterialitySelectionProcess, finalizeSelectedSubIssues } from "@stores/reportSlice";
 import { useAuth } from '@hooks/AuthContext.jsx';
 
 import "@styles/result.css";
@@ -47,6 +47,45 @@ const toImportanceLevel = (v10) => {
 // 도메인별 색상 헬퍼
 const domainColor = { E: "#22c55e", S: "#f59e0b", G: "#3b82f6" };
 const getDomainColor = (domain) => domainColor[domain] ?? "#94a3b8";
+
+// ── 분석축 기여도 계산 헬퍼 ──────────────────────────────────────
+// 존재하는(>0) 값들만 평균. 모두 없으면 null
+const avgPresent = (...values) => {
+  const nums = values
+    .map(Number)
+    .filter((v) => Number.isFinite(v) && v > 0);
+  if (nums.length === 0) return null;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+};
+
+// 각 stage raw score → 비율(%). 값 없는 stage는 0%, 합계 항상 100 보장.
+const toContributionPct = ({ bench, media, survey }) => {
+  const entries = [
+    ["bench", bench],
+    ["media", media],
+    ["survey", survey],
+  ].filter(([, value]) => value != null && value > 0);
+
+  if (entries.length === 0) {
+    return { bench: 0, media: 0, survey: 0, hasData: false };
+  }
+
+  const total = entries.reduce((sum, [, value]) => sum + value, 0);
+  const result = { bench: 0, media: 0, survey: 0, hasData: true };
+
+  let allocated = 0;
+  entries.forEach(([key, value], idx) => {
+    if (idx === entries.length - 1) {
+      // 반올림 오차를 마지막 non-zero 축에 보정 → 합계 100
+      result[key] = 100 - allocated;
+    } else {
+      result[key] = Math.round((value / total) * 100);
+      allocated += result[key];
+    }
+  });
+
+  return result;
+};
 
 // Fallback 데이터 (API 미연결 시 사용) ───────────────────────────
 // 선정된 이슈 데이터 (x: 재무중요성, y: 영향중요성, 1~3 스케일)
@@ -378,20 +417,6 @@ const DoubleMaterialityMatrix = ({ data = MATRIX_POINTS }) => {
   );
 };
 
-const CONTRIBUTION_DATA = [
-  { rank: 1, rankColor: "#22c55e", name: "기후변화 대응", bench: 45, media: 30, survey: 25 },
-  { rank: 2, rankColor: "#f59e0b", name: "에너지 전환", bench: 30, media: 20, survey: 50 },
-  { rank: 3, rankColor: "#22c55e", name: "인적자본 개발", bench: 25, media: 15, survey: 60 },
-  { rank: 4, rankColor: "#f59e0b", name: "공급망 ESG 관리", bench: 40, media: 25, survey: 35 },
-  { rank: 5, rankColor: "#f59e0b", name: "제품 안전 및 품질", bench: 20, media: 30, survey: 50 },
-];
-
-const BLIND_SPOTS = [
-  { rank: 1, rankColor: "#22c55e", name: "생물다양성 보호", desc: "이해관계자(설문) 관심은 높으나, 외부 미디어 및 벤치마킹 반영 낮음", badge: "설문-벤치 격차 +1.8", badgeBg: "#dcfce7", badgeColor: "#16a34a" },
-  { rank: 2, rankColor: "#f59e0b", name: "데이터 프라이버시", desc: "미디어에서 주목도 높으나, 이해관계자 관심 및 벤치마킹 낮음", badge: "미디어-설문 격차 +1.6", badgeBg: "#fef3c7", badgeColor: "#d97706" },
-  { rank: 3, rankColor: "#3b82f6", name: "수자원 관리", desc: "벤치마킹 반영도는 높으나, 이해관계자 관심 미흡", badge: "벤치-설문 격차 +1.2", badgeBg: "#dbeafe", badgeColor: "#2563eb" },
-];
-
 const MATRIX_ZONES = [
   {
     label: "High - High 영역", labelColor: "#ef4444", bg: "#fff5f5", border: "#fecaca",
@@ -517,6 +542,7 @@ const Result = () => {
   const runId = useSelector((state) => state.report.currentRunId);
   const materialityResults = useSelector((state) => state.report.materialityResults);
   const materialitySelectionProcess = useSelector((state) => state.report.materialitySelectionProcess);
+  const finalizeSelectionLoading = useSelector((state) => state.report.loading.finalizeSelectedSubIssues);
 
   useEffect(() => {
     if (!runId) {
@@ -526,6 +552,16 @@ const Result = () => {
     dispatch(fetchMaterialityResults({ runId }));
     dispatch(fetchMaterialitySelectionProcess({ runId }));
   }, [dispatch, runId, navigate]);
+
+  const handleFinalize = async () => {
+    if (!runId || finalizeSelectionLoading) return;
+    const result = await dispatch(finalizeSelectedSubIssues({ runId }));
+    if (finalizeSelectedSubIssues.fulfilled.match(result)) {
+      dispatch(fetchMaterialityResults({ runId }));
+      dispatch(fetchMaterialitySelectionProcess({ runId }));
+    }
+  };
+
 
   // matrixItems → 10점 원본값 그대로 (차트 도메인이 동적으로 맞춤)
   const apiMatrixPoints = materialityResults?.matrixItems?.map((item) => ({
@@ -564,16 +600,87 @@ const Result = () => {
   const flowScoredCount = materialitySelectionProcess?.scoredCount ?? 25;
   const flowSelectedCount = materialitySelectionProcess?.selectedCount ?? 10;
 
-  // 최종 Top 이슈 점수 분해 (items[])
-  const topIssueScores = materialityResults?.items?.slice(0, 5).map((item) => ({
-    name: item.displaySubIssueName,
-    finalScore: item.finalScore05?.toFixed(2) ?? "-",
-    impact: item.finalImpactScore05?.toFixed(2) ?? "-",
-    financial: item.finalFinancialScore05?.toFixed(2) ?? "-",
-    benchmark: item.benchmarkImpactScore05?.toFixed(2) ?? "-",
-    media: item.mediaImpactScore05?.toFixed(2) ?? "-",
-    survey: item.surveyImpactScore05?.toFixed(2) ?? "-",
-  }));
+  // 점수 포맷 헬퍼
+  const fmtScore = (v) => (v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : "-");
+
+  // 단계 점수(benchmark/media/survey)는 items[](MaterialityResultItemDto)에만 존재.
+  // topIssues[](TopIssueDto)에는 final 점수만 있으므로 subIssueCode로 join한다.
+  const itemByCode = {};
+  (materialityResults?.items ?? []).forEach((it) => {
+    if (it?.subIssueCode) itemByCode[it.subIssueCode] = it;
+  });
+
+  // Top 이슈 소스: topIssues → selected items → []
+  // 절대 items.slice(0,5)로 무조건 자르지 않는다.
+  const topSource =
+    materialityResults?.topIssues?.length
+      ? materialityResults.topIssues
+      : (materialityResults?.items?.filter((it) => it.selectedYn) ?? []);
+
+  // 최종 Top 이슈 점수 분해 (final은 topIssues, 단계 점수는 items join)
+  const topIssueScores = topSource.map((issue) => {
+    const it = itemByCode[issue.subIssueCode] ?? {};
+    return {
+      name: issue.displaySubIssueName ?? issue.subIssueCode,
+      finalScore: fmtScore(issue.finalScore05 ?? it.finalScore05),
+      impact: fmtScore(issue.finalImpactScore05 ?? it.finalImpactScore05),
+      financial: fmtScore(issue.finalFinancialScore05 ?? it.finalFinancialScore05),
+      benchmark: fmtScore(it.benchmarkImpactScore05),
+      media: fmtScore(it.mediaImpactScore05),
+      survey: fmtScore(it.surveyImpactScore05),
+    };
+  });
+
+  // 분석축 기여도 (items join으로 단계 점수 확보 후 비율 계산)
+  const contributionData = topSource.map((issue, idx) => {
+    const it = itemByCode[issue.subIssueCode] ?? {};
+    const bench = avgPresent(it.benchmarkImpactScore05, it.benchmarkFinancialScore05);
+    const media = avgPresent(it.mediaImpactScore05, it.mediaFinancialScore05);
+    const survey = avgPresent(it.surveyImpactScore05, it.surveyFinancialScore05);
+    const pct = toContributionPct({ bench, media, survey });
+    return {
+      rank: issue.rankNo ?? idx + 1,
+      rankColor: getDomainColor(issue.domain),
+      name: issue.displaySubIssueName ?? issue.subIssueCode,
+      bench: pct.bench,
+      media: pct.media,
+      survey: pct.survey,
+      hasData: pct.hasData,
+    };
+  });
+  const contributionHasAnyData = contributionData.some((r) => r.hasData);
+
+  // Blind Spot (분석축 간 점수 격차가 큰 이슈, 2개 이상 stage 값 보유시)
+  const blindSpots = topSource.reduce((acc, issue) => {
+    const it = itemByCode[issue.subIssueCode] ?? {};
+    const bench = avgPresent(it.benchmarkImpactScore05, it.benchmarkFinancialScore05);
+    const media = avgPresent(it.mediaImpactScore05, it.mediaFinancialScore05);
+    const survey = avgPresent(it.surveyImpactScore05, it.surveyFinancialScore05);
+    const present = [
+      ["벤치마킹", bench],
+      ["미디어", media],
+      ["설문", survey],
+    ].filter(([, v]) => v != null && v > 0);
+    if (present.length < 2) return acc;
+    const vals = present.map(([, v]) => v);
+    const maxVal = Math.max(...vals);
+    const minVal = Math.min(...vals);
+    const gap = maxVal - minVal;
+    if (gap >= 0.5) {
+      const maxLabel = present.find(([, v]) => v === maxVal)[0];
+      const minLabel = present.find(([, v]) => v === minVal)[0];
+      acc.push({
+        rank: issue.rankNo,
+        rankColor: getDomainColor(issue.domain),
+        name: issue.displaySubIssueName ?? issue.subIssueCode,
+        desc: `${maxLabel} 점수 높음, ${minLabel} 점수 낮음`,
+        badge: `${maxLabel}-${minLabel} 격차 +${gap.toFixed(1)}`,
+        badgeBg: "#f1f5f9",
+        badgeColor: "#475569",
+      });
+    }
+    return acc;
+  }, []);
 
   // 선정 사유 (selectionReasons[])
   const selectionReasonItems = materialityResults?.selectionReasons;
@@ -672,6 +779,15 @@ const Result = () => {
     navigate(steps[index].path);
   };
 
+  const navigateToPostDmaOnboarding = () => {
+    navigate("/onb", {
+      state: {
+        preferredCycleType: "POST_DMA_DISCLOSURE",
+        sourceMaterialityRunId: runId,
+      },
+    });
+  };
+
   const toggleSection = (id) => {
     setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
   };
@@ -733,32 +849,60 @@ const Result = () => {
                   </div>
                 </div>
 
+                {/* 확정 상태 배너 */}
+                {materialityResults?.selectionSource === "RANK_FALLBACK" && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", padding: "12px 16px" }}>
+                    <span style={{ fontSize: "0.84rem", color: "#92400e", fontWeight: 600 }}>
+                      임시 Top 5 — 점수 기반 자동 선정 상태입니다. 확정 저장 후 보고서 초안을 생성하세요.
+                    </span>
+                    <button
+                      onClick={handleFinalize}
+                      disabled={finalizeSelectionLoading}
+                      style={{ marginLeft: "16px", padding: "7px 18px", background: "#03A94D", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, fontSize: "0.82rem", cursor: finalizeSelectionLoading ? "not-allowed" : "pointer", opacity: finalizeSelectionLoading ? 0.6 : 1, flexShrink: 0 }}
+                    >
+                      {finalizeSelectionLoading ? "저장 중..." : "Top 5 확정 저장"}
+                    </button>
+                  </div>
+                )}
+                {materialityResults?.selectionSource === "TABLE" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "12px", padding: "12px 16px" }}>
+                    <span style={{ color: "#03A94D", fontWeight: 800, fontSize: "1rem" }}>✓</span>
+                    <span style={{ fontSize: "0.84rem", color: "#166534", fontWeight: 600 }}>Top 5 확정 완료 — DB에 저장된 선정 이슈 기준으로 표시됩니다.</span>
+                  </div>
+                )}
+
+
                 <div className="card-container">
                   <div className="card-title">최종 Top 이슈 점수 분해</div>
-                  <table className="result-table">
-                    <thead>
-                      <tr><th>이슈</th><th>최종점수</th><th>영향</th><th>재무</th><th>벤치마킹</th><th>미디어</th><th>설문</th></tr>
-                    </thead>
-                    <tbody>
-                      {topIssueScores
-                        ? topIssueScores.map((row, i) => (
-                          <tr key={i}>
-                            <td className="issue-name">{row.name}</td>
-                            <td className="score-main">{row.finalScore}</td>
-                            <td>{row.impact}</td>
-                            <td>{row.financial}</td>
-                            <td>{row.benchmark}</td>
-                            <td>{row.media}</td>
-                            <td>{row.survey}</td>
-                          </tr>
-                        ))
-                        : <>
-                          <tr><td className="issue-name">기후변화 대응</td><td className="score-main">4.61</td><td>4.40</td><td>4.75</td><td>4.20</td><td>4.60</td><td>4.70</td></tr>
-                          <tr><td className="issue-name">에너지 관리</td><td className="score-highlight">4.34</td><td>4.10</td><td>4.50</td><td>4.00</td><td>4.30</td><td>4.40</td></tr>
-                        </>
-                      }
-                    </tbody>
-                  </table>
+                  <div className="result-table-scroll">
+                    <table className="result-table">
+                      <thead>
+                        <tr><th>이슈</th><th>최종점수</th><th>영향</th><th>재무</th><th>벤치마킹</th><th>미디어</th><th>설문</th></tr>
+                      </thead>
+                      <tbody>
+                        {topIssueScores.length > 0
+                          ? topIssueScores.map((row, i) => (
+                            <tr key={i}>
+                              <td className="issue-name">{row.name}</td>
+                              <td className="score-main">{row.finalScore}</td>
+                              <td>{row.impact}</td>
+                              <td>{row.financial}</td>
+                              <td>{row.benchmark}</td>
+                              <td>{row.media}</td>
+                              <td>{row.survey}</td>
+                            </tr>
+                          ))
+                          : (
+                            <tr>
+                              <td colSpan={7} style={{ textAlign: "center", color: "#94a3b8", padding: "20px", fontSize: "0.82rem" }}>
+                                최종 이슈 데이터가 없습니다. 최종 Top 5 이슈 확정 후 다시 확인하세요.
+                              </td>
+                            </tr>
+                          )
+                        }
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 {/* 선정 사유 요약 */}
@@ -865,47 +1009,51 @@ const Result = () => {
                 {/* 최종 선정 이슈 */}
                 <div className="card-container">
                   <div className="section-title-sm">최종 선정 이슈</div>
-                  <table className="issue-table-inner">
-                    <thead>
-                      <tr>
-                        <th className="th-left" style={{ width: "30%" }}>이슈</th>
-                        <th className="th-center" style={{ width: "12%" }}>최종순위</th>
-                        <th className="th-left">포함 사유</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedIssues.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: i < selectedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-                          <td className="td-name">{row.name}</td>
-                          <td className="td-center-green">{row.finalRank}</td>
-                          <td className="td-text">{row.reason}</td>
+                  <div className="result-table-scroll">
+                    <table className="issue-table-inner">
+                      <thead>
+                        <tr>
+                          <th className="th-left" style={{ width: "30%" }}>이슈</th>
+                          <th className="th-center" style={{ width: "12%" }}>최종순위</th>
+                          <th className="th-left">포함 사유</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {selectedIssues.map((row, i) => (
+                          <tr key={i} style={{ borderBottom: i < selectedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                            <td className="td-name">{row.name}</td>
+                            <td className="td-center-green">{row.finalRank}</td>
+                            <td className="td-text">{row.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
                 {/* 후보였지만 제외된 이슈 */}
                 <div className="card-container">
                   <div className="section-title-red">후보였지만 제외된 이슈</div>
-                  <table className="issue-table-inner">
-                    <thead>
-                      <tr>
-                        <th className="th-left" style={{ width: "30%" }}>이슈</th>
-                        <th className="th-center" style={{ width: "12%" }}>최종순위</th>
-                        <th className="th-left">제외 사유</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {excludedIssues.map((row, i) => (
-                        <tr key={i} style={{ borderBottom: i < excludedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-                          <td className="td-name">{row.name}</td>
-                          <td className="td-center">{row.candRank}</td>
-                          <td className="td-text">{row.reason}</td>
+                  <div className="result-table-scroll">
+                    <table className="issue-table-inner">
+                      <thead>
+                        <tr>
+                          <th className="th-left" style={{ width: "30%" }}>이슈</th>
+                          <th className="th-center" style={{ width: "12%" }}>최종순위</th>
+                          <th className="th-left">제외 사유</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {excludedIssues.map((row, i) => (
+                          <tr key={i} style={{ borderBottom: i < excludedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                            <td className="td-name">{row.name}</td>
+                            <td className="td-center">{row.candRank}</td>
+                            <td className="td-text">{row.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
               </div>
@@ -931,19 +1079,29 @@ const Result = () => {
                     ))}
                   </div>
                   <div id="contribution-list">
-                    {CONTRIBUTION_DATA.map((item) => (
-                      <div key={item.rank} className="contribution-row">
-                        <div className="contribution-label">
-                          <span className="rank-circle" style={{ background: item.rankColor }}>{item.rank}</span>
-                          <span className="contribution-name">{item.name}</span>
+                    {topSource.length === 0 ? (
+                      <div className="contrib-empty">최종 이슈 데이터가 없습니다. 최종 Top 5 이슈 확정 후 다시 확인하세요.</div>
+                    ) : !contributionHasAnyData ? (
+                      <div className="contrib-empty">분석축 점수 데이터가 없습니다. 벤치마킹/미디어/설문 점수 반영 상태를 확인하세요.</div>
+                    ) : (
+                      contributionData.map((item) => (
+                        <div key={item.rank} className="contribution-row">
+                          <div className="contribution-label">
+                            <span className="rank-circle" style={{ background: item.rankColor }}>{item.rank}</span>
+                            <span className="contribution-name">{item.name}</span>
+                          </div>
+                          {item.hasData ? (
+                            <div className="contribution-bar">
+                              <div className="bar-seg bench" style={{ width: `${item.bench}%` }}>{item.bench > 0 ? `${item.bench}%` : ""}</div>
+                              <div className="bar-seg media" style={{ width: `${item.media}%` }}>{item.media > 0 ? `${item.media}%` : ""}</div>
+                              <div className="bar-seg survey" style={{ width: `${item.survey}%` }}>{item.survey > 0 ? `${item.survey}%` : ""}</div>
+                            </div>
+                          ) : (
+                            <div className="contribution-bar contribution-bar--empty">점수 데이터 없음</div>
+                          )}
                         </div>
-                        <div className="contribution-bar">
-                          <div className="bar-seg bench" style={{ width: `${item.bench}%` }}>{item.bench}%</div>
-                          <div className="bar-seg media" style={{ width: `${item.media}%` }}>{item.media}%</div>
-                          <div className="bar-seg survey" style={{ width: `${item.survey}%` }}>{item.survey}%</div>
-                        </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </section>
 
@@ -952,16 +1110,19 @@ const Result = () => {
                   <div className="section-title">2. 분석축 간 불일치 / Blind Spot</div>
                   <div className="section-desc">분석축 간 점수 편차가 큰 이슈를 확인하여 전략적 블라인드 스팟을 식별합니다.</div>
                   <div id="blind-spot-list">
-                    {BLIND_SPOTS.map((item) => (
-                      <div key={item.rank} className="blind-spot-row">
-                        <span className="rank-circle sm" style={{ background: item.rankColor }}>{item.rank}</span>
-                        <div className="blind-spot-info">
-                          <div className="blind-spot-name">{item.name}</div>
-                          <div className="blind-spot-desc">{item.desc}</div>
-                        </div>
-                        <span className="blind-spot-badge" style={{ background: item.badgeBg, color: item.badgeColor }}>{item.badge}</span>
-                      </div>
-                    ))}
+                    {blindSpots.length > 0
+                      ? blindSpots.map((item) => (
+                          <div key={item.rank} className="blind-spot-row">
+                            <span className="rank-circle sm" style={{ background: item.rankColor }}>{item.rank}</span>
+                            <div className="blind-spot-info">
+                              <div className="blind-spot-name">{item.name}</div>
+                              <div className="blind-spot-desc">{item.desc}</div>
+                            </div>
+                            <span className="blind-spot-badge" style={{ background: item.badgeBg, color: item.badgeColor }}>{item.badge}</span>
+                          </div>
+                        ))
+                      : <div style={{ color: "#94a3b8", fontSize: "0.82rem", padding: "12px 0" }}>분석축 간 점수 격차가 큰 이슈가 없습니다.</div>
+                    }
                   </div>
                 </section>
 
@@ -991,7 +1152,7 @@ const Result = () => {
                   <div id="shortcut-grid">
                     {[
                       {
-                        bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onboard",
+                        bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onb",
                         icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
                       },
                       {
@@ -1004,6 +1165,10 @@ const Result = () => {
                         className={`shortcut-card ${item.path === "/draft" && isGenerating ? "shortcut-disabled" : ""}`}
                         onClick={() => {
                           if (item.path === "/draft" && isGenerating) return;
+                          if (item.path === "/onb") {
+                            navigateToPostDmaOnboarding();
+                            return;
+                          }
                           item.path === "/draft" ? handleGenerateReport() : navigate(item.path);
                         }}
                       >
@@ -1171,7 +1336,7 @@ const Result = () => {
                   <div id="shortcut-grid">
                     {[
                       {
-                        bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onboard",
+                        bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onb",
                         icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
                       },
                       {

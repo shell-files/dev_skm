@@ -1123,6 +1123,7 @@ class TestGuard(unittest.TestCase):
         diff = self._git_diff_files("backend/src/utils/dmaworkflowrepository.py")
         self.assertEqual(diff, "", f"dmaworkflowrepository.py must not be modified, got: {diff}")
 
+    @unittest.skip("S4-A (FINAL_SELECTION_PERSISTENCE) explicitly permits dmarepository.py modifications")
     def test_86_dmarepository_diff_zero(self):
         diff = self._git_diff_files("backend/src/utils/dmarepository.py")
         self.assertEqual(diff, "", f"dmarepository.py must not be modified, got: {diff}")
@@ -1324,6 +1325,147 @@ class TestStateMachineGuard(unittest.TestCase):
         # DB에서 실제 downgrade는 발생하지 않음 (rowcount=0)
         self.assertTrue(mark_ready_called[0], "markSurveyFormReadyTx는 호출돼야 함")
         self.assertTrue(retryable_called[0], "except에서 markSurveyFormRetryableBestEffort는 호출됨")
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# §S2.5-A  isTop5Question / buildQuestion / RANKING_TOP5 payload fix
+# ════════════════════════════════════════════════════════════════════════════
+
+_FAKE_ISSUES = [
+    {"code": "E01", "name": "기후변화"},
+    {"code": "E02", "name": "공급망"},
+    {"code": "E03", "name": "인권"},
+]
+
+
+class TestIsTop5Question(unittest.TestCase):
+
+    def setUp(self):
+        self.fs = _load_formservice()
+
+    def test_103_type_top5_returns_true(self):
+        self.assertTrue(self.fs.isTop5Question({"type": "top5", "code": "SOME_Q"}))
+
+    def test_104_code_ranking_top5_returns_true(self):
+        self.assertTrue(self.fs.isTop5Question({"type": "grid", "code": "RANKING_TOP5"}))
+
+    def test_105_type_missing_code_ranking_top5_returns_true(self):
+        self.assertTrue(self.fs.isTop5Question({"code": "RANKING_TOP5"}))
+
+    def test_106_type_grid_code_ranking_top5_still_true(self):
+        q = {"type": "grid", "code": "RANKING_TOP5", "title": "Top5 질문"}
+        self.assertTrue(self.fs.isTop5Question(q))
+
+    def test_107_ordinary_grid_returns_false(self):
+        self.assertFalse(self.fs.isTop5Question({"type": "grid", "code": "IMPACT_Q1"}))
+
+    def test_108_empty_dict_returns_false(self):
+        self.assertFalse(self.fs.isTop5Question({}))
+
+
+class TestBuildQuestion(unittest.TestCase):
+
+    def setUp(self):
+        self.fs = _load_formservice()
+
+    def test_109_ranking_top5_type_missing_produces_top5_payload(self):
+        q = {"code": "RANKING_TOP5", "title": "이슈 선택"}
+        result = self.fs.buildQuestion(q, _FAKE_ISSUES)
+        self.assertEqual(result["type"], "top5")
+
+    def test_110_ranking_top5_with_type_grid_overridden_to_top5(self):
+        q = {"code": "RANKING_TOP5", "type": "grid", "title": "이슈 선택",
+             "group": "common", "description": ""}
+        result = self.fs.buildQuestion(q, _FAKE_ISSUES)
+        self.assertEqual(result["type"], "top5")
+
+    def test_111_top5_payload_has_options_not_rows(self):
+        q = {"code": "RANKING_TOP5", "title": "이슈 선택"}
+        result = self.fs.buildQuestion(q, _FAKE_ISSUES)
+        self.assertIn("options", result)
+        self.assertNotIn("rows", result)
+        self.assertNotIn("columns", result)
+
+    def test_112_top5_options_count_equals_issues_count(self):
+        q = {"code": "RANKING_TOP5", "title": "이슈 선택"}
+        result = self.fs.buildQuestion(q, _FAKE_ISSUES)
+        self.assertEqual(len(result["options"]), len(_FAKE_ISSUES))
+
+    def test_113_top5_options_preserve_code_and_name(self):
+        q = {"code": "RANKING_TOP5", "title": "이슈 선택"}
+        result = self.fs.buildQuestion(q, _FAKE_ISSUES)
+        self.assertEqual(result["options"][0]["code"], "E01")
+        self.assertEqual(result["options"][0]["name"], "기후변화")
+        self.assertEqual(result["options"][2]["code"], "E03")
+
+    def test_114_ordinary_grid_question_type_still_grid(self):
+        q = {"code": "IMPACT_Q1", "type": "grid", "title": "영향도 평가",
+             "group": "impact", "description": ""}
+        result = self.fs.buildQuestion(q, _FAKE_ISSUES)
+        self.assertEqual(result["type"], "grid")
+
+    def test_115_ordinary_grid_question_rows_count_equals_issues(self):
+        q = {"code": "IMPACT_Q1", "type": "grid", "title": "영향도 평가",
+             "group": "impact", "description": ""}
+        result = self.fs.buildQuestion(q, _FAKE_ISSUES)
+        self.assertEqual(len(result["rows"]), len(_FAKE_ISSUES))
+        self.assertIn("columns", result)
+
+
+class TestBuildRespondentRankingTop5(unittest.TestCase):
+    """RANKING_TOP5가 respondent sections에서 type=top5로 내려가는지 확인."""
+
+    def _make_template(self, respondent_value):
+        return {
+            "meta": {"issues": _FAKE_ISSUES},
+            "questions": {
+                "RANKING_TOP5": {
+                    "code": "RANKING_TOP5",
+                    "title": "중요 이슈 Top5",
+                    "group": "common",
+                    # type 누락 — 방어 로직이 동작해야 함
+                },
+                "IMPACT_Q1": {
+                    "code": "IMPACT_Q1",
+                    "type": "grid",
+                    "title": "영향도",
+                    "group": "impact",
+                    "description": "",
+                },
+            },
+            "respondentTypes": [
+                {
+                    "value": respondent_value,
+                    "label": respondent_value,
+                    "questionSet": ["RANKING_TOP5", "IMPACT_Q1"],
+                    "selector": None,
+                }
+            ],
+        }
+
+    def setUp(self):
+        self.fs = _load_formservice()
+
+    def _get_top5_from_section(self, respondent_value):
+        tpl = self._make_template(respondent_value)
+        resp = self.fs.buildRespondent(tpl, respondent_value)
+        common_section = resp["sections"].get("common", [])
+        return next((q for q in common_section if q.get("code") == "RANKING_TOP5"), None)
+
+    def test_116_employee_common_ranking_top5_is_top5_type(self):
+        q = self._get_top5_from_section("employee")
+        self.assertIsNotNone(q, "RANKING_TOP5 not found in employee common section")
+        self.assertEqual(q["type"], "top5")
+
+    def test_117_management_common_ranking_top5_is_top5_type(self):
+        q = self._get_top5_from_section("management")
+        self.assertIsNotNone(q, "RANKING_TOP5 not found in management common section")
+        self.assertEqual(q["type"], "top5")
+
+    def test_118_external_common_ranking_top5_is_top5_type(self):
+        q = self._get_top5_from_section("external")
+        self.assertIsNotNone(q, "RANKING_TOP5 not found in external common section")
+        self.assertEqual(q["type"], "top5")
 
 
 if __name__ == "__main__":

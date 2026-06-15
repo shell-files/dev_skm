@@ -12,6 +12,35 @@ _SELECTOR_GROUPS = frozenset({"employee", "external"})
 
 
 # =============================================================================
+# Header / label normalization helpers
+# =============================================================================
+
+def _normalizeHeaderText(value: str) -> str:
+    """Collapse whitespace (newline, tabs, multiple spaces) to a single space."""
+    return re.sub(r"\s+", " ", str(value or "").strip())
+
+
+def _normalizeIssueLabel(value: str) -> str:
+    """Normalize issue label for lookup — same rule as header."""
+    return re.sub(r"\s+", " ", str(value or "").strip())
+
+
+def _extractBracketParts(header: str) -> list:
+    """Return list of content strings inside [...] brackets, in order."""
+    return re.findall(r"\[([^\]]+)\]", header or "")
+
+
+def _parseQuestionMarker(part: str) -> "tuple | None":
+    """Detect 'QUESTION_CODE|route' pattern inside a bracket.
+    Returns (question_code, route) if detected, else None.
+    """
+    if "|" not in part:
+        return None
+    qcode, route = part.split("|", 1)
+    return (qcode.strip(), route.strip())
+
+
+# =============================================================================
 # Sheets Service — lazy init (no import-time credential read)
 # =============================================================================
 
@@ -142,27 +171,49 @@ def _parseMetaSheets(workbook: dict) -> dict:
         if group not in selector_titles:
             selector_titles[group] = title
 
-    # Question lookup: {sheet_header_title: {question_code, mapped_axis, question_type, route, respondent_group}}
-    question_lookup: dict = {}
+    # Question lookups
+    question_lookup: dict = {}             # sheet_header_title → qinfo
+    question_lookup_normalized: dict = {}  # normalized header/title → qinfo
+    question_code_route_lookup: dict = {}  # (code, route, group|None) → qinfo
+    question_code_lookup: dict = {}        # code → qinfo (last wins)
+
     for row in question_rows:
         header_title = row.get("sheet_header_title", "").strip()
         if not header_title:
             continue
-        question_lookup[header_title] = {
+        qinfo = {
             "question_code": row.get("question_code", ""),
             "mapped_axis": row.get("mapped_axis", ""),
             "question_type": row.get("question_type", ""),
             "route": row.get("route", ""),
             "respondent_group": row.get("respondent_group", ""),
+            "question_title": row.get("question_title", "").strip(),
         }
+        question_lookup[header_title] = qinfo
+        question_lookup_normalized[_normalizeHeaderText(header_title)] = qinfo
 
-    # Issue lookup: {sub_issue_name: sub_issue_code}
+        qt = qinfo["question_title"]
+        if qt and qt != header_title:
+            question_lookup_normalized[_normalizeHeaderText(qt)] = qinfo
+
+        code = qinfo["question_code"]
+        route_val = qinfo["route"]
+        group_val = qinfo["respondent_group"]
+        if code:
+            question_code_route_lookup[(code, route_val, group_val)] = qinfo
+            question_code_route_lookup[(code, route_val, None)] = qinfo
+            question_code_lookup[code] = qinfo
+
+    # Issue lookup: {sub_issue_name: sub_issue_code} + normalized keys
     issue_lookup: dict = {}
     for row in issue_rows:
         name = row.get("sub_issue_name", "").strip()
         code = row.get("sub_issue_code", "").strip()
         if name and code:
             issue_lookup[name] = code
+            norm_name = _normalizeIssueLabel(name)
+            if norm_name != name:
+                issue_lookup[norm_name] = code
 
     return {
         "registry": registry,
@@ -170,6 +221,9 @@ def _parseMetaSheets(workbook: dict) -> dict:
         "selector_lookup": selector_lookup,
         "selector_titles": selector_titles,
         "question_lookup": question_lookup,
+        "question_lookup_normalized": question_lookup_normalized,
+        "question_code_route_lookup": question_code_route_lookup,
+        "question_code_lookup": question_code_lookup,
         "issue_lookup": issue_lookup,
         "response_sheets": list(sheet_to_group.keys()),
         "formRegistry": bool(registry),
@@ -384,6 +438,83 @@ def _parseTop5Answer(
 
 
 # =============================================================================
+# Header resolver — supports 5 Google Forms column header patterns
+# =============================================================================
+
+def _resolveQuestionHeader(
+    header: str,
+    respondent_group: str,
+    meta: dict,
+) -> "dict | None":
+    """Resolve a response-sheet column header to qinfo dict.
+
+    Returns dict with keys: question_code, mapped_axis, question_type,
+    route, respondent_group, question_title, issue_name.
+    Returns None if the header is not recognized.
+    """
+    question_lookup = meta["question_lookup"]
+    question_lookup_normalized = meta.get("question_lookup_normalized", {})
+    question_code_route_lookup = meta.get("question_code_route_lookup", {})
+    question_code_lookup = meta.get("question_code_lookup", {})
+
+    # Pattern 1: exact match (sheet_header_title)
+    if header in question_lookup:
+        result = dict(question_lookup[header])
+        result["issue_name"] = None
+        return result
+
+    # Pattern 2: normalized whitespace match
+    normalized = _normalizeHeaderText(header)
+    if normalized in question_lookup_normalized:
+        result = dict(question_lookup_normalized[normalized])
+        result["issue_name"] = None
+        return result
+
+    # Bracket-based patterns (3, 4, 5)
+    parts = _extractBracketParts(header)
+    if not parts:
+        return None
+
+    markers = []
+    non_markers = []
+    for p in parts:
+        m = _parseQuestionMarker(p)
+        if m:
+            markers.append(m)
+        else:
+            non_markers.append(p)
+
+    issue_name = _normalizeIssueLabel(non_markers[-1]) if non_markers else None
+
+    qinfo = None
+
+    # Pattern 3/5: marker-based lookup (QUESTION_CODE|route inside header)
+    if markers:
+        qcode, route = markers[-1]
+        qinfo = (
+            question_code_route_lookup.get((qcode, route, respondent_group))
+            or question_code_route_lookup.get((qcode, route, None))
+            or question_code_lookup.get(qcode)
+        )
+
+    # Pattern 4: base text before first bracket (no marker or marker not found)
+    if qinfo is None:
+        base = re.sub(r"\s*\[.*", "", header, flags=re.DOTALL).strip()
+        norm_base = _normalizeHeaderText(base)
+        qinfo = (
+            question_lookup.get(base)
+            or question_lookup_normalized.get(norm_base)
+        )
+
+    if qinfo is None:
+        return None
+
+    result = dict(qinfo)
+    result["issue_name"] = issue_name
+    return result
+
+
+# =============================================================================
 # Response sheet parser
 # =============================================================================
 
@@ -424,24 +555,17 @@ def _parseResponseSheets(
             except ValueError:
                 pass
 
-        # Map each header column to question info
+        # Map each header column to question info using multi-pattern resolver
         # header_question_map: {col_idx: {question_code, mapped_axis, question_type, issue_name}}
         header_question_map: dict = {}
         for col_idx, header in enumerate(headers):
-            if header in question_lookup:
-                qinfo = dict(question_lookup[header])
-                qinfo["issue_name"] = None
+            qinfo = _resolveQuestionHeader(
+                header=header,
+                respondent_group=respondent_group,
+                meta=meta,
+            )
+            if qinfo is not None:
                 header_question_map[col_idx] = qinfo
-            else:
-                # Case B: "question_title [issue_name]"
-                match = re.match(r"^(.+?)\s*\[(.+?)\]\s*$", header)
-                if match:
-                    base_title = match.group(1).strip()
-                    issue_name = match.group(2).strip()
-                    if base_title in question_lookup:
-                        qinfo = dict(question_lookup[base_title])
-                        qinfo["issue_name"] = issue_name
-                        header_question_map[col_idx] = qinfo
 
         for row_idx, raw_row in enumerate(sheet_values[1:], start=2):
             padded = list(raw_row) + [""] * (len(headers) - len(raw_row))

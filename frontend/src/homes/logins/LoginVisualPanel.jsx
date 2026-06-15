@@ -15,24 +15,28 @@ const LoginVisualPanel = () => {
   return (
     <aside className="login-background" aria-hidden="true">
       <div className="login-visual-content">
-        <p className="login-visual-kicker">Unified ESG Platform</p>
+        <p className="login-visual-kicker">ESG Materiality Platform</p>
 
         <h2 className="login-visual-title">
-          지속가능경영 데이터를
+          ESG 이중 중대성 평가를
           <br />
           하나의 플랫폼에서.
         </h2>
 
         <p className="login-visual-description">
-          지표 입력부터 증빙 수집, 승인 워크플로우까지
+          벤치마킹·미디어 분석·이해관계자 설문을 통해
           <br />
-          ESG 보고 과정을 체계적으로 관리하세요.
+          중대성 이슈를 체계적으로 선정하고,
+          <br />
+          AI가 ESG 보고서 초안을 자동으로 완성합니다.
         </p>
 
         <div className="login-visual-chip-list">
-          <div className="login-visual-chip">보고서 AI 자동 발간</div>
-          <div className="login-visual-chip">탄소관리 자동화 AI</div>
-          <div className="login-visual-chip">공급망 데이터 AI 통합 관리</div>
+          <div className="login-visual-chip">벤치마킹 분석</div>
+          <div className="login-visual-chip">미디어 분석</div>
+          <div className="login-visual-chip">이해관계자 설문</div>
+          <div className="login-visual-chip">이중 중대성 매트릭스</div>
+          <div className="login-visual-chip">AI 보고서 초안 생성</div>
         </div>
       </div>
 

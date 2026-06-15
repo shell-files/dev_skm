@@ -815,7 +815,7 @@ const Result = () => {
           {/* ── 왼쪽 패널 ── */}
           <section id="result-left-panel">
             <div className="result-tab-bar">
-              {["최종선정요약", "후보군 최종선정 과정", "점수 해석"].map((label, i) => (
+              {[ "후보군 최종선정 과정", "최종선정요약", "점수 해석"].map((label, i) => (
                 <button
                   key={i}
                   className={`result-tab-button ${leftTab === i ? "active" : ""}`}
@@ -825,128 +825,7 @@ const Result = () => {
                 </button>
               ))}
             </div>
-
             {leftTab === 0 && (
-              <div className="result-tab-pane">
-                <div className="card-container">
-                  <div className="card-title-row">
-                    <span className="card-title">최종 선정 요약</span>
-
-                  </div>
-                  <div id="result-summary-grid" className="summary-grid">
-                    {[
-                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>, label: "평가 대상", value: `${summaryEvalCount}개`, cls: "" },
-                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2z" /></svg>, label: "최종 선정", value: `${summarySelectedCount}개`, cls: "success", valueClass: "text-green" },
-                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8"><polyline points="17 11 12 6 7 11" /><polyline points="17 18 12 13 7 18" /></svg>, label: "High 영역", value: `${summaryHighCount}개`, cls: "danger", valueClass: "text-red" },
-                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>, label: "후보군", value: `${summaryScoredCount}개`, cls: "" },
-                    ].map((card, i) => (
-                      <div key={i} className={`info-card ${card.cls}`}>
-                        {card.icon}
-                        <div className="card-label">{card.label}</div>
-                        <div className={`card-value ${card.valueClass || ""}`}>{card.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 확정 상태 배너 */}
-                {materialityResults?.selectionSource === "RANK_FALLBACK" && (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", padding: "12px 16px" }}>
-                    <span style={{ fontSize: "0.84rem", color: "#92400e", fontWeight: 600 }}>
-                      임시 Top 5 — 점수 기반 자동 선정 상태입니다. 확정 저장 후 보고서 초안을 생성하세요.
-                    </span>
-                    <button
-                      onClick={handleFinalize}
-                      disabled={finalizeSelectionLoading}
-                      style={{ marginLeft: "16px", padding: "7px 18px", background: "#03A94D", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, fontSize: "0.82rem", cursor: finalizeSelectionLoading ? "not-allowed" : "pointer", opacity: finalizeSelectionLoading ? 0.6 : 1, flexShrink: 0 }}
-                    >
-                      {finalizeSelectionLoading ? "저장 중..." : "Top 5 확정 저장"}
-                    </button>
-                  </div>
-                )}
-                {materialityResults?.selectionSource === "TABLE" && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "12px", padding: "12px 16px" }}>
-                    <span style={{ color: "#03A94D", fontWeight: 800, fontSize: "1rem" }}>✓</span>
-                    <span style={{ fontSize: "0.84rem", color: "#166534", fontWeight: 600 }}>Top 5 확정 완료 — DB에 저장된 선정 이슈 기준으로 표시됩니다.</span>
-                  </div>
-                )}
-
-
-                <div className="card-container">
-                  <div className="card-title">최종 Top 이슈 점수 분해</div>
-                  <div className="result-table-scroll">
-                    <table className="result-table">
-                      <thead>
-                        <tr><th>이슈</th><th>최종점수</th><th>영향</th><th>재무</th><th>벤치마킹</th><th>미디어</th><th>설문</th></tr>
-                      </thead>
-                      <tbody>
-                        {topIssueScores.length > 0
-                          ? topIssueScores.map((row, i) => (
-                            <tr key={i}>
-                              <td className="issue-name">{row.name}</td>
-                              <td className="score-main">{row.finalScore}</td>
-                              <td>{row.impact}</td>
-                              <td>{row.financial}</td>
-                              <td>{row.benchmark}</td>
-                              <td>{row.media}</td>
-                              <td>{row.survey}</td>
-                            </tr>
-                          ))
-                          : (
-                            <tr>
-                              <td colSpan={7} style={{ textAlign: "center", color: "#94a3b8", padding: "20px", fontSize: "0.82rem" }}>
-                                최종 이슈 데이터가 없습니다. 최종 Top 5 이슈 확정 후 다시 확인하세요.
-                              </td>
-                            </tr>
-                          )
-                        }
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* 선정 사유 요약 */}
-                <div className="card-container">
-                  <div className="card-title">선정 사유 요약</div>
-                  <div id="result-reason-list">
-                    {selectionReasonItems && selectionReasonItems.length > 0
-                      ? selectionReasonItems.map((item, i) => {
-                        const cfg = CAT_BADGE_STYLE[item.domain] ?? { bg: "#f1f5f9", color: "#475569", text: item.domain };
-                        return (
-                          <div key={item.subIssueCode ?? i} className="result-reason-row">
-                            <div className="result-reason-icon" style={{ background: cfg.bg }}>
-                              <span style={{ fontWeight: 800, color: cfg.color, fontSize: 14 }}>{item.rankNo}</span>
-                            </div>
-                            <div>
-                              <div className="result-reason-title">
-                                {item.displaySubIssueName}
-                                <span className="dmat-cat-badge" style={{ background: cfg.bg, color: cfg.color, marginLeft: 8 }}>{cfg.text}</span>
-                              </div>
-                              <p className="result-reason-desc">{item.selectionReason ?? "-"}</p>
-                            </div>
-                          </div>
-                        );
-                      })
-                      : [
-                        { bg: "#f0fdf4", title: "영향 및 재무 동시 고점 이슈 우선", desc: "영향 중대성과 재무 중대성 모두 높은 이슈를 우선 최종 선정하였습니다.", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg> },
-                        { bg: "#eff6ff", title: "이해관계자 의견 반영", desc: "설문 결과와 주요 이해관계자 인터뷰를 반영하여 중요 이슈를 확정하였습니다.", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg> },
-                        { bg: "#f5f3ff", title: "지속가능경영 전략 연계", desc: "기업의 전략 방향 및 리스크/기회 관점에서 관리가 필요한 이슈를 포함하였습니다.", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg> },
-                      ].map((item, i) => (
-                        <div key={i} className="result-reason-row">
-                          <div className="result-reason-icon" style={{ background: item.bg }}>{item.icon}</div>
-                          <div>
-                            <div className="result-reason-title">{item.title}</div>
-                            <p className="result-reason-desc">{item.desc}</p>
-                          </div>
-                        </div>
-                      ))
-                    }
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {leftTab === 1 && (
               <div className="result-tab-pane" style={{ gap: "24px" }}>
 
                 {/* 후보군 최종 선정 과정 */}
@@ -1006,56 +885,130 @@ const Result = () => {
                   </div>
                 </div>
 
-                {/* 최종 선정 이슈 */}
+                {/* 최종 선정 이슈 + 제외된 이슈 나란히 */}
                 <div className="card-container">
-                  <div className="section-title-sm">최종 선정 이슈</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px" }}>
+                    <div>
+                      <div className="section-title-sm">최종 선정 이슈</div>
+                      <table className="issue-table-inner" style={{ width: "100%", minWidth: 0 }}>
+                        <thead>
+                          <tr>
+                            <th className="th-left">이슈</th>
+                            <th className="th-center" style={{ width: "50%" }}>최종순위</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedIssues.map((row, i) => (
+                            <tr key={i} style={{ borderBottom: i < selectedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                              <td className="td-name" style={{ wordBreak: "keep-all" }}>{row.name}</td>
+                              <td className="td-center-green">{row.finalRank}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div style={{ borderLeft: "1px solid #f1f5f9", paddingLeft: "20px" }}>
+                      <div className="section-title-red">제외된 이슈</div>
+                      <table className="issue-table-inner" style={{ width: "100%", minWidth: 0 }}>
+                        <thead>
+                          <tr>
+                            <th className="th-left">이슈</th>
+                            <th className="th-center" style={{ width: "50%" }}>최종순위</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {excludedIssues.map((row, i) => (
+                            <tr key={i} style={{ borderBottom: i < excludedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                              <td className="td-name" style={{ wordBreak: "keep-all" }}>{row.name}</td>
+                              <td className="td-center">{row.candRank}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
+            {leftTab === 1 && (
+              <div className="result-tab-pane">
+                <div className="card-container">
+                  <div className="card-title-row">
+                    <span className="card-title">최종 선정 요약</span>
+
+                  </div>
+                  <div id="result-summary-grid" className="summary-grid">
+                    {[
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>, label: "평가 대상", value: `${summaryEvalCount}개`, cls: "" },
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2z" /></svg>, label: "최종 선정", value: `${summarySelectedCount}개`, cls: "success", valueClass: "text-green" },
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8"><polyline points="17 11 12 6 7 11" /><polyline points="17 18 12 13 7 18" /></svg>, label: "High 영역", value: `${summaryHighCount}개`, cls: "danger", valueClass: "text-red" },
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>, label: "후보군", value: `${summaryScoredCount}개`, cls: "" },
+                    ].map((card, i) => (
+                      <div key={i} className={`info-card ${card.cls}`}>
+                        {card.icon}
+                        <div className="card-label">{card.label}</div>
+                        <div className={`card-value ${card.valueClass || ""}`}>{card.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 확정 상태 배너 */}
+                {materialityResults?.selectionSource === "RANK_FALLBACK" && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", padding: "12px 16px" }}>
+                    <span style={{ fontSize: "0.84rem", color: "#92400e", fontWeight: 600 }}>
+                      임시 Top 5 — 점수 기반 자동 선정 상태입니다. 확정 저장 후 보고서 초안을 생성하세요.
+                    </span>
+                    <button
+                      onClick={handleFinalize}
+                      disabled={finalizeSelectionLoading}
+                      style={{ marginLeft: "16px", padding: "7px 18px", background: "#03A94D", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, fontSize: "0.82rem", cursor: finalizeSelectionLoading ? "not-allowed" : "pointer", opacity: finalizeSelectionLoading ? 0.6 : 1, flexShrink: 0 }}
+                    >
+                      {finalizeSelectionLoading ? "저장 중..." : "Top 5 확정 저장"}
+                    </button>
+                  </div>
+                )}
+                {materialityResults?.selectionSource === "TABLE" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "12px", padding: "12px 16px" }}>
+                    <span style={{ color: "#03A94D", fontWeight: 800, fontSize: "1rem" }}>✓</span>
+                    <span style={{ fontSize: "0.84rem", color: "#166534", fontWeight: 600 }}>Top 5 확정 완료 — 저장된 선정 이슈 기준으로 표시됩니다.</span>
+                  </div>
+                )}
+
+
+                <div className="card-container">
+                  <div className="card-title">최종 Top 이슈 점수 분해</div>
                   <div className="result-table-scroll">
-                    <table className="issue-table-inner">
+                    <table className="result-table">
                       <thead>
-                        <tr>
-                          <th className="th-left" style={{ width: "30%" }}>이슈</th>
-                          <th className="th-center" style={{ width: "12%" }}>최종순위</th>
-                          <th className="th-left">포함 사유</th>
-                        </tr>
+                        <tr><th>이슈</th><th>최종점수</th><th>영향</th><th>재무</th><th>벤치마킹</th><th>미디어</th><th>설문</th></tr>
                       </thead>
                       <tbody>
-                        {selectedIssues.map((row, i) => (
-                          <tr key={i} style={{ borderBottom: i < selectedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-                            <td className="td-name">{row.name}</td>
-                            <td className="td-center-green">{row.finalRank}</td>
-                            <td className="td-text">{row.reason}</td>
-                          </tr>
-                        ))}
+                        {topIssueScores.length > 0
+                          ? topIssueScores.map((row, i) => (
+                            <tr key={i}>
+                              <td className="issue-name">{row.name}</td>
+                              <td className="score-main">{row.finalScore}</td>
+                              <td>{row.impact}</td>
+                              <td>{row.financial}</td>
+                              <td>{row.benchmark}</td>
+                              <td>{row.media}</td>
+                              <td>{row.survey}</td>
+                            </tr>
+                          ))
+                          : (
+                            <tr>
+                              <td colSpan={7} style={{ textAlign: "center", color: "#94a3b8", padding: "20px", fontSize: "0.82rem" }}>
+                                최종 이슈 데이터가 없습니다. 최종 Top 5 이슈 확정 후 다시 확인하세요.
+                              </td>
+                            </tr>
+                          )
+                        }
                       </tbody>
                     </table>
                   </div>
                 </div>
-
-                {/* 후보였지만 제외된 이슈 */}
-                <div className="card-container">
-                  <div className="section-title-red">후보였지만 제외된 이슈</div>
-                  <div className="result-table-scroll">
-                    <table className="issue-table-inner">
-                      <thead>
-                        <tr>
-                          <th className="th-left" style={{ width: "30%" }}>이슈</th>
-                          <th className="th-center" style={{ width: "12%" }}>최종순위</th>
-                          <th className="th-left">제외 사유</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {excludedIssues.map((row, i) => (
-                          <tr key={i} style={{ borderBottom: i < excludedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-                            <td className="td-name">{row.name}</td>
-                            <td className="td-center">{row.candRank}</td>
-                            <td className="td-text">{row.reason}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
               </div>
             )}
 

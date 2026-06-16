@@ -1,9 +1,5 @@
 import uuid
 import shutil
-import os
-from typing import Optional
-
-from fastapi import UploadFile
 from pathlib import Path
 from src.utils.settings import settings
 from src.utils.db import save, findOne
@@ -19,7 +15,6 @@ from src.utils.dmarepository import (
 from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
 from src.utils.dmascoring import scoreSignals
 from src.services.benchmarks.adapter import convertToDmaSignals, step0NormalizeBenchmarkFacts
-from src.services.benchmarks.pg_service import fetchBenchmarkFromPg
 from src.services.materialities.orchestrator import (
     step0BuildFactTrace,
     step2BuildBenchmarkScreeningPayloads,
@@ -77,12 +72,6 @@ def _recordBenchmarkWorkflowFailureBestEffort(
         print(
             f"Warning: BENCHMARK workflow FAILED status write failed: {statusError}"
         )
-
-
-def _resolvePgMode(requestFlag: Optional[bool]) -> bool:
-    if requestFlag is not None:
-        return requestFlag
-    return settings.use_pg_pipeline
 
 
 _BENCHMARK_SCORE_BOOST_CODES = {
@@ -175,125 +164,12 @@ def uploadSr(fileModel: FileModel, userModel: UserModel):
     return ResponseModel(True, "파일이 성공적으로 업로드되었습니다.", {"files": saved_files, "page": fileModel.page})
 
 
-# (normalized DMA type, PGDB에 실제 저장된 type 값 목록)
-_PG_SR_TYPES = [
-    ("leader_sr", ["리더", "Leader", "leader"]),
-    ("peer_sr",   ["피어",  "Peer",   "peer"]),
-    ("own_sr",    ["자회사", "자사", "Own", "own", "owner"]),
-]
-
-
-async def _findSrFromPg(fileFindModel: FileFindModel, runId: int):
-    # srYear 미지정 시 pg_service 쪽에서 기본 범위(2022-2024) 적용
-    srYear = fileFindModel.pgSrYear or None
-
-    currentStage = "PREPARE"
-    currentProgress = 10
-    _writeBenchmarkWorkflowStatus(
-        runId=runId,
-        overallStatus="RUNNING",
-        currentStage=currentStage,
-        progressPercent=currentProgress,
-        startedYn=True,
-    )
-    try:
-        resetBenchmarkData(runId)
-
-        allScoredSignals = []
-        allRawResults = []
-        allFactPayloads = []
-        aiPolicy = dmaruleregistry.getPolicy("ai_fact_validation_policy")
-
-        for idx, (srType, dbTypes) in enumerate(_PG_SR_TYPES):
-            currentStage = "DOCUMENT_ANALYSIS"
-            currentProgress = 20 + idx * 20
-            _writeBenchmarkWorkflowStatus(
-                runId=runId,
-                overallStatus="RUNNING",
-                currentStage=currentStage,
-                progressPercent=currentProgress,
-            )
-
-            signals, rawResultList, sourceTitle = fetchBenchmarkFromPg(
-                srType=srType,
-                srTypes=dbTypes,
-                srYear=srYear,
-            )
-
-            scoredSignals = _applyBenchmarkBoost(scoreSignals(signals))
-            if scoredSignals:
-                saveSignals(
-                    runId=runId,
-                    signals=scoredSignals,
-                    fileId=None,
-                    sourceTitle=sourceTitle,
-                )
-                allScoredSignals.extend(scoredSignals)
-
-            shadowFacts = step0NormalizeBenchmarkFacts(
-                rawResultList,
-                fileId=None,
-                sourceType=srType,
-                aiPolicy=aiPolicy,
-            )
-            for fact in shadowFacts:
-                allFactPayloads.append(
-                    step0BuildFactTrace(extractedFact=fact, sourceChannel="benchmark")
-                )
-            allRawResults.extend(rawResultList)
-
-        currentStage = "BENCHMARK_SHADOW"
-        currentProgress = 90
-        _writeBenchmarkWorkflowStatus(
-            runId=runId,
-            overallStatus="RUNNING",
-            currentStage=currentStage,
-            progressPercent=currentProgress,
-        )
-
-        universeSubIssueCodes = [
-            code for code, meta in subissueMaster.items()
-            if meta.get("materiality_issue_pool_yn") == "Y"
-        ]
-        screeningPayloads = step2BuildBenchmarkScreeningPayloads(allFactPayloads, universeSubIssueCodes)
-        step4ReplaceBenchmarkShadowTracesTx(
-            runId=runId,
-            factPayloads=allFactPayloads,
-            screeningPayloads=screeningPayloads,
-            expectedScreeningCount=len(universeSubIssueCodes),
-        )
-
-        currentStage = "COMPLETED"
-        currentProgress = 100
-        _writeBenchmarkWorkflowStatus(
-            runId=runId,
-            overallStatus="COMPLETED",
-            currentStage=currentStage,
-            progressPercent=currentProgress,
-            completedYn=True,
-        )
-
-        return ResponseModel(
-            True,
-            f"PG 모드: 벤치마킹 분석 완료 ({len(allScoredSignals)}건)",
-            {"savedCount": len(allScoredSignals), "srYear": srYear},
-        )
-
-    except Exception as e:
-        _recordBenchmarkWorkflowFailureBestEffort(
-            runId=runId,
-            currentStage=currentStage,
-            progressPercent=currentProgress,
-            error=e,
-        )
-        raise
-
-
 async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
     runId = fileFindModel.esgMaterialityRunId
 
-    if _resolvePgMode(fileFindModel.usePgPipeline):
-        return await _findSrFromPg(fileFindModel, runId)
+    # PG 모드 제외 — 파일 업로드 모드만 사용
+    # if _resolvePgMode(fileFindModel.usePgPipeline):
+    #     return await _findSrFromPg(fileFindModel, runId)
 
     UPLOAD_DIR = Path(settings.file_dir)
     results = []

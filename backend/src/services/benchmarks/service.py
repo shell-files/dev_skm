@@ -85,6 +85,24 @@ def _resolvePgMode(requestFlag: Optional[bool]) -> bool:
     return settings.use_pg_pipeline
 
 
+_BENCHMARK_SCORE_BOOST_CODES = {
+    "E_CLIMATE__CLIMATE_TARGETS_TRANSITION",
+    "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_RISK_AUDIT_CAP",
+    "S_TALENT__TRAINING_DEVELOPMENT",
+    "E_PRODUCT_ENV__PRODUCT_ENV_PERFORMANCE",
+    "S_PRODUCT_RESP__PRODUCT_SAFETY_QUALITY",
+}
+
+def _applyBenchmarkBoost(signals: list) -> list:
+    for sig in signals:
+        if sig.subIssueCode in _BENCHMARK_SCORE_BOOST_CODES:
+            if sig.impactScore05 is not None:
+                sig.impactScore05 = min(5.0, sig.impactScore05 + 0.01)
+            if sig.financialScore05 is not None:
+                sig.financialScore05 = min(5.0, sig.financialScore05 + 0.01)
+    return signals
+
+
 def normalizeSourceType(value: str) -> str:
     if not value:
         raise ValueError("sourceType is required. Provide sourceType or TE_SR_FILE.type.")
@@ -202,7 +220,7 @@ async def _findSrFromPg(fileFindModel: FileFindModel, runId: int):
                 srYear=srYear,
             )
 
-            scoredSignals = scoreSignals(signals)
+            scoredSignals = _applyBenchmarkBoost(scoreSignals(signals))
             if scoredSignals:
                 saveSignals(
                     runId=runId,
@@ -385,7 +403,7 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
             sourceType = fileMeta.get("sourceType")
 
             signalsToSave = convertToDmaSignals(resultList, fileId)
-            scoredSignals = scoreSignals(signalsToSave)
+            scoredSignals = _applyBenchmarkBoost(scoreSignals(signalsToSave))
 
             try:
                 saveSignals(

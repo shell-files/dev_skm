@@ -67,7 +67,7 @@ const MODULE_CARDS = [
     tone: "orange",
     icon: iconApproval,
     // TODO: 승인 워크플로우 전용 route가 확정되면 교체
-    path: "/onboard",
+    path: "/onb",
   },
 ];
 
@@ -222,7 +222,7 @@ const Dashboard = () => {
 
   /* ── CTA handlers ── */
   const handleStartDataInput = () => {
-    navigate("/onboard");
+    navigate("/onbo");
   };
 
   const handleScrollToGuide = () => {

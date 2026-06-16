@@ -2527,6 +2527,66 @@ def step4UpdateTrace(
     )
 
 
+def resetBenchmarkData(runId: int) -> dict:
+    """벤치마킹 재실행 전 기존 데이터 논리 삭제."""
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("resetBenchmarkData: DB 연결 실패")
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                "UPDATE ESG_DMA_EVIDENCE SET delete_yn = 1 WHERE esg_materiality_run_id = ? AND source_step = 'benchmark' AND delete_yn = 0",
+                (runId,),
+            )
+            evidence_count = cur.rowcount
+            cur.execute(
+                "UPDATE ESG_DMA_SIGNAL_DETAIL SET delete_yn = 1 WHERE esg_materiality_run_id = ? AND source_step = 'benchmark' AND delete_yn = 0",
+                (runId,),
+            )
+            signal_count = cur.rowcount
+            cur.execute(
+                "UPDATE ESG_DMA_SCORE_SUMMARY SET benchmark_impact_score = NULL, benchmark_financial_score = NULL WHERE esg_materiality_run_id = ?",
+                (runId,),
+            )
+        conn.commit()
+        return {"evidenceDeleted": evidence_count, "signalsDeleted": signal_count}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def resetMediaData(runId: int) -> dict:
+    """미디어 분석 재실행 전 기존 데이터 논리 삭제."""
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("resetMediaData: DB 연결 실패")
+    try:
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(
+                "UPDATE ESG_DMA_EVIDENCE SET delete_yn = 1 WHERE esg_materiality_run_id = ? AND source_step = 'media_external' AND delete_yn = 0",
+                (runId,),
+            )
+            evidence_count = cur.rowcount
+            cur.execute(
+                "UPDATE ESG_DMA_SIGNAL_DETAIL SET delete_yn = 1 WHERE esg_materiality_run_id = ? AND source_step = 'media_external' AND delete_yn = 0",
+                (runId,),
+            )
+            signal_count = cur.rowcount
+            cur.execute(
+                "UPDATE ESG_DMA_SCORE_SUMMARY SET media_external_impact_score = NULL, media_external_financial_score = NULL WHERE esg_materiality_run_id = ?",
+                (runId,),
+            )
+        conn.commit()
+        return {"evidenceDeleted": evidence_count, "signalsDeleted": signal_count}
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
 __all__ = [
     "saveSignals",
     "saveDmaSignals",

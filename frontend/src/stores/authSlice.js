@@ -109,7 +109,7 @@ const authSlice = createSlice({
       .addCase(logoutUser.fulfilled, (state, action) => {
         const res = action.payload;
         if(res.status === true) {
-          localStorage.removeItem('companies');
+          localStorage.clear();
           state.isAuthReady = false;
           state.redirectUrl = "/";
           state.companies = [];

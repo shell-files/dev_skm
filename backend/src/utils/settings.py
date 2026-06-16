@@ -79,6 +79,12 @@ class Settings(BaseSettings):
   pg_db_user: str
   pg_db_password: str
   # --------------------------
+  # Pipeline Mode
+  # --------------------------
+  # True  → PostgreSQL pre-loaded 데이터 사용 (크롤링·Gemini API 생략)
+  # False → 기존 AI 파이프라인 (크롤링 + Gemini + SentenceTransformer)
+  use_pg_pipeline: bool = True
+  # --------------------------
   # Ollama
   # --------------------------
   ollama_url: str

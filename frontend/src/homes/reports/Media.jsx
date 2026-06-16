@@ -12,6 +12,7 @@ import {
   fetchDmaWorkflowStatus,
   selectCanRunDmaStage,
   selectDmaGateReason,
+  saveKcgsGrades,
 } from "@stores/reportSlice";
 
 // 정적 데이터 정의 (컴포넌트 외부에 두어 불필요한 재렌더링 방지)
@@ -252,10 +253,32 @@ const Media = () => {
     }));
   };
 
-  const handleKcgsSubmit = () => {
-    setIsKcgsModalOpen(false);
-    if (!selectedInstitutions.includes("kcgs")) {
-      setSelectedInstitutions(prev => [...prev, "kcgs"]);
+  const handleKcgsSubmit = async () => {
+    if (!companyId) {
+      showDefaultAlert("저장 불가", "회사 정보를 찾을 수 없습니다. 다시 로그인해주세요.", "warning");
+      return;
+    }
+    // 모달 grades(year/total/e/s/g) → 백엔드 DTO(ratingYear/overallGrade/...) 로 매핑
+    const grades = kcgsData.grades.map((g) => ({
+      ratingYear: Number(g.year),
+      overallGrade: g.total,
+      environmentGrade: g.e,
+      socialGrade: g.s,
+      governanceGrade: g.g,
+    }));
+    try {
+      await dispatch(saveKcgsGrades({ companyId, grades })).unwrap();
+      setIsKcgsModalOpen(false);
+      if (!selectedInstitutions.includes("kcgs")) {
+        setSelectedInstitutions((prev) => [...prev, "kcgs"]);
+      }
+      showDefaultAlert(
+        "저장 완료",
+        "KCGS 등급이 저장되었습니다. 미디어 분석 실행 시 점수에 반영됩니다.",
+        "success"
+      );
+    } catch (err) {
+      showDefaultAlert("저장 실패", err?.message || "KCGS 등급 저장에 실패했습니다.", "error");
     }
   };
 

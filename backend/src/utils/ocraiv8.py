@@ -192,9 +192,10 @@ def get_baseline_factors(sub_issue_code: str):
 # 키 풀 헬퍼
 # ------------------------------------------------------------------
 
-def _is_key_error(e: Exception) -> bool:
+def _is_quota_error(e: Exception) -> bool:
+    """429 / RESOURCE_EXHAUSTED / QUOTA → 다음 키 사용"""
     s = str(e).upper()
-    return any(x in s for x in ["429", "RESOURCE_EXHAUSTED", "QUOTA", "401", "403", "INVALID_ARGUMENT"])
+    return any(x in s for x in ["429", "RESOURCE_EXHAUSTED", "QUOTA"])
 
 def _get_active_key_idx() -> int | None:
     """소진되지 않은 첫 번째 키 인덱스를 반환합니다 (_key_lock 보유 상태에서 호출)."""
@@ -250,9 +251,19 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                     # Step 1. Retriever / Chunker (데이터 확보)
                     # ==================================================
                     # 파일을 구글 Gemini 서버로 안전하게 업로드합니다.
+                    # [파일 오류] 로컬 파일 존재 여부 확인
+                    import os as _os
+                    if not _os.path.exists(filePath):
+                        print(f"[파일 오류] {fileName}: 서버에 파일이 없습니다 → {filePath}")
+                        return {"fileName": fileName, "companyName": companyName, "type": type, "result": [], "error": "FILE_NOT_FOUND"}
+
                     fileConfig = types.UploadFileConfig(mime_type="application/pdf")
-                    with open(filePath, "rb") as f:
-                        uploadedFile = client.files.upload(file=f, config=fileConfig)
+                    try:
+                        with open(filePath, "rb") as f:
+                            uploadedFile = client.files.upload(file=f, config=fileConfig)
+                    except Exception as uploadErr:
+                        print(f"[파일 오류] {fileName}: Google 서버 업로드 실패 → {uploadErr}")
+                        raise
 
                     maxAttempts = 120  * 120
                     attempts = 0
@@ -263,8 +274,10 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                         if uploadedFile.state == types.FileState.ACTIVE:
                             break
                         elif uploadedFile.state == types.FileState.FAILED:
+                            print(f"[파일 오류] {fileName}: Google 서버에서 파일 처리 실패")
                             raise Exception("파일 업로드에 실패했습니다.")
                         elif attempts >= maxAttempts:
+                            print(f"[파일 오류] {fileName}: Google 서버 파일 가공 대기 시간 초과")
                             raise Exception("구글 서버의 파일 가공 대기 시간이 초과되었습니다.")
                         time.sleep(3)
                         uploadedFile = client.files.get(name=uploadedFile.name)
@@ -295,11 +308,15 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                         temperature=0.1, # 창의성은 끄고(0.1) 정확하게 답변하게 함
                         response_schema=LLMExtractorOutput,
                     )
-                    extractor_res = client.models.generate_content(
-                        model=settings.gemini_model,
-                        contents=[uploadedFile, extractor_prompt],
-                        config=extractor_config
-                    )
+                    try:
+                        extractor_res = client.models.generate_content(
+                            model=settings.gemini_model,
+                            contents=[uploadedFile, extractor_prompt],
+                            config=extractor_config
+                        )
+                    except Exception as aiErr:
+                        print(f"[AI 오류] {fileName}: Gemini API 호출 실패 → {aiErr}")
+                        raise
 
                     # 볼일 끝난 파일은 구글 서버에서 즉시 삭제하여 보안을 유지합니다.
                     if uploadedFile:
@@ -307,7 +324,12 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                         uploadedFile = None
 
                     # LLM이 뽑아준 결과물을 파이썬 객체로 변환합니다.
-                    extractor_data = json.loads(extractor_res.text)
+                    try:
+                        extractor_data = json.loads(extractor_res.text)
+                    except Exception as jsonErr:
+                        print(f"[JSON 오류] {fileName}: Gemini 응답 파싱 실패 → {jsonErr}")
+                        print(f"[JSON 오류] {fileName}: 원본 응답 → {extractor_res.text[:500]!r}")
+                        raise
                     extracted_issues = extractor_data.get("extracted_issues", [])
 
                     # ==================================================
@@ -425,17 +447,15 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                             pass
                         uploadedFile = None
 
-                    if _is_key_error(e):
-                        # 키 오류(429/401/403/400): 즉시 소진 처리 → 이후 모든 스레드가 다음 키 사용
+                    if _is_quota_error(e):
+                        # 429 quota 초과 → 다음 키 사용
                         _exhaust_key(active_idx)
                         key_rotated = True
                         break  # for 루프 탈출 → while 루프에서 다음 키 시도
 
-                    # 일시적 오류: 같은 키로 재시도
-                    if attempt == MAX_RETRIES - 1:
-                        data = {"fileName": fileName, "companyName": companyName, "type": type, "result": []}
-                        return data
-                    time.sleep(RETRY_DELAY)
+                    # 나머지 모든 오류(400/403/500/503 등) → 즉시 중단
+                    print(f"[{fileName}] 오류 발생 — 즉시 중단: {e}")
+                    return {"fileName": fileName, "companyName": companyName, "type": type, "result": []}
 
             if not key_rotated:
                 # 키 오류 없이 MAX_RETRIES 모두 소진 → 빈 결과

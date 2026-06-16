@@ -14,6 +14,7 @@ from src.utils import dmaruleregistry
 from src.utils.dmarepository import (
     saveSignals,
     step4ReplaceBenchmarkShadowTracesTx,
+    resetBenchmarkData,
 )
 from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
 from src.utils.dmascoring import scoreSignals
@@ -178,6 +179,8 @@ async def _findSrFromPg(fileFindModel: FileFindModel, runId: int):
         startedYn=True,
     )
     try:
+        resetBenchmarkData(runId)
+
         allScoredSignals = []
         allRawResults = []
         allFactPayloads = []
@@ -335,6 +338,8 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
                 "sourceTitle": sourceTitle,
                 "sourceType": sourceType,
             }
+
+        resetBenchmarkData(runId)
 
         currentStage = "DOCUMENT_ANALYSIS"
         currentProgress = 35

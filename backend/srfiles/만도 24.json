@@ -1,0 +1,867 @@
+{
+  "status": true,
+  "message": "분석이 성공적으로 완료되었습니다.",
+  "data": {
+    "status": true,
+    "message": "분석이 완료되었습니다.",
+    "data": [
+      {
+        "fileName": "46e6cef37f444f09a89058a7b377ed67.pdf",
+        "companyName": "만도",
+        "type": "Leader",
+        "result": [
+          {
+            "subIssueCode": "E_PRODUCT_ENV__PRODUCT_ENV_PERFORMANCE",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "온실가스 배출권 거래제 및 글로벌 탄소규제 강화에 따른 탄소 비용 (배출권 구매/탄소세 등) 부담 증가"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4580611136907365,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "온실가스 배출권 거래제 및 글로벌 탄소규제 강화에 따른 탄소 비용 (배출권 구매/탄소세 등) 부담 증가 (저탄소·친환경 제품)",
+            "displaySubIssueName": "저탄소·친환경 제품",
+            "similarityScore": 0.5541226863861084,
+            "similarityRank": 1,
+            "mappingWeight": 0.5089567929897072,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "온실가스 배출권 거래제 및 글로벌 탄소규제 강화에 따른 탄소 비용 (배출권 구매/탄소세 등) 부담 증가"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_RISK",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "온실가스 배출권 거래제 및 글로벌 탄소규제 강화에 따른 탄소 비용 (배출권 구매/탄소세 등) 부담 증가"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2486040543280042,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "온실가스 배출권 거래제 및 글로벌 탄소규제 강화에 따른 탄소 비용 (배출권 구매/탄소세 등) 부담 증가 (기후 리스크)",
+            "displaySubIssueName": "기후 리스크",
+            "similarityScore": 0.48581501841545105,
+            "similarityRank": 2,
+            "mappingWeight": 0.2762267270311158,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "온실가스 배출권 거래제 및 글로벌 탄소규제 강화에 따른 탄소 비용 (배출권 구매/탄소세 등) 부담 증가"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_USE_MIX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "온실가스 배출권 거래제 및 글로벌 탄소규제 강화에 따른 탄소 비용 (배출권 구매/탄소세 등) 부담 증가"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.19333483198125934,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "온실가스 배출권 거래제 및 글로벌 탄소규제 강화에 따른 탄소 비용 (배출권 구매/탄소세 등) 부담 증가 (에너지 사용·에너지원)",
+            "displaySubIssueName": "에너지 사용·에너지원",
+            "similarityScore": 0.46485477685928345,
+            "similarityRank": 3,
+            "mappingWeight": 0.21481647997917705,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "온실가스 배출권 거래제 및 글로벌 탄소규제 강화에 따른 탄소 비용 (배출권 구매/탄소세 등) 부담 증가"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_TARGETS_TRANSITION",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 3,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "2045 탄소중립 선언 및 온실가스 배출량 관리를 통해 국가 NDC 달성과 글로벌 기후 목표 (1.5도 목표) 실현에 기여"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3677784931128376,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "2045 탄소중립 선언 및 온실가스 배출량 관리를 통해 국가 NDC 달성과 글로벌 기후 목표 (1.5도 목표) 실현에 기여 (기후목표·전환계획)",
+            "displaySubIssueName": "기후목표·전환계획",
+            "similarityScore": 0.6349740028381348,
+            "similarityRank": 1,
+            "mappingWeight": 0.4086427701253751,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "2045 탄소중립 선언 및 온실가스 배출량 관리를 통해 국가 NDC 달성과 글로벌 기후 목표 (1.5도 목표) 실현에 기여"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_GOVERNANCE_INVENTORY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 3,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "2045 탄소중립 선언 및 온실가스 배출량 관리를 통해 국가 NDC 달성과 글로벌 기후 목표 (1.5도 목표) 실현에 기여"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.30266168973906865,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "2045 탄소중립 선언 및 온실가스 배출량 관리를 통해 국가 NDC 달성과 글로벌 기후 목표 (1.5도 목표) 실현에 기여 (기후 거버넌스·인벤토리)",
+            "displaySubIssueName": "기후 거버넌스·인벤토리",
+            "similarityScore": 0.6002568602561951,
+            "similarityRank": 2,
+            "mappingWeight": 0.33629076637674293,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "2045 탄소중립 선언 및 온실가스 배출량 관리를 통해 국가 NDC 달성과 글로벌 기후 목표 (1.5도 목표) 실현에 기여"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_RISK",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 3,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "2045 탄소중립 선언 및 온실가스 배출량 관리를 통해 국가 NDC 달성과 글로벌 기후 목표 (1.5도 목표) 실현에 기여"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2295598171480938,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "2045 탄소중립 선언 및 온실가스 배출량 관리를 통해 국가 NDC 달성과 글로벌 기후 목표 (1.5도 목표) 실현에 기여 (기후 리스크)",
+            "displaySubIssueName": "기후 리스크",
+            "similarityScore": 0.558134913444519,
+            "similarityRank": 3,
+            "mappingWeight": 0.255066463497882,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "2045 탄소중립 선언 및 온실가스 배출량 관리를 통해 국가 NDC 달성과 글로벌 기후 목표 (1.5도 목표) 실현에 기여"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__RENEWABLE_ENERGY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "재생에너지 사용 확대 요구에 따른 에너지 효율 개선 및 지속가능한 전력 구매 (PPA) 비용 발생"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4095740912841014,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "재생에너지 사용 확대 요구에 따른 에너지 효율 개선 및 지속가능한 전력 구매 (PPA) 비용 발생 (재생에너지)",
+            "displaySubIssueName": "재생에너지",
+            "similarityScore": 0.683353066444397,
+            "similarityRank": 1,
+            "mappingWeight": 0.45508232364900153,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "재생에너지 사용 확대 요구에 따른 에너지 효율 개선 및 지속가능한 전력 구매 (PPA) 비용 발생"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_EFFICIENCY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "재생에너지 사용 확대 요구에 따른 에너지 효율 개선 및 지속가능한 전력 구매 (PPA) 비용 발생"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.318888420623869,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "재생에너지 사용 확대 요구에 따른 에너지 효율 개선 및 지속가능한 전력 구매 (PPA) 비용 발생 (에너지 효율·집약도)",
+            "displaySubIssueName": "에너지 효율·집약도",
+            "similarityScore": 0.6321252584457397,
+            "similarityRank": 2,
+            "mappingWeight": 0.35432046735985445,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "재생에너지 사용 확대 요구에 따른 에너지 효율 개선 및 지속가능한 전력 구매 (PPA) 비용 발생"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_USE_MIX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "재생에너지 사용 확대 요구에 따른 에너지 효율 개선 및 지속가능한 전력 구매 (PPA) 비용 발생"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.17153748809202957,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "재생에너지 사용 확대 요구에 따른 에너지 효율 개선 및 지속가능한 전력 구매 (PPA) 비용 발생 (에너지 사용·에너지원)",
+            "displaySubIssueName": "에너지 사용·에너지원",
+            "similarityScore": 0.5366045236587524,
+            "similarityRank": 3,
+            "mappingWeight": 0.19059720899114396,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "재생에너지 사용 확대 요구에 따른 에너지 효율 개선 및 지속가능한 전력 구매 (PPA) 비용 발생"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_PRODUCT_ENV__PRODUCT_ENV_PERFORMANCE",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "EU의 신차 CO2 표준 채택 등 대기오염물질 배출량 감축 규제 강화에 따른 자율주행 기술과 친환경 모빌리티 시장의 성장 기회 확대"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.592764606841247,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "EU의 신차 CO2 표준 채택 등 대기오염물질 배출량 감축 규제 강화에 따른 자율주행 기술과 친환경 모빌리티 시장의 성장 기회 확대 (저탄소·친환경 제품)",
+            "displaySubIssueName": "저탄소·친환경 제품",
+            "similarityScore": 0.5478233098983765,
+            "similarityRank": 1,
+            "mappingWeight": 0.6586273409347189,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "EU의 신차 CO2 표준 채택 등 대기오염물질 배출량 감축 규제 강화에 따른 자율주행 기술과 친환경 모빌리티 시장의 성장 기회 확대"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_GOVERNANCE_INVENTORY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "EU의 신차 CO2 표준 채택 등 대기오염물질 배출량 감축 규제 강화에 따른 자율주행 기술과 친환경 모빌리티 시장의 성장 기회 확대"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.17344377161618127,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "EU의 신차 CO2 표준 채택 등 대기오염물질 배출량 감축 규제 강화에 따른 자율주행 기술과 친환경 모빌리티 시장의 성장 기회 확대 (기후 거버넌스·인벤토리)",
+            "displaySubIssueName": "기후 거버넌스·인벤토리",
+            "similarityScore": 0.4371890127658844,
+            "similarityRank": 2,
+            "mappingWeight": 0.19271530179575697,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "EU의 신차 CO2 표준 채택 등 대기오염물질 배출량 감축 규제 강화에 따른 자율주행 기술과 친환경 모빌리티 시장의 성장 기회 확대"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_POLLUTION__POLLUTION_INCIDENTS_COMPLIANCE",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "EU의 신차 CO2 표준 채택 등 대기오염물질 배출량 감축 규제 강화에 따른 자율주행 기술과 친환경 모빌리티 시장의 성장 기회 확대"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.13379162154257168,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "EU의 신차 CO2 표준 채택 등 대기오염물질 배출량 감축 규제 강화에 따른 자율주행 기술과 친환경 모빌리티 시장의 성장 기회 확대 (환경사고·오염 법규위반)",
+            "displaySubIssueName": "환경사고·오염 법규위반",
+            "similarityScore": 0.423334538936615,
+            "similarityRank": 3,
+            "mappingWeight": 0.1486573572695241,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "EU의 신차 CO2 표준 채택 등 대기오염물질 배출량 감축 규제 강화에 따른 자율주행 기술과 친환경 모빌리티 시장의 성장 기회 확대"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "G_BUSINESS_CONDUCT__LEGAL_COMPLIANCE_VIOLATIONS",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "자동차 안전규제 강화로 인해 안전 규제 위반 시 벌금, 리콜 등에 의한 고객 신뢰 하락과 매출 감소"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3530916858539977,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "자동차 안전규제 강화로 인해 안전 규제 위반 시 벌금, 리콜 등에 의한 고객 신뢰 하락과 매출 감소 (법규준수·위반)",
+            "displaySubIssueName": "법규준수·위반",
+            "similarityScore": 0.5449320673942566,
+            "similarityRank": 1,
+            "mappingWeight": 0.39232409539333074,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자동차 안전규제 강화로 인해 안전 규제 위반 시 벌금, 리콜 등에 의한 고객 신뢰 하락과 매출 감소"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__RECALL_FIELD_ACTION",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "자동차 안전규제 강화로 인해 안전 규제 위반 시 벌금, 리콜 등에 의한 고객 신뢰 하락과 매출 감소"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2966662009224644,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "자동차 안전규제 강화로 인해 안전 규제 위반 시 벌금, 리콜 등에 의한 고객 신뢰 하락과 매출 감소 (리콜·필드액션)",
+            "displaySubIssueName": "리콜·필드액션",
+            "similarityScore": 0.5235682725906372,
+            "similarityRank": 2,
+            "mappingWeight": 0.32962911213607154,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자동차 안전규제 강화로 인해 안전 규제 위반 시 벌금, 리콜 등에 의한 고객 신뢰 하락과 매출 감소"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__PRODUCT_SAFETY_QUALITY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "자동차 안전규제 강화로 인해 안전 규제 위반 시 벌금, 리콜 등에 의한 고객 신뢰 하락과 매출 감소"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.25024211322353795,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "자동차 안전규제 강화로 인해 안전 규제 위반 시 벌금, 리콜 등에 의한 고객 신뢰 하락과 매출 감소 (소비자 건강·제품안전)",
+            "displaySubIssueName": "소비자 건강·제품안전",
+            "similarityScore": 0.5049524903297424,
+            "similarityRank": 3,
+            "mappingWeight": 0.2780467924705977,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자동차 안전규제 강화로 인해 안전 규제 위반 시 벌금, 리콜 등에 의한 고객 신뢰 하락과 매출 감소"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_LABOR__WORKFORCE_COMPOSITION",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "근로시간 제한, 최저임금 인상, 산업 안전규정 강화 등 노동 관련 법률 강화로 원가 부담 가중"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.36106226588968776,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "근로시간 제한, 최저임금 인상, 산업 안전규정 강화 등 노동 관련 법률 강화로 원가 부담 가중 (고용·인력 구성)",
+            "displaySubIssueName": "고용·인력 구성",
+            "similarityScore": 0.5040512084960938,
+            "similarityRank": 1,
+            "mappingWeight": 0.4011802954329864,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "근로시간 제한, 최저임금 인상, 산업 안전규정 강화 등 노동 관련 법률 강화로 원가 부담 가중"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_LABOR__HIRING_TURNOVER_RETENTION",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "근로시간 제한, 최저임금 인상, 산업 안전규정 강화 등 노동 관련 법률 강화로 원가 부담 가중"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.33698296679845563,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "근로시간 제한, 최저임금 인상, 산업 안전규정 강화 등 노동 관련 법률 강화로 원가 부담 가중 (채용·이직·유지)",
+            "displaySubIssueName": "채용·이직·유지",
+            "similarityScore": 0.4971235990524292,
+            "similarityRank": 2,
+            "mappingWeight": 0.37442551866495066,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "근로시간 제한, 최저임금 인상, 산업 안전규정 강화 등 노동 관련 법률 강화로 원가 부담 가중"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_GRIEVANCE_VIOLATIONS",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "근로시간 제한, 최저임금 인상, 산업 안전규정 강화 등 노동 관련 법률 강화로 원가 부담 가중"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.20195476731185658,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "근로시간 제한, 최저임금 인상, 산업 안전규정 강화 등 노동 관련 법률 강화로 원가 부담 가중 (공급망 고충·중대위반)",
+            "displaySubIssueName": "공급망 고충·중대위반",
+            "similarityScore": 0.4545794725418091,
+            "similarityRank": 3,
+            "mappingWeight": 0.22439418590206286,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "근로시간 제한, 최저임금 인상, 산업 안전규정 강화 등 노동 관련 법률 강화로 원가 부담 가중"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__CUSTOMER_COMPLAINT_SATISFACTION",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "협력사의 안정적 사업 운영에 따른 품질 확보 및 고객사 수주 기회 확보"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.5232603057054549,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "협력사의 안정적 사업 운영에 따른 품질 확보 및 고객사 수주 기회 확보 (소비자 불만·만족도)",
+            "displaySubIssueName": "소비자 불만·만족도",
+            "similarityScore": 0.6039942502975464,
+            "similarityRank": 1,
+            "mappingWeight": 0.5814003396727276,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "협력사의 안정적 사업 운영에 따른 품질 확보 및 고객사 수주 기회 확보"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_RISK_AUDIT_CAP",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "협력사의 안정적 사업 운영에 따른 품질 확보 및 고객사 수주 기회 확보"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.22099263874292754,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "협력사의 안정적 사업 운영에 따른 품질 확보 및 고객사 수주 기회 확보 (공급망 감사·시정조치)",
+            "displaySubIssueName": "공급망 감사·시정조치",
+            "similarityScore": 0.49297624826431274,
+            "similarityRank": 2,
+            "mappingWeight": 0.2455473763810306,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "협력사의 안정적 사업 운영에 따른 품질 확보 및 고객사 수주 기회 확보"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "G_GOVERNANCE__BUSINESS_MODEL_VALUE_CHAIN",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "협력사의 안정적 사업 운영에 따른 품질 확보 및 고객사 수주 기회 확보"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.1557470555516177,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "협력사의 안정적 사업 운영에 따른 품질 확보 및 고객사 수주 기회 확보 (사업모델·가치사슬)",
+            "displaySubIssueName": "사업모델·가치사슬",
+            "similarityScore": 0.463229238986969,
+            "similarityRank": 3,
+            "mappingWeight": 0.17305228394624186,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "협력사의 안정적 사업 운영에 따른 품질 확보 및 고객사 수주 기회 확보"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "G_GOVERNANCE__ECONOMIC_VALUE",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "공정한 대금 지급 실천으로 대·중소기업 간 경제적 균형 조성 및 상생 문화 확산"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.9,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "공정한 대금 지급 실천으로 대·중소기업 간 경제적 균형 조성 및 상생 문화 확산 (경제가치 창출·배분)",
+            "displaySubIssueName": "경제가치 창출·배분",
+            "similarityScore": 0.47424668073654175,
+            "similarityRank": 1,
+            "mappingWeight": 1,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "공정한 대금 지급 실천으로 대·중소기업 간 경제적 균형 조성 및 상생 문화 확산"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -809,9 +809,9 @@ const Result = () => {
             <Fragment key={step.id}>
               <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
                 <div className="step-icon-circle">{step.icon}</div>
-                <div className="step-title-text">{step.title}</div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 800 }}>{step.title}</div>
               </div>
-              {index < steps.length - 1 && <div className="step-line"></div>}
+              {index < steps.length - 1 && <div className="step-line" />}
             </Fragment>
           ))}
         </div>
@@ -925,8 +925,8 @@ const Result = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {excludedIssues.map((row, i) => (
-                            <tr key={i} style={{ borderBottom: i < excludedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                          {excludedIssues.slice(0, 5).map((row, i) => (
+                            <tr key={i} style={{ borderBottom: i < Math.min(excludedIssues.length, 5) - 1 ? "1px solid #f1f5f9" : "none" }}>
                               <td className="td-name" style={{ wordBreak: "keep-all" }}>{row.name}</td>
                               <td className="td-center">{row.candRank}</td>
                             </tr>

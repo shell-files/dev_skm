@@ -27,6 +27,7 @@ jobs:
           "VITE_API_URL_SKM_BACK=${{ secrets.VITE_API_URL_SKM_BACK }}" | Add-Content -Path .env
           "VITE_API_URL_HG=${{ secrets.VITE_API_URL_HG }}" | Add-Content -Path .env
           "VITE_API_URL_TV=${{ secrets.VITE_API_URL_TV }}" | Add-Content -Path .env
+          "VITE_USE_PG_PIPELINE=${{ secrets.VITE_USE_PG_PIPELINE }}" | Add-Content -Path .env
       - name: Node Build
         working-directory: ./frontend
         run: npm run build
@@ -74,6 +75,7 @@ jobs:
           PG_DB_DATABASE: ${{ secrets.PG_DB_DATABASE }}
           PG_DB_USER: ${{ secrets.PG_DB_USER }}
           PG_DB_PASSWORD: ${{ secrets.PG_DB_PASSWORD }}
+          USE_PG_PIPELINE: ${{ secrets.USE_PG_PIPELINE }}
           OLLAMA_URL: ${{ secrets.OLLAMA_URL }}
         working-directory: .
         run: docker compose up -d

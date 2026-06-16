@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
 import { useSelector, useDispatch } from 'react-redux';
 import { useAuth } from '@hooks/AuthContext.jsx';
 import { setCurruntYear, setMaterialityRunId, fetchApprovalProjects } from '@stores/reportSlice';
@@ -19,10 +18,10 @@ const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
     const companyId = selectedCompany?.company_id;
 
     const currentYear = useSelector((state) => state.report.currentYear);
+    const currentRunId = useSelector((state) => state.report.currentRunId);
     const approvalProjects = useSelector((state) => state.report?.approval?.projects ?? []);
 
     const [showProjectModal, setShowProjectModal] = useState(false);
-    const [currentProject, setCurrentProject] = useState(null);
 
     useEffect(() => {
         if (!companyId) return;
@@ -33,7 +32,6 @@ const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
                 if (items.length === 0) return;
                 const firstActive =
                     items.find((p) => String(p.runStatus || "ACTIVE").toUpperCase() === "ACTIVE") ?? items[0];
-                setCurrentProject(firstActive);
                 dispatch(setCurruntYear(firstActive.reportingYear));
                 dispatch(setMaterialityRunId(firstActive.runId));
             })
@@ -44,14 +42,16 @@ const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
     }, [companyId, dispatch]);
 
     const handleSelectProject = (project) => {
-        setCurrentProject(project);
         dispatch(setCurruntYear(project.reportingYear));
         dispatch(setMaterialityRunId(project.runId));
         setShowProjectModal(false);
     };
 
-    const displayProject = currentProject ?? MOCK_PROJECTS[0];
     const projectList = approvalProjects.length > 0 ? approvalProjects : MOCK_PROJECTS;
+    const displayProject =
+        projectList.find((p) => String(p.runId) === String(currentRunId)) ??
+        projectList[0] ??
+        MOCK_PROJECTS[0];
 
     return (
         <>
@@ -63,7 +63,6 @@ const Headernav = ({ toggleSidebar, isSidebarOpen }) => {
                 </div>
 
                 <div className="header-right-group">
-                    {/* 프로젝트 정보 */}
                     <div className="header-project-group">
                         <span className="header-project-badge">
                             {currentYear || displayProject.reportingYear}

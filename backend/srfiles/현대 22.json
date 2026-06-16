@@ -1,0 +1,902 @@
+{
+  "status": true,
+  "message": "분석이 성공적으로 완료되었습니다.",
+  "data": {
+    "status": true,
+    "message": "분석이 완료되었습니다.",
+    "data": [
+      {
+        "fileName": "92bf181494c74f68b0b5e95bfee80cfc.pdf",
+        "companyName": "현모",
+        "type": "Own",
+        "result": [
+          {
+            "subIssueCode": "S_TALENT__PERFORMANCE_CAREER",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "연구개발 강화를 통한 선제적 기술 경쟁력 확보는 기업의 생존이 달린 문제임과 동시에 변화하는 산업 패러다임을 선도할 수 있는 기회이기도 합니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4832573605407452,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "연구개발 강화를 통한 기술 경쟁력 확보 (성과평가·경력개발)",
+            "displaySubIssueName": "성과평가·경력개발",
+            "similarityScore": 0.4485432505607605,
+            "similarityRank": 1,
+            "mappingWeight": 0.5369526228230502,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "연구개발 강화를 통한 선제적 기술 경쟁력 확보는 기업의 생존이 달린 문제임과 동시에 변화하는 산업 패러다임을 선도할 수 있는 기회이기도 합니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "연구개발 강화를 통한 선제적 기술 경쟁력 확보는 기업의 생존이 달린 문제임과 동시에 변화하는 산업 패러다임을 선도할 수 있는 기회이기도 합니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3190658779408248,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "연구개발 강화를 통한 기술 경쟁력 확보 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.4247184991836548,
+            "similarityRank": 2,
+            "mappingWeight": 0.35451764215647197,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "연구개발 강화를 통한 선제적 기술 경쟁력 확보는 기업의 생존이 달린 문제임과 동시에 변화하는 산업 패러다임을 선도할 수 있는 기회이기도 합니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_RISK_AUDIT_CAP",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "연구개발 강화를 통한 선제적 기술 경쟁력 확보는 기업의 생존이 달린 문제임과 동시에 변화하는 산업 패러다임을 선도할 수 있는 기회이기도 합니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.09767676151842994,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "연구개발 강화를 통한 기술 경쟁력 확보 (공급망 감사·시정조치)",
+            "displaySubIssueName": "공급망 감사·시정조치",
+            "similarityScore": 0.3839392364025116,
+            "similarityRank": 3,
+            "mappingWeight": 0.1085297350204777,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "연구개발 강화를 통한 선제적 기술 경쟁력 확보는 기업의 생존이 달린 문제임과 동시에 변화하는 산업 패러다임을 선도할 수 있는 기회이기도 합니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_TARGETS_TRANSITION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "WEF(세계경제포럼)는 가속화되는 기후변화 대응에 실패할 경우, 전 세계 GDP의 4-18% 손실이 발생하며 궁극적으로 지구를 사람이 살 수 없는 곳으로 만드는 돌이킬 수 없는 결과를 초래할 것이라고 경고합니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3725955586395872,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 대응 (All Scope) (기후목표·전환계획)",
+            "displaySubIssueName": "기후목표·전환계획",
+            "similarityScore": 0.691512942314148,
+            "similarityRank": 1,
+            "mappingWeight": 0.4139950651550969,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "WEF(세계경제포럼)는 가속화되는 기후변화 대응에 실패할 경우, 전 세계 GDP의 4-18% 손실이 발생하며 궁극적으로 지구를 사람이 살 수 없는 곳으로 만드는 돌이킬 수 없는 결과를 초래할 것이라고 경고합니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_RISK",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "WEF(세계경제포럼)는 가속화되는 기후변화 대응에 실패할 경우, 전 세계 GDP의 4-18% 손실이 발생하며 궁극적으로 지구를 사람이 살 수 없는 곳으로 만드는 돌이킬 수 없는 결과를 초래할 것이라고 경고합니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.30534891409419146,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 대응 (All Scope) (기후 리스크)",
+            "displaySubIssueName": "기후 리스크",
+            "similarityScore": 0.6490746736526489,
+            "similarityRank": 2,
+            "mappingWeight": 0.33927657121576826,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "WEF(세계경제포럼)는 가속화되는 기후변화 대응에 실패할 경우, 전 세계 GDP의 4-18% 손실이 발생하며 궁극적으로 지구를 사람이 살 수 없는 곳으로 만드는 돌이킬 수 없는 결과를 초래할 것이라고 경고합니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_GOVERNANCE_INVENTORY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "WEF(세계경제포럼)는 가속화되는 기후변화 대응에 실패할 경우, 전 세계 GDP의 4-18% 손실이 발생하며 궁극적으로 지구를 사람이 살 수 없는 곳으로 만드는 돌이킬 수 없는 결과를 초래할 것이라고 경고합니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.22205552726622133,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 대응 (All Scope) (기후 거버넌스·인벤토리)",
+            "displaySubIssueName": "기후 거버넌스·인벤토리",
+            "similarityScore": 0.5918557643890381,
+            "similarityRank": 3,
+            "mappingWeight": 0.2467283636291348,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "WEF(세계경제포럼)는 가속화되는 기후변화 대응에 실패할 경우, 전 세계 GDP의 4-18% 손실이 발생하며 궁극적으로 지구를 사람이 살 수 없는 곳으로 만드는 돌이킬 수 없는 결과를 초래할 것이라고 경고합니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_GRIEVANCE_VIOLATIONS",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "최근 코로나19와 무역분쟁, 지정학적 갈등 등으로 촉발된 공급망 불안정성도 업계에 큰 리스크로 작용하고 있습니다. 이러한 상황에서 ESG 역량 배양 지원을 포함한 공급망과의 상생협력 강화와 안정적 공급망 구축은 제품을 만들기 위해 수많은 업체와 협력해야 하는 산업 특성상 매우 중요한 이슈입니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4185844829763338,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "공급망 상생 협력 강화 (공급망 고충·중대위반)",
+            "displaySubIssueName": "공급망 고충·중대위반",
+            "similarityScore": 0.5493483543395996,
+            "similarityRank": 1,
+            "mappingWeight": 0.4650938699737042,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "최근 코로나19와 무역분쟁, 지정학적 갈등 등으로 촉발된 공급망 불안정성도 업계에 큰 리스크로 작용하고 있습니다. 이러한 상황에서 ESG 역량 배양 지원을 포함한 공급망과의 상생협력 강화와 안정적 공급망 구축은 제품을 만들기 위해 수많은 업체와 협력해야 하는 산업 특성상 매우 중요한 이슈입니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_RISK_AUDIT_CAP",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "최근 코로나19와 무역분쟁, 지정학적 갈등 등으로 촉발된 공급망 불안정성도 업계에 큰 리스크로 작용하고 있습니다. 이러한 상황에서 ESG 역량 배양 지원을 포함한 공급망과의 상생협력 강화와 안정적 공급망 구축은 제품을 만들기 위해 수많은 업체와 협력해야 하는 산업 특성상 매우 중요한 이슈입니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3231306615300047,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "공급망 상생 협력 강화 (공급망 감사·시정조치)",
+            "displaySubIssueName": "공급망 감사·시정조치",
+            "similarityScore": 0.5177552103996277,
+            "similarityRank": 2,
+            "mappingWeight": 0.35903406836667184,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "최근 코로나19와 무역분쟁, 지정학적 갈등 등으로 촉발된 공급망 불안정성도 업계에 큰 리스크로 작용하고 있습니다. 이러한 상황에서 ESG 역량 배양 지원을 포함한 공급망과의 상생협력 강화와 안정적 공급망 구축은 제품을 만들기 위해 수많은 업체와 협력해야 하는 산업 특성상 매우 중요한 이슈입니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUPPLY_CHAIN_ENV__SUPPLIER_ENV_ASSESSMENT",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "최근 코로나19와 무역분쟁, 지정학적 갈등 등으로 촉발된 공급망 불안정성도 업계에 큰 리스크로 작용하고 있습니다. 이러한 상황에서 ESG 역량 배양 지원을 포함한 공급망과의 상생협력 강화와 안정적 공급망 구축은 제품을 만들기 위해 수많은 업체와 협력해야 하는 산업 특성상 매우 중요한 이슈입니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.15828485549366156,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "공급망 상생 협력 강화 (공급망 환경평가)",
+            "displaySubIssueName": "공급망 환경평가",
+            "similarityScore": 0.4542437791824341,
+            "similarityRank": 3,
+            "mappingWeight": 0.17587206165962396,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "최근 코로나19와 무역분쟁, 지정학적 갈등 등으로 촉발된 공급망 불안정성도 업계에 큰 리스크로 작용하고 있습니다. 이러한 상황에서 ESG 역량 배양 지원을 포함한 공급망과의 상생협력 강화와 안정적 공급망 구축은 제품을 만들기 위해 수많은 업체와 협력해야 하는 산업 특성상 매우 중요한 이슈입니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "G_GOVERNANCE__BUSINESS_MODEL_VALUE_CHAIN",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "선제적인 시장 선점을 통해 영향력을 조기에 확보하고, 로컬 브랜드의 성장에 따라 심화되는 경쟁을 이겨 내는 것이 중요합니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.8452070323778149,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "글로벌 시장 점유율 확대 (사업모델·가치사슬)",
+            "displaySubIssueName": "사업모델·가치사슬",
+            "similarityScore": 0.6437520384788513,
+            "similarityRank": 1,
+            "mappingWeight": 0.9391189248642388,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "선제적인 시장 선점을 통해 영향력을 조기에 확보하고, 로컬 브랜드의 성장에 따라 심화되는 경쟁을 이겨 내는 것이 중요합니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "G_GOVERNANCE__ECONOMIC_VALUE",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "선제적인 시장 선점을 통해 영향력을 조기에 확보하고, 로컬 브랜드의 성장에 따라 심화되는 경쟁을 이겨 내는 것이 중요합니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.0445215410008514,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "글로벌 시장 점유율 확대 (경제가치 창출·배분)",
+            "displaySubIssueName": "경제가치 창출·배분",
+            "similarityScore": 0.3912780284881592,
+            "similarityRank": 2,
+            "mappingWeight": 0.04946837888983489,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "선제적인 시장 선점을 통해 영향력을 조기에 확보하고, 로컬 브랜드의 성장에 따라 심화되는 경쟁을 이겨 내는 것이 중요합니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "선제적인 시장 선점을 통해 영향력을 조기에 확보하고, 로컬 브랜드의 성장에 따라 심화되는 경쟁을 이겨 내는 것이 중요합니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.010271426621333771,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "글로벌 시장 점유율 확대 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.3655271828174591,
+            "similarityRank": 3,
+            "mappingWeight": 0.011412696245926411,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "선제적인 시장 선점을 통해 영향력을 조기에 확보하고, 로컬 브랜드의 성장에 따라 심화되는 경쟁을 이겨 내는 것이 중요합니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_HUMAN_RIGHTS__GRIEVANCE_REMEDY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "지배구조 수준이 단순히 기업 성과나 평판에만 영향을 미치는 것이 아니라, 기업의 위험을 유의미하게 감소시키는 것으로 분석되었습니다. 특히 주주 권리 보호 및 감사기구의 효과적 운영이 중요한 것으로 나타났습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3748839028982068,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "지배구조 건전성 확보 (고충처리·구제)",
+            "displaySubIssueName": "고충처리·구제",
+            "similarityScore": 0.4460381865501404,
+            "similarityRank": 1,
+            "mappingWeight": 0.4165376698868964,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "지배구조 수준이 단순히 기업 성과나 평판에만 영향을 미치는 것이 아니라, 기업의 위험을 유의미하게 감소시키는 것으로 분석되었습니다. 특히 주주 권리 보호 및 감사기구의 효과적 운영이 중요한 것으로 나타났습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_GRIEVANCE_VIOLATIONS",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "지배구조 수준이 단순히 기업 성과나 평판에만 영향을 미치는 것이 아니라, 기업의 위험을 유의미하게 감소시키는 것으로 분석되었습니다. 특히 주주 권리 보호 및 감사기구의 효과적 운영이 중요한 것으로 나타났습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2948612051868029,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "지배구조 건전성 확보 (공급망 고충·중대위반)",
+            "displaySubIssueName": "공급망 고충·중대위반",
+            "similarityScore": 0.4318322539329529,
+            "similarityRank": 2,
+            "mappingWeight": 0.3276235613186699,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "지배구조 수준이 단순히 기업 성과나 평판에만 영향을 미치는 것이 아니라, 기업의 위험을 유의미하게 감소시키는 것으로 분석되었습니다. 특히 주주 권리 보호 및 감사기구의 효과적 운영이 중요한 것으로 나타났습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "G_GOVERNANCE__BOARD_ESG_GOVERNANCE",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "지배구조 수준이 단순히 기업 성과나 평판에만 영향을 미치는 것이 아니라, 기업의 위험을 유의미하게 감소시키는 것으로 분석되었습니다. 특히 주주 권리 보호 및 감사기구의 효과적 운영이 중요한 것으로 나타났습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.23025489191499032,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "지배구조 건전성 확보 (이사회·ESG 거버넌스)",
+            "displaySubIssueName": "이사회·ESG 거버넌스",
+            "similarityScore": 0.41939347982406616,
+            "similarityRank": 3,
+            "mappingWeight": 0.2558387687944337,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "지배구조 수준이 단순히 기업 성과나 평판에만 영향을 미치는 것이 아니라, 기업의 위험을 유의미하게 감소시키는 것으로 분석되었습니다. 특히 주주 권리 보호 및 감사기구의 효과적 운영이 중요한 것으로 나타났습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__GREEN_PROCUREMENT",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "친환경차 시장은 2030년까지 연평균 22.3% 증가라는 매우 높은 성장세가 전망됩니다. 완성차 업체들 또한 각국 규제에 맞춰 내연기관차 생산 중단을 선언하고 있습니다. 이러한 시장을 선점하기 위해서는 전동화 제품군 확대가 필수적입니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.37306874992964845,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "친환경 제품 개발 및 확대 (녹색조달·친환경 구매)",
+            "displaySubIssueName": "녹색조달·친환경 구매",
+            "similarityScore": 0.6621069312095642,
+            "similarityRank": 1,
+            "mappingWeight": 0.4145208332551649,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "친환경차 시장은 2030년까지 연평균 22.3% 증가라는 매우 높은 성장세가 전망됩니다. 완성차 업체들 또한 각국 규제에 맞춰 내연기관차 생산 중단을 선언하고 있습니다. 이러한 시장을 선점하기 위해서는 전동화 제품군 확대가 필수적입니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_PRODUCT_ENV__PRODUCT_ENV_PERFORMANCE",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "친환경차 시장은 2030년까지 연평균 22.3% 증가라는 매우 높은 성장세가 전망됩니다. 완성차 업체들 또한 각국 규제에 맞춰 내연기관차 생산 중단을 선언하고 있습니다. 이러한 시장을 선점하기 위해서는 전동화 제품군 확대가 필수적입니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.31592037035784,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "친환경 제품 개발 및 확대 (저탄소·친환경 제품)",
+            "displaySubIssueName": "저탄소·친환경 제품",
+            "similarityScore": 0.6293589472770691,
+            "similarityRank": 2,
+            "mappingWeight": 0.3510226337309333,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "친환경차 시장은 2030년까지 연평균 22.3% 증가라는 매우 높은 성장세가 전망됩니다. 완성차 업체들 또한 각국 규제에 맞춰 내연기관차 생산 중단을 선언하고 있습니다. 이러한 시장을 선점하기 위해서는 전동화 제품군 확대가 필수적입니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "친환경차 시장은 2030년까지 연평균 22.3% 증가라는 매우 높은 성장세가 전망됩니다. 완성차 업체들 또한 각국 규제에 맞춰 내연기관차 생산 중단을 선언하고 있습니다. 이러한 시장을 선점하기 위해서는 전동화 제품군 확대가 필수적입니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.21101087971251173,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "친환경 제품 개발 및 확대 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.5634588003158569,
+            "similarityRank": 3,
+            "mappingWeight": 0.2344565330139019,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "친환경차 시장은 2030년까지 연평균 22.3% 증가라는 매우 높은 성장세가 전망됩니다. 완성차 업체들 또한 각국 규제에 맞춰 내연기관차 생산 중단을 선언하고 있습니다. 이러한 시장을 선점하기 위해서는 전동화 제품군 확대가 필수적입니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__PRODUCT_SAFETY_QUALITY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "제품의 품질안전 확보는 생명과 직결되는 만큼 실패할 경우, 예상치 못한 큰 비용이 발생할 뿐 아니라 이해관계자의 신뢰를 잃게 돼 사업 유지에 큰 리스크로 작용할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4032808085925022,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 안전/품질 확보 (소비자 건강·제품안전)",
+            "displaySubIssueName": "소비자 건강·제품안전",
+            "similarityScore": 0.7143732309341431,
+            "similarityRank": 1,
+            "mappingWeight": 0.44808978732500243,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "제품의 품질안전 확보는 생명과 직결되는 만큼 실패할 경우, 예상치 못한 큰 비용이 발생할 뿐 아니라 이해관계자의 신뢰를 잃게 돼 사업 유지에 큰 리스크로 작용할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__PRODUCT_INFORMATION_CHEMICAL_SAFETY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "제품의 품질안전 확보는 생명과 직결되는 만큼 실패할 경우, 예상치 못한 큰 비용이 발생할 뿐 아니라 이해관계자의 신뢰를 잃게 돼 사업 유지에 큰 리스크로 작용할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2787612653734641,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 안전/품질 확보 (소비자 정보·화학물질 안전)",
+            "displaySubIssueName": "소비자 정보·화학물질 안전",
+            "similarityScore": 0.6348588466644287,
+            "similarityRank": 2,
+            "mappingWeight": 0.309734739303849,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "제품의 품질안전 확보는 생명과 직결되는 만큼 실패할 경우, 예상치 못한 큰 비용이 발생할 뿐 아니라 이해관계자의 신뢰를 잃게 돼 사업 유지에 큰 리스크로 작용할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__RECALL_FIELD_ACTION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "제품의 품질안전 확보는 생명과 직결되는 만큼 실패할 경우, 예상치 못한 큰 비용이 발생할 뿐 아니라 이해관계자의 신뢰를 잃게 돼 사업 유지에 큰 리스크로 작용할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.21795792603403374,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 안전/품질 확보 (리콜·필드액션)",
+            "displaySubIssueName": "리콜·필드액션",
+            "similarityScore": 0.5917630195617676,
+            "similarityRank": 3,
+            "mappingWeight": 0.24217547337114861,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "제품의 품질안전 확보는 생명과 직결되는 만큼 실패할 경우, 예상치 못한 큰 비용이 발생할 뿐 아니라 이해관계자의 신뢰를 잃게 돼 사업 유지에 큰 리스크로 작용할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "CASE-커넥티드(Connected), 자율주행(Autonomous), 차량 공유·서비스(Shared & Service), 전동화(Electric)로 흔히 일컬어지는 모빌리티 혁명이 급격히 진행되고 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.46732485597042184,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "모빌리티 변화/혁신 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.38555318117141724,
+            "similarityRank": 1,
+            "mappingWeight": 0.5192498399671354,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "CASE-커넥티드(Connected), 자율주행(Autonomous), 차량 공유·서비스(Shared & Service), 전동화(Electric)로 흔히 일컬어지는 모빌리티 혁명이 급격히 진행되고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_LABOR__HIRING_TURNOVER_RETENTION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "CASE-커넥티드(Connected), 자율주행(Autonomous), 차량 공유·서비스(Shared & Service), 전동화(Electric)로 흔히 일컬어지는 모빌리티 혁명이 급격히 진행되고 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.43267514402957824,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "모빌리티 변화/혁신 (채용·이직·유지)",
+            "displaySubIssueName": "채용·이직·유지",
+            "similarityScore": 0.3837733268737793,
+            "similarityRank": 2,
+            "mappingWeight": 0.4807501600328647,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "CASE-커넥티드(Connected), 자율주행(Autonomous), 차량 공유·서비스(Shared & Service), 전동화(Electric)로 흔히 일컬어지는 모빌리티 혁명이 급격히 진행되고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          }
+        ]
+      }
+    ]
+  }
+}

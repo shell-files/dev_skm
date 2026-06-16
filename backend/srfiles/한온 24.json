@@ -1,0 +1,1057 @@
+{
+  "status": true,
+  "message": "분석이 성공적으로 완료되었습니다.",
+  "data": {
+    "status": true,
+    "message": "분석이 완료되었습니다.",
+    "data": [
+      {
+        "fileName": "1da2e45a953e4661abe986d2c58c10da.pdf",
+        "companyName": "한온",
+        "type": "Peer",
+        "result": [
+          {
+            "subIssueCode": "S_PRIVACY__DATA_BREACH_SECURITY_INCIDENTS",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "경제 | 재무건전성*",
+                "1 | 경제 | 재무건전성* | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 18-19 | 201",
+                "한온시스템은 전기차 시장 전환 속도 지연에 따라 재무 건전성과 수익성이 악화되는 어려움에 당면하였습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.5535654040719169,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "재무건전성 (개인정보 침해·정보보안 사고)",
+            "displaySubIssueName": "개인정보 침해·정보보안 사고",
+            "similarityScore": 0.36776357889175415,
+            "similarityRank": 1,
+            "mappingWeight": 0.6150726711910187,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "경제 | 재무건전성*",
+              "1 | 경제 | 재무건전성* | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 18-19 | 201",
+              "한온시스템은 전기차 시장 전환 속도 지연에 따라 재무 건전성과 수익성이 악화되는 어려움에 당면하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SAFETY__SEVERE_ACCIDENT_FATALITY",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "경제 | 재무건전성*",
+                "1 | 경제 | 재무건전성* | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 18-19 | 201",
+                "한온시스템은 전기차 시장 전환 속도 지연에 따라 재무 건전성과 수익성이 악화되는 어려움에 당면하였습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.34643459592808323,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "재무건전성 (중대재해·사망사고)",
+            "displaySubIssueName": "중대재해·사망사고",
+            "similarityScore": 0.3629966676235199,
+            "similarityRank": 2,
+            "mappingWeight": 0.38492732880898134,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "경제 | 재무건전성*",
+              "1 | 경제 | 재무건전성* | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 18-19 | 201",
+              "한온시스템은 전기차 시장 전환 속도 지연에 따라 재무 건전성과 수익성이 악화되는 어려움에 당면하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__GREEN_PROCUREMENT",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "경제 | 전기차 시장 대응 및 친환경차 매출 확대*",
+                "2 | 경제 | 전기차 시장 대응 및 친환경차 매출 확대* | ● ● ○ | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 22-23 | 해당없음"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.49165644396478,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "전기차 시장 대응 및 친환경차 매출 확대 (녹색조달·친환경 구매)",
+            "displaySubIssueName": "녹색조달·친환경 구매",
+            "similarityScore": 0.5621526837348938,
+            "similarityRank": 1,
+            "mappingWeight": 0.5462849377386444,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "경제 | 전기차 시장 대응 및 친환경차 매출 확대*",
+              "2 | 경제 | 전기차 시장 대응 및 친환경차 매출 확대* | ● ● ○ | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 22-23 | 해당없음"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_PRODUCT_ENV__PRODUCT_ENV_PERFORMANCE",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "경제 | 전기차 시장 대응 및 친환경차 매출 확대*",
+                "2 | 경제 | 전기차 시장 대응 및 친환경차 매출 확대* | ● ● ○ | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 22-23 | 해당없음"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3167791040340162,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "전기차 시장 대응 및 친환경차 매출 확대 (저탄소·친환경 제품)",
+            "displaySubIssueName": "저탄소·친환경 제품",
+            "similarityScore": 0.5082626342773438,
+            "similarityRank": 2,
+            "mappingWeight": 0.351976782260018,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "경제 | 전기차 시장 대응 및 친환경차 매출 확대*",
+              "2 | 경제 | 전기차 시장 대응 및 친환경차 매출 확대* | ● ● ○ | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 22-23 | 해당없음"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_EFFICIENCY",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "경제 | 전기차 시장 대응 및 친환경차 매출 확대*",
+                "2 | 경제 | 전기차 시장 대응 및 친환경차 매출 확대* | ● ● ○ | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 22-23 | 해당없음"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.09156445200120387,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "전기차 시장 대응 및 친환경차 매출 확대 (에너지 효율·집약도)",
+            "displaySubIssueName": "에너지 효율·집약도",
+            "similarityScore": 0.41918712854385376,
+            "similarityRank": 3,
+            "mappingWeight": 0.10173828000133764,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "경제 | 전기차 시장 대응 및 친환경차 매출 확대*",
+              "2 | 경제 | 전기차 시장 대응 및 친환경차 매출 확대* | ● ● ○ | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 22-23 | 해당없음"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__GREEN_PROCUREMENT",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "환경 | 친환경 제품 연구개발*",
+                "3 | 환경 | 친환경 제품 연구개발* | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 24-29 | 해당없음"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.34933391968164734,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "친환경 제품 연구개발 (녹색조달·친환경 구매)",
+            "displaySubIssueName": "녹색조달·친환경 구매",
+            "similarityScore": 0.695033848285675,
+            "similarityRank": 1,
+            "mappingWeight": 0.3881487996462748,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "환경 | 친환경 제품 연구개발*",
+              "3 | 환경 | 친환경 제품 연구개발* | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 24-29 | 해당없음"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_PRODUCT_ENV__PRODUCT_ENV_PERFORMANCE",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "환경 | 친환경 제품 연구개발*",
+                "3 | 환경 | 친환경 제품 연구개발* | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 24-29 | 해당없음"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.33053160357601846,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "친환경 제품 연구개발 (저탄소·친환경 제품)",
+            "displaySubIssueName": "저탄소·친환경 제품",
+            "similarityScore": 0.6825394630432129,
+            "similarityRank": 2,
+            "mappingWeight": 0.3672573373066872,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "환경 | 친환경 제품 연구개발*",
+              "3 | 환경 | 친환경 제품 연구개발* | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 24-29 | 해당없음"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "환경 | 친환경 제품 연구개발*",
+                "3 | 환경 | 친환경 제품 연구개발* | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 24-29 | 해당없음"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.22013447674233408,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "친환경 제품 연구개발 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.6036062240600586,
+            "similarityRank": 3,
+            "mappingWeight": 0.24459386304703787,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "환경 | 친환경 제품 연구개발*",
+              "3 | 환경 | 친환경 제품 연구개발* | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 24-29 | 해당없음"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_RISK_AUDIT_CAP",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "사회 | 지속가능한 공급망 관리",
+                "4 | 사회 | 지속가능한 공급망 관리 | ● ○ ○ | ● ● ● | ● ● ○ | ● ● ○ | ● ● ○ | 48-53 | 308, 414"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3379446771515312,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "지속가능한 공급망 관리 (공급망 감사·시정조치)",
+            "displaySubIssueName": "공급망 감사·시정조치",
+            "similarityScore": 0.581106424331665,
+            "similarityRank": 1,
+            "mappingWeight": 0.37549408572392357,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사회 | 지속가능한 공급망 관리",
+              "4 | 사회 | 지속가능한 공급망 관리 | ● ○ ○ | ● ● ● | ● ● ○ | ● ● ○ | ● ● ○ | 48-53 | 308, 414"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_GRIEVANCE_VIOLATIONS",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "사회 | 지속가능한 공급망 관리",
+                "4 | 사회 | 지속가능한 공급망 관리 | ● ○ ○ | ● ● ● | ● ● ○ | ● ● ○ | ● ● ○ | 48-53 | 308, 414"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2871690942432019,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "지속가능한 공급망 관리 (공급망 고충·중대위반)",
+            "displaySubIssueName": "공급망 고충·중대위반",
+            "similarityScore": 0.557335376739502,
+            "similarityRank": 2,
+            "mappingWeight": 0.31907677138133544,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사회 | 지속가능한 공급망 관리",
+              "4 | 사회 | 지속가능한 공급망 관리 | ● ○ ○ | ● ● ● | ● ● ○ | ● ● ○ | ● ● ○ | 48-53 | 308, 414"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUPPLY_CHAIN_ENV__SUPPLIER_ENV_ASSESSMENT",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "사회 | 지속가능한 공급망 관리",
+                "4 | 사회 | 지속가능한 공급망 관리 | ● ○ ○ | ● ● ● | ● ● ○ | ● ● ○ | ● ● ○ | 48-53 | 308, 414"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.27488622860526696,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "지속가능한 공급망 관리 (공급망 환경평가)",
+            "displaySubIssueName": "공급망 환경평가",
+            "similarityScore": 0.5513802766799927,
+            "similarityRank": 3,
+            "mappingWeight": 0.30542914289474105,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사회 | 지속가능한 공급망 관리",
+              "4 | 사회 | 지속가능한 공급망 관리 | ● ○ ○ | ● ● ● | ● ● ○ | ● ● ○ | ● ● ○ | 48-53 | 308, 414"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_RISK",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 3,
+              "likelihood": 4,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "환경 | 기후변화 대응",
+                "5 | 환경 | 기후변화 대응 | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 33-38 | 302-1, 302-3, 302-4, 303, 305, 306"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.37818917555067283,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 대응 (기후 리스크)",
+            "displaySubIssueName": "기후 리스크",
+            "similarityScore": 0.636371374130249,
+            "similarityRank": 1,
+            "mappingWeight": 0.42021019505630314,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "환경 | 기후변화 대응",
+              "5 | 환경 | 기후변화 대응 | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 33-38 | 302-1, 302-3, 302-4, 303, 305, 306"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_TARGETS_TRANSITION",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 3,
+              "likelihood": 4,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "환경 | 기후변화 대응",
+                "5 | 환경 | 기후변화 대응 | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 33-38 | 302-1, 302-3, 302-4, 303, 305, 306"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.33982770244343324,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 대응 (기후목표·전환계획)",
+            "displaySubIssueName": "기후목표·전환계획",
+            "similarityScore": 0.6166629791259766,
+            "similarityRank": 2,
+            "mappingWeight": 0.37758633604825914,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "환경 | 기후변화 대응",
+              "5 | 환경 | 기후변화 대응 | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 33-38 | 302-1, 302-3, 302-4, 303, 305, 306"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_GOVERNANCE_INVENTORY",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 3,
+              "likelihood": 4,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "환경 | 기후변화 대응",
+                "5 | 환경 | 기후변화 대응 | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 33-38 | 302-1, 302-3, 302-4, 303, 305, 306"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.18198312200589387,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 대응 (기후 거버넌스·인벤토리)",
+            "displaySubIssueName": "기후 거버넌스·인벤토리",
+            "similarityScore": 0.525850772857666,
+            "similarityRank": 3,
+            "mappingWeight": 0.2022034688954376,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "환경 | 기후변화 대응",
+              "5 | 환경 | 기후변화 대응 | ● ● ● | ● ● ● | ● ● ● | ● ● ● | ● ● ● | 33-38 | 302-1, 302-3, 302-4, 303, 305, 306"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "G_GOVERNANCE__MATERIALITY_STAKEHOLDER",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "지배구조 | 리스크 관리",
+                "6 | 지배구조 | 리스크 관리 | ● ● ● | ● ○ ○ | ● ○ ○ | ● ● ○ | ● ● ○ | 18-19, 67-71 | 205-1, 205-2, 207-1"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.9,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "리스크 관리 (중대성평가·이해관계자)",
+            "displaySubIssueName": "중대성평가·이해관계자",
+            "similarityScore": 0.3769318461418152,
+            "similarityRank": 1,
+            "mappingWeight": 1,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "지배구조 | 리스크 관리",
+              "6 | 지배구조 | 리스크 관리 | ● ● ● | ● ○ ○ | ● ○ ○ | ● ● ○ | ● ● ○ | 18-19, 67-71 | 205-1, 205-2, 207-1"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CIRCULARITY__RECYCLING_RECOVERY",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "사회 | 인재관리 및 근무환경",
+                "7 | 사회 | 인재관리 및 근무환경 | ● ● ● | ● ● ○ | ● ● ● | ● ● ● | ● ● ● | 40-44 | 401-1, 401-3, 404"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.33258419859816957,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "인재관리 및 근무환경 (재활용·회수)",
+            "displaySubIssueName": "재활용·회수",
+            "similarityScore": 0.5562907457351685,
+            "similarityRank": 1,
+            "mappingWeight": 0.36953799844241064,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사회 | 인재관리 및 근무환경",
+              "7 | 사회 | 인재관리 및 근무환경 | ● ● ● | ● ● ○ | ● ● ● | ● ● ● | ● ● ● | 40-44 | 401-1, 401-3, 404"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_BIODIVERSITY__RESTORATION_CONSERVATION",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "사회 | 인재관리 및 근무환경",
+                "7 | 사회 | 인재관리 및 근무환경 | ● ● ● | ● ● ○ | ● ● ● | ● ● ● | ● ● ● | 40-44 | 401-1, 401-3, 404"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3081511503152319,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "인재관리 및 근무환경 (복원·보전)",
+            "displaySubIssueName": "복원·보전",
+            "similarityScore": 0.5460594892501831,
+            "similarityRank": 2,
+            "mappingWeight": 0.3423901670169243,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사회 | 인재관리 및 근무환경",
+              "7 | 사회 | 인재관리 및 근무환경 | ● ● ● | ● ● ○ | ● ● ● | ● ● ● | ● ● ● | 40-44 | 401-1, 401-3, 404"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_WATER__WATER_REUSE_RISK",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "사회 | 인재관리 및 근무환경",
+                "7 | 사회 | 인재관리 및 근무환경 | ● ● ● | ● ● ○ | ● ● ● | ● ● ● | ● ● ● | 40-44 | 401-1, 401-3, 404"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2592646510865985,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "인재관리 및 근무환경 (용수 재이용·물 리스크)",
+            "displaySubIssueName": "용수 재이용·물 리스크",
+            "similarityScore": 0.5247327089309692,
+            "similarityRank": 3,
+            "mappingWeight": 0.28807183454066504,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사회 | 인재관리 및 근무환경",
+              "7 | 사회 | 인재관리 및 근무환경 | ● ● ● | ● ● ○ | ● ● ● | ● ● ● | ● ● ● | 40-44 | 401-1, 401-3, 404"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__CUSTOMER_COMPLAINT_SATISFACTION",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "경제 | 고객 다변화",
+                "8 | 경제 | 고객 다변화 | ● ○ ○ | ● ● ○ | ● ○ ○ | ● ○ ○ | ● ○ ○ | 20 | 해당없음"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.7728345829662743,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "고객 다변화 (소비자 불만·만족도)",
+            "displaySubIssueName": "소비자 불만·만족도",
+            "similarityScore": 0.5183779001235962,
+            "similarityRank": 1,
+            "mappingWeight": 0.8587050921847492,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "경제 | 고객 다변화",
+              "8 | 경제 | 고객 다변화 | ● ○ ○ | ● ● ○ | ● ○ ○ | ● ○ ○ | ● ○ ○ | 20 | 해당없음"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_LABOR__HIRING_TURNOVER_RETENTION",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "경제 | 고객 다변화",
+                "8 | 경제 | 고객 다변화 | ● ○ ○ | ● ● ○ | ● ○ ○ | ● ○ ○ | ● ○ ○ | 20 | 해당없음"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.12716541703372577,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "고객 다변화 (채용·이직·유지)",
+            "displaySubIssueName": "채용·이직·유지",
+            "similarityScore": 0.4005599617958069,
+            "similarityRank": 2,
+            "mappingWeight": 0.14129490781525086,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "경제 | 고객 다변화",
+              "8 | 경제 | 고객 다변화 | ● ○ ○ | ● ● ○ | ● ○ ○ | ● ○ ○ | ● ○ ○ | 20 | 해당없음"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SAFETY__OHS_MANAGEMENT",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "사회 | 사업장 안전보건",
+                "9 | 사회 | 사업장 안전보건 | ● ● ○ | ● ○ ○ | ● ○ ○ | ● ● ○ | ● ● ○ | 45-47 | 403"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4329978808960041,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "사업장 안전보건 (안전보건 관리체계)",
+            "displaySubIssueName": "안전보건 관리체계",
+            "similarityScore": 0.6109406352043152,
+            "similarityRank": 1,
+            "mappingWeight": 0.4811087565511157,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사회 | 사업장 안전보건",
+              "9 | 사회 | 사업장 안전보건 | ● ● ○ | ● ○ ○ | ● ○ ○ | ● ● ○ | ● ● ○ | 45-47 | 403"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__PRODUCT_SAFETY_QUALITY",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 4,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "사회 | 사업장 안전보건",
+                "9 | 사회 | 사업장 안전보건 | ● ● ○ | ● ○ ○ | ● ○ ○ | ● ● ○ | ● ● ○ | 45-47 | 403"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2909225069957121,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "사업장 안전보건 (소비자 건강·제품안전)",
+            "displaySubIssueName": "소비자 건강·제품안전",
+            "similarityScore": 0.5501717329025269,
+            "similarityRank": 2,
+            "mappingWeight": 0.32324722999523564,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사회 | 사업장 안전보건",
+              "9 | 사회 | 사업장 안전보건 | ● ● ○ | ● ○ ○ | ● ○ ○ | ● ● ○ | ● ● ○ | 45-47 | 403"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__RECALL_FIELD_ACTION",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "사회 | 사업장 안전보건",
+                "9 | 사회 | 사업장 안전보건 | ● ● ○ | ● ○ ○ | ● ○ ○ | ● ● ○ | ● ● ○ | 45-47 | 403"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.17607961210828388,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "사업장 안전보건 (리콜·필드액션)",
+            "displaySubIssueName": "리콜·필드액션",
+            "similarityScore": 0.49322667717933655,
+            "similarityRank": 3,
+            "mappingWeight": 0.19564401345364874,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사회 | 사업장 안전보건",
+              "9 | 사회 | 사업장 안전보건 | ● ● ○ | ● ○ ○ | ● ○ ○ | ● ● ○ | ● ● ○ | 45-47 | 403"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_RISK_AUDIT_CAP",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "사회 | 제품 책임",
+                "10 | 사회 | 제품 책임 | ● ● ○ | ● ● ○ | ● ● ○ | ● ○ ○ | ● ○ ○ | 54-56 | 416, 417-2, 417-3, 418-1"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.35851922881536574,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 책임 (공급망 감사·시정조치)",
+            "displaySubIssueName": "공급망 감사·시정조치",
+            "similarityScore": 0.5477715134620667,
+            "similarityRank": 1,
+            "mappingWeight": 0.3983546986837397,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사회 | 제품 책임",
+              "10 | 사회 | 제품 책임 | ● ● ○ | ● ● ○ | ● ● ○ | ● ○ ○ | ● ○ ○ | 54-56 | 416, 417-2, 417-3, 418-1"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__PRODUCT_SAFETY_QUALITY",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 4,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "사회 | 제품 책임",
+                "10 | 사회 | 제품 책임 | ● ● ○ | ● ● ○ | ● ● ○ | ● ○ ○ | ● ○ ○ | 54-56 | 416, 417-2, 417-3, 418-1"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.27639303033052787,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 책임 (소비자 건강·제품안전)",
+            "displaySubIssueName": "소비자 건강·제품안전",
+            "similarityScore": 0.5162800550460815,
+            "similarityRank": 2,
+            "mappingWeight": 0.3071033670339198,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사회 | 제품 책임",
+              "10 | 사회 | 제품 책임 | ● ● ○ | ● ● ○ | ● ● ○ | ● ○ ○ | ● ○ ○ | 54-56 | 416, 417-2, 417-3, 418-1"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__RECALL_FIELD_ACTION",
+            "sourceStep": "benchmark",
+            "sourceType": "peer_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "사회 | 제품 책임",
+                "10 | 사회 | 제품 책임 | ● ● ○ | ● ● ○ | ● ● ○ | ● ○ ○ | ● ○ ○ | 54-56 | 416, 417-2, 417-3, 418-1"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2650877408541065,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 책임 (리콜·필드액션)",
+            "displaySubIssueName": "리콜·필드액션",
+            "similarityScore": 0.5117143392562866,
+            "similarityRank": 3,
+            "mappingWeight": 0.29454193428234055,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사회 | 제품 책임",
+              "10 | 사회 | 제품 책임 | ● ● ○ | ● ● ○ | ● ● ○ | ● ○ ○ | ● ○ ○ | 54-56 | 416, 417-2, 417-3, 418-1"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          }
+        ]
+      }
+    ]
+  }
+}

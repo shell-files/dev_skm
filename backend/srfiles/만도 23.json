@@ -1,0 +1,1186 @@
+{
+  "status": true,
+  "message": "분석이 성공적으로 완료되었습니다.",
+  "data": {
+    "status": true,
+    "message": "분석이 완료되었습니다.",
+    "data": [
+      {
+        "fileName": "6543c752ea5341998d88ae7ce0994536.pdf",
+        "companyName": "만도",
+        "type": "Leader",
+        "result": [
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_RISK",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 3,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "지속가능성 중요 이슈 분석 결과, 10개 이슈가 중대성이 높은 이슈로 도출되었으며, 그 중 상위 3개인 ‘기후변화 완화’, ‘에너지’, ‘미래 성장 동력’을 핵심 이슈로 선정하였습니다.",
+                "지역사회 건강에 미치는 악영향 방지",
+                "폭염·한파 등 기상이변 현상 완화"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3606917064399299,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 완화 (기후 리스크)",
+            "displaySubIssueName": "기후 리스크",
+            "similarityScore": 0.6008046865463257,
+            "similarityRank": 1,
+            "mappingWeight": 0.4007685627110332,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "지속가능성 중요 이슈 분석 결과, 10개 이슈가 중대성이 높은 이슈로 도출되었으며, 그 중 상위 3개인 ‘기후변화 완화’, ‘에너지’, ‘미래 성장 동력’을 핵심 이슈로 선정하였습니다.",
+              "지역사회 건강에 미치는 악영향 방지",
+              "폭염·한파 등 기상이변 현상 완화"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_TARGETS_TRANSITION",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 3,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "지속가능성 중요 이슈 분석 결과, 10개 이슈가 중대성이 높은 이슈로 도출되었으며, 그 중 상위 3개인 ‘기후변화 완화’, ‘에너지’, ‘미래 성장 동력’을 핵심 이슈로 선정하였습니다.",
+                "지역사회 건강에 미치는 악영향 방지",
+                "폭염·한파 등 기상이변 현상 완화"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.31848464200139626,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 완화 (기후목표·전환계획)",
+            "displaySubIssueName": "기후목표·전환계획",
+            "similarityScore": 0.5808361768722534,
+            "similarityRank": 2,
+            "mappingWeight": 0.35387182444599585,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "지속가능성 중요 이슈 분석 결과, 10개 이슈가 중대성이 높은 이슈로 도출되었으며, 그 중 상위 3개인 ‘기후변화 완화’, ‘에너지’, ‘미래 성장 동력’을 핵심 이슈로 선정하였습니다.",
+              "지역사회 건강에 미치는 악영향 방지",
+              "폭염·한파 등 기상이변 현상 완화"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_GOVERNANCE_INVENTORY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 3,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "지속가능성 중요 이슈 분석 결과, 10개 이슈가 중대성이 높은 이슈로 도출되었으며, 그 중 상위 3개인 ‘기후변화 완화’, ‘에너지’, ‘미래 성장 동력’을 핵심 이슈로 선정하였습니다.",
+                "지역사회 건강에 미치는 악영향 방지",
+                "폭염·한파 등 기상이변 현상 완화"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.22082365155867378,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 완화 (기후 거버넌스·인벤토리)",
+            "displaySubIssueName": "기후 거버넌스·인벤토리",
+            "similarityScore": 0.5308319926261902,
+            "similarityRank": 3,
+            "mappingWeight": 0.24535961284297086,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "지속가능성 중요 이슈 분석 결과, 10개 이슈가 중대성이 높은 이슈로 도출되었으며, 그 중 상위 3개인 ‘기후변화 완화’, ‘에너지’, ‘미래 성장 동력’을 핵심 이슈로 선정하였습니다.",
+              "지역사회 건강에 미치는 악영향 방지",
+              "폭염·한파 등 기상이변 현상 완화"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_RISK",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "고객의 친환경차 전환에 따른 미대응 시 경쟁력 저하",
+                "외부 평가기관·고객사의 기후변화 관련 요구사항 강화"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3606917064399299,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 완화 (기후 리스크)",
+            "displaySubIssueName": "기후 리스크",
+            "similarityScore": 0.6008046865463257,
+            "similarityRank": 1,
+            "mappingWeight": 0.4007685627110332,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "고객의 친환경차 전환에 따른 미대응 시 경쟁력 저하",
+              "외부 평가기관·고객사의 기후변화 관련 요구사항 강화"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_TARGETS_TRANSITION",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "고객의 친환경차 전환에 따른 미대응 시 경쟁력 저하",
+                "외부 평가기관·고객사의 기후변화 관련 요구사항 강화"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.31848464200139626,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 완화 (기후목표·전환계획)",
+            "displaySubIssueName": "기후목표·전환계획",
+            "similarityScore": 0.5808361768722534,
+            "similarityRank": 2,
+            "mappingWeight": 0.35387182444599585,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "고객의 친환경차 전환에 따른 미대응 시 경쟁력 저하",
+              "외부 평가기관·고객사의 기후변화 관련 요구사항 강화"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_GOVERNANCE_INVENTORY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "고객의 친환경차 전환에 따른 미대응 시 경쟁력 저하",
+                "외부 평가기관·고객사의 기후변화 관련 요구사항 강화"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.22082365155867378,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 완화 (기후 거버넌스·인벤토리)",
+            "displaySubIssueName": "기후 거버넌스·인벤토리",
+            "similarityScore": 0.5308319926261902,
+            "similarityRank": 3,
+            "mappingWeight": 0.24535961284297086,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "고객의 친환경차 전환에 따른 미대응 시 경쟁력 저하",
+              "외부 평가기관·고객사의 기후변화 관련 요구사항 강화"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_RISK",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "새로운 신흥 시장에 대한 접근을 통한 수익 증대",
+                "저배출 제품 및 서비스에 대한 수요 증가로 인한 매출 증가"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3606917064399299,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 완화 (기후 리스크)",
+            "displaySubIssueName": "기후 리스크",
+            "similarityScore": 0.6008046865463257,
+            "similarityRank": 1,
+            "mappingWeight": 0.4007685627110332,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "새로운 신흥 시장에 대한 접근을 통한 수익 증대",
+              "저배출 제품 및 서비스에 대한 수요 증가로 인한 매출 증가"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_TARGETS_TRANSITION",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "새로운 신흥 시장에 대한 접근을 통한 수익 증대",
+                "저배출 제품 및 서비스에 대한 수요 증가로 인한 매출 증가"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.31848464200139626,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 완화 (기후목표·전환계획)",
+            "displaySubIssueName": "기후목표·전환계획",
+            "similarityScore": 0.5808361768722534,
+            "similarityRank": 2,
+            "mappingWeight": 0.35387182444599585,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "새로운 신흥 시장에 대한 접근을 통한 수익 증대",
+              "저배출 제품 및 서비스에 대한 수요 증가로 인한 매출 증가"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_GOVERNANCE_INVENTORY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "새로운 신흥 시장에 대한 접근을 통한 수익 증대",
+                "저배출 제품 및 서비스에 대한 수요 증가로 인한 매출 증가"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.22082365155867378,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 완화 (기후 거버넌스·인벤토리)",
+            "displaySubIssueName": "기후 거버넌스·인벤토리",
+            "similarityScore": 0.5308319926261902,
+            "similarityRank": 3,
+            "mappingWeight": 0.24535961284297086,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "새로운 신흥 시장에 대한 접근을 통한 수익 증대",
+              "저배출 제품 및 서비스에 대한 수요 증가로 인한 매출 증가"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_EFFICIENCY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "재생에너지 전환으로 인한 온실가스 배출량 감소에 기여",
+                "태양광, 태양열, 풍력 등 재생에너지 산업 발전 기여"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4459747140437271,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (에너지 효율·집약도)",
+            "displaySubIssueName": "에너지 효율·집약도",
+            "similarityScore": 0.5354443788528442,
+            "similarityRank": 1,
+            "mappingWeight": 0.49552746004858567,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "재생에너지 전환으로 인한 온실가스 배출량 감소에 기여",
+              "태양광, 태양열, 풍력 등 재생에너지 산업 발전 기여"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_USE_MIX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "재생에너지 전환으로 인한 온실가스 배출량 감소에 기여",
+                "태양광, 태양열, 풍력 등 재생에너지 산업 발전 기여"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.38148323245683496,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (에너지 사용·에너지원)",
+            "displaySubIssueName": "에너지 사용·에너지원",
+            "similarityScore": 0.5171054005622864,
+            "similarityRank": 2,
+            "mappingWeight": 0.42387025828537217,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "재생에너지 전환으로 인한 온실가스 배출량 감소에 기여",
+              "태양광, 태양열, 풍력 등 재생에너지 산업 발전 기여"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__RENEWABLE_ENERGY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "재생에너지 전환으로 인한 온실가스 배출량 감소에 기여",
+                "태양광, 태양열, 풍력 등 재생에너지 산업 발전 기여"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.0725420534994379,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (재생에너지)",
+            "displaySubIssueName": "재생에너지",
+            "similarityScore": 0.4052586257457733,
+            "similarityRank": 3,
+            "mappingWeight": 0.08060228166604211,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "재생에너지 전환으로 인한 온실가스 배출량 감소에 기여",
+              "태양광, 태양열, 풍력 등 재생에너지 산업 발전 기여"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_EFFICIENCY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "바이오연료 사용으로 인한 식량, 토지 등 식량난 문제 야기",
+                "태양광 시설 설치로 인한 산림 환경 파괴"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4459747140437271,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (에너지 효율·집약도)",
+            "displaySubIssueName": "에너지 효율·집약도",
+            "similarityScore": 0.5354443788528442,
+            "similarityRank": 1,
+            "mappingWeight": 0.49552746004858567,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "바이오연료 사용으로 인한 식량, 토지 등 식량난 문제 야기",
+              "태양광 시설 설치로 인한 산림 환경 파괴"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_USE_MIX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "바이오연료 사용으로 인한 식량, 토지 등 식량난 문제 야기",
+                "태양광 시설 설치로 인한 산림 환경 파괴"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.38148323245683496,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (에너지 사용·에너지원)",
+            "displaySubIssueName": "에너지 사용·에너지원",
+            "similarityScore": 0.5171054005622864,
+            "similarityRank": 2,
+            "mappingWeight": 0.42387025828537217,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "바이오연료 사용으로 인한 식량, 토지 등 식량난 문제 야기",
+              "태양광 시설 설치로 인한 산림 환경 파괴"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__RENEWABLE_ENERGY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "바이오연료 사용으로 인한 식량, 토지 등 식량난 문제 야기",
+                "태양광 시설 설치로 인한 산림 환경 파괴"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.0725420534994379,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (재생에너지)",
+            "displaySubIssueName": "재생에너지",
+            "similarityScore": 0.4052586257457733,
+            "similarityRank": 3,
+            "mappingWeight": 0.08060228166604211,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "바이오연료 사용으로 인한 식량, 토지 등 식량난 문제 야기",
+              "태양광 시설 설치로 인한 산림 환경 파괴"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_EFFICIENCY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "재생에너지 사용 기회 확대로 인한 비용 감소 (중국, 인도)",
+                "에너지 효율 개선을 통한 운영비용 절감"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4459747140437271,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (에너지 효율·집약도)",
+            "displaySubIssueName": "에너지 효율·집약도",
+            "similarityScore": 0.5354443788528442,
+            "similarityRank": 1,
+            "mappingWeight": 0.49552746004858567,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "재생에너지 사용 기회 확대로 인한 비용 감소 (중국, 인도)",
+              "에너지 효율 개선을 통한 운영비용 절감"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_USE_MIX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "재생에너지 사용 기회 확대로 인한 비용 감소 (중국, 인도)",
+                "에너지 효율 개선을 통한 운영비용 절감"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.38148323245683496,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (에너지 사용·에너지원)",
+            "displaySubIssueName": "에너지 사용·에너지원",
+            "similarityScore": 0.5171054005622864,
+            "similarityRank": 2,
+            "mappingWeight": 0.42387025828537217,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "재생에너지 사용 기회 확대로 인한 비용 감소 (중국, 인도)",
+              "에너지 효율 개선을 통한 운영비용 절감"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__RENEWABLE_ENERGY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "재생에너지 사용 기회 확대로 인한 비용 감소 (중국, 인도)",
+                "에너지 효율 개선을 통한 운영비용 절감"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.0725420534994379,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (재생에너지)",
+            "displaySubIssueName": "재생에너지",
+            "similarityScore": 0.4052586257457733,
+            "similarityRank": 3,
+            "mappingWeight": 0.08060228166604211,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "재생에너지 사용 기회 확대로 인한 비용 감소 (중국, 인도)",
+              "에너지 효율 개선을 통한 운영비용 절감"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_EFFICIENCY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "재생에너지 전환으로 인한 운영비용 증가",
+                "전기요금 인상에 따른 운영비용 증가 (한국)"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4459747140437271,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (에너지 효율·집약도)",
+            "displaySubIssueName": "에너지 효율·집약도",
+            "similarityScore": 0.5354443788528442,
+            "similarityRank": 1,
+            "mappingWeight": 0.49552746004858567,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "재생에너지 전환으로 인한 운영비용 증가",
+              "전기요금 인상에 따른 운영비용 증가 (한국)"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_USE_MIX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "재생에너지 전환으로 인한 운영비용 증가",
+                "전기요금 인상에 따른 운영비용 증가 (한국)"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.38148323245683496,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (에너지 사용·에너지원)",
+            "displaySubIssueName": "에너지 사용·에너지원",
+            "similarityScore": 0.5171054005622864,
+            "similarityRank": 2,
+            "mappingWeight": 0.42387025828537217,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "재생에너지 전환으로 인한 운영비용 증가",
+              "전기요금 인상에 따른 운영비용 증가 (한국)"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__RENEWABLE_ENERGY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "재생에너지 전환으로 인한 운영비용 증가",
+                "전기요금 인상에 따른 운영비용 증가 (한국)"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.0725420534994379,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (재생에너지)",
+            "displaySubIssueName": "재생에너지",
+            "similarityScore": 0.4052586257457733,
+            "similarityRank": 3,
+            "mappingWeight": 0.08060228166604211,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "재생에너지 전환으로 인한 운영비용 증가",
+              "전기요금 인상에 따른 운영비용 증가 (한국)"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "친환경 제품 수요 충족",
+                "소프트웨어 기반 안전 기능을 통한 주행 안전성 제고"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.5496447393143994,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "미래 성장 동력 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.36054277420043945,
+            "similarityRank": 1,
+            "mappingWeight": 0.6107163770159993,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "친환경 제품 수요 충족",
+              "소프트웨어 기반 안전 기능을 통한 주행 안전성 제고"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_TALENT__PERFORMANCE_CAREER",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "친환경 제품 수요 충족",
+                "소프트웨어 기반 안전 기능을 통한 주행 안전성 제고"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.35035526068560063,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "미래 성장 동력 (성과평가·경력개발)",
+            "displaySubIssueName": "성과평가·경력개발",
+            "similarityScore": 0.35780858993530273,
+            "similarityRank": 2,
+            "mappingWeight": 0.3892836229840007,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "친환경 제품 수요 충족",
+              "소프트웨어 기반 안전 기능을 통한 주행 안전성 제고"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "사이버 안전 침해 사고 발생",
+                "보행자와의 충돌 등 안전 사고 증가 위험"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.5496447393143994,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "미래 성장 동력 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.36054277420043945,
+            "similarityRank": 1,
+            "mappingWeight": 0.6107163770159993,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사이버 안전 침해 사고 발생",
+              "보행자와의 충돌 등 안전 사고 증가 위험"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_TALENT__PERFORMANCE_CAREER",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "사이버 안전 침해 사고 발생",
+                "보행자와의 충돌 등 안전 사고 증가 위험"
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.35035526068560063,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "미래 성장 동력 (성과평가·경력개발)",
+            "displaySubIssueName": "성과평가·경력개발",
+            "similarityScore": 0.35780858993530273,
+            "similarityRank": 2,
+            "mappingWeight": 0.3892836229840007,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "사이버 안전 침해 사고 발생",
+              "보행자와의 충돌 등 안전 사고 증가 위험"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "저탄소 제품 및 서비스의 개발 및 확대",
+                "첨단 기술에 대한 수요 증가로 인한 소프트웨어 B2B 시장 확대"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.5496447393143994,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "미래 성장 동력 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.36054277420043945,
+            "similarityRank": 1,
+            "mappingWeight": 0.6107163770159993,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "저탄소 제품 및 서비스의 개발 및 확대",
+              "첨단 기술에 대한 수요 증가로 인한 소프트웨어 B2B 시장 확대"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_TALENT__PERFORMANCE_CAREER",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "저탄소 제품 및 서비스의 개발 및 확대",
+                "첨단 기술에 대한 수요 증가로 인한 소프트웨어 B2B 시장 확대"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.35035526068560063,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "미래 성장 동력 (성과평가·경력개발)",
+            "displaySubIssueName": "성과평가·경력개발",
+            "similarityScore": 0.35780858993530273,
+            "similarityRank": 2,
+            "mappingWeight": 0.3892836229840007,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "저탄소 제품 및 서비스의 개발 및 확대",
+              "첨단 기술에 대한 수요 증가로 인한 소프트웨어 B2B 시장 확대"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "친환경 제품 단가 상승으로 인한 생산비용 증가",
+                "해킹, 정보 유출 등 사이버 보안사고 발생"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.5496447393143994,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "미래 성장 동력 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.36054277420043945,
+            "similarityRank": 1,
+            "mappingWeight": 0.6107163770159993,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "친환경 제품 단가 상승으로 인한 생산비용 증가",
+              "해킹, 정보 유출 등 사이버 보안사고 발생"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_TALENT__PERFORMANCE_CAREER",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "친환경 제품 단가 상승으로 인한 생산비용 증가",
+                "해킹, 정보 유출 등 사이버 보안사고 발생"
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.35035526068560063,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "미래 성장 동력 (성과평가·경력개발)",
+            "displaySubIssueName": "성과평가·경력개발",
+            "similarityScore": 0.35780858993530273,
+            "similarityRank": 2,
+            "mappingWeight": 0.3892836229840007,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "친환경 제품 단가 상승으로 인한 생산비용 증가",
+              "해킹, 정보 유출 등 사이버 보안사고 발생"
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          }
+        ]
+      }
+    ]
+  }
+}

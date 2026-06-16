@@ -185,11 +185,13 @@ def getOrFreezeSurveyFormSnapshotTx(*, runId: int, templateVersion: str) -> dict
             cur.execute(_TOP20_SQL, (runId,))
             rows = cur.fetchall()
 
-        if len(rows) != 20:
+        # Top20 = 최대 20개(쿼리 LIMIT 20). 20개 미만이어도 현재 랭크 기준으로 폼을 생성한다.
+        # 단, 랭크된 서브이슈가 하나도 없으면(0개) 폼을 만들 수 없으므로 실패시킨다.
+        if not rows:
             conn.rollback()
             raise RuntimeError(
-                f"Top20 snapshot requires exactly 20 rows with rank_no IS NOT NULL,"
-                f" got {len(rows)} for runId={runId}"
+                f"Top20 snapshot requires at least 1 row with rank_no IS NOT NULL,"
+                f" got 0 for runId={runId}"
             )
 
         codes_seen = set()

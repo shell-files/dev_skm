@@ -36,7 +36,11 @@ from src.utils.dmarepository import (
     step4ReplaceRegulationShadowTracesTx,
     listExternalMaxEligibleMediaRows,
     step4ReplaceMediaExternalMaxShadowAndSummaryTx,
+    countTop20RankedSubIssues,
+    saveKcgsGradeInputRows,
 )
+from src.models.dmaengine import KcgsGradeInputV13
+from src.models.dmakcgsgrade import KcgsGradeSaveRequest
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
 from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
 from src.utils.subissuemaster import getSubIssueDisplayName
@@ -175,48 +179,118 @@ def buildMediaAnalyzeResponse(
 
 
 def _runMediaCrawlAndAnalyzePg(request: MediaNewsCrawlAnalyzeRequest) -> MediaNewsCrawlAnalyzeResponse:
-    scoredSignals = runMediaAnalysis(
-        articles=[],
-        runId=request.runId,
-        keywords=MVP_DEMO_COMPANY_KEYWORDS,
-        industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
-        shadowReplaceYn=True,
-        usePgPipeline=True,
+    runId = request.runId
+    currentStage = "PREPARE"
+    currentProgress = 10
+    _writeMediaWorkflowStatus(
+        runId=runId,
+        overallStatus="RUNNING",
+        currentStage=currentStage,
+        progressPercent=currentProgress,
+        startedYn=True,
     )
 
-    # Regulation/KCGS shadow refresh: best-effort, 실패해도 분석 결과는 보존한다.
-    # ExternalMax/Summary/Final/Rank는 materiality 전체 사이클 완료 후에만 유효하므로
-    # PG 모드에서는 호출하지 않는다.
     try:
-        refreshRegulationShadowForRun(request.runId)
-    except Exception as _exc:
-        print(f"Warning: [pg_media] regulation shadow refresh skipped: {_exc}")
-    try:
-        refreshKcgsShadowForRun(request.runId)
-    except Exception as _exc:
-        print(f"Warning: [pg_media] kcgs shadow refresh skipped: {_exc}")
+        currentStage = "NEWS_ANALYSIS"
+        currentProgress = 55
+        _writeMediaWorkflowStatus(
+            runId=runId,
+            overallStatus="RUNNING",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+        )
+        scoredSignals = runMediaAnalysis(
+            articles=[],
+            runId=request.runId,
+            keywords=MVP_DEMO_COMPANY_KEYWORDS,
+            industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
+            shadowReplaceYn=True,
+            usePgPipeline=True,
+        )
 
-    coverageInfo = getMediaCoverage(request.runId)
-    savedSignalCount = len(scoredSignals) if scoredSignals else 0
+        # Regulation/KCGS shadow refresh: best-effort, 실패해도 분석 결과는 보존한다.
+        # ExternalMax/Summary/Final/Rank는 materiality 전체 사이클 완료 후에만 유효하므로
+        # PG 모드에서는 재계산하지 않는다(기존 랭크를 그대로 사용).
+        currentStage = "REGULATION_REFRESH"
+        currentProgress = 70
+        _writeMediaWorkflowStatus(
+            runId=runId,
+            overallStatus="RUNNING",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+        )
+        try:
+            refreshRegulationShadowForRun(request.runId)
+        except Exception as _exc:
+            print(f"Warning: [pg_media] regulation shadow refresh skipped: {_exc}")
 
-    return MediaNewsCrawlAnalyzeResponse(
-        runId=request.runId,
-        requestedSources=request.sources,
-        allowedSources=request.sources,
-        rejectedSources=[],
-        companyKeywords=MVP_DEMO_COMPANY_KEYWORDS,
-        industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
-        collectedArticleCount=0,
-        filteredArticleCount=0,
-        articleCount=0,
-        savedSignalCount=savedSignalCount,
-        observedSubIssueCount=countMediaSubIssues(request.runId),
-        sourceBreakdown=[],
-        topIssues=_buildMediaTopIssues(request.runId),
-        coverage=coverageInfo,
-        coverageStatus=coverageInfo["coverageStatus"],
-        errors=[],
-    )
+        currentStage = "KCGS_REFRESH"
+        currentProgress = 80
+        _writeMediaWorkflowStatus(
+            runId=runId,
+            overallStatus="RUNNING",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+        )
+        try:
+            refreshKcgsShadowForRun(request.runId)
+        except Exception as _exc:
+            print(f"Warning: [pg_media] kcgs shadow refresh skipped: {_exc}")
+
+        # PG 모드는 External MAX/Rank 를 재계산하지 않지만, 전체 사이클에서 이미 산정된
+        # 랭크가 있으면 그 기준으로 설문 폼(Top20, 최대 20개)을 생성한다.
+        # 랭크가 0개면(아직 산정 전) 폼 생성을 건너뛰고 분석은 정상 완료시킨다.
+        if countTop20RankedSubIssues(request.runId) >= 1:
+            currentStage = "SURVEY_FORM_FREEZE"
+            currentProgress = 95
+            _writeMediaWorkflowStatus(
+                runId=runId,
+                overallStatus="RUNNING",
+                currentStage=currentStage,
+                progressPercent=currentProgress,
+            )
+            ensureSurveyFormForRun(request.runId)
+
+        coverageInfo = getMediaCoverage(request.runId)
+        savedSignalCount = len(scoredSignals) if scoredSignals else 0
+
+        response = MediaNewsCrawlAnalyzeResponse(
+            runId=request.runId,
+            requestedSources=request.sources,
+            allowedSources=request.sources,
+            rejectedSources=[],
+            companyKeywords=MVP_DEMO_COMPANY_KEYWORDS,
+            industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
+            collectedArticleCount=0,
+            filteredArticleCount=0,
+            articleCount=0,
+            savedSignalCount=savedSignalCount,
+            observedSubIssueCount=countMediaSubIssues(request.runId),
+            sourceBreakdown=[],
+            topIssues=_buildMediaTopIssues(request.runId),
+            coverage=coverageInfo,
+            coverageStatus=coverageInfo["coverageStatus"],
+            errors=[],
+        )
+
+        currentStage = "COMPLETED"
+        currentProgress = 100
+        _writeMediaWorkflowStatus(
+            runId=runId,
+            overallStatus="COMPLETED",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+            completedYn=True,
+        )
+        return response
+    except Exception as e:
+        _recordMediaWorkflowFailureBestEffort(
+            runId=runId,
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+            error=e,
+        )
+        raise
 
 
 def runMediaCrawlAndAnalyze(
@@ -336,7 +410,27 @@ def runMediaCrawlAndAnalyze(
             )
             # media_external External MAX Shadow + Summary + Final + Rank — critical path.
             refreshMediaExternalMaxForRun(request.runId)
-            ensureSurveyFormForRun(request.runId)
+            # 폼은 랭크가 1개 이상일 때만 생성한다. 이번 run 의 신호가 비어
+            # refresh 결과 랭크가 0개로 재계산되면(크롤 0건 + 규제/KCGS 미승인 등),
+            # 폼 생성을 건너뛰고 미디어 분석은 정상 완료시킨다.
+            # (got 0 으로 미디어 워크플로 전체를 FAILED 시키지 않는다.)
+            if countTop20RankedSubIssues(request.runId) >= 1:
+                ensureSurveyFormForRun(request.runId)
+        else:
+            # 크롤 미완료(기사 0건 등)로 External MAX 재계산은 건너뛰지만,
+            # 이미 랭크된 서브이슈가 있으면 그 기존 랭크 기준으로 설문 폼을 생성한다.
+            # Top20 은 최대 20개이며, 20개 미만이어도 현재 랭크 기준으로 생성한다.
+            # (점수는 덮어쓰지 않고, 폼 freeze 만 별도로 수행)
+            if countTop20RankedSubIssues(request.runId) >= 1:
+                currentStage = "SURVEY_FORM_FREEZE"
+                currentProgress = 95
+                _writeMediaWorkflowStatus(
+                    runId=runId,
+                    overallStatus="RUNNING",
+                    currentStage=currentStage,
+                    progressPercent=currentProgress,
+                )
+                ensureSurveyFormForRun(request.runId)
 
         sourceBreakdown = applySavedSignalCounts(
             crawlResult.sourceBreakdown,
@@ -511,6 +605,58 @@ def refreshKcgsShadowForRun(runId: int) -> int:
     payloads = step2BuildKcgsPillarBoostPayloads(gradeRows)
 
     return step4ReplaceKcgsShadowTracesTx(runId, payloads)
+
+
+def saveKcgsGradeInputs(request: KcgsGradeSaveRequest, userModel) -> int:
+    """
+    모달에서 입력한 KCGS 등급(정확히 3개 연속 연도)을 APPROVED 로 저장한다.
+    저장 전, 미디어 분석이 실제로 쓰는 동일 빌더(step2BuildKcgsPillarBoostPayloads)로
+    fail-closed 검증한다. (3개·연속연도·단일회사·유효등급) 검증 통과 시에만 DB 반영.
+    이후 미디어 분석을 다시 실행하면 refreshKcgsShadowForRun 이 이 행들을 읽어 점수에 반영한다.
+    """
+    if len(request.grades) != 3:
+        raise ValueError("KCGS 등급은 정확히 3개년(연속) 입력이 필요합니다.")
+
+    inputs = [
+        KcgsGradeInputV13(
+            companyId=request.companyId,
+            ratingYear=g.ratingYear,
+            overallGrade=g.overallGrade,
+            environmentGrade=g.environmentGrade,
+            socialGrade=g.socialGrade,
+            governanceGrade=g.governanceGrade,
+            inputSourceType="MANUAL",
+            sourceDocumentRef=g.sourceDocumentRef,
+            reviewStatus="APPROVED",
+        )
+        for g in request.grades
+    ]
+
+    # 저장 전 검증: 등급 유효성/연속연도/3개/단일회사 — 실패 시 ValueError -> 400
+    step2BuildKcgsPillarBoostPayloads(inputs)
+
+    if isinstance(userModel, dict):
+        userId = userModel.get("id")
+    else:
+        userId = getattr(userModel, "id", None)
+
+    rows = [
+        {
+            "ratingYear": g.ratingYear,
+            "overallGrade": g.overallGrade,
+            "environmentGrade": g.environmentGrade,
+            "socialGrade": g.socialGrade,
+            "governanceGrade": g.governanceGrade,
+            "sourceDocumentRef": g.sourceDocumentRef,
+        }
+        for g in request.grades
+    ]
+    return saveKcgsGradeInputRows(
+        companyId=request.companyId,
+        rows=rows,
+        reviewStatus="APPROVED",
+        createdByUserId=userId,
+    )
 
 
 def _isCrawlComplete(crawlResult) -> bool:

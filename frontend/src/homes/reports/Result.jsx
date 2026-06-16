@@ -925,8 +925,8 @@ const Result = () => {
                           </tr>
                         </thead>
                         <tbody>
-                          {excludedIssues.map((row, i) => (
-                            <tr key={i} style={{ borderBottom: i < excludedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                          {excludedIssues.slice(0, 5).map((row, i) => (
+                            <tr key={i} style={{ borderBottom: i < Math.min(excludedIssues.length, 5) - 1 ? "1px solid #f1f5f9" : "none" }}>
                               <td className="td-name" style={{ wordBreak: "keep-all" }}>{row.name}</td>
                               <td className="td-center">{row.candRank}</td>
                             </tr>

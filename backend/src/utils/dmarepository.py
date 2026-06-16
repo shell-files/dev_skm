@@ -244,32 +244,41 @@ def recalcStage(runId: int, subIssueCode: str, sourceStep: str):
         leaderFiles = set(s.teSrFileId for s in signals if s.sourceType == "leader_sr" and s.teSrFileId is not None)
         peerFiles = set(s.teSrFileId for s in signals if s.sourceType == "peer_sr" and s.teSrFileId is not None)
         ownFiles = set(s.teSrFileId for s in signals if s.sourceType == "own_sr" and s.teSrFileId is not None)
-        
-        from src.utils.settings import settings
-        totalSql = f"""
-            SELECT aes_d(type, '{settings.maria_db_key}') as raw_source_type
-            FROM TE_SR_FILE
-            WHERE delete_yn = 0
-        """
-        rows = findAll(totalSql)
-        
-        typeCounts = {"leader_sr": 0, "peer_sr": 0, "own_sr": 0}
-        for row in rows:
-            raw_type = str(row.get("raw_source_type", "")).lower()
-            if "leader" in raw_type or "리더" in raw_type:
-                typeCounts["leader_sr"] += 1
-            elif "peer" in raw_type or "피어" in raw_type or "동종" in raw_type:
-                typeCounts["peer_sr"] += 1
-            elif "own" in raw_type or "자사" in raw_type:
-                typeCounts["own_sr"] += 1
-        
-        totalLeader = max(1, typeCounts.get("leader_sr", 1))
-        totalPeer = max(1, typeCounts.get("peer_sr", 1))
-        totalOwn = max(1, typeCounts.get("own_sr", 1))
-        
-        leaderRatio = min(1.0, len(leaderFiles) / totalLeader)
-        peerRatio = min(1.0, len(peerFiles) / totalPeer)
-        ownRatio = min(1.0, len(ownFiles) / totalOwn)
+
+        allFileIds = leaderFiles | peerFiles | ownFiles
+        if allFileIds:
+            # 업로드 모드: 이 런의 evidence에 연결된 파일 중 delete_yn=0인 것만 집계
+            from src.utils.settings import settings
+            placeholders = ",".join("?" * len(allFileIds))
+            totalSql = f"""
+                SELECT aes_d(type, '{settings.maria_db_key}') as raw_source_type
+                FROM TE_SR_FILE
+                WHERE id IN ({placeholders}) AND delete_yn = 0
+            """
+            rows = findAll(totalSql, tuple(allFileIds))
+            typeCounts = {"leader_sr": 0, "peer_sr": 0, "own_sr": 0}
+            for row in rows:
+                raw_type = str(row.get("raw_source_type", "")).lower()
+                if "leader" in raw_type or "리더" in raw_type:
+                    typeCounts["leader_sr"] += 1
+                elif "peer" in raw_type or "피어" in raw_type or "동종" in raw_type:
+                    typeCounts["peer_sr"] += 1
+                elif "own" in raw_type or "자사" in raw_type:
+                    typeCounts["own_sr"] += 1
+            totalLeader = max(1, typeCounts.get("leader_sr", 1))
+            totalPeer = max(1, typeCounts.get("peer_sr", 1))
+            totalOwn = max(1, typeCounts.get("own_sr", 1))
+            leaderRatio = min(1.0, len(leaderFiles) / totalLeader)
+            peerRatio = min(1.0, len(peerFiles) / totalPeer)
+            ownRatio = min(1.0, len(ownFiles) / totalOwn)
+        else:
+            # PG 모드: te_sr_file_id 없음 — source_type 별 시그널 존재 여부로 커버리지 판단
+            leaderSigs = [s for s in signals if s.sourceType == "leader_sr"]
+            peerSigs = [s for s in signals if s.sourceType == "peer_sr"]
+            ownSigs = [s for s in signals if s.sourceType == "own_sr"]
+            leaderRatio = 1.0 if leaderSigs else 0.0
+            peerRatio = 1.0 if peerSigs else 0.0
+            ownRatio = 1.0 if ownSigs else 0.0
         
         commonSelection = (leaderRatio > 0.5 and peerRatio > 0.5)
         blindSpot = (leaderRatio > 0.5 and ownRatio == 0.0)
@@ -743,14 +752,15 @@ def countObservedSubIssues(runId: int, sourceStep: str) -> int:
 def listEvidenceCounts(runId: int, sourceStep: str) -> list:
     sql = """
         SELECT
-            source_type,
+            e.source_type,
             COUNT(*) AS evidence_count,
-            COUNT(DISTINCT te_sr_file_id) AS report_count
-        FROM ESG_DMA_EVIDENCE
-        WHERE esg_materiality_run_id = ?
-          AND source_step = ?
-          AND delete_yn = 0
-        GROUP BY source_type
+            COUNT(DISTINCT CASE WHEN (f.id IS NULL OR f.delete_yn = 0) THEN e.te_sr_file_id END) AS report_count
+        FROM ESG_DMA_EVIDENCE e
+        LEFT JOIN skm.TE_SR_FILE f ON f.id = e.te_sr_file_id
+        WHERE e.esg_materiality_run_id = ?
+          AND e.source_step = ?
+          AND e.delete_yn = 0
+        GROUP BY e.source_type
     """
     return findAll(sql, (runId, sourceStep)) or []
 
@@ -2602,6 +2612,15 @@ def resetBenchmarkData(runId: int) -> dict:
         raise RuntimeError("resetBenchmarkData: DB 연결 실패")
     try:
         with conn.cursor(dictionary=True) as cur:
+            # 기존 evidence에 연결된 TE_SR_FILE을 먼저 논리 삭제
+            cur.execute("""
+                UPDATE skm.TE_SR_FILE SET delete_yn = 1
+                WHERE id IN (
+                    SELECT te_sr_file_id FROM ESG_DMA_EVIDENCE
+                    WHERE esg_materiality_run_id = ? AND source_step = 'benchmark'
+                      AND te_sr_file_id IS NOT NULL AND delete_yn = 0
+                )
+            """, (runId,))
             cur.execute(
                 "UPDATE ESG_DMA_EVIDENCE SET delete_yn = 1 WHERE esg_materiality_run_id = ? AND source_step = 'benchmark' AND delete_yn = 0",
                 (runId,),

@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import "@styles/media.css";
 import robot from "@assets/images/robot/robot_media_t.png";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
+import { useAuth } from "@hooks/AuthContext";
 import {
   fetchCurrentWorkflow,
   runMediaCrawlAndAnalyze,
@@ -165,6 +166,10 @@ const Media = () => {
   const timerRef = useRef(null);
   const mediaPollTimerRef = useRef(null);
   const mediaWorkflowErrorRef = useRef(null);
+  const { selectedCompany } = useAuth();
+  const companyId = selectedCompany?.company_id ?? selectedCompany?.companyId;
+  const reportingYear = useSelector((state) => state.report.currentYear);
+
   const currentRunId = useSelector((state) => state.report.currentRunId);
   const workflow = useSelector((state) => state.report.workflow.current);
   const canRunDma = useSelector(selectCanRunDmaStage);
@@ -314,8 +319,11 @@ const Media = () => {
 
   // 진입 시 reportWorkflow.current 를 확보한다. (G0/롤업 완료 게이트 판정용)
   useEffect(() => {
-    if (!workflow) dispatch(fetchCurrentWorkflow());
-  }, [dispatch, workflow]);
+    if (!workflow && companyId && reportingYear) {
+      dispatch(fetchCurrentWorkflow({ companyId, reportingYear }));
+    }
+  }, [dispatch, workflow, companyId, reportingYear]);
+
 
   const createParticles = () => {
     if (!particleRef.current) return;
@@ -418,8 +426,8 @@ const Media = () => {
       } catch (crawlErr) {
         throw new Error(
           mediaWorkflowErrorRef.current ||
-            crawlErr?.message ||
-            "미디어 분석에 실패했습니다."
+          crawlErr?.message ||
+          "미디어 분석에 실패했습니다."
         );
       }
 

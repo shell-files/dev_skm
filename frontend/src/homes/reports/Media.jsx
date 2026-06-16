@@ -931,24 +931,30 @@ const Media = () => {
                       <div className="stat-icon-wrap">📰</div>
                       <div>
                         <div className="stat-label">언론 기사</div>
+                        <div className="stat-value-row">
                         <div className="stat-value">{dashboardData?.stats?.press?.count ?? "0건"}</div>
                         <div className="stat-sub">{dashboardData?.stats?.press?.sub ?? ""}</div>
+                        </div>
                       </div>
                     </div>
                     <div className="result-stat-card">
                       <div className="stat-icon-wrap">🏛️</div>
                       <div>
                         <div className="stat-label">전문기관 자료</div>
+                        <div className="stat-value-row">
                         <div className="stat-value">{dashboardData?.stats?.expert?.count ?? "0건"}</div>
                         <div className="stat-sub">{dashboardData?.stats?.expert?.sub ?? ""}</div>
+                        </div>
                       </div>
                     </div>
                     <div className="result-stat-card">
                       <div className="stat-icon-wrap">⚖️</div>
                       <div>
                         <div className="stat-label">규제 프레임</div>
+                        <div className="stat-value-row">
                         <div className="stat-value">{dashboardData?.stats?.regulation?.count ?? "0건"}</div>
                         <div className="stat-sub">{dashboardData?.stats?.regulation?.sub ?? ""}</div>
+                        </div>
                       </div>
                     </div>
                     <div className="result-stat-card">

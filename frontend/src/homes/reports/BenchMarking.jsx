@@ -20,8 +20,8 @@ import {
 
 const BENCHMARK_GROUP_CONFIG = {
   leader: { fileType: "Leader", label: "리더" },
-  peer:   { fileType: "Peer",   label: "피어" },
-  sub:    { fileType: "Own",    label: "자사" },
+  peer: { fileType: "Peer", label: "피어" },
+  sub: { fileType: "Own", label: "자사" },
 };
 
 const mapBenchmarkResultToDashboard = (dto) => ({
@@ -131,9 +131,9 @@ const Benchmarking = () => {
 
   // 진입 시 reportWorkflow.current 를 확보한다. (G0/롤업 완료 게이트 판정용)
   useEffect(() => {
-  if (!workflow && companyId && reportingYear) {
-    dispatch(fetchCurrentWorkflow({ companyId, reportingYear }));
-  }
+    if (!workflow && companyId && reportingYear) {
+      dispatch(fetchCurrentWorkflow({ companyId, reportingYear }));
+    }
   }, [dispatch, workflow, companyId, reportingYear]);
 
   // 페이지 재진입 시 현재 runId의 기존 벤치마킹 결과 복원
@@ -152,8 +152,8 @@ const Benchmarking = () => {
           setDashboardOpen(true);
         }
       })
-      .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      .catch(() => { });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRunId, dispatch]);
 
 
@@ -330,8 +330,8 @@ const Benchmarking = () => {
       } catch (analyzeErr) {
         throw new Error(
           benchmarkWorkflowErrorRef.current ||
-            analyzeErr?.message ||
-            "벤치마킹 분석에 실패했습니다."
+          analyzeErr?.message ||
+          "벤치마킹 분석에 실패했습니다."
         );
       }
 
@@ -432,9 +432,9 @@ const Benchmarking = () => {
             <Fragment key={step.id}>
               <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
                 <div className="step-icon-circle">{step.icon}</div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 850 }}>{step.title}</div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 800 }}>{step.title}</div>
               </div>
-              {index < steps.length - 1 && <div className="step-line"></div>}
+              {index < steps.length - 1 && <div className="step-line" />}
             </Fragment>
           ))}
         </div>
@@ -525,8 +525,8 @@ const Benchmarking = () => {
 
       <div className={`dashboard-result-dashboard ${dashboardOpen ? "open " : ""}`} id="dashboard">
         <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen)}>
-          <div className="handle-pill">
-            {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인" : "실시간 분석 대기 중"}
+           <div className={`handle-pill ${showResult ? "complete" : ""}`}>
+            {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인 (클릭)" : "실시간 분석 대기 중"}
           </div>
         </div>
         <div className={`robot-view-container ${isAnalyzing ? "analyzing" : ""} ${showResult ? "showing-result" : ""}`}>
@@ -555,7 +555,7 @@ const Benchmarking = () => {
             </div>
           ) : (
             <div className="result-layout" id="benchmarking-result">
-              <div className="ai-message-box" style={{ marginBottom: "20px" }}>
+              <div className="ai-message-box" style={{ marginBottom: "5px" }}>
                 <strong style={{ color: "var(--Bench-primary)", fontWeight: 850 }}>
                   [AI 벤치마킹 이슈 도출 및 Gap Analysis]
                 </strong>
@@ -568,18 +568,22 @@ const Benchmarking = () => {
                 <div className="result-stat-card">
                   <div className="stat-icon-wrap stat-icon-green">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                      <polyline points="14 2 14 8 20 8"/>
-                      <line x1="16" y1="13" x2="8" y2="13"/>
-                      <line x1="16" y1="17" x2="8" y2="17"/>
-                      <line x1="10" y1="9" x2="8" y2="9"/>
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <line x1="10" y1="9" x2="8" y2="9" />
                     </svg>
                   </div>
                   <div>
                     <div className="stat-label">분석보고서</div>
-                    <div className="stat-value">{displayData.stats.reports}개</div>
-                    <div className="stat-sub">
-                      리더 {displayData.stats.leaderCount} · 피어 {displayData.stats.peerCount} · 자사 {displayData.stats.ownCount}
+                    <div className="stat-value-row">
+                      <div className="stat-value">
+                        {displayData.stats.reports}개
+                      </div>
+                      <div className="stat-sub">
+                        리더 {displayData.stats.leaderCount} · 피어 {displayData.stats.peerCount} · 자사 {displayData.stats.ownCount}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -587,12 +591,12 @@ const Benchmarking = () => {
                 <div className="result-stat-card">
                   <div className="stat-icon-wrap stat-icon-blue">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="8" y1="6" x2="21" y2="6"/>
-                      <line x1="8" y1="12" x2="21" y2="12"/>
-                      <line x1="8" y1="18" x2="21" y2="18"/>
-                      <circle cx="3" cy="6" r="1" fill="#3b82f6" stroke="none"/>
-                      <circle cx="3" cy="12" r="1" fill="#3b82f6" stroke="none"/>
-                      <circle cx="3" cy="18" r="1" fill="#3b82f6" stroke="none"/>
+                      <line x1="8" y1="6" x2="21" y2="6" />
+                      <line x1="8" y1="12" x2="21" y2="12" />
+                      <line x1="8" y1="18" x2="21" y2="18" />
+                      <circle cx="3" cy="6" r="1" fill="#3b82f6" stroke="none" />
+                      <circle cx="3" cy="12" r="1" fill="#3b82f6" stroke="none" />
+                      <circle cx="3" cy="18" r="1" fill="#3b82f6" stroke="none" />
                     </svg>
                   </div>
                   <div>
@@ -604,10 +608,10 @@ const Benchmarking = () => {
                 <div className="result-stat-card">
                   <div className="stat-icon-wrap stat-icon-purple">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                      <circle cx="9" cy="7" r="4"/>
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
                   </div>
                   <div>
@@ -619,9 +623,9 @@ const Benchmarking = () => {
                 <div className="result-stat-card">
                   <div className="stat-icon-wrap stat-icon-orange">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"/>
-                      <circle cx="12" cy="12" r="6"/>
-                      <circle cx="12" cy="12" r="2"/>
+                      <circle cx="12" cy="12" r="10" />
+                      <circle cx="12" cy="12" r="6" />
+                      <circle cx="12" cy="12" r="2" />
                     </svg>
                   </div>
                   <div>

@@ -638,13 +638,7 @@
   box-shadow: 0 4px 10px rgba(3, 169, 77, 0.2);
 }
 
-.step-line {
-  flex: 1;
-  min-width: 30px;
-  height: 2px;
-  margin-top: -20px;
-  background: #e2e8f0;
-}
+
 
 /* =========================================================
    Tablet
@@ -1019,7 +1013,6 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
-  margin-top: 16px;
 }
 
 .result-stat-card {
@@ -1068,7 +1061,6 @@
   display: grid;
   grid-template-columns: 1fr 2fr 1fr;
   gap: 20px;
-  margin-top: 16px;
 }
 
 .result-panel {

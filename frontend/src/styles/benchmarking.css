@@ -17,14 +17,11 @@
 }
 
 .Bench-header {
-    flex-shrink: 0;
-
-    width: 100%;
-
-    padding: 20px 40px;
-
-    background: #fff;
-    border-bottom: 1px solid var(--Bench-border);
+  background: #fff;
+  padding: 20px 40px;
+  border-bottom: 1px solid var(--media-border);
+  flex-shrink: 0;
+  width: 100%;
 }
 
 .Bench-title {
@@ -101,15 +98,7 @@
     box-shadow: 0 4px 10px rgba(3, 169, 77, 0.2);
 }
 
-.step-line {
-    flex: 1;
-    min-width: 30px;
-    height: 2px;
 
-    margin-top: -20px;
-
-    background: #e2e8f0;
-}
 
 /* =========================================================
    Main Layout
@@ -569,15 +558,14 @@
 }
 
 .handle-pill {
-    padding: 6px 20px;
-
-    border-radius: 30px;
-
-    background: #f1f5f9;
-    color: #64748b;
-
-    font-size: 0.8rem;
-    font-weight: 700;
+  position: relative;
+  padding: 6px 20px;
+  background: #f1f5f9;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #64748b;
+  font-size: 0.8rem;
 }
 
 /* =========================================================
@@ -1013,6 +1001,7 @@
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 12px;
+    margin: 0;
 }
 .result-stat-card {
     display: flex;
@@ -1034,6 +1023,7 @@
 .stat-icon-purple { background: #f5f3ff; }
 .stat-icon-orange { background: #fffbeb; }
 .stat-label { font-size: 0.72rem; color: #64748b; font-weight: 600; margin-bottom: 2px; }
+.stat-value-row { display: flex; align-items: baseline; gap: 8px; }
 .stat-value { font-size: 1.5rem; font-weight: 850; color: #1e293b; line-height: 1.1; }
 .stat-sub { font-size: 0.68rem; color: #94a3b8; margin-top: 3px; }
 

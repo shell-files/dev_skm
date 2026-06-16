@@ -43,7 +43,7 @@ def html1(companyName, uuid):
                     </ul>
                   </div>
                   <div style="text-align: center;">
-                    <a href="http://capybara.{settings.domain}/invite/{uuid}" style="background-color: #28a745; color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
+                    <a href="http://capybara.{settings.skm_domain}/invite/{uuid}" style="background-color: #28a745; color: #ffffff; padding: 16px 40px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-size: 16px;">
                       회원가입 시작하기
                     </a>
                   </div>

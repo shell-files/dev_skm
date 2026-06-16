@@ -2,11 +2,13 @@ from google import genai
 from google.genai import types
 import json
 import asyncio
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Any
 from fastapi import APIRouter
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
 from src.utils.settings import settings
 from src.models.model import ResponseModel
 from src.models.dmaengine import LLMExtractorOutput, DMASignal, ImpactFactor, FinancialFactor
@@ -25,9 +27,31 @@ embedding_model = None
 # 최종 점수 계산은 파이썬 코드가 엄격한 수학 공식(Rule-based)으로 처리합니다.
 # ------------------------------------------------------------------
 
-# Gemini Client 설정 (구글의 AI 모델을 사용하기 위한 연결 고리)
-client = genai.Client(api_key=settings.gemini_api_key)
+# Gemini Client 설정 — 여러 키를 풀로 관리합니다.
+# 모든 스레드는 현재 활성 키를 공유하며, 키 소진 시 다음 키로 자동 전환됩니다.
+def _build_key_pool() -> List[str]:
+    keys = []
+    primary = (settings.gemini_api_key or "").strip()
+    if primary:
+        keys.append(primary)
+    extras = (settings.gemini_api_keys or "").strip()
+    if extras:
+        for k in extras.split(","):
+            k = k.strip()
+            if k and k not in keys:
+                keys.append(k)
+    return keys
+
+_API_KEYS: List[str] = _build_key_pool()
+_exhausted_key_indices: set = set()
+_key_lock = threading.Lock()
+
 modelName = settings.gemini_model
+MAX_RETRIES = 3
+RETRY_DELAY = 5  # 실패 시 5초 쉬고 다시 시도
+MAX_WORKERS = 3  # 리더 3 / 피어 3 / 자회사 3 그룹별 병렬 처리
+
+print(f"[ocraiv8] Gemini 키 {len(_API_KEYS)}개 로드, 최대 {MAX_WORKERS}개 병렬 처리")
 
 # 62개 서브이슈 캐싱 변수 (DB나 엑셀에서 읽어온 62개 표준 ESG 이슈 목록을 메모리에 저장해 둡니다)
 _ISSUE_DICTIONARY_STR = ""
@@ -45,12 +69,12 @@ def load_issue_dictionary():
     # 이미 읽어온 적이 있다면 그대로 반환 (속도 최적화)
     if _ISSUE_DICTIONARY_STR and _ISSUE_VECTORS is not None:
         return _ISSUE_DICTIONARY_STR, _ISSUE_DICTIONARY_LIST
-    
+
     try:
         _ISSUE_KEYS = list(subissueMaster.keys())
         issue_texts = []
         _ISSUE_DICTIONARY_LIST = []
-        
+
         for key in _ISSUE_KEYS:
             meta = subissueMaster[key]
             # 설명문이 있으면 설명문 사용, 없으면 이름 사용
@@ -58,18 +82,18 @@ def load_issue_dictionary():
             text = meta.get("sentence") or meta.get("subIssueSentence") or meta.get("subIssueNameKr")
             issue_texts.append(text)
             _ISSUE_DICTIONARY_LIST.append(meta.get("subIssueNameKr"))
-            
+
         _ISSUE_DICTIONARY_STR = ", ".join(_ISSUE_DICTIONARY_LIST)
-        
+
         # 62개 표준 이슈의 임베딩 벡터 사전 계산 (배치 인코딩)
         print("Pre-computing SubIssue master vectors...")
         _ISSUE_VECTORS = _getEmbeddingModel().encode(issue_texts)
-        
+
     except Exception as e:
         print("Failed to load issue dict:", e)
         _ISSUE_DICTIONARY_STR = "기후변화, 산업안전, 공급망 관리, 제품안전, 자원순환 등"
         _ISSUE_DICTIONARY_LIST = []
-        
+
     return _ISSUE_DICTIONARY_STR, _ISSUE_DICTIONARY_LIST
 
 
@@ -91,11 +115,6 @@ def clean(responseText: str) -> list:
         data = json.loads(cleanedStr)
     return data
 
-# 오류 방지를 위하여 Max 파일 수 제한 및 재시도 로직 설정
-MAX_TASKS = 1
-MAX_RETRIES = 3
-RETRY_DELAY = 5  # 실패 시 5초 쉬고 다시 시도
-
 def normalize_mapping_weights(raw_label, threshold=0.35, alpha=1.5, top_k=3):
     """
     [기능] LLM이 뽑아낸 원문 이슈(raw_label)를 딥러닝 임베딩(SentenceTransformer)으로 변환하여,
@@ -109,7 +128,7 @@ def normalize_mapping_weights(raw_label, threshold=0.35, alpha=1.5, top_k=3):
 
     # 1. 원문(raw_label)을 임베딩 벡터로 변환
     vec = _getEmbeddingModel().encode([raw_label], show_progress_bar=False)[0]
-    
+
     # 2. 62개 전체 표준 이슈와 코사인 유사도 일괄 계산
     sims = cosine_similarity([vec], _ISSUE_VECTORS)[0]
 
@@ -149,7 +168,7 @@ def get_baseline_factors(sub_issue_code: str):
     """
     scale, scope, likelihood, irremediability = 3, 3, 3, 3
     mag = 3
-    
+
     if sub_issue_code in ["E_CLIMATE_TRANSITION_PLAN", "E_GHG_EMISSION"] or "CLIMATE" in sub_issue_code:
         scale, scope, likelihood = 4, 4, 4
         mag = 4
@@ -165,31 +184,65 @@ def get_baseline_factors(sub_issue_code: str):
     elif "LOW_CARBON_PRODUCT" in sub_issue_code or "ECO_FRIENDLY_PRODUCT" in sub_issue_code:
         scale, scope, likelihood, irremediability = 4, 4, 4, 1
         mag = 4
-        
+
     return scale, scope, likelihood, irremediability, mag
 
+
+# ------------------------------------------------------------------
+# 키 풀 헬퍼
+# ------------------------------------------------------------------
+
+def _is_key_error(e: Exception) -> bool:
+    s = str(e).upper()
+    return any(x in s for x in ["429", "RESOURCE_EXHAUSTED", "QUOTA", "401", "403", "INVALID_ARGUMENT"])
+
+def _get_active_key_idx() -> int | None:
+    """소진되지 않은 첫 번째 키 인덱스를 반환합니다 (_key_lock 보유 상태에서 호출)."""
+    for i in range(len(_API_KEYS)):
+        if i not in _exhausted_key_indices:
+            return i
+    return None
+
+def _exhaust_key(idx: int):
+    """키를 소진 처리합니다. 이후 모든 스레드가 자동으로 다음 키를 사용합니다."""
+    with _key_lock:
+        _exhausted_key_indices.add(idx)
+    remaining = len(_API_KEYS) - len(_exhausted_key_indices)
+    print(f"키 {idx+1}/{len(_API_KEYS)} 소진. 남은 키: {remaining}개")
 
 
 # ------------------------------------------------------------------
 # 8단계 텍스트 분석 엔진 메인 함수 (v8.2 Rule-based Scorer 적용)
 # ------------------------------------------------------------------
 async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> ResponseModel:
-    
+
     # 62개 이슈 사전을 로드합니다.
     issue_dict_str, issue_dict_list = load_issue_dictionary()
-    semaphore = asyncio.Semaphore(MAX_TASKS)
-    
+
     # 개별 파일(PDF 등)을 하나씩 분석하는 함수입니다.
-    async def oneGemini(result: Dict[str, Any], filePath: str) -> Dict[str, Any]:
-        async with semaphore:
+    # ThreadPoolExecutor 스레드 안에서 실행되는 동기 함수입니다.
+    def oneGemini(result: Dict[str, Any], filePath: str) -> Dict[str, Any]:
+        uploadedFile = None
+        fileName = result.get("file_name", "")
+        companyName = result.get("company_name", "")
+        type = result.get("type", "")
+        source_step = result.get("source_step", "media_external")
+        source_type = result.get("source_type", type)
+
+        while True:
+            # 현재 모든 스레드가 공유하는 활성 키 획득 (스레드 안전)
+            with _key_lock:
+                active_idx = _get_active_key_idx()
+
+            if active_idx is None:
+                print(f"[{fileName}] 모든 키 소진 — 빈 결과 반환")
+                return {"fileName": fileName, "companyName": companyName, "type": type, "result": []}
+
+            client = genai.Client(api_key=_API_KEYS[active_idx])
             uploadedFile = None
-            fileName = result.get("file_name", "")
-            companyName = result.get("company_name", "")
-            type = result.get("type", "")
-            source_step = result.get("source_step", "media_external")
-            source_type = result.get("source_type", type)
-            
-            # --- Retry 로직 --- 
+            key_rotated = False
+
+            # --- Retry 로직 ---
             # (AI 서버가 일시적으로 멈출 수 있으므로, 실패하면 3번까지 재시도합니다)
             for attempt in range(MAX_RETRIES):
                 try:
@@ -200,10 +253,10 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                     fileConfig = types.UploadFileConfig(mime_type="application/pdf")
                     with open(filePath, "rb") as f:
                         uploadedFile = client.files.upload(file=f, config=fileConfig)
-    
-                    maxAttempts = 120  * 120 
+
+                    maxAttempts = 120  * 120
                     attempts = 0
-                    
+
                     # 파일 업로드 및 처리가 완료될 때까지 기다립니다.
                     while True:
                         uploadedFile = client.files.get(name=uploadedFile.name)
@@ -213,10 +266,10 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                             raise Exception("파일 업로드에 실패했습니다.")
                         elif attempts >= maxAttempts:
                             raise Exception("구글 서버의 파일 가공 대기 시간이 초과되었습니다.")
-                        await asyncio.sleep(3)
+                        time.sleep(3)
                         uploadedFile = client.files.get(name=uploadedFile.name)
                         attempts += 1
-                
+
                     # ==================================================
                     # Step 2~4. LLM Extractor (추출기)
                     # ==================================================
@@ -225,10 +278,10 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                     extractor_prompt = f"""
                     Perform the role of a Double Materiality Assessment Extractor.
                     Analyze the provided document and extract key sustainability issues based ONLY on the provided Issue Dictionary.
-                    
+
                     [Issue Dictionary]
                     {issue_dict_str}
-                    
+
                     Do NOT score them from 1 to 5. Instead, strictly extract:
                     1. The raw issue labels as they appear in the text.
                     2. The most relevant candidate terms from the Issue Dictionary (up to 3).
@@ -236,7 +289,7 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                     4. Time Horizon Hint (short, mid, long).
                     5. Exact evidence spans from the document proving the issue.
                     """
-                    
+
                     # LLMExtractorOutput 스키마에 맞춰 JSON 형태로 결과를 달라고 강제합니다.
                     extractor_config = types.GenerateContentConfig(
                         temperature=0.1, # 창의성은 끄고(0.1) 정확하게 답변하게 함
@@ -247,22 +300,22 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                         contents=[uploadedFile, extractor_prompt],
                         config=extractor_config
                     )
-                    
+
                     # 볼일 끝난 파일은 구글 서버에서 즉시 삭제하여 보안을 유지합니다.
                     if uploadedFile:
                         client.files.delete(name=uploadedFile.name)
                         uploadedFile = None
-                    
+
                     # LLM이 뽑아준 결과물을 파이썬 객체로 변환합니다.
                     extractor_data = json.loads(extractor_res.text)
                     extracted_issues = extractor_data.get("extracted_issues", [])
-                    
+
                     # ==================================================
                     # Step 5~8. Rule-based Scorer, Judge, Aggregator (규칙 기반 채점 및 심판)
                     # ==================================================
                     final_results = []
                     dma_details = [] # DB에 꼼꼼하게 남길 감사(Audit)용 상세 원장
-                    
+
                     # 추출된 각각의 이슈에 대해 처리를 시작합니다.
                     for issue in extracted_issues:
                         raw_label = issue.get("raw_issue_label", "")
@@ -270,38 +323,45 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                         iro_hint = issue.get("iro_hint", "negative_impact")
                         time_horizon_hint = issue.get("time_horizon_hint", "short")
                         evidence_spans = issue.get("evidence_spans", [])
-                        
+
                         judge_status = "pass"
                         confidence_score = 0.9
-                        
+
                         # Step 7. Judge (심판 단계): 증거 문장이 없으면? 가짜(환각)일 확률이 높으므로 즉시 짤라버립니다(Reject).
                         if not evidence_spans or len(evidence_spans) == 0:
                             judge_status = "reject"
                             confidence_score = 0.0
                             continue # 다음 이슈로 넘어감
-                            
+
                         # Step 5. AI Embedding Scorer (임베딩 유사도 기반 가중치 부여 및 최대 3곳 분배)
                         # LLM이 뽑은 raw_label 텍스트 자체를 딥러닝 임베딩(SentenceTransformer) 처리하여
                         # subissuemaster_v8의 62개 설명문(Sentence)과 코사인 유사도(Cosine Similarity)를 비교합니다.
                         # threshold를 0.35로 낮추어 의미론적 유사성(Semantic Similarity)을 더 잘 잡도록 변경했습니다.
                         mapped_terms = normalize_mapping_weights(raw_label, threshold=0.35, alpha=1.5, top_k=3)
-                        
+
                         # 유사도 60점을 넘는 항목이 하나도 없다면 버립니다.
                         if not mapped_terms:
-                            continue
-                            
+                            # LLM 후보어(candidates)로 사전 검색 재시도
+                            for candidate in candidates:
+                                if candidate in issue_dict_list:
+                                    mapped_terms = normalize_mapping_weights(candidate, threshold=0.35, alpha=1.5, top_k=3)
+                                    if mapped_terms:
+                                        break
+                            if not mapped_terms:
+                                continue
+
                         # 배분된 비율(mapping_weight)만큼 신뢰도를 분할하여 할당합니다.
                         for mapped in mapped_terms:
                             term = mapped["term"]
                             key = mapped["key"]
                             weight = mapped["mapping_weight"]
                             sim = mapped["similarity"]
-                            
+
                             impact_factor = None
                             financial_factor = None
-                            
+
                             scale, scope, likelihood, irremediability, mag = get_baseline_factors(key)
-                            
+
                             # [핵심] 재무적 중대성(Financial)과 환경/사회적 중대성(Impact) 요소를 분리해서 저장합니다! (점수 계산은 안함)
                             if iro_hint in ["negative_impact", "positive_impact"]:
                                 impact_factor = ImpactFactor(
@@ -311,7 +371,7 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                                     timeHorizon=time_horizon_hint,
                                     evidenceSpans=evidence_spans
                                 )
-                                
+
                             if iro_hint in ["financial_risk", "financial_opportunity"]:
                                 financial_factor = FinancialFactor(
                                     financialIroType="risk" if "risk" in iro_hint else "opportunity",
@@ -321,7 +381,7 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                                     timeHorizon=time_horizon_hint,
                                     evidenceSpans=evidence_spans
                                 )
-                                
+
                             # ------------------------------------------------------------------
                             # [상세 데이터 저장 (Audit 추적용 DMASignal)]
                             # 추출된 증거와 매핑 정보를 Rule Engine으로 넘길 준비를 합니다.
@@ -344,41 +404,60 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                                 evidenceSpans=evidence_spans
                             )
                             dma_details.append(signal)
-                            
+
                             # ==================================================
                             # Step 8. Gateway 응답 준비 (프론트엔드로 보내줄 1차 결과 조립)
                             # ==================================================
                             # Rule Engine이 없더라도 파이프라인 진행을 위해 signal 데이터를 딕셔너리로 반환합니다.
                             sig_dict = signal.model_dump()
                             final_results.append(sig_dict)
-                    
+
                     data = {"fileName": fileName, "companyName": companyName, "type": type, "result": final_results}
                     return data
-                    
+
                 except Exception as e:
-                    # 에러 발생 시 로그를 찍고 다음 Retry로 넘어갑니다.
+                    # 에러 발생 시 로그를 찍고 처리합니다.
                     print(f'{fileName} (attempt {attempt+1}):', str(e))
                     if uploadedFile:
                         try:
                             client.files.delete(name=uploadedFile.name)
                         except Exception:
-                            pass  
-                    # 3번 다 실패하면 빈 결과를 내보냅니다.
+                            pass
+                        uploadedFile = None
+
+                    if _is_key_error(e):
+                        # 키 오류(429/401/403/400): 즉시 소진 처리 → 이후 모든 스레드가 다음 키 사용
+                        _exhaust_key(active_idx)
+                        key_rotated = True
+                        break  # for 루프 탈출 → while 루프에서 다음 키 시도
+
+                    # 일시적 오류: 같은 키로 재시도
                     if attempt == MAX_RETRIES - 1:
-                        data = {"fileName": fileName, "companyName": companyName, "type": type, "result": []} 
+                        data = {"fileName": fileName, "companyName": companyName, "type": type, "result": []}
                         return data
-                    await asyncio.sleep(RETRY_DELAY)
-        
-    tasks = [oneGemini(results[i], filePaths[i]) for i in range(len(filePaths))]
-    
-    # 여러 파일을 동시에 병렬 처리(비동기)하여 속도를 높입니다.
-    totalOutputs = await asyncio.gather(*tasks, return_exceptions=True)
+                    time.sleep(RETRY_DELAY)
+
+            if not key_rotated:
+                # 키 오류 없이 MAX_RETRIES 모두 소진 → 빈 결과
+                return {"fileName": fileName, "companyName": companyName, "type": type, "result": []}
+            # key_rotated=True → while 루프 계속하여 다음 키 시도
+
+    loop = asyncio.get_event_loop()
+
+    # 키 개수만큼 병렬 스레드로 PDF 분석 실행
+    # 모든 스레드가 현재 활성 키를 공유하며, 키 소진 시 이후 스레드가 자동으로 다음 키로 전환됩니다.
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        tasks = [
+            loop.run_in_executor(executor, oneGemini, results[i], filePaths[i])
+            for i in range(len(filePaths))
+        ]
+        totalOutputs = await asyncio.gather(*tasks, return_exceptions=True)
 
     finalResults = []
     for res in totalOutputs:
         if isinstance(res, Exception):
             finalResults.append({
-                "fileName": "", 
+                "fileName": "",
                 "companyName": "SYSTEM",
                 "type": "ERROR",
                 "result": [],
@@ -386,5 +465,5 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
             })
         else:
             finalResults.append(res)
-            
+
     return ResponseModel(True, "분석이 완료되었습니다.", finalResults)

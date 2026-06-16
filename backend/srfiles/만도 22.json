@@ -1,0 +1,866 @@
+{
+  "status": true,
+  "message": "분석이 성공적으로 완료되었습니다.",
+  "data": {
+    "status": true,
+    "message": "분석이 완료되었습니다.",
+    "data": [
+      {
+        "fileName": "606999522379446781c16074a1294ec2.pdf",
+        "companyName": "만도",
+        "type": "Leader",
+        "result": [
+          {
+            "subIssueCode": "S_PRODUCT_RESP__PRODUCT_SAFETY_QUALITY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도의 모든 임직원은 ‘품질은 우리의 운명이자 진정성’이라는 철학으로 제품의 안전과 품질을 위해 최선을 다하고 있습니다.",
+                "특히 산업의 특성상 보안부품의 품질은 피할 수 없는 본질입니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.41772958837876156,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 안전 및 품질 (소비자 건강·제품안전)",
+            "displaySubIssueName": "소비자 건강·제품안전",
+            "similarityScore": 0.744516134262085,
+            "similarityRank": 1,
+            "mappingWeight": 0.4641439870875128,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도의 모든 임직원은 ‘품질은 우리의 운명이자 진정성’이라는 철학으로 제품의 안전과 품질을 위해 최선을 다하고 있습니다.",
+              "특히 산업의 특성상 보안부품의 품질은 피할 수 없는 본질입니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__PRODUCT_INFORMATION_CHEMICAL_SAFETY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도의 모든 임직원은 ‘품질은 우리의 운명이자 진정성’이라는 철학으로 제품의 안전과 품질을 위해 최선을 다하고 있습니다.",
+                "특히 산업의 특성상 보안부품의 품질은 피할 수 없는 본질입니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.27283756123854136,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 안전 및 품질 (소비자 정보·화학물질 안전)",
+            "displaySubIssueName": "소비자 정보·화학물질 안전",
+            "similarityScore": 0.6469869613647461,
+            "similarityRank": 2,
+            "mappingWeight": 0.3031528458206015,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도의 모든 임직원은 ‘품질은 우리의 운명이자 진정성’이라는 철학으로 제품의 안전과 품질을 위해 최선을 다하고 있습니다.",
+              "특히 산업의 특성상 보안부품의 품질은 피할 수 없는 본질입니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__RECALL_FIELD_ACTION",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도의 모든 임직원은 ‘품질은 우리의 운명이자 진정성’이라는 철학으로 제품의 안전과 품질을 위해 최선을 다하고 있습니다.",
+                "특히 산업의 특성상 보안부품의 품질은 피할 수 없는 본질입니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.20943285038269716,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 안전 및 품질 (리콜·필드액션)",
+            "displaySubIssueName": "리콜·필드액션",
+            "similarityScore": 0.5989800095558167,
+            "similarityRank": 3,
+            "mappingWeight": 0.23270316709188574,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도의 모든 임직원은 ‘품질은 우리의 운명이자 진정성’이라는 철학으로 제품의 안전과 품질을 위해 최선을 다하고 있습니다.",
+              "특히 산업의 특성상 보안부품의 품질은 피할 수 없는 본질입니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CIRCULARITY__WASTE_MANAGEMENT",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도는 경영 활동에 의해 발생하는 폐기물을 줄이기 위해 연간 KPI를 수립하고 배출 총량을 관리하고 있습니다.",
+                "또한 종합 폐기물 보관장을 운영하며 재활용할 수 있는 파지, 비닐, 플라스틱 등을 종류별로 분리 보관해 자원 순환을 실시하고 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.37262422338952367,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "폐기물 관리 및 자원순환 (폐기물 관리)",
+            "displaySubIssueName": "폐기물 관리",
+            "similarityScore": 0.8552039265632629,
+            "similarityRank": 1,
+            "mappingWeight": 0.4140269148772485,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 경영 활동에 의해 발생하는 폐기물을 줄이기 위해 연간 KPI를 수립하고 배출 총량을 관리하고 있습니다.",
+              "또한 종합 폐기물 보관장을 운영하며 재활용할 수 있는 파지, 비닐, 플라스틱 등을 종류별로 분리 보관해 자원 순환을 실시하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CIRCULARITY__RECYCLING_RECOVERY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도는 경영 활동에 의해 발생하는 폐기물을 줄이기 위해 연간 KPI를 수립하고 배출 총량을 관리하고 있습니다.",
+                "또한 종합 폐기물 보관장을 운영하며 재활용할 수 있는 파지, 비닐, 플라스틱 등을 종류별로 분리 보관해 자원 순환을 실시하고 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3021201576955292,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "폐기물 관리 및 자원순환 (재활용·회수)",
+            "displaySubIssueName": "재활용·회수",
+            "similarityScore": 0.7892776727676392,
+            "similarityRank": 2,
+            "mappingWeight": 0.3356890641061435,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 경영 활동에 의해 발생하는 폐기물을 줄이기 위해 연간 KPI를 수립하고 배출 총량을 관리하고 있습니다.",
+              "또한 종합 폐기물 보관장을 운영하며 재활용할 수 있는 파지, 비닐, 플라스틱 등을 종류별로 분리 보관해 자원 순환을 실시하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CIRCULARITY__CIRCULAR_MATERIALS",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도는 경영 활동에 의해 발생하는 폐기물을 줄이기 위해 연간 KPI를 수립하고 배출 총량을 관리하고 있습니다.",
+                "또한 종합 폐기물 보관장을 운영하며 재활용할 수 있는 파지, 비닐, 플라스틱 등을 종류별로 분리 보관해 자원 순환을 실시하고 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2252556189149471,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "폐기물 관리 및 자원순환 (원재료·순환자원)",
+            "displaySubIssueName": "원재료·순환자원",
+            "similarityScore": 0.7111905813217163,
+            "similarityRank": 3,
+            "mappingWeight": 0.2502840210166079,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 경영 활동에 의해 발생하는 폐기물을 줄이기 위해 연간 KPI를 수립하고 배출 총량을 관리하고 있습니다.",
+              "또한 종합 폐기물 보관장을 운영하며 재활용할 수 있는 파지, 비닐, 플라스틱 등을 종류별로 분리 보관해 자원 순환을 실시하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_EFFICIENCY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도는 2002년부터 매년 에너지 절감 TFT를 구성해 에너지 절감을 위한 개선 과제를 발굴하고 이를 실천해 나가고 있습니다.",
+                "특히 에너지 효율 관리를 강화하기 위해 에너지 소비량 데이터를 실시간으로 관리할 수 있는 에너지 관리 시스템 FEMS (Factory Energy Management System)를 구축하였습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4459747140437271,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (에너지 효율·집약도)",
+            "displaySubIssueName": "에너지 효율·집약도",
+            "similarityScore": 0.5354443788528442,
+            "similarityRank": 1,
+            "mappingWeight": 0.49552746004858567,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 2002년부터 매년 에너지 절감 TFT를 구성해 에너지 절감을 위한 개선 과제를 발굴하고 이를 실천해 나가고 있습니다.",
+              "특히 에너지 효율 관리를 강화하기 위해 에너지 소비량 데이터를 실시간으로 관리할 수 있는 에너지 관리 시스템 FEMS (Factory Energy Management System)를 구축하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_USE_MIX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도는 2002년부터 매년 에너지 절감 TFT를 구성해 에너지 절감을 위한 개선 과제를 발굴하고 이를 실천해 나가고 있습니다.",
+                "특히 에너지 효율 관리를 강화하기 위해 에너지 소비량 데이터를 실시간으로 관리할 수 있는 에너지 관리 시스템 FEMS (Factory Energy Management System)를 구축하였습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.38148323245683496,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (에너지 사용·에너지원)",
+            "displaySubIssueName": "에너지 사용·에너지원",
+            "similarityScore": 0.5171054005622864,
+            "similarityRank": 2,
+            "mappingWeight": 0.42387025828537217,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 2002년부터 매년 에너지 절감 TFT를 구성해 에너지 절감을 위한 개선 과제를 발굴하고 이를 실천해 나가고 있습니다.",
+              "특히 에너지 효율 관리를 강화하기 위해 에너지 소비량 데이터를 실시간으로 관리할 수 있는 에너지 관리 시스템 FEMS (Factory Energy Management System)를 구축하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__RENEWABLE_ENERGY",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도는 2002년부터 매년 에너지 절감 TFT를 구성해 에너지 절감을 위한 개선 과제를 발굴하고 이를 실천해 나가고 있습니다.",
+                "특히 에너지 효율 관리를 강화하기 위해 에너지 소비량 데이터를 실시간으로 관리할 수 있는 에너지 관리 시스템 FEMS (Factory Energy Management System)를 구축하였습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.0725420534994379,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 (재생에너지)",
+            "displaySubIssueName": "재생에너지",
+            "similarityScore": 0.4052586257457733,
+            "similarityRank": 3,
+            "mappingWeight": 0.08060228166604211,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 2002년부터 매년 에너지 절감 TFT를 구성해 에너지 절감을 위한 개선 과제를 발굴하고 이를 실천해 나가고 있습니다.",
+              "특히 에너지 효율 관리를 강화하기 위해 에너지 소비량 데이터를 실시간으로 관리할 수 있는 에너지 관리 시스템 FEMS (Factory Energy Management System)를 구축하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_PRODUCT_ENV__PRODUCT_ENV_PERFORMANCE",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "HL만도는 미래 환경에 기여하기 위해 친환경 최첨단 제품을 개발하여 사회 구성원들에게 보다 깨끗하고 쾌적한 환경을 제공하고자 합니다.",
+                "운송 부문 온실가스 배출과 관련한 기후변화에 대응하고자 EV/FCEV의 R&D 투자를 확대하였습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3581919931995023,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "친환경 제품/기술 (저탄소·친환경 제품)",
+            "displaySubIssueName": "저탄소·친환경 제품",
+            "similarityScore": 0.6828820109367371,
+            "similarityRank": 1,
+            "mappingWeight": 0.39799110355500256,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 미래 환경에 기여하기 위해 친환경 최첨단 제품을 개발하여 사회 구성원들에게 보다 깨끗하고 쾌적한 환경을 제공하고자 합니다.",
+              "운송 부문 온실가스 배출과 관련한 기후변화에 대응하고자 EV/FCEV의 R&D 투자를 확대하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__GREEN_PROCUREMENT",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "HL만도는 미래 환경에 기여하기 위해 친환경 최첨단 제품을 개발하여 사회 구성원들에게 보다 깨끗하고 쾌적한 환경을 제공하고자 합니다.",
+                "운송 부문 온실가스 배출과 관련한 기후변화에 대응하고자 EV/FCEV의 R&D 투자를 확대하였습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.34280598961497694,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "친환경 제품/기술 (녹색조달·친환경 구매)",
+            "displaySubIssueName": "녹색조달·친환경 구매",
+            "similarityScore": 0.673279881477356,
+            "similarityRank": 2,
+            "mappingWeight": 0.38089554401664105,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 미래 환경에 기여하기 위해 친환경 최첨단 제품을 개발하여 사회 구성원들에게 보다 깨끗하고 쾌적한 환경을 제공하고자 합니다.",
+              "운송 부문 온실가스 배출과 관련한 기후변화에 대응하고자 EV/FCEV의 R&D 투자를 확대하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "HL만도는 미래 환경에 기여하기 위해 친환경 최첨단 제품을 개발하여 사회 구성원들에게 보다 깨끗하고 쾌적한 환경을 제공하고자 합니다.",
+                "운송 부문 온실가스 배출과 관련한 기후변화에 대응하고자 EV/FCEV의 R&D 투자를 확대하였습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.19900201718552074,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "친환경 제품/기술 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.5749666094779968,
+            "similarityRank": 3,
+            "mappingWeight": 0.22111335242835636,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 미래 환경에 기여하기 위해 친환경 최첨단 제품을 개발하여 사회 구성원들에게 보다 깨끗하고 쾌적한 환경을 제공하고자 합니다.",
+              "운송 부문 온실가스 배출과 관련한 기후변화에 대응하고자 EV/FCEV의 R&D 투자를 확대하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_POLLUTION__AIR_EMISSIONS",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "HL만도는 탄소중립에 대한 사회적 책임과 실천을 강화하고자 2050년 탄소중립 (Net-Zero) 목표를 앞당겨 2045년 탄소중립 목표를 설정하였습니다.",
+                "Operation 부문에서는 탄소중립 선언을 위해 2023년 SBTi 참여, 2024년 RE100 가입을 계획하고 있으며, 글로벌 사업장을 포함하여 점진적인 재생에너지 전환과 에너지 절감 활동을 병행해 나갈 예정입니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3610614427638275,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "온실가스 (대기오염물질)",
+            "displaySubIssueName": "대기오염물질",
+            "similarityScore": 0.48586517572402954,
+            "similarityRank": 1,
+            "mappingWeight": 0.4011793808486972,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 탄소중립에 대한 사회적 책임과 실천을 강화하고자 2050년 탄소중립 (Net-Zero) 목표를 앞당겨 2045년 탄소중립 목표를 설정하였습니다.",
+              "Operation 부문에서는 탄소중립 선언을 위해 2023년 SBTi 참여, 2024년 RE100 가입을 계획하고 있으며, 글로벌 사업장을 포함하여 점진적인 재생에너지 전환과 에너지 절감 활동을 병행해 나갈 예정입니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_USE_MIX",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "HL만도는 탄소중립에 대한 사회적 책임과 실천을 강화하고자 2050년 탄소중립 (Net-Zero) 목표를 앞당겨 2045년 탄소중립 목표를 설정하였습니다.",
+                "Operation 부문에서는 탄소중립 선언을 위해 2023년 SBTi 참여, 2024년 RE100 가입을 계획하고 있으며, 글로벌 사업장을 포함하여 점진적인 재생에너지 전환과 에너지 절감 활동을 병행해 나갈 예정입니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2858109144760244,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "온실가스 (에너지 사용·에너지원)",
+            "displaySubIssueName": "에너지 사용·에너지원",
+            "similarityScore": 0.4662625789642334,
+            "similarityRank": 2,
+            "mappingWeight": 0.3175676827511382,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 탄소중립에 대한 사회적 책임과 실천을 강화하고자 2050년 탄소중립 (Net-Zero) 목표를 앞당겨 2045년 탄소중립 목표를 설정하였습니다.",
+              "Operation 부문에서는 탄소중립 선언을 위해 2023년 SBTi 참여, 2024년 RE100 가입을 계획하고 있으며, 글로벌 사업장을 포함하여 점진적인 재생에너지 전환과 에너지 절감 활동을 병행해 나갈 예정입니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_PRODUCT_ENV__PRODUCT_ENV_PERFORMANCE",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "HL만도는 탄소중립에 대한 사회적 책임과 실천을 강화하고자 2050년 탄소중립 (Net-Zero) 목표를 앞당겨 2045년 탄소중립 목표를 설정하였습니다.",
+                "Operation 부문에서는 탄소중립 선언을 위해 2023년 SBTi 참여, 2024년 RE100 가입을 계획하고 있으며, 글로벌 사업장을 포함하여 점진적인 재생에너지 전환과 에너지 절감 활동을 병행해 나갈 예정입니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.25312764276014815,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "온실가스 (저탄소·친환경 제품)",
+            "displaySubIssueName": "저탄소·친환경 제품",
+            "similarityScore": 0.4572211503982544,
+            "similarityRank": 3,
+            "mappingWeight": 0.2812529364001646,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 탄소중립에 대한 사회적 책임과 실천을 강화하고자 2050년 탄소중립 (Net-Zero) 목표를 앞당겨 2045년 탄소중립 목표를 설정하였습니다.",
+              "Operation 부문에서는 탄소중립 선언을 위해 2023년 SBTi 참여, 2024년 RE100 가입을 계획하고 있으며, 글로벌 사업장을 포함하여 점진적인 재생에너지 전환과 에너지 절감 활동을 병행해 나갈 예정입니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_LABOR__HIRING_TURNOVER_RETENTION",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도는 헌법 제33조(근로3권)에 따라 임직원의 결사 및 단체 교섭의 자유를 보장하며, 결사의 사유와 선출된 대표자를 통해 자신의 이익을 대변할 권리가 있음을 행동강령에 포함하고 있습니다.",
+                "임금교섭은 연1회, 단체교섭은 격년에 1회 주기로 병행하며, 2022년에는 복수노조 교섭창구 단일화 절차에 따라 단체교섭 후 단체협약서를 체결하였습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.325327204920551,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "고용 및 노사관계 (채용·이직·유지)",
+            "displaySubIssueName": "채용·이직·유지",
+            "similarityScore": 0.5837430357933044,
+            "similarityRank": 1,
+            "mappingWeight": 0.3614746721339456,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 헌법 제33조(근로3권)에 따라 임직원의 결사 및 단체 교섭의 자유를 보장하며, 결사의 사유와 선출된 대표자를 통해 자신의 이익을 대변할 권리가 있음을 행동강령에 포함하고 있습니다.",
+              "임금교섭은 연1회, 단체교섭은 격년에 1회 주기로 병행하며, 2022년에는 복수노조 교섭창구 단일화 절차에 따라 단체교섭 후 단체협약서를 체결하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_LABOR__WORKFORCE_COMPOSITION",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도는 헌법 제33조(근로3권)에 따라 임직원의 결사 및 단체 교섭의 자유를 보장하며, 결사의 사유와 선출된 대표자를 통해 자신의 이익을 대변할 권리가 있음을 행동강령에 포함하고 있습니다.",
+                "임금교섭은 연1회, 단체교섭은 격년에 1회 주기로 병행하며, 2022년에는 복수노조 교섭창구 단일화 절차에 따라 단체교섭 후 단체협약서를 체결하였습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3056283119771591,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "고용 및 노사관계 (고용·인력 구성)",
+            "displaySubIssueName": "고용·인력 구성",
+            "similarityScore": 0.5742095708847046,
+            "similarityRank": 2,
+            "mappingWeight": 0.33958701330795454,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 헌법 제33조(근로3권)에 따라 임직원의 결사 및 단체 교섭의 자유를 보장하며, 결사의 사유와 선출된 대표자를 통해 자신의 이익을 대변할 권리가 있음을 행동강령에 포함하고 있습니다.",
+              "임금교섭은 연1회, 단체교섭은 격년에 1회 주기로 병행하며, 2022년에는 복수노조 교섭창구 단일화 절차에 따라 단체교섭 후 단체협약서를 체결하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_LABOR__WORKING_CONDITIONS_LABOR_RELATIONS",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도는 헌법 제33조(근로3권)에 따라 임직원의 결사 및 단체 교섭의 자유를 보장하며, 결사의 사유와 선출된 대표자를 통해 자신의 이익을 대변할 권리가 있음을 행동강령에 포함하고 있습니다.",
+                "임금교섭은 연1회, 단체교섭은 격년에 1회 주기로 병행하며, 2022년에는 복수노조 교섭창구 단일화 절차에 따라 단체교섭 후 단체협약서를 체결하였습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2690444831022898,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "고용 및 노사관계 (근로조건·노사관계)",
+            "displaySubIssueName": "근로조건·노사관계",
+            "similarityScore": 0.5559402108192444,
+            "similarityRank": 3,
+            "mappingWeight": 0.29893831455809977,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 헌법 제33조(근로3권)에 따라 임직원의 결사 및 단체 교섭의 자유를 보장하며, 결사의 사유와 선출된 대표자를 통해 자신의 이익을 대변할 권리가 있음을 행동강령에 포함하고 있습니다.",
+              "임금교섭은 연1회, 단체교섭은 격년에 1회 주기로 병행하며, 2022년에는 복수노조 교섭창구 단일화 절차에 따라 단체교섭 후 단체협약서를 체결하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_RISK_AUDIT_CAP",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도는 급변하는 글로벌 자동차 산업에 대응하여 협력사와 함께 지속가능한 공급망을 구축해 나가고자 협력사 행동강령을 제정하여 모든 협력사에게 사업을 영위하는 국가에 적용되는 법률과 규정을 철저히 준수할 것을 요구합니다.",
+                "협력사 행동강령은 상생협력팀에서 지속적인 보완과 개정을 통해 관리하고 있으며, 개정된 내용은 HL만도 홈페이지에 공개하고 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.38123968260007957,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "협력사 상생경영 (공급망 감사·시정조치)",
+            "displaySubIssueName": "공급망 감사·시정조치",
+            "similarityScore": 0.6654619574546814,
+            "similarityRank": 1,
+            "mappingWeight": 0.42359964733342176,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 급변하는 글로벌 자동차 산업에 대응하여 협력사와 함께 지속가능한 공급망을 구축해 나가고자 협력사 행동강령을 제정하여 모든 협력사에게 사업을 영위하는 국가에 적용되는 법률과 규정을 철저히 준수할 것을 요구합니다.",
+              "협력사 행동강령은 상생협력팀에서 지속적인 보완과 개정을 통해 관리하고 있으며, 개정된 내용은 HL만도 홈페이지에 공개하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_GRIEVANCE_VIOLATIONS",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도는 급변하는 글로벌 자동차 산업에 대응하여 협력사와 함께 지속가능한 공급망을 구축해 나가고자 협력사 행동강령을 제정하여 모든 협력사에게 사업을 영위하는 국가에 적용되는 법률과 규정을 철저히 준수할 것을 요구합니다.",
+                "협력사 행동강령은 상생협력팀에서 지속적인 보완과 개정을 통해 관리하고 있으며, 개정된 내용은 HL만도 홈페이지에 공개하고 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.27104417407102255,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "협력사 상생경영 (공급망 고충·중대위반)",
+            "displaySubIssueName": "공급망 고충·중대위반",
+            "similarityScore": 0.6012898683547974,
+            "similarityRank": 2,
+            "mappingWeight": 0.30116019341224726,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 급변하는 글로벌 자동차 산업에 대응하여 협력사와 함께 지속가능한 공급망을 구축해 나가고자 협력사 행동강령을 제정하여 모든 협력사에게 사업을 영위하는 국가에 적용되는 법률과 규정을 철저히 준수할 것을 요구합니다.",
+              "협력사 행동강령은 상생협력팀에서 지속적인 보완과 개정을 통해 관리하고 있으며, 개정된 내용은 HL만도 홈페이지에 공개하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "G_ETHICS__WHISTLEBLOWING_RETALIATION",
+            "sourceStep": "benchmark",
+            "sourceType": "leader_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "HL만도는 급변하는 글로벌 자동차 산업에 대응하여 협력사와 함께 지속가능한 공급망을 구축해 나가고자 협력사 행동강령을 제정하여 모든 협력사에게 사업을 영위하는 국가에 적용되는 법률과 규정을 철저히 준수할 것을 요구합니다.",
+                "협력사 행동강령은 상생협력팀에서 지속적인 보완과 개정을 통해 관리하고 있으며, 개정된 내용은 HL만도 홈페이지에 공개하고 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.24771614332889785,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "협력사 상생경영 (내부제보·보복금지)",
+            "displaySubIssueName": "내부제보·보복금지",
+            "similarityScore": 0.5866561532020569,
+            "similarityRank": 3,
+            "mappingWeight": 0.27524015925433093,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "HL만도는 급변하는 글로벌 자동차 산업에 대응하여 협력사와 함께 지속가능한 공급망을 구축해 나가고자 협력사 행동강령을 제정하여 모든 협력사에게 사업을 영위하는 국가에 적용되는 법률과 규정을 철저히 준수할 것을 요구합니다.",
+              "협력사 행동강령은 상생협력팀에서 지속적인 보완과 개정을 통해 관리하고 있으며, 개정된 내용은 HL만도 홈페이지에 공개하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -136,6 +136,26 @@ const Benchmarking = () => {
   }
   }, [dispatch, workflow, companyId, reportingYear]);
 
+  // 페이지 재진입 시 현재 runId의 기존 벤치마킹 결과 복원
+  useEffect(() => {
+    if (!currentRunId || isAnalyzing) return;
+    const runId = Number(currentRunId);
+    if (!runId) return;
+
+    dispatch(fetchBenchmarkResult({ runId }))
+      .unwrap()
+      .then((res) => {
+        const dto = res.data ?? res;
+        if (dto?.topIssues?.length > 0 || dto?.summary?.analyzedReportCount > 0) {
+          setDashboardData(mapBenchmarkResultToDashboard(dto));
+          setShowResult(true);
+          setDashboardOpen(true);
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRunId, dispatch]);
+
 
   const steps = [
     { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
@@ -165,7 +185,7 @@ const Benchmarking = () => {
     if (totalCount > 3) {
       showDefaultAlert(
         "파일 업로드 제한",
-        `3개년치(3개) 파일만 등록할 수 있습니다.<br/>현재 등록된 파일 수: ${fileStorage[groupKey].length}개`,
+        `최대 3개 파일까지 등록할 수 있습니다.<br/>현재 등록된 파일 수: ${fileStorage[groupKey].length}개`,
         "warning"
       );
       e.target.value = "";
@@ -214,8 +234,8 @@ const Benchmarking = () => {
     const group = BENCHMARK_GROUP_CONFIG[groupKey];
     const files = fileStorage[groupKey] || [];
 
-    if (files.length !== 3) {
-      throw new Error(`${group.label} 보고서 PDF 3개를 등록해주세요.`);
+    if (files.length < 1 || files.length > 3) {
+      throw new Error(`${group.label} 보고서 PDF를 1~3개 등록해주세요.`);
     }
 
     const companyName = String(companyNames[groupKey] || "").trim();
@@ -260,13 +280,22 @@ const Benchmarking = () => {
       return;
     }
 
+    if (showResult) {
+      const confirmed = await showConfirmAlert(
+        "재분석 확인",
+        "이미 벤치마킹 결과가 존재합니다.<br/>기존 데이터를 삭제하고 다시 분석하시겠습니까?",
+        "warning"
+      );
+      if (!confirmed) return;
+    }
+
     if (!companyNames.leader.trim() || !companyNames.peer.trim() || !companyNames.sub.trim()) {
       showDefaultAlert("입력 오류", "모든 그룹의 회사 이름을 입력해주세요.", "warning");
       return;
     }
 
-    if (fileStorage.leader.length !== 3 || fileStorage.peer.length !== 3 || fileStorage.sub.length !== 3) {
-      showDefaultAlert("파일 수 부족", "각 그룹별 정확히 3개년치(3개) 파일 업로드가 필수적입니다.", "warning");
+    if (fileStorage.leader.length === 0 || fileStorage.peer.length === 0 || fileStorage.sub.length === 0) {
+      showDefaultAlert("파일 미등록", "각 그룹별 최소 1개 파일 업로드가 필요합니다.", "warning");
       return;
     }
 
@@ -366,7 +395,7 @@ const Benchmarking = () => {
 
         <div className="file-list-container">
           {files.length === 0 ? (
-            <div className="empty-file-text">3개년치 파일 필수 업로드</div>
+            <div className="empty-file-text">PDF 파일 1~3개 업로드</div>
           ) : (
             files.map((file, index) => (
               <div className="file-item-box" key={index}>

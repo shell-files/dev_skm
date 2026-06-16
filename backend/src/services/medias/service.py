@@ -36,6 +36,7 @@ from src.utils.dmarepository import (
     step4ReplaceRegulationShadowTracesTx,
     listExternalMaxEligibleMediaRows,
     step4ReplaceMediaExternalMaxShadowAndSummaryTx,
+    resetMediaData,
 )
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
 from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
@@ -245,6 +246,8 @@ def runMediaCrawlAndAnalyze(
     )
 
     try:
+        resetMediaData(runId)
+
         currentStage = "NEWS_CRAWL"
         currentProgress = 30
         _writeMediaWorkflowStatus(

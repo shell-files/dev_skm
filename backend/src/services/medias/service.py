@@ -12,7 +12,9 @@ from src.models.model import UserModel
 from src.services.medias.adapter import convertMediaToDmaSignals, step0NormalizeMediaFacts
 from src.services.medias.baseline import applyMediaBaseline
 from src.services.medias.crawler import applySavedSignalCounts, crawlNewsArticles
+from src.services.medias.pg_pipeline import fetchMediaChunksFromPg
 from src.services.medias.pipeline import processMediaPipeline
+from src.utils.settings import settings
 from src.services.materialities.orchestrator import (
     step0BuildFactTrace,
     step1BuildMediaNewsCanonicalPayloads,
@@ -106,12 +108,19 @@ def _recordMediaWorkflowFailureBestEffort(
         print(f"Warning: MEDIA workflow FAILED status write failed: {statusError}")
 
 
+def _resolvePgMode(requestFlag: Optional[bool]) -> bool:
+    if requestFlag is not None:
+        return requestFlag
+    return settings.use_pg_pipeline
+
+
 def runMediaAnalysis(
     articles: list,
     runId: int,
     keywords: Optional[list[str]] = None,
     industryKeywords: Optional[list[str]] = None,
     shadowReplaceYn: bool = True,
+    usePgPipeline: Optional[bool] = None,
 ):
     """
     미디어 언론 분석 전체 워크플로우를 실행합니다.
@@ -122,11 +131,14 @@ def runMediaAnalysis(
     if industryKeywords is None:
         industryKeywords = []
 
-    pipelineResults = processMediaPipeline(
-        articles,
-        companyKeywords=keywords,
-        industryKeywords=industryKeywords,
-    )
+    if _resolvePgMode(usePgPipeline):
+        pipelineResults = fetchMediaChunksFromPg()
+    else:
+        pipelineResults = processMediaPipeline(
+            articles,
+            companyKeywords=keywords,
+            industryKeywords=industryKeywords,
+        )
     signals = convertMediaToDmaSignals(pipelineResults)
     baselinedSignals = applyMediaBaseline(signals)
     scoredSignals = scoreSignals(baselinedSignals)
@@ -162,9 +174,63 @@ def buildMediaAnalyzeResponse(
     )
 
 
+def _runMediaCrawlAndAnalyzePg(request: MediaNewsCrawlAnalyzeRequest) -> MediaNewsCrawlAnalyzeResponse:
+    scoredSignals = runMediaAnalysis(
+        articles=[],
+        runId=request.runId,
+        keywords=MVP_DEMO_COMPANY_KEYWORDS,
+        industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
+        shadowReplaceYn=True,
+        usePgPipeline=True,
+    )
+
+    _shadowRefreshErrors: list[tuple[str, Exception]] = []
+    try:
+        refreshRegulationShadowForRun(request.runId)
+    except Exception as _exc:
+        _shadowRefreshErrors.append(("regulation", _exc))
+    try:
+        refreshKcgsShadowForRun(request.runId)
+    except Exception as _exc:
+        _shadowRefreshErrors.append(("kcgs", _exc))
+
+    if _shadowRefreshErrors:
+        raise RuntimeError(
+            "media_external source refresh failed; externalMax summary update aborted: "
+            + "; ".join(f"{k}: {v}" for k, v in _shadowRefreshErrors)
+        )
+    refreshMediaExternalMaxForRun(request.runId)
+    ensureSurveyFormForRun(request.runId)
+
+    coverageInfo = getMediaCoverage(request.runId)
+    savedSignalCount = len(scoredSignals) if scoredSignals else 0
+
+    return MediaNewsCrawlAnalyzeResponse(
+        runId=request.runId,
+        requestedSources=request.sources,
+        allowedSources=request.sources,
+        rejectedSources=[],
+        companyKeywords=MVP_DEMO_COMPANY_KEYWORDS,
+        industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
+        collectedArticleCount=0,
+        filteredArticleCount=0,
+        articleCount=0,
+        savedSignalCount=savedSignalCount,
+        observedSubIssueCount=countMediaSubIssues(request.runId),
+        sourceBreakdown=[],
+        topIssues=_buildMediaTopIssues(request.runId),
+        coverage=coverageInfo,
+        coverageStatus=coverageInfo["coverageStatus"],
+        errors=[],
+    )
+
+
 def runMediaCrawlAndAnalyze(
     request: MediaNewsCrawlAnalyzeRequest, userModel: UserModel
 ) -> MediaNewsCrawlAnalyzeResponse:
+    if _resolvePgMode(request.usePgPipeline):
+        return _runMediaCrawlAndAnalyzePg(request)
+
     # 입력 검증은 workflow status 기록 이전에 수행한다. (잘못된 날짜는 400으로 처리하고
     # MEDIA workflow row 를 생성하지 않는다.)
     dateFrom = _parseRequestDate(request.dateFrom, "dateFrom")

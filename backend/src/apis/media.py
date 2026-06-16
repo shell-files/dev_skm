@@ -24,7 +24,7 @@ router = APIRouter(tags=["media"])
 )
 async def analyze_media_news(request: MediaAnalyzeRequest, userModel=Depends(get_token)):
     try:
-        scoredSignals = runMediaAnalysis(request.articles, request.runId, request.keywords)
+        scoredSignals = runMediaAnalysis(request.articles, request.runId, request.keywords, usePgPipeline=request.usePgPipeline)
         return buildMediaAnalyzeResponse(
             runId=request.runId,
             articleCount=len(request.articles),

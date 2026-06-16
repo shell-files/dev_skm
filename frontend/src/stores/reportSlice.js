@@ -876,14 +876,18 @@ export const uploadBenchmarkGroup = createAsyncThunk(
 
 export const runBenchmarkAnalysis = createAsyncThunk(
   "report/runBenchmarkAnalysis",
-  async ({ runId, fileNames, page = "SR", sourceStep = "benchmark" }, { rejectWithValue }) => {
+  async ({ runId, fileNames, page = "SR", sourceStep = "benchmark", usePgPipeline, pgSrType, pgSrYear }, { rejectWithValue }) => {
     try {
-      const res = await PUT("/benchmk", {
-        file: fileNames,
+      const body = {
+        file: fileNames ?? [],
         page,
-        esgMaterialityRunId: runId,
-        sourceStep,
-      });
+        esg_materiality_run_id: runId,
+        source_step: sourceStep,
+      };
+      if (usePgPipeline != null) body.use_pg_pipeline = usePgPipeline;
+      if (pgSrType != null) body.pg_sr_type = pgSrType;
+      if (pgSrYear != null) body.pg_sr_year = pgSrYear;
+      const res = await PUT("/benchmk", body);
       return rejectIfFailed(res, rejectWithValue, "벤치마킹 분석에 실패했습니다.");
     } catch (error) {
       console.error(error);

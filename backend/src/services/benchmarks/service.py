@@ -155,6 +155,9 @@ def uploadSr(fileModel: FileModel, userModel: UserModel):
 
 
 async def _findSrFromPg(fileFindModel: FileFindModel, runId: int):
+    if not fileFindModel.pgSrType:
+        raise ValueError("PG 모드 벤치마킹은 pg_sr_type을 반드시 지정해야 합니다.")
+
     currentStage = "PREPARE"
     currentProgress = 20
     _writeBenchmarkWorkflowStatus(

@@ -184,23 +184,17 @@ def _runMediaCrawlAndAnalyzePg(request: MediaNewsCrawlAnalyzeRequest) -> MediaNe
         usePgPipeline=True,
     )
 
-    _shadowRefreshErrors: list[tuple[str, Exception]] = []
+    # Regulation/KCGS shadow refresh: best-effort, 실패해도 분석 결과는 보존한다.
+    # ExternalMax/Summary/Final/Rank는 materiality 전체 사이클 완료 후에만 유효하므로
+    # PG 모드에서는 호출하지 않는다.
     try:
         refreshRegulationShadowForRun(request.runId)
     except Exception as _exc:
-        _shadowRefreshErrors.append(("regulation", _exc))
+        print(f"Warning: [pg_media] regulation shadow refresh skipped: {_exc}")
     try:
         refreshKcgsShadowForRun(request.runId)
     except Exception as _exc:
-        _shadowRefreshErrors.append(("kcgs", _exc))
-
-    if _shadowRefreshErrors:
-        raise RuntimeError(
-            "media_external source refresh failed; externalMax summary update aborted: "
-            + "; ".join(f"{k}: {v}" for k, v in _shadowRefreshErrors)
-        )
-    refreshMediaExternalMaxForRun(request.runId)
-    ensureSurveyFormForRun(request.runId)
+        print(f"Warning: [pg_media] kcgs shadow refresh skipped: {_exc}")
 
     coverageInfo = getMediaCoverage(request.runId)
     savedSignalCount = len(scoredSignals) if scoredSignals else 0

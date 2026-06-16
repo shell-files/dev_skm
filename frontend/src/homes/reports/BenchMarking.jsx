@@ -7,6 +7,7 @@ import {
   showDefaultAlert,
   showConfirmAlert,
 } from "@components/UI/ServiceAlert";
+import { useAuth } from "@hooks/AuthContext";
 
 import {
   fetchCurrentWorkflow,
@@ -54,6 +55,9 @@ const mapBenchmarkResultToDashboard = (dto) => ({
 
 const Benchmarking = () => {
   const dispatch = useDispatch();
+  const { selectedCompany } = useAuth();
+  const companyId = selectedCompany?.company_id ?? selectedCompany?.companyId;
+  const reportingYear = useSelector((state) => state.report.currentYear);
   const currentRunId = useSelector((state) => state.report.currentRunId);
   const workflow = useSelector((state) => state.report.workflow.current);
   const canRunDma = useSelector(selectCanRunDmaStage);
@@ -125,9 +129,12 @@ const Benchmarking = () => {
   useEffect(() => () => stopBenchmarkPolling(), []);
 
   // 진입 시 reportWorkflow.current 를 확보한다. (G0/롤업 완료 게이트 판정용)
+  // companyId/reportingYear 가 없으면 /reportWorkflow/current 가 422(Field required)를 반환하므로 둘 다 갖춰진 뒤 호출한다.
   useEffect(() => {
-    if (!workflow) dispatch(fetchCurrentWorkflow());
-  }, [dispatch, workflow]);
+    if (!workflow && companyId && reportingYear) {
+      dispatch(fetchCurrentWorkflow({ companyId, reportingYear }));
+    }
+  }, [dispatch, workflow, companyId, reportingYear]);
 
   const steps = [
     { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },

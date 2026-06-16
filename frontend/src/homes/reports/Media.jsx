@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import "@styles/media.css";
 import robot from "@assets/images/robot/robot_media_t.png";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
+import { useAuth } from "@hooks/AuthContext";
 import {
   fetchCurrentWorkflow,
   runMediaCrawlAndAnalyze,
@@ -165,6 +166,9 @@ const Media = () => {
   const timerRef = useRef(null);
   const mediaPollTimerRef = useRef(null);
   const mediaWorkflowErrorRef = useRef(null);
+  const { selectedCompany } = useAuth();
+  const companyId = selectedCompany?.company_id ?? selectedCompany?.companyId;
+  const reportingYear = useSelector((state) => state.report.currentYear);
   const currentRunId = useSelector((state) => state.report.currentRunId);
   const workflow = useSelector((state) => state.report.workflow.current);
   const canRunDma = useSelector(selectCanRunDmaStage);
@@ -313,9 +317,12 @@ const Media = () => {
   }, []);
 
   // 진입 시 reportWorkflow.current 를 확보한다. (G0/롤업 완료 게이트 판정용)
+  // companyId/reportingYear 가 없으면 /reportWorkflow/current 가 422(Field required)를 반환하므로 둘 다 갖춰진 뒤 호출한다.
   useEffect(() => {
-    if (!workflow) dispatch(fetchCurrentWorkflow());
-  }, [dispatch, workflow]);
+    if (!workflow && companyId && reportingYear) {
+      dispatch(fetchCurrentWorkflow({ companyId, reportingYear }));
+    }
+  }, [dispatch, workflow, companyId, reportingYear]);
 
   const createParticles = () => {
     if (!particleRef.current) return;

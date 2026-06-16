@@ -5,7 +5,7 @@
 import { createContext, useState, useContext, useEffect, Component } from "react";
 import { GET, POST, PUT, PATCH, DELETE } from "@utils/Network";
 import { useNavigate } from "react-router";
-import { checkUser, logoutUser, loginUser, updateUserName, updateCompanyName } from "@stores/authSlice";
+import { checkUser, logoutUser, loginUser, updateUserName, updateCompanyName, setUserEmail } from "@stores/authSlice";
 import { useDispatch, useSelector } from "react-redux";
 import {showConfirmAlert} from "@components/UI/ServiceAlert"
 
@@ -33,6 +33,7 @@ export const AuthProvider = ({ children }) => {
   const dispatch = useDispatch();
 
 	const userName = useSelector((state) => state.auth.userName);
+  const userEmail = useSelector((state) => state.auth.userEmail);
 
 	// [변수] isAuthReady: localStorage 복원 완료 여부 (라우터 가드에서 활용)
 	const isAuthReady = useSelector((state) => state.auth.isAuthReady);
@@ -54,9 +55,18 @@ export const AuthProvider = ({ children }) => {
 	/**
    * [이펙트] 앱 진입 시 localStorage에서 이전 세션 복원
    */
-  useEffect(() => { 
-    dispatch(checkUser()); 
+  useEffect(() => {
+    dispatch(checkUser());
   }, []);
+
+  useEffect(() => {
+    if (!isAuthReady || userEmail) return;
+    POST('/auth').then(res => {
+      if (res?.status === true && res?.data?.user) {
+        dispatch(setUserEmail(res.data.user));
+      }
+    }).catch(() => {});
+  }, [isAuthReady, userEmail, dispatch]);
   
   // selectedCompany
 
@@ -146,8 +156,8 @@ export const AuthProvider = ({ children }) => {
 	};
 
 	// 전역 인증 상태 관리 컨텍스트에 필요한 값들을 객체로 묶어서 제공
-	const authContextValue = {login, goMyPage, goHome, 
-    userName, selectedCompany, 
+	const authContextValue = {login, goMyPage, goHome,
+    userName, userEmail, selectedCompany,
     companies, isAuthReady, isLoading,
     updateName, logoutUser,handleLogout,
     isBasisModalOpen, setIsBasisModalOpen

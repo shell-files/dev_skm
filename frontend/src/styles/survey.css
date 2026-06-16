@@ -65,17 +65,24 @@
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 24px 130px 0;
+    padding: 24px 130px;
+    padding-bottom: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
 }
 
 .survey-input-card {
     width: 100%;
-    max-width: 1440px;
-    margin: 0 auto;
-    padding-bottom: 120px;
+    min-width: 0;
 
     display: flex;
     flex-direction: column;
+    justify-content: flex-start;
+
+    padding: 32px 0 30px;
+
+    background: #fff;
     overflow: visible;
 }
 
@@ -83,15 +90,33 @@
     flex: 0 0 auto;
 }
 
-@media (max-width: 1280px) {
+@media (max-width: 1200px) {
     .survey-container .main-content {
-        padding: 24px 48px 0;
+        padding: 20px 48px;
+        padding-bottom: 80px;
+    }
+    .survey-input-card {
+        padding: 28px 0 120px;
+    }
+}
+
+@media (max-width: 992px) {
+    .survey-container .main-content {
+        padding: 18px;
+        padding-bottom: 100px;
+    }
+    .survey-input-card {
+        padding: 24px 0 120px;
     }
 }
 
 @media (max-width: 768px) {
     .survey-container .main-content {
-        padding: 20px 20px 0;
+        padding: 14px;
+        padding-bottom: 120px;
+    }
+    .survey-input-card {
+        padding: 20px 0 120px;
     }
 }
 
@@ -1448,14 +1473,7 @@
     }
 }
 
-@media (min-width: 1440px) {
-    .survey-section-grid {
-        grid-template-columns: minmax(0, 820px) minmax(360px, 420px);
-        justify-content: center;
-    }
-}
-
-@media (max-width: 1280px) {
+@media (max-width: 1200px) {
     .survey-section-grid {
         grid-template-columns: 1fr;
     }

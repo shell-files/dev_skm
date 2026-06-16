@@ -490,6 +490,7 @@ const Benchmarking = () => {
           >
             실시간 AI 분석 시작
           </button>
+          <div style={{ height: "60px", flexShrink: 0 }} />
         </div>
       </main>
 

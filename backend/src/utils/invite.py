@@ -78,8 +78,9 @@ def inviteSignUp(inviteId: str, inviteSignUpUserInfo: inviteSignUpUserInfo):
     try:
         with conn.cursor(dictionary=True) as cur:
             cur.execute(
-                """
-                SELECT *
+                f"""
+                SELECT id, company_id, role_id, state, delete_yn,
+                       aes_d(email, '{settings.maria_db_key}') AS email
                 FROM INVITE
                 WHERE id = ?
                   AND delete_yn = 0
@@ -175,10 +176,10 @@ def inviteConsultantProcess(inviteConsultantModel, userModel):
             return ResponseModel(False, "회사 정보를 찾을 수 없습니다.")
 
         for email in inviteConsultantModel.email:
-            inviteSql = """
+            inviteSql = f"""
                 INSERT INTO `INVITE`
                 (company_id, user_id, role_id, email)
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, aes_e(?, '{settings.maria_db_key}'))
             """
             result = addKey(inviteSql, (company["id"], userId, inviteConsultantModel.role, email))
             if not result[0]:
@@ -199,7 +200,7 @@ def inviteConsultantProcess(inviteConsultantModel, userModel):
                     (INVITE_STATE_REVOKED, inviteId),
                 )
                 return ResponseModel(False, "초대 토큰 Redis 저장에 실패했습니다.")
-            userExists = exists("SELECT 1 FROM `with`.`USER` WHERE email = ?", (email,))
+            userExists = exists(f"SELECT 1 FROM `with`.`USER` WHERE email = aes_e(?, '{settings.maria_db_key}')", (email,))
             sendToKafka(
                 {
                     "type": 3 if userExists else 2,
@@ -228,10 +229,10 @@ def inviteMember(inviteMemberModel: inviteMemberModel, userModel=Depends(get_tok
 
         projectId = int(getattr(inviteMemberModel, "projectId", 0) or 0)
         for inviteEmail in inviteMemberModel.email:
-            inviteSql = """
+            inviteSql = f"""
                 INSERT INTO `INVITE`
                 (company_id, user_id, role_id, email)
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, aes_e(?, '{settings.maria_db_key}'))
             """
             result = addKey(
                 inviteSql,

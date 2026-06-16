@@ -6,10 +6,12 @@ from src.models.media import (
     MediaNewsCrawlAnalyzeRequest,
     MediaNewsCrawlAnalyzeResponse,
 )
+from src.models.dmakcgsgrade import KcgsGradeSaveRequest, KcgsGradeSaveResponse
 from src.services.medias.service import (
     buildMediaAnalyzeResponse,
     runMediaAnalysis,
     runMediaCrawlAndAnalyze,
+    saveKcgsGradeInputs,
 )
 from src.utils.auth import get_token
 
@@ -45,6 +47,25 @@ async def crawl_and_analyze_media_news(
 ):
     try:
         return runMediaCrawlAndAnalyze(request, userModel)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+    "/kcgs/grades",
+    response_model=KcgsGradeSaveResponse,
+    summary="KCGS ESG 등급 입력 저장(APPROVED)",
+)
+async def save_kcgs_grades(request: KcgsGradeSaveRequest, userModel=Depends(get_token)):
+    try:
+        saved = saveKcgsGradeInputs(request, userModel)
+        return KcgsGradeSaveResponse(
+            companyId=request.companyId,
+            savedCount=saved,
+            reviewStatus="APPROVED",
+        )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

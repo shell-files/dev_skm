@@ -164,15 +164,18 @@ def insertEvidence(
         evidenceText,
     )
 
+    conn = getConn()
+    if not conn:
+        raise RuntimeError("insertEvidence: MariaDB 연결 실패")
     try:
-        with getConn() as conn:
-            with conn.cursor(dictionary=True) as cur:
-                cur.execute(evidenceSql, evidenceParams)
-                cur.execute("SELECT LAST_INSERT_ID() as id")
-                data = cur.fetchone()
-                conn.commit()
-                return [True, data["id"] if data else 0]
+        with conn.cursor(dictionary=True) as cur:
+            cur.execute(evidenceSql, evidenceParams)
+            cur.execute("SELECT LAST_INSERT_ID() as id")
+            data = cur.fetchone()
+        conn.commit()
+        return [True, data["id"] if data else 0]
     except Exception as e:
+        conn.rollback()
         errorMessage = str(e)
         if "source_url" not in errorMessage and "source_published_at" not in errorMessage:
             raise
@@ -193,6 +196,8 @@ def insertEvidence(
         )
         print("Warning: ESG_DMA_EVIDENCE source_url/source_published_at columns are missing. Falling back to legacy evidence insert.")
         return addKey(fallbackSql, fallbackParams)
+    finally:
+        conn.close()
 
 def listSignals(runId: int, subIssueCode: str, sourceStep: str) -> List[DMASignal]:
     """

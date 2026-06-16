@@ -65,6 +65,7 @@ jobs:
           COOKIE_KEY: ${{ secrets.COOKIE_KEY }}
           FILE_DIR: ${{ secrets.FILE_DIR }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
           GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
           APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}

@@ -96,8 +96,10 @@ def normalizeSourceType(value: str) -> str:
         "peer": "peer_sr",
         "피어": "peer_sr",
         "Own": "own_sr",
+        "own": "own_sr",
         "owner": "own_sr",
         "자사": "own_sr",
+        "자회사": "own_sr",
         "news": "news",
         "agency": "agency",
         "regulation": "regulation",
@@ -154,7 +156,12 @@ def uploadSr(fileModel: FileModel, userModel: UserModel):
     return ResponseModel(True, "파일이 성공적으로 업로드되었습니다.", {"files": saved_files, "page": fileModel.page})
 
 
-_PG_SR_TYPES = ["leader_sr", "peer_sr", "own_sr"]
+# (normalized DMA type, PGDB에 실제 저장된 type 값 목록)
+_PG_SR_TYPES = [
+    ("leader_sr", ["리더", "Leader", "leader"]),
+    ("peer_sr",   ["피어",  "Peer",   "peer"]),
+    ("own_sr",    ["자회사", "자사", "Own", "own", "owner"]),
+]
 
 
 async def _findSrFromPg(fileFindModel: FileFindModel, runId: int):
@@ -176,7 +183,7 @@ async def _findSrFromPg(fileFindModel: FileFindModel, runId: int):
         allFactPayloads = []
         aiPolicy = dmaruleregistry.getPolicy("ai_fact_validation_policy")
 
-        for idx, srType in enumerate(_PG_SR_TYPES):
+        for idx, (srType, dbTypes) in enumerate(_PG_SR_TYPES):
             currentStage = "DOCUMENT_ANALYSIS"
             currentProgress = 20 + idx * 20
             _writeBenchmarkWorkflowStatus(
@@ -188,6 +195,7 @@ async def _findSrFromPg(fileFindModel: FileFindModel, runId: int):
 
             signals, rawResultList, sourceTitle = fetchBenchmarkFromPg(
                 srType=srType,
+                srTypes=dbTypes,
                 srYear=srYear,
             )
 

@@ -104,14 +104,17 @@ def _resolveBaselineFactors(
 
 def fetchBenchmarkFromPg(
     srType: Optional[str] = None,
+    srTypes: Optional[list[str]] = None,
     srYear: Optional[str] = None,
 ) -> tuple[list[DMASignal], list[dict], str]:
     """
     ai_sr 테이블에서 pre-processed 벤치마킹 데이터를 조회합니다.
 
     Args:
-        srType: ai_sr.type 필터 (예: "자회사", "Leader"). None이면 전체.
-        srYear: ai_sr.year 필터 (예: "2022"). None이면 전체.
+        srType: 정규화된 DMA sourceType (예: "leader_sr"). source_type 레이블용.
+        srTypes: PGDB ai_sr.type 컬럼의 실제 값 목록 (예: ["리더", "Leader"]).
+                 지정 시 IN 절로 조회. srType 단독보다 우선.
+        srYear: ai_sr.year 필터 (예: "2022"). None이면 기본 범위 적용.
 
     Returns:
         (signals, rawResultList, sourceTitle)
@@ -119,7 +122,11 @@ def fetchBenchmarkFromPg(
     conditions = ["mapped_issues IS NOT NULL"]
     params: list = []
 
-    if srType:
+    if srTypes:
+        placeholders = ", ".join(["%s"] * len(srTypes))
+        conditions.append(f"type IN ({placeholders})")
+        params.extend(srTypes)
+    elif srType:
         conditions.append("type = %s")
         params.append(srType)
     if srYear:

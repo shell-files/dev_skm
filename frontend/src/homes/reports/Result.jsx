@@ -809,9 +809,9 @@ const Result = () => {
             <Fragment key={step.id}>
               <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
                 <div className="step-icon-circle">{step.icon}</div>
-                <div className="step-title-text">{step.title}</div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 800 }}>{step.title}</div>
               </div>
-              {index < steps.length - 1 && <div className="step-line"></div>}
+              {index < steps.length - 1 && <div className="step-line" />}
             </Fragment>
           ))}
         </div>

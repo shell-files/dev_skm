@@ -436,13 +436,8 @@
     flex-direction: column;
     gap: 6px;
 
-    flex: 1;
-
     width: 100%;
     min-width: 0;
-
-    overflow-y: auto;
-    overflow-x: hidden;
 }
 
 .file-item-box {

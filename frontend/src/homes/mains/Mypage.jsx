@@ -107,40 +107,32 @@ const requestApi = {
   
   const Mypage = () => {
   const navigate = useNavigate();
-  const { user, userName, 
+  const { userEmail, userName,
     selectedCompany, companies, updateName,
-    isAuthReady, logout, 
-    handleLogout, toggleSidebarMobile, 
+    isAuthReady, logout,
+    handleLogout, toggleSidebarMobile,
     goHome, goMyPage, openAlarmCenter
-
    } = useAuth();
 
-  // ── States ──
-  
-
-  // [데이터] 사용자 기본 정보 (이메일 고정)
   const [userData, setUserData] = useState({
     name: userName || '사용자',
-    email: user?.email || selectedCompany?.email || '-',
-    role: selectedCompany?.role
+    email: userEmail || selectedCompany?.email || '-',
+    role: selectedCompany?.role_name
   });
 
-  // [편집] 정보 수정 및 비밀번호 양식
   const [editForm, setEditForm] = useState({ name: '' });
   const [passwordForm, setPasswordForm] = useState({ new: '', confirm: '', current: '' });
   const [isEditMode, setIsEditMode] = useState(false);
-
-  // [모달] 활성 모달 및 상태 메시지
   const [modal, setModal] = useState({ active: null, nextAction: null, error: '' });
   const [loading, setLoading] = useState(false);
-  const authData = useAuth();
+
   useEffect(() => {
     setUserData({
       name: userName || '사용자',
-      email: selectedCompany?.email || user?.email || '-',
+      email: userEmail || selectedCompany?.email || '-',
       role: selectedCompany?.role_name,
     });
-  }, [user, selectedCompany, userName, isAuthReady]);
+  }, [userEmail, selectedCompany, userName, isAuthReady]);
 
   // ── Handlers ──
 

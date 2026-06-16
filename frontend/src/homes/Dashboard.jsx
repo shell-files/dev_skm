@@ -67,7 +67,7 @@ const MODULE_CARDS = [
     tone: "orange",
     icon: iconApproval,
     // TODO: 승인 워크플로우 전용 route가 확정되면 교체
-    path: "/onboard",
+    path: "/managerData",
   },
 ];
 
@@ -164,6 +164,7 @@ const Dashboard = () => {
 
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [currentProject, setCurrentProject] = useState(null);
+  const [pendingNavPath, setPendingNavPath] = useState(null);
   const guideRef = useRef(null);
 
   /* ── runId 변경 시 필요 온보딩 지표 API 호출 (이슈별 개별 카운트) ── */
@@ -215,6 +216,15 @@ const Dashboard = () => {
     dispatch(setCurruntYear(project.reportingYear));
     dispatch(setMaterialityRunId(project.runId));
     setShowProjectModal(false);
+    if (pendingNavPath) {
+      navigate(pendingNavPath);
+      setPendingNavPath(null);
+    }
+  };
+
+  const navigateWithProjectModal = (path) => {
+    setPendingNavPath(path);
+    setShowProjectModal(true);
   };
 
   const displayProject = currentProject ?? MOCK_PROJECTS[0];
@@ -222,7 +232,7 @@ const Dashboard = () => {
 
   /* ── CTA handlers ── */
   const handleStartDataInput = () => {
-    navigate("/onboard");
+    navigateWithProjectModal("/onb");
   };
 
   const handleScrollToGuide = () => {
@@ -287,10 +297,10 @@ const Dashboard = () => {
               key={mod.key}
               className="home-dashboard-module-card"
               data-tone={mod.tone}
-              onClick={() => navigate(mod.path)}
+              onClick={() => mod.key === "approval" ? navigate(mod.path) : navigateWithProjectModal(mod.path)}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => e.key === "Enter" && navigate(mod.path)}
+              onKeyDown={(e) => e.key === "Enter" && (mod.key === "approval" ? navigate(mod.path) : navigateWithProjectModal(mod.path))}
             >
               <div className="home-dashboard-module-icon">
                 <img src={mod.icon} alt={mod.title} />
@@ -456,7 +466,7 @@ const Dashboard = () => {
         projects={projectList}
         selectedRunId={displayProject?.runId}
         onSelectProject={handleSelectProject}
-        onClose={() => setShowProjectModal(false)}
+        onClose={() => { setShowProjectModal(false); setPendingNavPath(null); }}
       />
     </div>
   );

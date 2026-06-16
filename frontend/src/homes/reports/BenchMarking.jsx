@@ -280,6 +280,15 @@ const Benchmarking = () => {
       return;
     }
 
+    if (showResult) {
+      const confirmed = await showConfirmAlert(
+        "재분석 확인",
+        "이미 벤치마킹 결과가 존재합니다.<br/>기존 데이터를 삭제하고 다시 분석하시겠습니까?",
+        "warning"
+      );
+      if (!confirmed) return;
+    }
+
     if (!companyNames.leader.trim() || !companyNames.peer.trim() || !companyNames.sub.trim()) {
       showDefaultAlert("입력 오류", "모든 그룹의 회사 이름을 입력해주세요.", "warning");
       return;

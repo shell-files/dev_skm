@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import "@styles/media.css";
 import robot from "@assets/images/robot/robot_media_t.png";
-import { showDefaultAlert } from "@components/UI/ServiceAlert";
+import { showDefaultAlert, showConfirmAlert } from "@components/UI/ServiceAlert";
 import { useAuth } from "@hooks/AuthContext";
 import {
   fetchCurrentWorkflow,
@@ -389,6 +389,15 @@ const Media = () => {
       showDefaultAlert("실행 불가", gateReason, "warning");
       return;
     }
+    if (showResult) {
+      const confirmed = await showConfirmAlert(
+        "재분석 확인",
+        "이미 미디어 분석 결과가 존재합니다.<br/>기존 데이터를 삭제하고 다시 분석하시겠습니까?",
+        "warning"
+      );
+      if (!confirmed) return;
+    }
+
     if (selectedPress.length === 0) {
       showDefaultAlert("입력 오류", "수집 언론사를 선택해주세요.", "warning");
       return;

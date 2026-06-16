@@ -12,7 +12,8 @@ const initialState = {
   loading: false,
   error: null,
   selectedCompany: null,
-  userName: null
+  userName: null,
+  userEmail: null
 };
 
 export const checkUser = createAsyncThunk(
@@ -62,6 +63,9 @@ const authSlice = createSlice({
     },
     updateCompanyName: (state, action) => {
       state.selectedCompany = action.payload;
+    },
+    setUserEmail: (state, action) => {
+      state.userEmail = action.payload;
     }
   },
   extraReducers: (builder) => {  
@@ -75,6 +79,7 @@ const authSlice = createSlice({
             : [];
           state.companies = storedCompanies;
           state.userName = data.userName || null;
+          state.userEmail = data.userEmail || data.user || null;
           state.selectedCompany = data.selectedCompany || null;
           state.isAuthReady = true;
           state.redirectUrl = "/dashboard";
@@ -83,6 +88,7 @@ const authSlice = createSlice({
           state.companies = [];
           state.selectedCompany = null;
           state.userName = null;
+          state.userEmail = null;
           state.isAuthReady = false;
           state.redirectUrl = "/";
         }
@@ -95,6 +101,7 @@ const authSlice = createSlice({
           localStorage.setItem("companies", encodeJson(storedCompanies));
           state.companies = storedCompanies;
           state.userName = res.data.userName;
+          state.userEmail = res.data.userEmail || null;
           state.selectedCompany = res.data.selectedCompany;
           state.isAuthReady = true;
           state.redirectUrl = "/";
@@ -114,6 +121,7 @@ const authSlice = createSlice({
           state.redirectUrl = "/";
           state.companies = [];
           state.userName = "";
+          state.userEmail = null;
           state.selectedCompany = null
           state.loading = false;
         } else {
@@ -140,5 +148,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { updateUserName, updateCompanyName } = authSlice.actions;
+export const { updateUserName, updateCompanyName, setUserEmail } = authSlice.actions;
 export default authSlice.reducer;

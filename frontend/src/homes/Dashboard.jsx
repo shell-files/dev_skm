@@ -297,10 +297,10 @@ const Dashboard = () => {
               key={mod.key}
               className="home-dashboard-module-card"
               data-tone={mod.tone}
-              onClick={() => navigateWithProjectModal(mod.path)}
+              onClick={() => mod.key === "approval" ? navigate(mod.path) : navigateWithProjectModal(mod.path)}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => e.key === "Enter" && navigateWithProjectModal(mod.path)}
+              onKeyDown={(e) => e.key === "Enter" && (mod.key === "approval" ? navigate(mod.path) : navigateWithProjectModal(mod.path))}
             >
               <div className="home-dashboard-module-icon">
                 <img src={mod.icon} alt={mod.title} />
@@ -466,7 +466,7 @@ const Dashboard = () => {
         projects={projectList}
         selectedRunId={displayProject?.runId}
         onSelectProject={handleSelectProject}
-        onClose={() => setShowProjectModal(false)}
+        onClose={() => { setShowProjectModal(false); setPendingNavPath(null); }}
       />
     </div>
   );

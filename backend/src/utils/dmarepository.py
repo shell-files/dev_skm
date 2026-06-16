@@ -46,79 +46,87 @@ from src.utils.subissuemaster import subissueMaster
 def saveSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] = None, sourceTitle: str = ""):
     """
     DMASignal 목록을 ESG_DMA_SIGNAL_DETAIL 테이블에 저장합니다.
-    scoring_payload_json을 사용하여 상세 정보를 보존하고, ESG_DMA_EVIDENCE와 함께 저장합니다.
+    단일 DB 연결로 모든 evidence + signal을 처리해 연결 수를 최소화합니다.
     저장 후 연관된 sub_issue_code에 대한 Stage Aggregation을 유발합니다.
     """
-    updatedSubIssues = set()
-    
-    for sig in signals:
-        # 1. ESG_DMA_EVIDENCE 저장 (addKey 사용)
-        evidenceText = " ".join(sig.evidenceSpans) if sig.evidenceSpans else ""
-        currentSourceTitle = sig.sourceTitle if getattr(sig, "sourceTitle", None) else sourceTitle
-        currentSourceUrl = sig.sourceUrl if getattr(sig, "sourceUrl", None) else None
-        currentPublishedAt = normalizePublishedAt(
-            sig.publishedAt if getattr(sig, "publishedAt", None) else None
-        )
-        
-        evidenceId = None
-        try:
-            res = insertEvidence(
-                runId=runId,
-                sourceStep=sig.sourceStep,
-                sourceType=sig.sourceType,
-                sourceTitle=currentSourceTitle,
-                sourceUrl=currentSourceUrl,
-                sourcePublishedAt=currentPublishedAt,
-                fileId=fileId,
-                evidenceText=evidenceText,
-            )
-            if res[0]:
-                evidenceId = res[1]
-                sig.evidenceId = str(evidenceId)
-        except Exception as e:
-            print(f"Error saving evidence: {e}")
+    if not signals:
+        return
 
-        # 2. JSON 직렬화 및 ESG_DMA_SIGNAL_DETAIL 저장
-        payload = sig.model_dump(by_alias=False)
-        payloadJson = json.dumps(payload, ensure_ascii=False)
-        
-        impactScore = sig.impactScore05 if sig.impactScore05 is not None else None
-        financialScore = sig.financialScore05 if sig.financialScore05 is not None else None
-        
-        sql = """
-        INSERT INTO ESG_DMA_SIGNAL_DETAIL (
-            esg_materiality_run_id,
-            evidence_id,
-            raw_issue_label,
-            sub_issue_code,
-            source_step,
-            source_type,
-            impact_score,
-            financial_score,
-            confidence_score,
-            scoring_payload_json
-        ) VALUES (
-            ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
-        )
-        """
-        params = (
-            runId,
-            evidenceId,
-            sig.rawIssueLabel,
-            sig.subIssueCode,
-            sig.sourceStep,
-            sig.sourceType,
-            impactScore,
-            financialScore,
-            sig.confidenceScore,
-            payloadJson
-        )
-        try:
-            save(sql, params)
-            updatedSubIssues.add((sig.subIssueCode, sig.sourceStep))
-        except Exception as e:
-            print(f"Error saving DMA Signal {sig.subIssueCode}: {e}")
-            raise Exception(f"Failed to save signal: {e}")
+    updatedSubIssues = set()
+    conn = getConn()
+    if not conn:
+        print("saveSignals: MariaDB 연결 실패")
+        return
+
+    try:
+        conn.autocommit = True
+        with conn.cursor(dictionary=True) as cur:
+            for sig in signals:
+                evidenceText = " ".join(sig.evidenceSpans) if sig.evidenceSpans else ""
+                currentSourceTitle = sig.sourceTitle if getattr(sig, "sourceTitle", None) else sourceTitle
+                currentSourceUrl = sig.sourceUrl if getattr(sig, "sourceUrl", None) else None
+                currentPublishedAt = normalizePublishedAt(
+                    sig.publishedAt if getattr(sig, "publishedAt", None) else None
+                )
+
+                # 1. ESG_DMA_EVIDENCE INSERT (같은 연결에서 LAST_INSERT_ID 사용)
+                evidenceId = None
+                try:
+                    cur.execute("""
+                        INSERT INTO ESG_DMA_EVIDENCE (
+                            esg_materiality_run_id, source_step, source_type,
+                            source_title, source_url, source_published_at, te_sr_file_id, text_span
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (runId, sig.sourceStep, sig.sourceType, currentSourceTitle,
+                          currentSourceUrl, currentPublishedAt, fileId, evidenceText))
+                    cur.execute("SELECT LAST_INSERT_ID() as id")
+                    data = cur.fetchone()
+                    if data:
+                        evidenceId = data["id"]
+                        sig.evidenceId = str(evidenceId)
+                except Exception as e:
+                    errorMessage = str(e)
+                    if "source_url" in errorMessage or "source_published_at" in errorMessage:
+                        print("Warning: ESG_DMA_EVIDENCE source_url/source_published_at columns missing. Using fallback.")
+                        try:
+                            cur.execute("""
+                                INSERT INTO ESG_DMA_EVIDENCE (
+                                    esg_materiality_run_id, source_step, source_type,
+                                    source_title, te_sr_file_id, text_span
+                                ) VALUES (?, ?, ?, ?, ?, ?)
+                            """, (runId, sig.sourceStep, sig.sourceType,
+                                  currentSourceTitle, fileId, evidenceText))
+                            cur.execute("SELECT LAST_INSERT_ID() as id")
+                            data = cur.fetchone()
+                            if data:
+                                evidenceId = data["id"]
+                                sig.evidenceId = str(evidenceId)
+                        except Exception as fallbackErr:
+                            print(f"Error saving evidence (fallback): {fallbackErr}")
+                    else:
+                        print(f"Error saving evidence: {e}")
+
+                # 2. ESG_DMA_SIGNAL_DETAIL INSERT
+                payload = sig.model_dump(by_alias=False)
+                payloadJson = json.dumps(payload, ensure_ascii=False)
+                impactScore = sig.impactScore05 if sig.impactScore05 is not None else None
+                financialScore = sig.financialScore05 if sig.financialScore05 is not None else None
+
+                try:
+                    cur.execute("""
+                        INSERT INTO ESG_DMA_SIGNAL_DETAIL (
+                            esg_materiality_run_id, evidence_id, raw_issue_label, sub_issue_code,
+                            source_step, source_type, impact_score, financial_score,
+                            confidence_score, scoring_payload_json
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (runId, evidenceId, sig.rawIssueLabel, sig.subIssueCode,
+                          sig.sourceStep, sig.sourceType, impactScore, financialScore,
+                          sig.confidenceScore, payloadJson))
+                    updatedSubIssues.add((sig.subIssueCode, sig.sourceStep))
+                except Exception as e:
+                    raise Exception(f"Failed to save signal: {e}")
+    finally:
+        conn.close()
 
     # 3. 변경된 subIssueCode 단위로 Stage Aggregation 수행
     for subIssueCode, sourceStep in updatedSubIssues:

@@ -88,10 +88,6 @@ const Benchmarking = () => {
   const benchmarkWorkflowErrorRef = useRef(null);
   const navigate = useNavigate();
 
-  const USE_PG_PIPELINE = import.meta.env.VITE_USE_PG_PIPELINE === "true";
-  const [pgSrType, setPgSrType] = useState("own_sr");
-  const [pgSrYear, setPgSrYear] = useState("");
-
   const stopBenchmarkPolling = () => {
     if (benchmarkPollTimerRef.current !== null) {
       clearInterval(benchmarkPollTimerRef.current);
@@ -261,64 +257,6 @@ const Benchmarking = () => {
     // G0/롤업 완료 게이트: DMA 단계 진입 전에는 벤치마킹 실행 금지
     if (!canRunDma) {
       showDefaultAlert("실행 불가", gateReason, "warning");
-      return;
-    }
-
-    if (USE_PG_PIPELINE) {
-      if (!pgSrType) {
-        showDefaultAlert("입력 오류", "SR 유형을 선택해주세요.", "warning");
-        return;
-      }
-      stopBenchmarkPolling();
-      benchmarkWorkflowErrorRef.current = null;
-      setDashboardOpen(true);
-      setShowResult(false);
-      setProgress(0);
-      setIsAnalyzing(true);
-      showDefaultAlert("분석 시작", "DB 직접 조회 모드로 벤치마킹 분석이 시작되었습니다.", "success");
-      try {
-        setProgress(10);
-        const analyzePromise = dispatch(
-          runBenchmarkAnalysis({
-            runId,
-            fileNames: [],
-            usePgPipeline: true,
-            pgSrType,
-            pgSrYear: pgSrYear.trim() || undefined,
-          })
-        ).unwrap();
-        startBenchmarkPolling(runId);
-        try {
-          await analyzePromise;
-        } catch (analyzeErr) {
-          throw new Error(
-            benchmarkWorkflowErrorRef.current ||
-              analyzeErr?.message ||
-              "벤치마킹 분석에 실패했습니다."
-          );
-        }
-        if (benchmarkWorkflowErrorRef.current) {
-          throw new Error(benchmarkWorkflowErrorRef.current);
-        }
-        const finalWorkflow = await fetchBenchmarkWorkflowStatus(runId);
-        if (!finalWorkflow) throw new Error("벤치마킹 분석 상태를 확인할 수 없습니다.");
-        if (finalWorkflow.overallStatus !== "COMPLETED") {
-          throw new Error(finalWorkflow.errorMessage || "벤치마킹 분석이 완료되지 않았습니다.");
-        }
-        stopBenchmarkPolling();
-        setProgress(100);
-        const resultResponse = await dispatch(fetchBenchmarkResult({ runId })).unwrap();
-        const dto = resultResponse.data ?? resultResponse;
-        setDashboardData(mapBenchmarkResultToDashboard(dto));
-        setIsAnalyzing(false);
-        setShowResult(true);
-      } catch (err) {
-        console.error(err);
-        stopBenchmarkPolling();
-        showDefaultAlert("분석 오류", err.message || "벤치마킹 분석 중 오류가 발생했습니다.", "error");
-        setIsAnalyzing(false);
-        setShowResult(false);
-      }
       return;
     }
 
@@ -537,40 +475,6 @@ const Benchmarking = () => {
             {renderUploadGroup("peer", "피어", "회사이름 필수 입력")}
             {renderUploadGroup("sub", "자사", "회사이름 필수 입력")}
           </div>
-
-          {USE_PG_PIPELINE && (
-            <div style={{ margin: "16px 0", padding: "14px 18px", background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: "10px" }}>
-              <div style={{ fontWeight: 700, fontSize: "0.85rem", color: "#15803d", marginBottom: "10px" }}>
-                DB 직접 조회 모드 (PDF 업로드 불필요)
-              </div>
-              <div style={{ display: "flex", gap: "12px", alignItems: "flex-end", flexWrap: "wrap" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151" }}>
-                    SR 유형 <span style={{ color: "#dc2626" }}>*</span>
-                  </label>
-                  <select
-                    value={pgSrType}
-                    onChange={(e) => setPgSrType(e.target.value)}
-                    style={{ padding: "6px 10px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "0.85rem", minWidth: "140px" }}
-                  >
-                    <option value="own_sr">자사 (Own)</option>
-                    <option value="leader_sr">리더 (Leader)</option>
-                    <option value="peer_sr">피어 (Peer)</option>
-                  </select>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                  <label style={{ fontSize: "0.78rem", fontWeight: 600, color: "#374151" }}>연도 (선택)</label>
-                  <input
-                    type="text"
-                    value={pgSrYear}
-                    onChange={(e) => setPgSrYear(e.target.value)}
-                    placeholder="예: 2024"
-                    style={{ padding: "6px 10px", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "0.85rem", width: "110px" }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
 
           {!canRunDma && (
             <div style={{ marginTop: "10px", fontSize: "0.85rem", color: "#b45309", textAlign: "center", fontWeight: 600 }}>

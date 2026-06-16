@@ -154,12 +154,15 @@ def uploadSr(fileModel: FileModel, userModel: UserModel):
     return ResponseModel(True, "파일이 성공적으로 업로드되었습니다.", {"files": saved_files, "page": fileModel.page})
 
 
+_PG_SR_TYPES = ["leader_sr", "peer_sr", "own_sr"]
+
+
 async def _findSrFromPg(fileFindModel: FileFindModel, runId: int):
-    if not fileFindModel.pgSrType:
-        raise ValueError("PG 모드 벤치마킹은 pg_sr_type을 반드시 지정해야 합니다.")
+    # srYear 미지정 시 pg_service 쪽에서 기본 범위(2022-2024) 적용
+    srYear = fileFindModel.pgSrYear or None
 
     currentStage = "PREPARE"
-    currentProgress = 20
+    currentProgress = 10
     _writeBenchmarkWorkflowStatus(
         runId=runId,
         overallStatus="RUNNING",
@@ -168,37 +171,47 @@ async def _findSrFromPg(fileFindModel: FileFindModel, runId: int):
         startedYn=True,
     )
     try:
-        currentStage = "DOCUMENT_ANALYSIS"
-        currentProgress = 40
-        _writeBenchmarkWorkflowStatus(
-            runId=runId,
-            overallStatus="RUNNING",
-            currentStage=currentStage,
-            progressPercent=currentProgress,
-        )
+        allScoredSignals = []
+        allRawResults = []
+        allFactPayloads = []
+        aiPolicy = dmaruleregistry.getPolicy("ai_fact_validation_policy")
 
-        signals, rawResultList, sourceTitle = fetchBenchmarkFromPg(
-            srType=fileFindModel.pgSrType,
-            srYear=fileFindModel.pgSrYear,
-        )
-
-        currentStage = "BENCHMARK_SCORING"
-        currentProgress = 70
-        _writeBenchmarkWorkflowStatus(
-            runId=runId,
-            overallStatus="RUNNING",
-            currentStage=currentStage,
-            progressPercent=currentProgress,
-        )
-
-        scoredSignals = scoreSignals(signals)
-        if scoredSignals:
-            saveSignals(
+        for idx, srType in enumerate(_PG_SR_TYPES):
+            currentStage = "DOCUMENT_ANALYSIS"
+            currentProgress = 20 + idx * 20
+            _writeBenchmarkWorkflowStatus(
                 runId=runId,
-                signals=scoredSignals,
-                fileId=None,
-                sourceTitle=sourceTitle,
+                overallStatus="RUNNING",
+                currentStage=currentStage,
+                progressPercent=currentProgress,
             )
+
+            signals, rawResultList, sourceTitle = fetchBenchmarkFromPg(
+                srType=srType,
+                srYear=srYear,
+            )
+
+            scoredSignals = scoreSignals(signals)
+            if scoredSignals:
+                saveSignals(
+                    runId=runId,
+                    signals=scoredSignals,
+                    fileId=None,
+                    sourceTitle=sourceTitle,
+                )
+                allScoredSignals.extend(scoredSignals)
+
+            shadowFacts = step0NormalizeBenchmarkFacts(
+                rawResultList,
+                fileId=None,
+                sourceType=srType,
+                aiPolicy=aiPolicy,
+            )
+            for fact in shadowFacts:
+                allFactPayloads.append(
+                    step0BuildFactTrace(extractedFact=fact, sourceChannel="benchmark")
+                )
+            allRawResults.extend(rawResultList)
 
         currentStage = "BENCHMARK_SHADOW"
         currentProgress = 90
@@ -209,25 +222,14 @@ async def _findSrFromPg(fileFindModel: FileFindModel, runId: int):
             progressPercent=currentProgress,
         )
 
-        aiPolicy = dmaruleregistry.getPolicy("ai_fact_validation_policy")
-        shadowFacts = step0NormalizeBenchmarkFacts(
-            rawResultList,
-            fileId=None,
-            sourceType=None,
-            aiPolicy=aiPolicy,
-        )
-        factPayloads = [
-            step0BuildFactTrace(extractedFact=fact, sourceChannel="benchmark")
-            for fact in shadowFacts
-        ]
         universeSubIssueCodes = [
             code for code, meta in subissueMaster.items()
             if meta.get("materiality_issue_pool_yn") == "Y"
         ]
-        screeningPayloads = step2BuildBenchmarkScreeningPayloads(factPayloads, universeSubIssueCodes)
+        screeningPayloads = step2BuildBenchmarkScreeningPayloads(allFactPayloads, universeSubIssueCodes)
         step4ReplaceBenchmarkShadowTracesTx(
             runId=runId,
-            factPayloads=factPayloads,
+            factPayloads=allFactPayloads,
             screeningPayloads=screeningPayloads,
             expectedScreeningCount=len(universeSubIssueCodes),
         )
@@ -244,8 +246,8 @@ async def _findSrFromPg(fileFindModel: FileFindModel, runId: int):
 
         return ResponseModel(
             True,
-            f"PG 모드: {sourceTitle} 분석 완료 ({len(scoredSignals)}건)",
-            {"savedCount": len(scoredSignals), "sourceTitle": sourceTitle},
+            f"PG 모드: 벤치마킹 분석 완료 ({len(allScoredSignals)}건)",
+            {"savedCount": len(allScoredSignals), "srYear": srYear},
         )
 
     except Exception as e:

@@ -25,6 +25,7 @@ from src.utils.subissuemaster import getSubIssueDisplayName, getScoringAllowedIr
 
 _DEFAULT_CONFIDENCE: float = 0.9
 _EVIDENCE_TEXT_LIMIT: int = 500
+_PG_DEFAULT_YEARS: tuple = ("2022", "2023", "2024")
 
 # recalcStage의 파일-비율 계산(leaderRatio/peerRatio/ownRatio)이 teSrFileId 기반이므로
 # PG 모드 신호에는 sourceType별 가상 음수 ID를 부여해 비율이 0이 되지 않도록 한다.
@@ -124,6 +125,10 @@ def fetchBenchmarkFromPg(
     if srYear:
         conditions.append("year = %s")
         params.append(srYear)
+    else:
+        placeholders = ", ".join(["%s"] * len(_PG_DEFAULT_YEARS))
+        conditions.append(f"year IN ({placeholders})")
+        params.extend(_PG_DEFAULT_YEARS)
 
     where_clause = " AND ".join(conditions)
     sql = f"""

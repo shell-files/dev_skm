@@ -324,6 +324,26 @@ const Media = () => {
     }
   }, [dispatch, workflow, companyId, reportingYear]);
 
+  // 페이지 재진입 시 현재 runId의 기존 미디어 결과 복원
+  useEffect(() => {
+    if (!currentRunId || isAnalyzing) return;
+    const runId = Number(currentRunId);
+    if (!runId) return;
+
+    dispatch(fetchMediaResult({ runId }))
+      .unwrap()
+      .then((res) => {
+        const dto = res.data ?? res;
+        if (dto?.topIssues?.length > 0) {
+          setDashboardData(mapMediaResultToDashboard(null, dto));
+          setShowResult(true);
+          setDashboardOpen(true);
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRunId, dispatch]);
+
 
   const createParticles = () => {
     if (!particleRef.current) return;

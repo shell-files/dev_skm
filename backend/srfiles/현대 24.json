@@ -1,0 +1,876 @@
+{
+  "status": true,
+  "message": "분석이 성공적으로 완료되었습니다.",
+  "data": {
+    "status": true,
+    "message": "분석이 완료되었습니다.",
+    "data": [
+      {
+        "fileName": "2fddffde6a9a45b0a9684b9cd7a3f9f2.pdf",
+        "companyName": "현모",
+        "type": "Own",
+        "result": [
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_RISK",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "금속, 플라스틱 등 원재료의 가공과 부품의 제조에 따른 업스트림, 자체 운영에서의 온실가스 배출과 부품의 사용 및 폐기 단계에 이르기까지 다운스트림에서의 온실가스 배출로 인해 기후변화를 가속화시킬 수 있습니다.",
+                "소재 대체, 신기술 적용 등에 따른 자체 제조 비용이 상승할 수 있으며, 업스트림 협력사로부터 제품 구매비용 또한 증가할 수 있습니다. EU CBAM 등 새로운 온실가스 규제는 관세 등의 추가적 비용을 야기할 수 있으며, 점진적인 규제 강화 시 무역장벽으로 작용할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.37818917555067283,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 대응 (기후 리스크)",
+            "displaySubIssueName": "기후 리스크",
+            "similarityScore": 0.636371374130249,
+            "similarityRank": 1,
+            "mappingWeight": 0.42021019505630314,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "금속, 플라스틱 등 원재료의 가공과 부품의 제조에 따른 업스트림, 자체 운영에서의 온실가스 배출과 부품의 사용 및 폐기 단계에 이르기까지 다운스트림에서의 온실가스 배출로 인해 기후변화를 가속화시킬 수 있습니다.",
+              "소재 대체, 신기술 적용 등에 따른 자체 제조 비용이 상승할 수 있으며, 업스트림 협력사로부터 제품 구매비용 또한 증가할 수 있습니다. EU CBAM 등 새로운 온실가스 규제는 관세 등의 추가적 비용을 야기할 수 있으며, 점진적인 규제 강화 시 무역장벽으로 작용할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_TARGETS_TRANSITION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "금속, 플라스틱 등 원재료의 가공과 부품의 제조에 따른 업스트림, 자체 운영에서의 온실가스 배출과 부품의 사용 및 폐기 단계에 이르기까지 다운스트림에서의 온실가스 배출로 인해 기후변화를 가속화시킬 수 있습니다.",
+                "소재 대체, 신기술 적용 등에 따른 자체 제조 비용이 상승할 수 있으며, 업스트림 협력사로부터 제품 구매비용 또한 증가할 수 있습니다. EU CBAM 등 새로운 온실가스 규제는 관세 등의 추가적 비용을 야기할 수 있으며, 점진적인 규제 강화 시 무역장벽으로 작용할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.33982770244343324,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 대응 (기후목표·전환계획)",
+            "displaySubIssueName": "기후목표·전환계획",
+            "similarityScore": 0.6166629791259766,
+            "similarityRank": 2,
+            "mappingWeight": 0.37758633604825914,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "금속, 플라스틱 등 원재료의 가공과 부품의 제조에 따른 업스트림, 자체 운영에서의 온실가스 배출과 부품의 사용 및 폐기 단계에 이르기까지 다운스트림에서의 온실가스 배출로 인해 기후변화를 가속화시킬 수 있습니다.",
+              "소재 대체, 신기술 적용 등에 따른 자체 제조 비용이 상승할 수 있으며, 업스트림 협력사로부터 제품 구매비용 또한 증가할 수 있습니다. EU CBAM 등 새로운 온실가스 규제는 관세 등의 추가적 비용을 야기할 수 있으며, 점진적인 규제 강화 시 무역장벽으로 작용할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_GOVERNANCE_INVENTORY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 4,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "금속, 플라스틱 등 원재료의 가공과 부품의 제조에 따른 업스트림, 자체 운영에서의 온실가스 배출과 부품의 사용 및 폐기 단계에 이르기까지 다운스트림에서의 온실가스 배출로 인해 기후변화를 가속화시킬 수 있습니다.",
+                "소재 대체, 신기술 적용 등에 따른 자체 제조 비용이 상승할 수 있으며, 업스트림 협력사로부터 제품 구매비용 또한 증가할 수 있습니다. EU CBAM 등 새로운 온실가스 규제는 관세 등의 추가적 비용을 야기할 수 있으며, 점진적인 규제 강화 시 무역장벽으로 작용할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.18198312200589387,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 대응 (기후 거버넌스·인벤토리)",
+            "displaySubIssueName": "기후 거버넌스·인벤토리",
+            "similarityScore": 0.525850772857666,
+            "similarityRank": 3,
+            "mappingWeight": 0.2022034688954376,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "금속, 플라스틱 등 원재료의 가공과 부품의 제조에 따른 업스트림, 자체 운영에서의 온실가스 배출과 부품의 사용 및 폐기 단계에 이르기까지 다운스트림에서의 온실가스 배출로 인해 기후변화를 가속화시킬 수 있습니다.",
+              "소재 대체, 신기술 적용 등에 따른 자체 제조 비용이 상승할 수 있으며, 업스트림 협력사로부터 제품 구매비용 또한 증가할 수 있습니다. EU CBAM 등 새로운 온실가스 규제는 관세 등의 추가적 비용을 야기할 수 있으며, 점진적인 규제 강화 시 무역장벽으로 작용할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_EFFICIENCY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "자체 사업장 운영 시 화석연료 연소 등을 통한 직접 에너지와, 전력 구매를 통한 간접 에너지를 사용하고 있습니다.",
+                "이에 에너지 최적화, 재생에너지 직접 발전 등을 위한 신규 설비 투자가 필요할 수 있으며, 인증서 구매 등 추가적인 운영 비용이 발생할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3561789558001225,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 사용 관리 (에너지 효율·집약도)",
+            "displaySubIssueName": "에너지 효율·집약도",
+            "similarityScore": 0.7236774563789368,
+            "similarityRank": 1,
+            "mappingWeight": 0.3957543953334694,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자체 사업장 운영 시 화석연료 연소 등을 통한 직접 에너지와, 전력 구매를 통한 간접 에너지를 사용하고 있습니다.",
+              "이에 에너지 최적화, 재생에너지 직접 발전 등을 위한 신규 설비 투자가 필요할 수 있으며, 인증서 구매 등 추가적인 운영 비용이 발생할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__ENERGY_USE_MIX",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "자체 사업장 운영 시 화석연료 연소 등을 통한 직접 에너지와, 전력 구매를 통한 간접 에너지를 사용하고 있습니다.",
+                "이에 에너지 최적화, 재생에너지 직접 발전 등을 위한 신규 설비 투자가 필요할 수 있으며, 인증서 구매 등 추가적인 운영 비용이 발생할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.34151190182099034,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 사용 관리 (에너지 사용·에너지원)",
+            "displaySubIssueName": "에너지 사용·에너지원",
+            "similarityScore": 0.713347315788269,
+            "similarityRank": 2,
+            "mappingWeight": 0.37945766868998926,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자체 사업장 운영 시 화석연료 연소 등을 통한 직접 에너지와, 전력 구매를 통한 간접 에너지를 사용하고 있습니다.",
+              "이에 에너지 최적화, 재생에너지 직접 발전 등을 위한 신규 설비 투자가 필요할 수 있으며, 인증서 구매 등 추가적인 운영 비용이 발생할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_ENERGY__RENEWABLE_ENERGY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "자체 사업장 운영 시 화석연료 연소 등을 통한 직접 에너지와, 전력 구매를 통한 간접 에너지를 사용하고 있습니다.",
+                "이에 에너지 최적화, 재생에너지 직접 발전 등을 위한 신규 설비 투자가 필요할 수 있으며, 인증서 구매 등 추가적인 운영 비용이 발생할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.20230914237888725,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "에너지 사용 관리 (재생에너지)",
+            "displaySubIssueName": "재생에너지",
+            "similarityScore": 0.6062880754470825,
+            "similarityRank": 3,
+            "mappingWeight": 0.2247879359765414,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자체 사업장 운영 시 화석연료 연소 등을 통한 직접 에너지와, 전력 구매를 통한 간접 에너지를 사용하고 있습니다.",
+              "이에 에너지 최적화, 재생에너지 직접 발전 등을 위한 신규 설비 투자가 필요할 수 있으며, 인증서 구매 등 추가적인 운영 비용이 발생할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_PRODUCT_ENV__PRODUCT_LCA_CERTIFICATION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "국가별 탄소중립 이행에 의해 친환경 자동차 시장은 가파르게 성장하고 있습니다.",
+                "제품의 환경성을 평가하는 전과정평가 결과(탄소발자국)는 주요 글로벌 고객사의 수주 조건으로 포함되고 있습니다. 이에 제품 탄소발자국 산정뿐만 아니라 감축을 통한 저탄소 제품으로의 방향성은 향후 친환경 시장 점유율 확대를 위한 기회가 될 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.45161678741136774,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 순환성 (LCA, 전동화 제품, 재제조/재활용) (제품 환경성과·LCA)",
+            "displaySubIssueName": "제품 환경성과·LCA",
+            "similarityScore": 0.6538528203964233,
+            "similarityRank": 1,
+            "mappingWeight": 0.5017964304570752,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "국가별 탄소중립 이행에 의해 친환경 자동차 시장은 가파르게 성장하고 있습니다.",
+              "제품의 환경성을 평가하는 전과정평가 결과(탄소발자국)는 주요 글로벌 고객사의 수주 조건으로 포함되고 있습니다. 이에 제품 탄소발자국 산정뿐만 아니라 감축을 통한 저탄소 제품으로의 방향성은 향후 친환경 시장 점유율 확대를 위한 기회가 될 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CIRCULARITY__CIRCULAR_MATERIALS",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "국가별 탄소중립 이행에 의해 친환경 자동차 시장은 가파르게 성장하고 있습니다.",
+                "제품의 환경성을 평가하는 전과정평가 결과(탄소발자국)는 주요 글로벌 고객사의 수주 조건으로 포함되고 있습니다. 이에 제품 탄소발자국 산정뿐만 아니라 감축을 통한 저탄소 제품으로의 방향성은 향후 친환경 시장 점유율 확대를 위한 기회가 될 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.23530787202004036,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 순환성 (LCA, 전동화 제품, 재제조/재활용) (원재료·순환자원)",
+            "displaySubIssueName": "원재료·순환자원",
+            "similarityScore": 0.5467467308044434,
+            "similarityRank": 2,
+            "mappingWeight": 0.26145319113337817,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "국가별 탄소중립 이행에 의해 친환경 자동차 시장은 가파르게 성장하고 있습니다.",
+              "제품의 환경성을 평가하는 전과정평가 결과(탄소발자국)는 주요 글로벌 고객사의 수주 조건으로 포함되고 있습니다. 이에 제품 탄소발자국 산정뿐만 아니라 감축을 통한 저탄소 제품으로의 방향성은 향후 친환경 시장 점유율 확대를 위한 기회가 될 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CIRCULARITY__RECYCLING_RECOVERY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "국가별 탄소중립 이행에 의해 친환경 자동차 시장은 가파르게 성장하고 있습니다.",
+                "제품의 환경성을 평가하는 전과정평가 결과(탄소발자국)는 주요 글로벌 고객사의 수주 조건으로 포함되고 있습니다. 이에 제품 탄소발자국 산정뿐만 아니라 감축을 통한 저탄소 제품으로의 방향성은 향후 친환경 시장 점유율 확대를 위한 기회가 될 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.21307534056859198,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 순환성 (LCA, 전동화 제품, 재제조/재활용) (재활용·회수)",
+            "displaySubIssueName": "재활용·회수",
+            "similarityScore": 0.5341501235961914,
+            "similarityRank": 3,
+            "mappingWeight": 0.23675037840954663,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "국가별 탄소중립 이행에 의해 친환경 자동차 시장은 가파르게 성장하고 있습니다.",
+              "제품의 환경성을 평가하는 전과정평가 결과(탄소발자국)는 주요 글로벌 고객사의 수주 조건으로 포함되고 있습니다. 이에 제품 탄소발자국 산정뿐만 아니라 감축을 통한 저탄소 제품으로의 방향성은 향후 친환경 시장 점유율 확대를 위한 기회가 될 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "G_GOVERNANCE__BUSINESS_MODEL_VALUE_CHAIN",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "유연하고 효율적인 조직문화는 구성원의 업무 몰입도 제고 및 근로 만족도 향상에 기여합니다.",
+                "기업문화는 궁극적으로 업무 성과 향상과 연계되어 불확실한 시장에서 경쟁 우위를 점하고, 새로운 수익 채널과 고객을 확보하는 등의 사업 성과 개선으로 증폭될 수 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.9,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기업 문화 (사업모델·가치사슬)",
+            "displaySubIssueName": "사업모델·가치사슬",
+            "similarityScore": 0.4125177562236786,
+            "similarityRank": 1,
+            "mappingWeight": 1,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "유연하고 효율적인 조직문화는 구성원의 업무 몰입도 제고 및 근로 만족도 향상에 기여합니다.",
+              "기업문화는 궁극적으로 업무 성과 향상과 연계되어 불확실한 시장에서 경쟁 우위를 점하고, 새로운 수익 채널과 고객을 확보하는 등의 사업 성과 개선으로 증폭될 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_LABOR__HIRING_TURNOVER_RETENTION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "공정하고 올바른 채용을 위한 노력은 구직자들에게 동등한 기회를 제공하고, 아동·강제 노동과 같은 불공정한 노동을 근절시키는 역할을 할 수 있습니다.",
+                "적절한 인재를 확보하고 유지하는 것은 비즈니스를 확장, 전환하는 데 기여하며 기업의 발전과 장기적 목표 달성을 위한 기회 요인이 될 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.45577074905099685,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "인재 채용 및 유지 (채용·이직·유지)",
+            "displaySubIssueName": "채용·이직·유지",
+            "similarityScore": 0.5259425044059753,
+            "similarityRank": 1,
+            "mappingWeight": 0.5064119433899965,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "공정하고 올바른 채용을 위한 노력은 구직자들에게 동등한 기회를 제공하고, 아동·강제 노동과 같은 불공정한 노동을 근절시키는 역할을 할 수 있습니다.",
+              "적절한 인재를 확보하고 유지하는 것은 비즈니스를 확장, 전환하는 데 기여하며 기업의 발전과 장기적 목표 달성을 위한 기회 요인이 될 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_BIODIVERSITY__RESTORATION_CONSERVATION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "공정하고 올바른 채용을 위한 노력은 구직자들에게 동등한 기회를 제공하고, 아동·강제 노동과 같은 불공정한 노동을 근절시키는 역할을 할 수 있습니다.",
+                "적절한 인재를 확보하고 유지하는 것은 비즈니스를 확장, 전환하는 데 기여하며 기업의 발전과 장기적 목표 달성을 위한 기회 요인이 될 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2911513249058568,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "인재 채용 및 유지 (복원·보전)",
+            "displaySubIssueName": "복원·보전",
+            "similarityScore": 0.48050254583358765,
+            "similarityRank": 2,
+            "mappingWeight": 0.3235014721176187,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "공정하고 올바른 채용을 위한 노력은 구직자들에게 동등한 기회를 제공하고, 아동·강제 노동과 같은 불공정한 노동을 근절시키는 역할을 할 수 있습니다.",
+              "적절한 인재를 확보하고 유지하는 것은 비즈니스를 확장, 전환하는 데 기여하며 기업의 발전과 장기적 목표 달성을 위한 기회 요인이 될 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_TALENT__PERFORMANCE_CAREER",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "공정하고 올바른 채용을 위한 노력은 구직자들에게 동등한 기회를 제공하고, 아동·강제 노동과 같은 불공정한 노동을 근절시키는 역할을 할 수 있습니다.",
+                "적절한 인재를 확보하고 유지하는 것은 비즈니스를 확장, 전환하는 데 기여하며 기업의 발전과 장기적 목표 달성을 위한 기회 요인이 될 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.15307792604314627,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "인재 채용 및 유지 (성과평가·경력개발)",
+            "displaySubIssueName": "성과평가·경력개발",
+            "similarityScore": 0.43501225113868713,
+            "similarityRank": 3,
+            "mappingWeight": 0.17008658449238473,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "공정하고 올바른 채용을 위한 노력은 구직자들에게 동등한 기회를 제공하고, 아동·강제 노동과 같은 불공정한 노동을 근절시키는 역할을 할 수 있습니다.",
+              "적절한 인재를 확보하고 유지하는 것은 비즈니스를 확장, 전환하는 데 기여하며 기업의 발전과 장기적 목표 달성을 위한 기회 요인이 될 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_RISK_AUDIT_CAP",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "공급망과의 상생협력은 개별 기업 차원을 넘어 산업 생태계를 강화시키고, 가치사슬 근로자의 고용 안정성을 높이며 산업 노동환경 개선에 기여할 수 있습니다.",
+                "공급망 관리는 안정적인 부품의 수급과 생산, 공급과 연계되어 협력사의 자금 문제, 파업 등에 따른 원재료, 부품 조달 문제 발생 시 라인 중단 등 심각한 비즈니스적 위험을 유발할 수 있습니다. 또한, EU국가를 중심으로 한 공급망 관련 규제는 미준수 시 벌금 등 비교적 큰 규모의 추가 비용을 발생시킬 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.34162386082826773,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "공급망 지속가능성 관리 (공급망 감사·시정조치)",
+            "displaySubIssueName": "공급망 감사·시정조치",
+            "similarityScore": 0.5925860404968262,
+            "similarityRank": 1,
+            "mappingWeight": 0.37958206758696417,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "공급망과의 상생협력은 개별 기업 차원을 넘어 산업 생태계를 강화시키고, 가치사슬 근로자의 고용 안정성을 높이며 산업 노동환경 개선에 기여할 수 있습니다.",
+              "공급망 관리는 안정적인 부품의 수급과 생산, 공급과 연계되어 협력사의 자금 문제, 파업 등에 따른 원재료, 부품 조달 문제 발생 시 라인 중단 등 심각한 비즈니스적 위험을 유발할 수 있습니다. 또한, EU국가를 중심으로 한 공급망 관련 규제는 미준수 시 벌금 등 비교적 큰 규모의 추가 비용을 발생시킬 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUPPLY_CHAIN_ENV__SUPPLIER_ENV_ASSESSMENT",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "공급망과의 상생협력은 개별 기업 차원을 넘어 산업 생태계를 강화시키고, 가치사슬 근로자의 고용 안정성을 높이며 산업 노동환경 개선에 기여할 수 있습니다.",
+                "공급망 관리는 안정적인 부품의 수급과 생산, 공급과 연계되어 협력사의 자금 문제, 파업 등에 따른 원재료, 부품 조달 문제 발생 시 라인 중단 등 심각한 비즈니스적 위험을 유발할 수 있습니다. 또한, EU국가를 중심으로 한 공급망 관련 규제는 미준수 시 벌금 등 비교적 큰 규모의 추가 비용을 발생시킬 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3324234993063558,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "공급망 지속가능성 관리 (공급망 환경평가)",
+            "displaySubIssueName": "공급망 환경평가",
+            "similarityScore": 0.5882108211517334,
+            "similarityRank": 2,
+            "mappingWeight": 0.36935944367372864,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "공급망과의 상생협력은 개별 기업 차원을 넘어 산업 생태계를 강화시키고, 가치사슬 근로자의 고용 안정성을 높이며 산업 노동환경 개선에 기여할 수 있습니다.",
+              "공급망 관리는 안정적인 부품의 수급과 생산, 공급과 연계되어 협력사의 자금 문제, 파업 등에 따른 원재료, 부품 조달 문제 발생 시 라인 중단 등 심각한 비즈니스적 위험을 유발할 수 있습니다. 또한, EU국가를 중심으로 한 공급망 관련 규제는 미준수 시 벌금 등 비교적 큰 규모의 추가 비용을 발생시킬 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__GREEN_PROCUREMENT",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "공급망과의 상생협력은 개별 기업 차원을 넘어 산업 생태계를 강화시키고, 가치사슬 근로자의 고용 안정성을 높이며 산업 노동환경 개선에 기여할 수 있습니다.",
+                "공급망 관리는 안정적인 부품의 수급과 생산, 공급과 연계되어 협력사의 자금 문제, 파업 등에 따른 원재료, 부품 조달 문제 발생 시 라인 중단 등 심각한 비즈니스적 위험을 유발할 수 있습니다. 또한, EU국가를 중심으로 한 공급망 관련 규제는 미준수 시 벌금 등 비교적 큰 규모의 추가 비용을 발생시킬 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.22595263986537648,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "공급망 지속가능성 관리 (녹색조달·친환경 구매)",
+            "displaySubIssueName": "녹색조달·친환경 구매",
+            "similarityScore": 0.5341529250144958,
+            "similarityRank": 3,
+            "mappingWeight": 0.2510584887393072,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "공급망과의 상생협력은 개별 기업 차원을 넘어 산업 생태계를 강화시키고, 가치사슬 근로자의 고용 안정성을 높이며 산업 노동환경 개선에 기여할 수 있습니다.",
+              "공급망 관리는 안정적인 부품의 수급과 생산, 공급과 연계되어 협력사의 자금 문제, 파업 등에 따른 원재료, 부품 조달 문제 발생 시 라인 중단 등 심각한 비즈니스적 위험을 유발할 수 있습니다. 또한, EU국가를 중심으로 한 공급망 관련 규제는 미준수 시 벌금 등 비교적 큰 규모의 추가 비용을 발생시킬 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__PRODUCT_SAFETY_QUALITY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "자동차 부품 산업의 특성상 품질 문제 발생 시 소비자의 이동안정성을 저해하고, 건강에 직접적인 위해가 될 수 있습니다.",
+                "품질 문제 발생 시 제품 신뢰도 및 브랜드 가치 하락에 따른 직간접적 매출 감소가 위험 요인이 될 수 있으며, 대규모 리콜 및 보증 이행에 의한 추가 운영 비용이 발생할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.41583860831289565,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 안전 및 품질 확보 (소비자 건강·제품안전)",
+            "displaySubIssueName": "소비자 건강·제품안전",
+            "similarityScore": 0.7497960329055786,
+            "similarityRank": 1,
+            "mappingWeight": 0.4620428981254396,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자동차 부품 산업의 특성상 품질 문제 발생 시 소비자의 이동안정성을 저해하고, 건강에 직접적인 위해가 될 수 있습니다.",
+              "품질 문제 발생 시 제품 신뢰도 및 브랜드 가치 하락에 따른 직간접적 매출 감소가 위험 요인이 될 수 있으며, 대규모 리콜 및 보증 이행에 의한 추가 운영 비용이 발생할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__PRODUCT_INFORMATION_CHEMICAL_SAFETY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "자동차 부품 산업의 특성상 품질 문제 발생 시 소비자의 이동안정성을 저해하고, 건강에 직접적인 위해가 될 수 있습니다.",
+                "품질 문제 발생 시 제품 신뢰도 및 브랜드 가치 하락에 따른 직간접적 매출 감소가 위험 요인이 될 수 있으며, 대규모 리콜 및 보증 이행에 의한 추가 운영 비용이 발생할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.26647470864881995,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 안전 및 품질 확보 (소비자 정보·화학물질 안전)",
+            "displaySubIssueName": "소비자 정보·화학물질 안전",
+            "similarityScore": 0.6471615433692932,
+            "similarityRank": 2,
+            "mappingWeight": 0.29608300960979994,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자동차 부품 산업의 특성상 품질 문제 발생 시 소비자의 이동안정성을 저해하고, 건강에 직접적인 위해가 될 수 있습니다.",
+              "품질 문제 발생 시 제품 신뢰도 및 브랜드 가치 하락에 따른 직간접적 매출 감소가 위험 요인이 될 수 있으며, 대규모 리콜 및 보증 이행에 의한 추가 운영 비용이 발생할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__RECALL_FIELD_ACTION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "자동차 부품 산업의 특성상 품질 문제 발생 시 소비자의 이동안정성을 저해하고, 건강에 직접적인 위해가 될 수 있습니다.",
+                "품질 문제 발생 시 제품 신뢰도 및 브랜드 가치 하락에 따른 직간접적 매출 감소가 위험 요인이 될 수 있으며, 대규모 리콜 및 보증 이행에 의한 추가 운영 비용이 발생할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.21768668303828453,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 안전 및 품질 확보 (리콜·필드액션)",
+            "displaySubIssueName": "리콜·필드액션",
+            "similarityScore": 0.6096827983856201,
+            "similarityRank": 3,
+            "mappingWeight": 0.2418740922647606,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자동차 부품 산업의 특성상 품질 문제 발생 시 소비자의 이동안정성을 저해하고, 건강에 직접적인 위해가 될 수 있습니다.",
+              "품질 문제 발생 시 제품 신뢰도 및 브랜드 가치 하락에 따른 직간접적 매출 감소가 위험 요인이 될 수 있으며, 대규모 리콜 및 보증 이행에 의한 추가 운영 비용이 발생할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_TALENT__PERFORMANCE_CAREER",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "자동차 산업은 자율주행차, 친환경차를 중심으로 급격히 변화하고 있습니다. 뿐만 아니라 UAM(도심항공교통)과 같은 새로운 이동 수단의 패러다임을 형성해 나가고 있습니다.",
+                "연구개발 강화에 따른 신기술, 신제품 개발은 지속적으로 비즈니스를 확장, 전환하는 기회요인이 될 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.46980349112784264,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "연구개발 강화/기술 혁신 (성과평가·경력개발)",
+            "displaySubIssueName": "성과평가·경력개발",
+            "similarityScore": 0.4394344687461853,
+            "similarityRank": 1,
+            "mappingWeight": 0.5220038790309363,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자동차 산업은 자율주행차, 친환경차를 중심으로 급격히 변화하고 있습니다. 뿐만 아니라 UAM(도심항공교통)과 같은 새로운 이동 수단의 패러다임을 형성해 나가고 있습니다.",
+              "연구개발 강화에 따른 신기술, 신제품 개발은 지속적으로 비즈니스를 확장, 전환하는 기회요인이 될 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "자동차 산업은 자율주행차, 친환경차를 중심으로 급격히 변화하고 있습니다. 뿐만 아니라 UAM(도심항공교통)과 같은 새로운 이동 수단의 패러다임을 형성해 나가고 있습니다.",
+                "연구개발 강화에 따른 신기술, 신제품 개발은 지속적으로 비즈니스를 확장, 전환하는 기회요인이 될 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4301965088721574,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "연구개발 강화/기술 혁신 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.43433451652526855,
+            "similarityRank": 2,
+            "mappingWeight": 0.47799612096906374,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자동차 산업은 자율주행차, 친환경차를 중심으로 급격히 변화하고 있습니다. 뿐만 아니라 UAM(도심항공교통)과 같은 새로운 이동 수단의 패러다임을 형성해 나가고 있습니다.",
+              "연구개발 강화에 따른 신기술, 신제품 개발은 지속적으로 비즈니스를 확장, 전환하는 기회요인이 될 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,806 @@
+{
+  "status": true,
+  "message": "분석이 성공적으로 완료되었습니다.",
+  "data": {
+    "status": true,
+    "message": "분석이 완료되었습니다.",
+    "data": [
+      {
+        "fileName": "1fa0422604db47e9af93f17d725342b9.pdf",
+        "companyName": "현모",
+        "type": "Own",
+        "result": [
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_RISK",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 3,
+              "likelihood": 4,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "현대모비스는 '2045 탄소중립'을 선언하고, ① Green Plant(사업장 에너지 전환) ② Green Supply(Scope3 공급망 관리) ③ Green Product(탄소저감 제품 확대) ④ Green Partnership(지속가능 파트너십 운영)을 바탕으로 한 4대 추진전략을 이행하고 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.37818917555067283,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 대응 (기후 리스크)",
+            "displaySubIssueName": "기후 리스크",
+            "similarityScore": 0.636371374130249,
+            "similarityRank": 1,
+            "mappingWeight": 0.42021019505630314,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "현대모비스는 '2045 탄소중립'을 선언하고, ① Green Plant(사업장 에너지 전환) ② Green Supply(Scope3 공급망 관리) ③ Green Product(탄소저감 제품 확대) ④ Green Partnership(지속가능 파트너십 운영)을 바탕으로 한 4대 추진전략을 이행하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_TARGETS_TRANSITION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 3,
+              "likelihood": 4,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "현대모비스는 '2045 탄소중립'을 선언하고, ① Green Plant(사업장 에너지 전환) ② Green Supply(Scope3 공급망 관리) ③ Green Product(탄소저감 제품 확대) ④ Green Partnership(지속가능 파트너십 운영)을 바탕으로 한 4대 추진전략을 이행하고 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.33982770244343324,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 대응 (기후목표·전환계획)",
+            "displaySubIssueName": "기후목표·전환계획",
+            "similarityScore": 0.6166629791259766,
+            "similarityRank": 2,
+            "mappingWeight": 0.37758633604825914,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "현대모비스는 '2045 탄소중립'을 선언하고, ① Green Plant(사업장 에너지 전환) ② Green Supply(Scope3 공급망 관리) ③ Green Product(탄소저감 제품 확대) ④ Green Partnership(지속가능 파트너십 운영)을 바탕으로 한 4대 추진전략을 이행하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CLIMATE__CLIMATE_GOVERNANCE_INVENTORY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 4,
+              "irremediability": 3,
+              "likelihood": 4,
+              "timeHorizon": "long",
+              "evidenceSpans": [
+                "현대모비스는 '2045 탄소중립'을 선언하고, ① Green Plant(사업장 에너지 전환) ② Green Supply(Scope3 공급망 관리) ③ Green Product(탄소저감 제품 확대) ④ Green Partnership(지속가능 파트너십 운영)을 바탕으로 한 4대 추진전략을 이행하고 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.18198312200589387,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "기후변화 대응 (기후 거버넌스·인벤토리)",
+            "displaySubIssueName": "기후 거버넌스·인벤토리",
+            "similarityScore": 0.525850772857666,
+            "similarityRank": 3,
+            "mappingWeight": 0.2022034688954376,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "현대모비스는 '2045 탄소중립'을 선언하고, ① Green Plant(사업장 에너지 전환) ② Green Supply(Scope3 공급망 관리) ③ Green Product(탄소저감 제품 확대) ④ Green Partnership(지속가능 파트너십 운영)을 바탕으로 한 4대 추진전략을 이행하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "통합 플랫폼 개발, 글로벌 SW개발 등 SW중심 회사로서의 전환 전략과 함께 자동차 부품외에 영역에서 장기 성장 동력을 육성해 나갈 것입니다. 이에 연구개발 투자비는 지난 5년간 지속 증가하였으며 (2022년 1.37조 원), 연구개발 인력 또한 2018년 대비 63%, 전년 대비 17% 증가하였습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4741084064103656,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "연구개발 강화 기술 혁신 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.42060449719429016,
+            "similarityRank": 1,
+            "mappingWeight": 0.5267871182337396,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "통합 플랫폼 개발, 글로벌 SW개발 등 SW중심 회사로서의 전환 전략과 함께 자동차 부품외에 영역에서 장기 성장 동력을 육성해 나갈 것입니다. 이에 연구개발 투자비는 지난 5년간 지속 증가하였으며 (2022년 1.37조 원), 연구개발 인력 또한 2018년 대비 63%, 전년 대비 17% 증가하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_TALENT__PERFORMANCE_CAREER",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "통합 플랫폼 개발, 글로벌 SW개발 등 SW중심 회사로서의 전환 전략과 함께 자동차 부품외에 영역에서 장기 성장 동력을 육성해 나갈 것입니다. 이에 연구개발 투자비는 지난 5년간 지속 증가하였으며 (2022년 1.37조 원), 연구개발 인력 또한 2018년 대비 63%, 전년 대비 17% 증가하였습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.42589159358963447,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "연구개발 강화 기술 혁신 (성과평가·경력개발)",
+            "displaySubIssueName": "성과평가·경력개발",
+            "similarityScore": 0.4157324731349945,
+            "similarityRank": 2,
+            "mappingWeight": 0.47321288176626053,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "통합 플랫폼 개발, 글로벌 SW개발 등 SW중심 회사로서의 전환 전략과 함께 자동차 부품외에 영역에서 장기 성장 동력을 육성해 나갈 것입니다. 이에 연구개발 투자비는 지난 5년간 지속 증가하였으며 (2022년 1.37조 원), 연구개발 인력 또한 2018년 대비 63%, 전년 대비 17% 증가하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "G_GOVERNANCE__ECONOMIC_VALUE",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "현대모비스는 리더 육성 트랙, 직원 경험 트랙, 전문가 육성 트랙이라는 3가지 인재 육성 방향을 설정하고 교육 체계를 수립하였습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.71137494327709,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "성장 지원 및 균등기회 보장 (경제가치 창출·배분)",
+            "displaySubIssueName": "경제가치 창출·배분",
+            "similarityScore": 0.4254007637500763,
+            "similarityRank": 1,
+            "mappingWeight": 0.7904166036412111,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "현대모비스는 리더 육성 트랙, 직원 경험 트랙, 전문가 육성 트랙이라는 3가지 인재 육성 방향을 설정하고 교육 체계를 수립하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUSTAINABLE_INVESTMENT__SUSTAINABLE_RND_CAPEX",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "현대모비스는 리더 육성 트랙, 직원 경험 트랙, 전문가 육성 트랙이라는 3가지 인재 육성 방향을 설정하고 교육 체계를 수립하였습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.18096291611555915,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "성장 지원 및 균등기회 보장 (지속가능 R&D·CAPEX)",
+            "displaySubIssueName": "지속가능 R&D·CAPEX",
+            "similarityScore": 0.38027167320251465,
+            "similarityRank": 2,
+            "mappingWeight": 0.2010699067950657,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "현대모비스는 리더 육성 트랙, 직원 경험 트랙, 전문가 육성 트랙이라는 3가지 인재 육성 방향을 설정하고 교육 체계를 수립하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_LABOR__HIRING_TURNOVER_RETENTION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "현대모비스는 리더 육성 트랙, 직원 경험 트랙, 전문가 육성 트랙이라는 3가지 인재 육성 방향을 설정하고 교육 체계를 수립하였습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.007662140607350844,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "성장 지원 및 균등기회 보장 (채용·이직·유지)",
+            "displaySubIssueName": "채용·이직·유지",
+            "similarityScore": 0.3536774218082428,
+            "similarityRank": 3,
+            "mappingWeight": 0.00851348956372316,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "현대모비스는 리더 육성 트랙, 직원 경험 트랙, 전문가 육성 트랙이라는 3가지 인재 육성 방향을 설정하고 교육 체계를 수립하였습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_CODE_DUE_DILIGENCE",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "현대모비스는 구성원의 일과 삶의 균형을 지원하기 위해 선택적 근로시간제와 PC-Off 프로그램을 운영하고 있습니다. 또한, '하이브리드 근무'제도를 통해 대면 근무과 비대면 근무(재택, 거점 오피스 등)를 혼합하여 임직원들이 유연하게 근무할 수 있는 환경을 제공하고 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3338192375460341,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "일과 삶의 균형 (가치사슬 근로자 인권·실사)",
+            "displaySubIssueName": "가치사슬 근로자 인권·실사",
+            "similarityScore": 0.44800621271133423,
+            "similarityRank": 1,
+            "mappingWeight": 0.3709102639400379,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "현대모비스는 구성원의 일과 삶의 균형을 지원하기 위해 선택적 근로시간제와 PC-Off 프로그램을 운영하고 있습니다. 또한, '하이브리드 근무'제도를 통해 대면 근무과 비대면 근무(재택, 거점 오피스 등)를 혼합하여 임직원들이 유연하게 근무할 수 있는 환경을 제공하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_LABOR__WORKING_CONDITIONS_LABOR_RELATIONS",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "현대모비스는 구성원의 일과 삶의 균형을 지원하기 위해 선택적 근로시간제와 PC-Off 프로그램을 운영하고 있습니다. 또한, '하이브리드 근무'제도를 통해 대면 근무과 비대면 근무(재택, 거점 오피스 등)를 혼합하여 임직원들이 유연하게 근무할 수 있는 환경을 제공하고 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.3191048703836493,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "일과 삶의 균형 (근로조건·노사관계)",
+            "displaySubIssueName": "근로조건·노사관계",
+            "similarityScore": 0.4451046288013458,
+            "similarityRank": 2,
+            "mappingWeight": 0.35456096709294366,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "현대모비스는 구성원의 일과 삶의 균형을 지원하기 위해 선택적 근로시간제와 PC-Off 프로그램을 운영하고 있습니다. 또한, '하이브리드 근무'제도를 통해 대면 근무과 비대면 근무(재택, 거점 오피스 등)를 혼합하여 임직원들이 유연하게 근무할 수 있는 환경을 제공하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "G_GOVERNANCE__ECONOMIC_VALUE",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "현대모비스는 구성원의 일과 삶의 균형을 지원하기 위해 선택적 근로시간제와 PC-Off 프로그램을 운영하고 있습니다. 또한, '하이브리드 근무'제도를 통해 대면 근무과 비대면 근무(재택, 거점 오피스 등)를 혼합하여 임직원들이 유연하게 근무할 수 있는 환경을 제공하고 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.2470758920703166,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "일과 삶의 균형 (경제가치 창출·배분)",
+            "displaySubIssueName": "경제가치 창출·배분",
+            "similarityScore": 0.43019235134124756,
+            "similarityRank": 3,
+            "mappingWeight": 0.27452876896701844,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "현대모비스는 구성원의 일과 삶의 균형을 지원하기 위해 선택적 근로시간제와 PC-Off 프로그램을 운영하고 있습니다. 또한, '하이브리드 근무'제도를 통해 대면 근무과 비대면 근무(재택, 거점 오피스 등)를 혼합하여 임직원들이 유연하게 근무할 수 있는 환경을 제공하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__PRODUCT_SAFETY_QUALITY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 4,
+              "costMagnitude": 4,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "자동차 부품 산업의 특성상 제품 품질이 자동차 탑승자와 보행자의 생명과 직결되는 만큼, 품질이 보장되지 못할 경우, 예상치 못한 큰 비용이 발생할 뿐 아니라 이해관계자의 신뢰를 잃게 되어 사업 유지에 큰 리스크로 작용할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.41583860831289565,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 안전 및 품질 확보 (소비자 건강·제품안전)",
+            "displaySubIssueName": "소비자 건강·제품안전",
+            "similarityScore": 0.7497960329055786,
+            "similarityRank": 1,
+            "mappingWeight": 0.4620428981254396,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자동차 부품 산업의 특성상 제품 품질이 자동차 탑승자와 보행자의 생명과 직결되는 만큼, 품질이 보장되지 못할 경우, 예상치 못한 큰 비용이 발생할 뿐 아니라 이해관계자의 신뢰를 잃게 되어 사업 유지에 큰 리스크로 작용할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__PRODUCT_INFORMATION_CHEMICAL_SAFETY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "자동차 부품 산업의 특성상 제품 품질이 자동차 탑승자와 보행자의 생명과 직결되는 만큼, 품질이 보장되지 못할 경우, 예상치 못한 큰 비용이 발생할 뿐 아니라 이해관계자의 신뢰를 잃게 되어 사업 유지에 큰 리스크로 작용할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.26647470864881995,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 안전 및 품질 확보 (소비자 정보·화학물질 안전)",
+            "displaySubIssueName": "소비자 정보·화학물질 안전",
+            "similarityScore": 0.6471615433692932,
+            "similarityRank": 2,
+            "mappingWeight": 0.29608300960979994,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자동차 부품 산업의 특성상 제품 품질이 자동차 탑승자와 보행자의 생명과 직결되는 만큼, 품질이 보장되지 못할 경우, 예상치 못한 큰 비용이 발생할 뿐 아니라 이해관계자의 신뢰를 잃게 되어 사업 유지에 큰 리스크로 작용할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__RECALL_FIELD_ACTION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "risk",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "자동차 부품 산업의 특성상 제품 품질이 자동차 탑승자와 보행자의 생명과 직결되는 만큼, 품질이 보장되지 못할 경우, 예상치 못한 큰 비용이 발생할 뿐 아니라 이해관계자의 신뢰를 잃게 되어 사업 유지에 큰 리스크로 작용할 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.21768668303828453,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "제품 안전 및 품질 확보 (리콜·필드액션)",
+            "displaySubIssueName": "리콜·필드액션",
+            "similarityScore": 0.6096827983856201,
+            "similarityRank": 3,
+            "mappingWeight": 0.2418740922647606,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "자동차 부품 산업의 특성상 제품 품질이 자동차 탑승자와 보행자의 생명과 직결되는 만큼, 품질이 보장되지 못할 경우, 예상치 못한 큰 비용이 발생할 뿐 아니라 이해관계자의 신뢰를 잃게 되어 사업 유지에 큰 리스크로 작용할 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_GRIEVANCE_VIOLATIONS",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "현대모비스는 동반성장의 파트너로서 협력사의 경쟁력을 높이고, ESG리스크를 줄이기 위한 공급망 관리 정책을 시행하고 있습니다. ‘일곱 가지 아름다운 약속’으로 대표되는 동반성장 프로그램을 바탕으로 ESG측면을 포함한 다양한 기술, 금융, 교육 지원 활동을 전개 하고 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.4491892577184259,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "공급망 상생협력 강화 (공급망 고충·중대위반)",
+            "displaySubIssueName": "공급망 고충·중대위반",
+            "similarityScore": 0.5460630655288696,
+            "similarityRank": 1,
+            "mappingWeight": 0.4990991752426954,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "현대모비스는 동반성장의 파트너로서 협력사의 경쟁력을 높이고, ESG리스크를 줄이기 위한 공급망 관리 정책을 시행하고 있습니다. ‘일곱 가지 아름다운 약속’으로 대표되는 동반성장 프로그램을 바탕으로 ESG측면을 포함한 다양한 기술, 금융, 교육 지원 활동을 전개 하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_RISK_AUDIT_CAP",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "현대모비스는 동반성장의 파트너로서 협력사의 경쟁력을 높이고, ESG리스크를 줄이기 위한 공급망 관리 정책을 시행하고 있습니다. ‘일곱 가지 아름다운 약속’으로 대표되는 동반성장 프로그램을 바탕으로 ESG측면을 포함한 다양한 기술, 금융, 교육 지원 활동을 전개 하고 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.35366384087896147,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "공급망 상생협력 강화 (공급망 감사·시정조치)",
+            "displaySubIssueName": "공급망 감사·시정조치",
+            "similarityScore": 0.517174482345581,
+            "similarityRank": 2,
+            "mappingWeight": 0.3929598231988461,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "현대모비스는 동반성장의 파트너로서 협력사의 경쟁력을 높이고, ESG리스크를 줄이기 위한 공급망 관리 정책을 시행하고 있습니다. ‘일곱 가지 아름다운 약속’으로 대표되는 동반성장 프로그램을 바탕으로 ESG측면을 포함한 다양한 기술, 금융, 교육 지원 활동을 전개 하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_SUPPLY_CHAIN_ENV__SUPPLIER_ENV_ASSESSMENT",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 4,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "현대모비스는 동반성장의 파트너로서 협력사의 경쟁력을 높이고, ESG리스크를 줄이기 위한 공급망 관리 정책을 시행하고 있습니다. ‘일곱 가지 아름다운 약속’으로 대표되는 동반성장 프로그램을 바탕으로 ESG측면을 포함한 다양한 기술, 금융, 교육 지원 활동을 전개 하고 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.09714690140261265,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "공급망 상생협력 강화 (공급망 환경평가)",
+            "displaySubIssueName": "공급망 환경평가",
+            "similarityScore": 0.42064186930656433,
+            "similarityRank": 3,
+            "mappingWeight": 0.1079410015584585,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "현대모비스는 동반성장의 파트너로서 협력사의 경쟁력을 높이고, ESG리스크를 줄이기 위한 공급망 관리 정책을 시행하고 있습니다. ‘일곱 가지 아름다운 약속’으로 대표되는 동반성장 프로그램을 바탕으로 ESG측면을 포함한 다양한 기술, 금융, 교육 지원 활동을 전개 하고 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_CIRCULARITY__RECYCLING_RECOVERY",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "기업의 공정하고 올바른 채용을 위한 노력은 구직자들에게 동등한 기회를 제공하고, 아동·강제노동과 같은 불공정한 노동을 근절시키는 역할을 할 수 있습니다. 이는 개인을 넘어 사회 전반의 노동환경 개선을 유도할 수도 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.30926643232345774,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "인재채용 및 유지 (재활용·회수)",
+            "displaySubIssueName": "재활용·회수",
+            "similarityScore": 0.6343588829040527,
+            "similarityRank": 1,
+            "mappingWeight": 0.34362936924828635,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "기업의 공정하고 올바른 채용을 위한 노력은 구직자들에게 동등한 기회를 제공하고, 아동·강제노동과 같은 불공정한 노동을 근절시키는 역할을 할 수 있습니다. 이는 개인을 넘어 사회 전반의 노동환경 개선을 유도할 수도 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_BIODIVERSITY__RESTORATION_CONSERVATION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "positive",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "기업의 공정하고 올바른 채용을 위한 노력은 구직자들에게 동등한 기회를 제공하고, 아동·강제노동과 같은 불공정한 노동을 근절시키는 역할을 할 수 있습니다. 이는 개인을 넘어 사회 전반의 노동환경 개선을 유도할 수도 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.30065194139064144,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "인재채용 및 유지 (복원·보전)",
+            "displaySubIssueName": "복원·보전",
+            "similarityScore": 0.6290535926818848,
+            "similarityRank": 2,
+            "mappingWeight": 0.33405771265626827,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "기업의 공정하고 올바른 채용을 위한 노력은 구직자들에게 동등한 기회를 제공하고, 아동·강제노동과 같은 불공정한 노동을 근절시키는 역할을 할 수 있습니다. 이는 개인을 넘어 사회 전반의 노동환경 개선을 유도할 수도 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "E_WATER__WATER_REUSE_RISK",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": {
+              "impactDirection": "negative",
+              "actuality": "actual",
+              "scale": 3,
+              "scope": 3,
+              "irremediability": 3,
+              "likelihood": 3,
+              "timeHorizon": "short",
+              "evidenceSpans": [
+                "기업의 공정하고 올바른 채용을 위한 노력은 구직자들에게 동등한 기회를 제공하고, 아동·강제노동과 같은 불공정한 노동을 근절시키는 역할을 할 수 있습니다. 이는 개인을 넘어 사회 전반의 노동환경 개선을 유도할 수도 있습니다."
+              ]
+            },
+            "financialFactor": null,
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.29008162628590084,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "인재채용 및 유지 (용수 재이용·물 리스크)",
+            "displaySubIssueName": "용수 재이용·물 리스크",
+            "similarityScore": 0.6224740147590637,
+            "similarityRank": 3,
+            "mappingWeight": 0.3223129180954454,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "기업의 공정하고 올바른 채용을 위한 노력은 구직자들에게 동등한 기회를 제공하고, 아동·강제노동과 같은 불공정한 노동을 근절시키는 역할을 할 수 있습니다. 이는 개인을 넘어 사회 전반의 노동환경 개선을 유도할 수도 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          },
+          {
+            "subIssueCode": "S_PRODUCT_RESP__CUSTOMER_COMPLAINT_SATISFACTION",
+            "sourceStep": "benchmark",
+            "sourceType": "own_sr",
+            "impactFactor": null,
+            "financialFactor": {
+              "financialIroType": "opportunity",
+              "revenueMagnitude": 3,
+              "costMagnitude": 3,
+              "capexMagnitude": 0,
+              "assetLiabilityMagnitude": 0,
+              "financingMagnitude": 0,
+              "legalRegulatoryMagnitude": 0,
+              "likelihood": 3,
+              "timeHorizon": "mid",
+              "evidenceSpans": [
+                "각 국가의 자국 보호 정책이 심화됨에 따라 비즈니스 현지화는 기업의 글로벌 경쟁력으로 자리 잡고 있습니다. 이에 따른 신규 생산 거점의 개발과 운영은 고객 및 사용자에게로 공급이 간결해 짐에 따라 비용 절감의 기회가 될 수 있으며, 지역 일자리를 창출하고 지역사회를 발전시킬 수 있습니다."
+              ]
+            },
+            "impactScore05": null,
+            "financialScore05": null,
+            "confidenceScore": 0.9,
+            "evidenceId": null,
+            "teSrFileId": null,
+            "rawIssueLabel": "글로벌 경쟁력 강화 (소비자 불만·만족도)",
+            "displaySubIssueName": "소비자 불만·만족도",
+            "similarityScore": 0.3526266813278198,
+            "similarityRank": 1,
+            "mappingWeight": 1,
+            "mappingMethod": "dictionary_similarity",
+            "judgeStatus": "pass",
+            "evidenceSpans": [
+              "각 국가의 자국 보호 정책이 심화됨에 따라 비즈니스 현지화는 기업의 글로벌 경쟁력으로 자리 잡고 있습니다. 이에 따른 신규 생산 거점의 개발과 운영은 고객 및 사용자에게로 공급이 간결해 짐에 따라 비용 절감의 기회가 될 수 있으며, 지역 일자리를 창출하고 지역사회를 발전시킬 수 있습니다."
+            ],
+            "sourceTitle": null,
+            "sourceUrl": null,
+            "publishedAt": null,
+            "scoringPayloadJson": null
+          }
+        ]
+      }
+    ]
+  }
+}

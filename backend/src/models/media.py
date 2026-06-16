@@ -5,8 +5,10 @@ from pydantic import BaseModel, Field
 
 class MediaAnalyzeRequest(BaseModel):
     runId: int
-    articles: list[dict[str, Any]]
+    articles: list[dict[str, Any]] = Field(default_factory=list)
     keywords: Optional[list[str]] = Field(default_factory=list)
+    # None → 서버 환경변수(USE_PG_PIPELINE) 따름 / True·False → 요청별 강제 지정
+    usePgPipeline: Optional[bool] = Field(None, description="PG 모드 강제 on/off (null=서버 기본값 사용)")
 
 
 class MediaTopIssue(BaseModel):
@@ -33,9 +35,11 @@ class MediaAnalyzeResponse(BaseModel):
 
 class MediaNewsCrawlAnalyzeRequest(BaseModel):
     runId: int
-    sources: list[str]
-    dateFrom: str
-    dateTo: str
+    sources: list[str] = Field(default_factory=list)
+    dateFrom: str = Field("", description="PG 모드에서는 무시됨")
+    dateTo: str = Field("", description="PG 모드에서는 무시됨")
+    # None → 서버 환경변수(USE_PG_PIPELINE) 따름 / True·False → 요청별 강제 지정
+    usePgPipeline: Optional[bool] = Field(None, description="PG 모드 강제 on/off (null=서버 기본값 사용)")
 
 
 class MediaRejectedSource(BaseModel):

@@ -437,6 +437,24 @@ def updateRanks(runId: int):
     from src.utils.db import saveMany
     saveMany(updateSql, params)
 
+def countTop20RankedSubIssues(runId: int) -> int:
+    """
+    설문 폼이 freeze 하는 Top20 스냅샷과 '동일한' 조건으로 랭크된 서브이슈 수를 센다.
+    (ESG_SUB_ISSUE_MASTER INNER JOIN + rank_no IS NOT NULL)
+    폼은 정확히 20개를 요구하므로, 이 값이 20 이상이면 폼 생성이 가능하다.
+    dmasurveyformrepository._TOP20_SQL 과 조인/조건이 일치해야 한다.
+    """
+    sql = """
+        SELECT COUNT(*) AS cnt
+        FROM ESG_DMA_SCORE_SUMMARY s
+        INNER JOIN ESG_SUB_ISSUE_MASTER m
+                ON m.sub_issue_code = s.sub_issue_code
+        WHERE s.esg_materiality_run_id = ?
+          AND s.rank_no IS NOT NULL
+    """
+    row = findOne(sql, (runId,))
+    return int(row["cnt"]) if row and row.get("cnt") is not None else 0
+
 def upsertFinal(runId: int, score: FinalMaterialityScore):
     sql = """
         INSERT INTO ESG_DMA_SCORE_SUMMARY (
@@ -1924,6 +1942,56 @@ def listApprovedKcgsGradeInputs(companyId: int) -> list[dict]:
         LIMIT 3
     """
     return _findAllRegulationRowsOrRaise(sql, (companyId,))
+
+
+def saveKcgsGradeInputRows(
+    companyId: int,
+    rows: Sequence[Dict[str, Any]],
+    reviewStatus: str = "APPROVED",
+    createdByUserId: Optional[int] = None,
+) -> int:
+    """
+    KCGS 등급 입력을 (company_id, rating_year) 기준으로 UPSERT 한다.
+    unique key uk_dma_kcgs_grade_company_year 가 있어 동일 연도는 갱신된다.
+    rows 각 항목 키: ratingYear, overallGrade, environmentGrade, socialGrade,
+                    governanceGrade, sourceDocumentRef(optional)
+    """
+    if not rows:
+        return 0
+    sql = """
+        INSERT INTO ESG_DMA_KCGS_GRADE_INPUT
+            (company_id, rating_year, overall_grade, environment_grade,
+             social_grade, governance_grade, source_type, source_document_ref,
+             review_status, created_by_user_id, delete_yn)
+        VALUES (?, ?, ?, ?, ?, ?, 'MANUAL', ?, ?, ?, 0)
+        ON DUPLICATE KEY UPDATE
+            overall_grade = VALUES(overall_grade),
+            environment_grade = VALUES(environment_grade),
+            social_grade = VALUES(social_grade),
+            governance_grade = VALUES(governance_grade),
+            source_type = VALUES(source_type),
+            source_document_ref = VALUES(source_document_ref),
+            review_status = VALUES(review_status),
+            created_by_user_id = VALUES(created_by_user_id),
+            delete_yn = 0
+    """
+    params = [
+        (
+            companyId,
+            int(row["ratingYear"]),
+            row["overallGrade"],
+            row["environmentGrade"],
+            row["socialGrade"],
+            row["governanceGrade"],
+            row.get("sourceDocumentRef"),
+            reviewStatus,
+            createdByUserId,
+        )
+        for row in rows
+    ]
+    from src.utils.db import saveMany
+    saveMany(sql, params)
+    return len(params)
 
 
 def _buildKcgsShadowRows(

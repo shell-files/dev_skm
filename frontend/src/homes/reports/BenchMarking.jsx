@@ -19,9 +19,9 @@ import {
 } from "@stores/reportSlice";
 
 const BENCHMARK_GROUP_CONFIG = {
-  leader: { fileType: "Leader", label: "리더" },
-  peer:   { fileType: "Peer",   label: "피어" },
-  sub:    { fileType: "Own",    label: "자사" },
+  leader: { fileType: "Leader", label: "리더",  letter: "L", color: "green"  },
+  peer:   { fileType: "Peer",   label: "피어",  letter: "P", color: "blue"   },
+  sub:    { fileType: "Own",    label: "자사",  letter: "S", color: "orange" },
 };
 
 const mapBenchmarkResultToDashboard = (dto) => ({
@@ -131,9 +131,9 @@ const Benchmarking = () => {
 
   // 진입 시 reportWorkflow.current 를 확보한다. (G0/롤업 완료 게이트 판정용)
   useEffect(() => {
-  if (!workflow && companyId && reportingYear) {
-    dispatch(fetchCurrentWorkflow({ companyId, reportingYear }));
-  }
+    if (!workflow && companyId && reportingYear) {
+      dispatch(fetchCurrentWorkflow({ companyId, reportingYear }));
+    }
   }, [dispatch, workflow, companyId, reportingYear]);
 
   // 페이지 재진입 시 현재 runId의 기존 벤치마킹 결과 복원
@@ -152,8 +152,8 @@ const Benchmarking = () => {
           setDashboardOpen(true);
         }
       })
-      .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+      .catch(() => { });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRunId, dispatch]);
 
 
@@ -330,8 +330,8 @@ const Benchmarking = () => {
       } catch (analyzeErr) {
         throw new Error(
           benchmarkWorkflowErrorRef.current ||
-            analyzeErr?.message ||
-            "벤치마킹 분석에 실패했습니다."
+          analyzeErr?.message ||
+          "벤치마킹 분석에 실패했습니다."
         );
       }
 
@@ -365,45 +365,71 @@ const Benchmarking = () => {
     }
   };
 
-  const renderUploadGroup = (groupKey, label, placeholder) => {
+  const renderUploadGroup = (groupKey) => {
+    const { label, letter, color } = BENCHMARK_GROUP_CONFIG[groupKey];
     const files = fileStorage[groupKey];
     const companyName = companyNames[groupKey] || "회사이름";
 
     return (
-      <div className="upload-group-container" id={`group-${groupKey}`}>
-        <div className="upload-group-badge">{label}</div>
+      <div className={`upload-group-container upload-group--${color}`} id={`group-${groupKey}`}>
 
-        <div className="company-top-Bench-input-row">
-          <input
-            type="text"
-            className="company-name-input"
-            placeholder={placeholder}
-            value={companyNames[groupKey]}
-            onChange={(e) => handleCompanyNameChange(groupKey, e.target.value)}
-          />
-          <label className="inline-upload-btn">
-            업로드
+        {/* 카드 헤더 */}
+        <div className="upload-group-header">
+          <span className={`upload-group-letter upload-group-letter--${color}`}>{letter}</span>
+          <div>
+            <div className={`upload-group-label upload-group-label--${color}`}>{label}</div>
+            <div className="upload-group-hint">보고서(SR) PDF 1~3개</div>
+          </div>
+        </div>
+
+        {/* 회사명 입력 + 업로드 버튼 */}
+        <div className="upload-name-row">
+          <div className="upload-name-input-wrap">
+            <svg className="upload-name-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
             <input
-              type="file"
-              hidden
-              multiple
-              accept=".pdf"
-              onChange={(e) => handleFileChange(e, groupKey)}
+              type="text"
+              className="company-name-input"
+              placeholder="회사이름 필수 입력"
+              value={companyNames[groupKey]}
+              onChange={(e) => handleCompanyNameChange(groupKey, e.target.value)}
             />
+          </div>
+          <label className={`inline-upload-btn inline-upload-btn--${color}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            파일 선택
+            <input type="file" hidden multiple accept=".pdf" onChange={(e) => handleFileChange(e, groupKey)} />
           </label>
         </div>
 
+        {/* 파일 목록 */}
         <div className="file-list-container">
           {files.length === 0 ? (
-            <div className="empty-file-text">PDF 파일 1~3개 업로드</div>
+            <div className="empty-file-zone">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <line x1="9" y1="15" x2="15" y2="15"/>
+              </svg>
+              <span>PDF 파일 1~3개 업로드</span>
+            </div>
           ) : (
             files.map((file, index) => (
               <div className="file-item-box" key={index}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
                 <div className="file-info-text">
                   <div className="mock-label">{companyName}</div>
-                  <div className="file-status-text" title={file.name}>
-                    업로드 파일 : {file.name}
-                  </div>
+                  <div className="file-status-text" title={file.name}>{file.name}</div>
                 </div>
                 <button
                   className="file-cancel-btn"
@@ -418,6 +444,14 @@ const Benchmarking = () => {
             ))
           )}
         </div>
+
+        {/* 파일 카운트 */}
+        {files.length > 0 && (
+          <div className="upload-file-count">
+            <span className={`upload-file-count-dot upload-file-count-dot--${color}`}/>
+            {files.length}개 파일 선택됨
+          </div>
+        )}
       </div>
     );
   };
@@ -432,9 +466,9 @@ const Benchmarking = () => {
             <Fragment key={step.id}>
               <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
                 <div className="step-icon-circle">{step.icon}</div>
-                <div style={{ fontSize: "0.8rem", fontWeight: 850 }}>{step.title}</div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 800 }}>{step.title}</div>
               </div>
-              {index < steps.length - 1 && <div className="step-line"></div>}
+              {index < steps.length - 1 && <div className="step-line" />}
             </Fragment>
           ))}
         </div>
@@ -457,13 +491,13 @@ const Benchmarking = () => {
               <p className="bench-page-desc">
                 지속가능경영보고서(SR) PDF를 업로드하면 AI가 자동으로 ESG 이슈를 파싱하고,
                 리더·피어·자회사 간 공시 현황과 격차(Gap)를 비교·분석합니다.
-                각 그룹별 최근 <strong>3개년치</strong> 보고서를 등록하면 분석이 시작됩니다.
+                각 그룹별 최근 <strong>최대 3개년치</strong> 보고서를 등록하면 분석이 시작됩니다.
               </p>
               <div className="bench-tag-row">
                 <span className="bench-tag bench-tag-green">PDF 자동 파싱</span>
                 <span className="bench-tag bench-tag-blue">ESG 이슈 자동 식별</span>
                 <span className="bench-tag bench-tag-purple">공시 Gap 분석</span>
-                <span className="bench-tag bench-tag-orange">3개년 비교</span>
+                <span className="bench-tag bench-tag-orange">최대 3개년 비교</span>
               </div>
             </div>
           </div>
@@ -500,9 +534,9 @@ const Benchmarking = () => {
           </div>
 
           <div className="Bench-upload-section-grid">
-            {renderUploadGroup("leader", "리더", "회사이름 필수 입력")}
-            {renderUploadGroup("peer", "피어", "회사이름 필수 입력")}
-            {renderUploadGroup("sub", "자사", "회사이름 필수 입력")}
+            {renderUploadGroup("leader")}
+            {renderUploadGroup("peer")}
+            {renderUploadGroup("sub")}
           </div>
 
           {!canRunDma && (
@@ -525,8 +559,8 @@ const Benchmarking = () => {
 
       <div className={`dashboard-result-dashboard ${dashboardOpen ? "open " : ""}`} id="dashboard">
         <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen)}>
-          <div className="handle-pill">
-            {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인" : "실시간 분석 대기 중"}
+           <div className={`handle-pill ${showResult ? "complete" : ""}`}>
+            {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인 (클릭)" : "실시간 분석 대기 중"}
           </div>
         </div>
         <div className={`robot-view-container ${isAnalyzing ? "analyzing" : ""} ${showResult ? "showing-result" : ""}`}>
@@ -555,29 +589,59 @@ const Benchmarking = () => {
             </div>
           ) : (
             <div className="result-layout" id="benchmarking-result">
-              <div className="ai-message-box" style={{ marginBottom: "20px" }}>
-                <strong style={{ color: "var(--Bench-primary)", fontWeight: 850 }}>
-                  [AI 벤치마킹 이슈 도출 및 Gap Analysis]
-                </strong>
-                <p style={{ margin: "8px 0 0", color: "#334155", fontWeight: 500, lineHeight: 1.5 }}>
-                  보고서(SR) 교차 파싱 결과 <strong>{displayData.stats.identifiedIssues}개</strong>의 핵심 이슈가 식별되었습니다. 자사의 누락(Gap) 요소를 보완하여 최적의 초안 요건을 빌드하세요.
-                </p>
+
+              {/* 결과 배너 */}
+              <div className="bench-result-banner">
+                <div className="bench-result-banner-left">
+                  <span className="bench-result-banner-badge">
+                    <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                      <path d="M2.5 6l2.5 2.5 4.5-5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    AI 분석 완료
+                  </span>
+                  <div className="bench-result-banner-title">벤치마킹 이슈 도출 · Gap Analysis</div>
+                  <p className="bench-result-banner-desc">
+                    보고서(SR) 교차 파싱 결과 <strong>{displayData.stats.identifiedIssues}개</strong>의 핵심 이슈가 식별되었습니다.
+                    자사의 누락(Gap) 요소를 보완하여 최적의 초안 요건을 빌드하세요.
+                  </p>
+                </div>
+                <img src={robot} className="bench-result-banner-robot" alt="robot" />
               </div>
 
+              {/* KPI 카드 */}
               <div className="result-stats-row">
                 <div className="result-stat-card">
-                  <div className="stat-icon-wrap">📋</div>
+                  <div className="stat-icon-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" y1="13" x2="8" y2="13" />
+                      <line x1="16" y1="17" x2="8" y2="17" />
+                      <line x1="10" y1="9" x2="8" y2="9" />
+                    </svg>
+                  </div>
                   <div>
                     <div className="stat-label">분석보고서</div>
+                    <div className="stat-value-row">
                     <div className="stat-value">{displayData.stats.reports}개</div>
                     <div className="stat-sub">
                       리더 {displayData.stats.leaderCount} · 피어 {displayData.stats.peerCount} · 자사 {displayData.stats.ownCount}
+                    </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="result-stat-card">
-                  <div className="stat-icon-wrap">≡</div>
+                  <div className="stat-icon-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="8" y1="6" x2="21" y2="6" />
+                      <line x1="8" y1="12" x2="21" y2="12" />
+                      <line x1="8" y1="18" x2="21" y2="18" />
+                      <circle cx="3" cy="6" r="1" fill="#64748b" stroke="none" />
+                      <circle cx="3" cy="12" r="1" fill="#64748b" stroke="none" />
+                      <circle cx="3" cy="18" r="1" fill="#64748b" stroke="none" />
+                    </svg>
+                  </div>
                   <div>
                     <div className="stat-label">식별 이슈</div>
                     <div className="stat-value">{displayData.stats.identifiedIssues}개</div>
@@ -585,7 +649,14 @@ const Benchmarking = () => {
                 </div>
 
                 <div className="result-stat-card">
-                  <div className="stat-icon-wrap">👥</div>
+                  <div className="stat-icon-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                  </div>
                   <div>
                     <div className="stat-label">공통 이슈</div>
                     <div className="stat-value">{displayData.stats.commonIssues}개</div>
@@ -593,7 +664,13 @@ const Benchmarking = () => {
                 </div>
 
                 <div className="result-stat-card">
-                  <div className="stat-icon-wrap">🎯</div>
+                  <div className="stat-icon-wrap">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <circle cx="12" cy="12" r="6" />
+                      <circle cx="12" cy="12" r="2" />
+                    </svg>
+                  </div>
                   <div>
                     <div className="stat-label">자사 Blind Spot</div>
                     <div className="stat-value">{displayData.stats.blindSpots}개</div>
@@ -601,75 +678,112 @@ const Benchmarking = () => {
                 </div>
               </div>
 
+              {/* 3-패널 */}
               <div className="result-panels-row">
-                <div className="result-panel">
+
+                {/* 패널 1: Top 이슈 */}
+                <div className="result-panel panel-accent-green">
                   <div className="panel-header-row">
-                    <span className="panel-title">벤치마킹 Top 이슈 점수</span>
-                    <span className="panel-info-btn">ⓘ</span>
+                    <span className="panel-title">
+                      <span className="panel-dot dot-green" />
+                      벤치마킹 Top 이슈 점수
+                    </span>
+                    <span className="panel-badge-count">{displayData.topIssues.length}건</span>
                   </div>
-                  <table className="issue-table">
-                    <thead>
-                      <tr><th>순위</th><th>Sub Issue</th><th>Impact</th><th>Financial</th></tr>
-                    </thead>
-                    <tbody>
-                      {displayData.topIssues.map((item) => (
-                        <tr key={item.rank}>
-                          <td>{item.rank}</td>
-                          <td>{item.name}</td>
-                          <td>{item.impact}</td>
-                          <td>{item.financial}</td>
+                  <div className="panel-body">
+                    <table className="issue-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: "36px" }}>순위</th>
+                          <th>Sub Issue</th>
+                          <th>Impact</th>
+                          <th>Financial</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {displayData.topIssues.map((item) => (
+                          <tr key={item.rank}>
+                            <td>
+                              <span className={`rank-badge${item.rank <= 3 ? ` rank-top${item.rank}` : ""}`}>
+                                {item.rank}
+                              </span>
+                            </td>
+                            <td>{item.name}</td>
+                            <td>{item.impact}</td>
+                            <td>{item.financial}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                <div className="result-panel">
+                {/* 패널 2: 공통 선정 이슈 */}
+                <div className="result-panel panel-accent-blue">
                   <div className="panel-header-row">
-                    <span className="panel-title">공통 선정 이슈</span>
-                    <span className="panel-info-btn">ⓘ</span>
+                    <span className="panel-title">
+                      <span className="panel-dot dot-blue" />
+                      공통 선정 이슈
+                    </span>
+                    <span className="panel-badge-count">{displayData.commonIssues.length}건</span>
                   </div>
-                  <table className="issue-table">
-                    <thead>
-                      <tr><th>Sub Issue</th><th>리더</th><th>피어</th><th>자사</th></tr>
-                    </thead>
-                    <tbody>
-                      {displayData.commonIssues.map((item, index) => (
-                        <tr key={index}>
-                          <td>{item.name}</td>
-                          <td>{item.leader && <span className="chk">✓</span>}</td>
-                          <td>{item.peer && <span className="chk">✓</span>}</td>
-                          <td>{item.own && <span className="chk">✓</span>}</td>
+                  <div className="panel-body">
+                    <table className="issue-table">
+                      <thead>
+                        <tr>
+                          <th>Sub Issue</th>
+                          <th><span className="col-badge col-green">리더</span></th>
+                          <th><span className="col-badge col-blue">피어</span></th>
+                          <th><span className="col-badge col-orange">자사</span></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {displayData.commonIssues.map((item, index) => (
+                          <tr key={index}>
+                            <td>{item.name}</td>
+                            <td>{item.leader && <span className="chk chk-green">✓</span>}</td>
+                            <td>{item.peer && <span className="chk chk-blue">✓</span>}</td>
+                            <td>{item.own && <span className="chk chk-orange">✓</span>}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
 
-                <div className="result-panel">
+                {/* 패널 3: Blind Spot */}
+                <div className="result-panel panel-accent-orange">
                   <div className="panel-header-row">
-                    <span className="panel-title">자사 Blind Spot</span>
-                    <span className="panel-info-btn">ⓘ</span>
+                    <span className="panel-title">
+                      <span className="panel-dot dot-orange" />
+                      자사 Blind Spot
+                    </span>
+                    <span className="panel-badge-count">{displayData.blindSpots.length}건</span>
                   </div>
-                  <ul className="blind-spot-list">
-                    {displayData.blindSpots.map((item, index) => (
-                      <li key={index}>
-                        <div className="blind-spot-title">{item.title}</div>
-                        <p className="blind-spot-desc">{item.desc}</p>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="panel-body">
+                    <ul className="blind-spot-list">
+                      {displayData.blindSpots.map((item, index) => (
+                        <li key={index} className="blind-spot-item">
+                          <span className="blind-spot-num">{index + 1}</span>
+                          <div>
+                            <div className="blind-spot-title">{item.title}</div>
+                            <p className="blind-spot-desc">{item.desc}</p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
 
-              <div style={{ textAlign: "center", marginTop: "20px" }}>
-                <button
-                  type="button"
-                  className="Bench-btn"
-                  style={{ maxWidth: "320px", margin: "0 auto" }}
-                  onClick={() => navigate("/media")}
-                >
+              {/* 다음 단계 버튼 */}
+              <div className="result-next-row">
+                <button type="button" className="result-next-btn" onClick={() => navigate("/media")}>
                   다음 단계: 미디어 분석으로 이동
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                    <polyline points="12 5 19 12 12 19" />
+                  </svg>
                 </button>
               </div>
             </div>

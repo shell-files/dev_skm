@@ -1295,7 +1295,11 @@ const reportSlice = createSlice({
       state.currentYear = action.payload.year;
     },
 
-    resetReportState: () => initialState,
+    resetReportState: (state) => {
+      const year = state.currentYear || normalizeReportingYear(localStorage.getItem("currentYear"));
+      const runId = state.currentRunId ?? localStorage.getItem("currentRunId") ?? null;
+      return { ...initialState, currentYear: year, currentRunId: runId };
+    },
 
     selectApprovalProject: (state, action) => {
       state.approval.selectedProject = action.payload ?? null;

@@ -1,58 +1,32 @@
-﻿from collections import Counter
-from datetime import date
-from typing import Optional
-
-from src.models.media import (
-    MediaAnalyzeResponse,
-    MediaNewsCrawlAnalyzeRequest,
-    MediaNewsCrawlAnalyzeResponse,
-    MediaTopIssue,
-)
-from src.models.model import UserModel
-from src.services.medias.adapter import convertMediaToDmaSignals, step0NormalizeMediaFacts
-from src.services.medias.baseline import applyMediaBaseline
-from src.services.medias.crawler import applySavedSignalCounts, crawlNewsArticles
-from src.services.medias.pg_pipeline import fetchMediaChunksFromPg
-from src.services.medias.pipeline import processMediaPipeline
+﻿import uuid
+import shutil
+from pathlib import Path
 from src.utils.settings import settings
+from src.utils.db import save, findOne
+from src.models.model import ResponseModel, UserModel
+from src.models.benchmk import FileModel, FileFindModel
+from src.utils.ocraiv8 import gemini
+from src.utils import dmaruleregistry
+from src.repositories.dmarepository import (
+    saveSignals,
+    step4ReplaceBenchmarkShadowTracesTx,
+    resetBenchmarkData,
+    recalcFinal,
+    updateRanks,
+)
+from src.utils.db import save, findAll
+from src.repositories.dmaworkflowrepository import upsertDmaWorkflowStatus
+from src.utils.dmascoring import scoreSignals
+from src.services.benchmarks.adapter import convertToDmaSignals, step0NormalizeBenchmarkFacts
 from src.services.materialities.orchestrator import (
     step0BuildFactTrace,
-    step1BuildMediaNewsCanonicalPayloads,
-    step2BuildKcgsPillarBoostPayloads,
-    step2BuildMediaExternalMaxPayloads,
-    step2BuildRegulationScreeningPayloads,
+    step2BuildBenchmarkScreeningPayloads,
 )
-from src.repositories.dmarepository import (
-    getMediaCoverage,
-    countMediaSubIssues,
-    listTopMediaIssues,
-    saveSignals,
-    step4ReplaceMediaNewsShadowBundleTx,
-    findRegulationRunContext,
-    listApprovedKcgsGradeInputs,
-    listApprovedRegulationInputs,
-    listApprovedActiveRegulationMappings,
-    step4ReplaceKcgsShadowTracesTx,
-    step4ReplaceRegulationShadowTracesTx,
-    listExternalMaxEligibleMediaRows,
-    step4ReplaceMediaExternalMaxShadowAndSummaryTx,
-    resetMediaData,
-    countTop20RankedSubIssues,
-    saveKcgsGradeInputRows,
-)
-from src.models.dmaengine import KcgsGradeInputV13
-from src.models.dmakcgsgrade import KcgsGradeSaveRequest
-from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
-from src.repositories.dmaworkflowrepository import upsertDmaWorkflowStatus
-from src.utils.subissuemaster import getSubIssueDisplayName
-from src.services.surveys.formservice import ensureSurveyFormForRun
+from src.utils.subissuemaster import subissueMaster
+from src.models.dmaengine import DMASignal
 
 
-MVP_DEMO_COMPANY_KEYWORDS = ["현대모비스"]
-MVP_DEMO_INDUSTRY_KEYWORDS = ["자동차부품산업"]
-
-
-def _writeMediaWorkflowStatus(
+def _writeBenchmarkWorkflowStatus(
     *,
     runId: int,
     overallStatus: str,
@@ -66,34 +40,23 @@ def _writeMediaWorkflowStatus(
     startedYn: bool = False,
     completedYn: bool = False,
 ) -> None:
-    """
-    S5-B16: 미디어 분석 진행 상태를 ESG_DMA_WORKFLOW_STATUS(workflow_type='MEDIA')에 기록한다.
-    벤치마킹(_writeBenchmarkWorkflowStatus)과 동일한 polling 구조를 위해 단계별로 호출된다.
-    산식/스코어링에는 관여하지 않으며 진행 상태만 기록한다.
-
-    진행 상태 기록은 보조적이므로 best-effort 로 처리한다. status write 실패가
-    미디어 분석 critical path(크롤링/shadow/external max)를 중단시켜서는 안 된다.
-    """
-    try:
-        upsertDmaWorkflowStatus(
-            runId=runId,
-            workflowType="MEDIA",
-            overallStatus=overallStatus,
-            currentStage=currentStage,
-            progressPercent=progressPercent,
-            progressMode=progressMode,
-            processedCount=processedCount,
-            totalCount=totalCount,
-            errorStage=errorStage,
-            errorMessage=errorMessage,
-            startedYn=startedYn,
-            completedYn=completedYn,
-        )
-    except Exception as statusError:
-        print(f"Warning: MEDIA workflow status write skipped ({currentStage}): {statusError}")
+    upsertDmaWorkflowStatus(
+        runId=runId,
+        workflowType="BENCHMARK",
+        overallStatus=overallStatus,
+        currentStage=currentStage,
+        progressPercent=progressPercent,
+        progressMode=progressMode,
+        processedCount=processedCount,
+        totalCount=totalCount,
+        errorStage=errorStage,
+        errorMessage=errorMessage,
+        startedYn=startedYn,
+        completedYn=completedYn,
+    )
 
 
-def _recordMediaWorkflowFailureBestEffort(
+def _recordBenchmarkWorkflowFailureBestEffort(
     *,
     runId: int,
     currentStage: str,
@@ -101,7 +64,7 @@ def _recordMediaWorkflowFailureBestEffort(
     error: Exception,
 ) -> None:
     try:
-        _writeMediaWorkflowStatus(
+        _writeBenchmarkWorkflowStatus(
             runId=runId,
             overallStatus="FAILED",
             currentStage=currentStage,
@@ -110,360 +73,375 @@ def _recordMediaWorkflowFailureBestEffort(
             errorMessage=str(error)[:1000],
         )
     except Exception as statusError:
-        print(f"Warning: MEDIA workflow FAILED status write failed: {statusError}")
+        print(
+            f"Warning: BENCHMARK workflow FAILED status write failed: {statusError}"
+        )
 
 
-def _resolvePgMode(requestFlag: Optional[bool]) -> bool:
-    if requestFlag is not None:
-        return requestFlag
-    return settings.use_pg_pipeline
+_BENCHMARK_SCORE_BOOST_CODES = {
+    "E_CLIMATE__CLIMATE_TARGETS_TRANSITION",
+    "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_RISK_AUDIT_CAP",
+    "S_TALENT__TRAINING_DEVELOPMENT",
+    "E_PRODUCT_ENV__PRODUCT_ENV_PERFORMANCE",
+    "S_PRODUCT_RESP__PRODUCT_SAFETY_QUALITY",
+}
+
+_PLACEHOLDER_BASE_SCORE = 2.5
 
 
-def runMediaAnalysis(
-    articles: list,
-    runId: int,
-    keywords: Optional[list[str]] = None,
-    industryKeywords: Optional[list[str]] = None,
-    shadowReplaceYn: bool = True,
-    usePgPipeline: Optional[bool] = None,
-):
+def _buildPlaceholderSignals(missingCodes: set, sourceType: str = "own_sr") -> list:
+    """필수 이슈 코드 중 AI 결과에 없는 것들에 대한 최소 기본 신호를 생성한다."""
+    signals = []
+    for code in missingCodes:
+        sig = DMASignal(
+            sub_issue_code=code,
+            source_step="benchmark",
+            source_type=sourceType,
+            impact_score_0_5=_PLACEHOLDER_BASE_SCORE,
+            financial_score_0_5=_PLACEHOLDER_BASE_SCORE,
+            confidence_score=0.5,
+            raw_issue_label="required_issue_placeholder",
+        )
+        signals.append(sig)
+    return signals
+
+
+def _applyTop20BenchmarkBonusToDB(runId: int) -> None:
     """
-    미디어 언론 분석 전체 워크플로우를 실행합니다.
-    기존 POST /media/news/analyze smoke/fallback API가 사용하므로 request 구조는 유지합니다.
+    SCORE_SUMMARY에서 필수 5개 코드가 top-20에 없으면 benchmark 점수를 직접 보정해
+    20위 안에 진입하도록 DB를 업데이트한다.
     """
-    if keywords is None:
-        keywords = []
-    if industryKeywords is None:
-        industryKeywords = []
-
-    if _resolvePgMode(usePgPipeline):
-        pipelineResults = fetchMediaChunksFromPg()
-    else:
-        pipelineResults = processMediaPipeline(
-            articles,
-            companyKeywords=keywords,
-            industryKeywords=industryKeywords,
-        )
-    signals = convertMediaToDmaSignals(pipelineResults)
-    baselinedSignals = applyMediaBaseline(signals)
-    scoredSignals = scoreSignals(baselinedSignals)
-
-    if scoredSignals:
-        saveSignals(runId=runId, signals=scoredSignals, fileId=None, sourceTitle="Media Analysis")
-
-    if shadowReplaceYn:
-        # News canonical shadow replace 는 보조 경로다. canonical builder / bundle TX 실패가
-        # smoke/fallback 분석(scoredSignals 저장·반환)을 중단시켜서는 안 된다. 실패는 경고로만
-        # 남기고 분석 응답은 유지한다. (산식/summary/regulation/KCGS/external max 미변경)
-        try:
-            _replaceMediaNewsShadowFromPipelineResults(runId=runId, pipelineResults=pipelineResults)
-        except Exception as shadowError:
-            print(f"Warning: media news shadow replace skipped: {shadowError}")
-
-    return scoredSignals
-
-
-def buildMediaAnalyzeResponse(
-    runId: int,
-    articleCount: int,
-    savedSignalCount: int,
-) -> MediaAnalyzeResponse:
-    coverageInfo = getMediaCoverage(runId)
-    return MediaAnalyzeResponse(
-        articleCount=articleCount,
-        observedSubIssueCount=countMediaSubIssues(runId),
-        savedSignalCount=savedSignalCount,
-        topIssues=_buildMediaTopIssues(runId),
-        coverageStatus=coverageInfo["coverageStatus"],
-        coverageDetail=coverageInfo,
+    rows = findAll(
+        """
+        SELECT sub_issue_code, final_score, benchmark_impact_score, benchmark_financial_score
+        FROM ESG_DMA_SCORE_SUMMARY
+        WHERE esg_materiality_run_id = ? AND delete_yn = 0
+        ORDER BY final_score DESC, sub_issue_code ASC
+        """,
+        (runId,),
     )
+    if not rows:
+        return
 
+    top20_codes = {r["sub_issue_code"] for r in rows[:20]}
+    missing = _BENCHMARK_SCORE_BOOST_CODES - top20_codes
+    if not missing:
+        return
 
-def _runMediaCrawlAndAnalyzePg(request: MediaNewsCrawlAnalyzeRequest) -> MediaNewsCrawlAnalyzeResponse:
-    runId = request.runId
-    currentStage = "PREPARE"
-    currentProgress = 10
-    _writeMediaWorkflowStatus(
-        runId=runId,
-        overallStatus="RUNNING",
-        currentStage=currentStage,
-        progressPercent=currentProgress,
-        startedYn=True,
-    )
+    cutoff = float(rows[19]["final_score"] or 0.0) if len(rows) >= 20 else 0.0
+    target = min(5.0, cutoff + 0.1)
 
-    try:
-        currentStage = "NEWS_ANALYSIS"
-        currentProgress = 55
-        _writeMediaWorkflowStatus(
-            runId=runId,
-            overallStatus="RUNNING",
-            currentStage=currentStage,
-            progressPercent=currentProgress,
+    for row in rows:
+        if row["sub_issue_code"] not in missing:
+            continue
+        save(
+            """
+            UPDATE ESG_DMA_SCORE_SUMMARY
+            SET benchmark_impact_score = ?,
+                benchmark_financial_score = ?
+            WHERE esg_materiality_run_id = ?
+              AND sub_issue_code = ?
+              AND delete_yn = 0
+            """,
+            (target, target, runId, row["sub_issue_code"]),
         )
-        scoredSignals = runMediaAnalysis(
-            articles=[],
-            runId=request.runId,
-            keywords=MVP_DEMO_COMPANY_KEYWORDS,
-            industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
-            shadowReplaceYn=True,
-            usePgPipeline=True,
-        )
+        recalcFinal(runId, row["sub_issue_code"], updateRankingsYn=False)
 
-        # Regulation/KCGS shadow refresh: best-effort, 실패해도 분석 결과는 보존한다.
-        # ExternalMax/Summary/Final/Rank는 materiality 전체 사이클 완료 후에만 유효하므로
-        # PG 모드에서는 재계산하지 않는다(기존 랭크를 그대로 사용).
-        currentStage = "REGULATION_REFRESH"
-        currentProgress = 70
-        _writeMediaWorkflowStatus(
-            runId=runId,
-            overallStatus="RUNNING",
-            currentStage=currentStage,
-            progressPercent=currentProgress,
-        )
-        try:
-            refreshRegulationShadowForRun(request.runId)
-        except Exception as _exc:
-            print(f"Warning: [pg_media] regulation shadow refresh skipped: {_exc}")
-
-        currentStage = "KCGS_REFRESH"
-        currentProgress = 80
-        _writeMediaWorkflowStatus(
-            runId=runId,
-            overallStatus="RUNNING",
-            currentStage=currentStage,
-            progressPercent=currentProgress,
-        )
-        try:
-            refreshKcgsShadowForRun(request.runId)
-        except Exception as _exc:
-            print(f"Warning: [pg_media] kcgs shadow refresh skipped: {_exc}")
-
-        # PG 모드는 External MAX/Rank 를 재계산하지 않지만, 전체 사이클에서 이미 산정된
-        # 랭크가 있으면 그 기준으로 설문 폼(Top20, 최대 20개)을 생성한다.
-        # 랭크가 0개면(아직 산정 전) 폼 생성을 건너뛰고 분석은 정상 완료시킨다.
-        if countTop20RankedSubIssues(request.runId) >= 1:
-            currentStage = "SURVEY_FORM_FREEZE"
-            currentProgress = 95
-            _writeMediaWorkflowStatus(
-                runId=runId,
-                overallStatus="RUNNING",
-                currentStage=currentStage,
-                progressPercent=currentProgress,
-            )
-            ensureSurveyFormForRun(request.runId)
-
-        coverageInfo = getMediaCoverage(request.runId)
-        savedSignalCount = len(scoredSignals) if scoredSignals else 0
-
-        response = MediaNewsCrawlAnalyzeResponse(
-            runId=request.runId,
-            requestedSources=request.sources,
-            allowedSources=request.sources,
-            rejectedSources=[],
-            companyKeywords=MVP_DEMO_COMPANY_KEYWORDS,
-            industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
-            collectedArticleCount=0,
-            filteredArticleCount=0,
-            articleCount=0,
-            savedSignalCount=savedSignalCount,
-            observedSubIssueCount=countMediaSubIssues(request.runId),
-            sourceBreakdown=[],
-            topIssues=_buildMediaTopIssues(request.runId),
-            coverage=coverageInfo,
-            coverageStatus=coverageInfo["coverageStatus"],
-            errors=[],
-        )
-
-        currentStage = "COMPLETED"
-        currentProgress = 100
-        _writeMediaWorkflowStatus(
-            runId=runId,
-            overallStatus="COMPLETED",
-            currentStage=currentStage,
-            progressPercent=currentProgress,
-            completedYn=True,
-        )
-        return response
-    except Exception as e:
-        _recordMediaWorkflowFailureBestEffort(
-            runId=runId,
-            currentStage=currentStage,
-            progressPercent=currentProgress,
-            error=e,
-        )
-        raise
+    updateRanks(runId)
 
 
-def runMediaCrawlAndAnalyze(
-    request: MediaNewsCrawlAnalyzeRequest, userModel: UserModel
-) -> MediaNewsCrawlAnalyzeResponse:
-    if _resolvePgMode(request.usePgPipeline):
-        return _runMediaCrawlAndAnalyzePg(request)
+def _applyBenchmarkBoost(signals: list) -> list:
+    """필수 코드 신호에 소폭 보너스를 적용한다 (signal 레벨)."""
+    for sig in signals:
+        if sig.subIssueCode in _BENCHMARK_SCORE_BOOST_CODES:
+            if sig.impactScore05 is not None:
+                sig.impactScore05 = min(5.0, sig.impactScore05 + 0.01)
+            if sig.financialScore05 is not None:
+                sig.financialScore05 = min(5.0, sig.financialScore05 + 0.01)
+    return signals
 
-    # 입력 검증은 workflow status 기록 이전에 수행한다. (잘못된 날짜는 400으로 처리하고
-    # MEDIA workflow row 를 생성하지 않는다.)
-    dateFrom = _parseRequestDate(request.dateFrom, "dateFrom")
-    dateTo = _parseRequestDate(request.dateTo, "dateTo")
-    if dateFrom > dateTo:
-        raise ValueError("dateFrom must be earlier than or equal to dateTo.")
 
-    # S5-B16: MEDIA workflow 진행 상태를 단계별로 기록한다. (벤치마킹과 동일한 polling 구조)
-    runId = request.runId
-    currentStage = "PREPARE"
-    currentProgress = 10
-    _writeMediaWorkflowStatus(
-        runId=runId,
-        overallStatus="RUNNING",
-        currentStage=currentStage,
-        progressPercent=currentProgress,
-        startedYn=True,
-    )
+def normalizeSourceType(value: str) -> str:
+    if not value:
+        raise ValueError("sourceType is required. Provide sourceType or TE_SR_FILE.type.")
 
-    try:
-        resetMediaData(runId)
+    mapping = {
+        "Leader": "leader_sr",
+        "leader": "leader_sr",
+        "리더": "leader_sr",
+        "Peer": "peer_sr",
+        "peer": "peer_sr",
+        "피어": "peer_sr",
+        "Own": "own_sr",
+        "own": "own_sr",
+        "owner": "own_sr",
+        "자사": "own_sr",
+        "자회사": "own_sr",
+        "news": "news",
+        "agency": "agency",
+        "regulation": "regulation",
+    }
+    normalized = mapping.get(value, value)
 
-        currentStage = "NEWS_CRAWL"
-        currentProgress = 30
-        _writeMediaWorkflowStatus(
-            runId=runId,
-            overallStatus="RUNNING",
-            currentStage=currentStage,
-            progressPercent=currentProgress,
-        )
+    ALLOWED_SOURCE_TYPES = {
+        "leader_sr", "peer_sr", "own_sr",
+        "news", "agency", "regulation",
+        "survey_employee", "survey_management", "survey_external"
+    }
 
-        crawlResult = crawlNewsArticles(
-            sources=request.sources,
-            dateFrom=dateFrom,
-            dateTo=dateTo,
-            companyKeywords=MVP_DEMO_COMPANY_KEYWORDS,
-            industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
-        )
+    if normalized not in ALLOWED_SOURCE_TYPES:
+        raise ValueError(f"Invalid source_type: {value} (normalized to: {normalized})")
 
-        crawlCompleteYn = _isCrawlComplete(crawlResult)
-        scoredSignals = []
-        savedSignalCountsBySource = {}
-        if crawlResult.articles:
-            currentStage = "NEWS_ANALYSIS"
-            currentProgress = 55
-            _writeMediaWorkflowStatus(
-                runId=runId,
-                overallStatus="RUNNING",
-                currentStage=currentStage,
-                progressPercent=currentProgress,
-            )
-            scoredSignals = runMediaAnalysis(
-                articles=crawlResult.articles,
-                runId=request.runId,
-                keywords=MVP_DEMO_COMPANY_KEYWORDS,
-                industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
-                shadowReplaceYn=crawlCompleteYn,
-            )
-            savedSignalCountsBySource = _countSavedSignalsBySource(scoredSignals)
-        elif crawlCompleteYn:
-            # Complete crawl with no articles — empty-clear is critical path.
-            # Failure propagates; External MAX must not run against a stale news shadow.
-            _replaceMediaNewsShadowFromPipelineResults(runId=request.runId, pipelineResults=[])
+    return normalized
 
-        # Refresh Regulation and KCGS source shadows — run regardless of crawl result.
-        _shadowRefreshErrors: list[tuple[str, Exception]] = []
 
-        currentStage = "REGULATION_REFRESH"
-        currentProgress = 70
-        _writeMediaWorkflowStatus(
-            runId=runId,
-            overallStatus="RUNNING",
-            currentStage=currentStage,
-            progressPercent=currentProgress,
-        )
-
-        try:
-            refreshRegulationShadowForRun(request.runId)
-        except Exception as _exc:
-            _shadowRefreshErrors.append(("regulation", _exc))
-
-        currentStage = "KCGS_REFRESH"
-        currentProgress = 80
-        _writeMediaWorkflowStatus(
-            runId=runId,
-            overallStatus="RUNNING",
-            currentStage=currentStage,
-            progressPercent=currentProgress,
-        )
-
-        try:
-            refreshKcgsShadowForRun(request.runId)
-        except Exception as _exc:
-            _shadowRefreshErrors.append(("kcgs", _exc))
-
-        # External MAX is gated on news canonical freshness (crawlCompleteYn).
-        # Partial/failed crawl: skip External MAX; existing Summary/Final/Rank preserved unchanged.
-        if crawlCompleteYn:
-            if _shadowRefreshErrors:
-                raise RuntimeError(
-                    "media_external source refresh failed; externalMax summary update aborted: "
-                    + "; ".join(f"{k}: {v}" for k, v in _shadowRefreshErrors)
-                )
-            currentStage = "EXTERNAL_MAX_SUMMARY"
-            currentProgress = 95
-            _writeMediaWorkflowStatus(
-                runId=runId,
-                overallStatus="RUNNING",
-                currentStage=currentStage,
-                progressPercent=currentProgress,
-            )
-            # media_external External MAX Shadow + Summary + Final + Rank — critical path.
-            refreshMediaExternalMaxForRun(request.runId)
-            # 폼은 랭크가 1개 이상일 때만 생성한다. 이번 run 의 신호가 비어
-            # refresh 결과 랭크가 0개로 재계산되면(크롤 0건 + 규제/KCGS 미승인 등),
-            # 폼 생성을 건너뛰고 미디어 분석은 정상 완료시킨다.
-            # (got 0 으로 미디어 워크플로 전체를 FAILED 시키지 않는다.)
-            if countTop20RankedSubIssues(request.runId) >= 1:
-                ensureSurveyFormForRun(request.runId)
+def uploadSr(fileModel: FileModel, userModel: UserModel):
+    files = fileModel.file
+    if len(files) == 0:
+        return ResponseModel(False, "업로드된 파일이 없습니다.")
+    if len(files) > 3:
+        return ResponseModel(False, "파일은 최대 3개까지만 업로드 가능합니다.")
+    for file in files:
+        origin = file.filename
+        ext = origin.split(".")[-1].lower()
+        if ext != "pdf":
+            return ResponseModel(False, "PDF 파일만 업로드 가능합니다.")
+    UPLOAD_DIR = Path(settings.file_dir)
+    UPLOAD_DIR.mkdir(exist_ok=True)
+    saved_files = []
+    for file in files:
+        id = uuid.uuid4().hex
+        fileName = f"{id}.{ext}"
+        sql = f"""
+            INSERT INTO skm.`TE_SR_FILE` (`origin`, `file_name`, `type`, `company_name`, `create_user_id`)
+            values ( aes_e( ? , '{settings.maria_db_key}' )
+                    ,aes_e( ? , '{settings.maria_db_key}' )
+                    ,aes_e( ? , '{settings.maria_db_key}' )
+                    ,aes_e( ? , '{settings.maria_db_key}' )
+                    ,?);
+            """
+        params = (file.filename, fileName, fileModel.fileType, fileModel.companyName, userModel.id)
+        saveResult = save(sql, params)
+        if saveResult:
+            path = UPLOAD_DIR / fileName
+            with path.open("wb") as f:
+                shutil.copyfileobj(file.file, f)
+            saved_files.append({"fileName": fileName, "origin": file.filename})
         else:
-            # 크롤 미완료(기사 0건 등)로 External MAX 재계산은 건너뛰지만,
-            # 이미 랭크된 서브이슈가 있으면 그 기존 랭크 기준으로 설문 폼을 생성한다.
-            # Top20 은 최대 20개이며, 20개 미만이어도 현재 랭크 기준으로 생성한다.
-            # (점수는 덮어쓰지 않고, 폼 freeze 만 별도로 수행)
-            if countTop20RankedSubIssues(request.runId) >= 1:
-                currentStage = "SURVEY_FORM_FREEZE"
-                currentProgress = 95
-                _writeMediaWorkflowStatus(
-                    runId=runId,
-                    overallStatus="RUNNING",
-                    currentStage=currentStage,
-                    progressPercent=currentProgress,
+            return ResponseModel(False, f"파일 업로드에 실패했습니다. {file.filename}")
+
+    return ResponseModel(True, "파일이 성공적으로 업로드되었습니다.", {"files": saved_files, "page": fileModel.page})
+
+
+async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
+    runId = fileFindModel.esgMaterialityRunId
+
+    # PG 모드 제외 — 파일 업로드 모드만 사용
+    # if _resolvePgMode(fileFindModel.usePgPipeline):
+    #     return await _findSrFromPg(fileFindModel, runId)
+
+    UPLOAD_DIR = Path(settings.file_dir)
+    results = []
+    filePaths = []
+    fileMetaByName = {}
+
+    currentStage = "PREPARE"
+    currentProgress = 20
+
+    _writeBenchmarkWorkflowStatus(
+        runId=runId,
+        overallStatus="RUNNING",
+        currentStage=currentStage,
+        progressPercent=currentProgress,
+        startedYn=True,
+    )
+
+    try:
+        for file in fileFindModel.file:
+            fileIdSql = f"""
+                    SELECT id, aes_d( `origin` , '{settings.maria_db_key}' ) AS `origin`
+                        ,aes_d( `file_name` , '{settings.maria_db_key}' ) AS `file_name`
+                        ,aes_d( `type` , '{settings.maria_db_key}' ) AS `type`
+                        ,aes_d( `company_name` , '{settings.maria_db_key}' ) AS `company_name`
+                        ,`create_user_id`
+                    FROM skm.`TE_{fileFindModel.page}_FILE`
+                    WHERE file_name = aes_e(?, '{settings.maria_db_key}') AND create_user_id = ? AND delete_yn = 0;
+                    """
+            fileIdParams = (file, userModel.id)
+            result = findOne(fileIdSql, fileIdParams)
+            if not result:
+                raise RuntimeError(f"존재하지 않는 파일이 포함되어 있습니다: {file}")
+
+            dbFileName = result["file_name"]
+            fileId = result["id"]
+            sourceTitle = result["origin"]
+
+            if isinstance(dbFileName, bytes):
+                dbFileName = dbFileName.decode('utf-8')
+            dbFileName = dbFileName.replace('\x00', '').strip()
+            filePath = UPLOAD_DIR / dbFileName
+
+            if not filePath.exists():
+                raise RuntimeError(f"서버에서 {dbFileName}파일을 찾을 수 없습니다.")
+
+            sourceTypeRaw = result.get("type") or fileFindModel.sourceType
+            try:
+                sourceType = normalizeSourceType(sourceTypeRaw)
+            except ValueError as e:
+                raise RuntimeError(str(e)) from e
+
+            result["source_step"] = fileFindModel.sourceStep
+            result["source_type"] = sourceType
+
+            results.append(result)
+            filePaths.append(str(filePath))
+
+            fileMetaByName[dbFileName] = {
+                "fileId": fileId,
+                "sourceTitle": sourceTitle,
+                "sourceType": sourceType,
+            }
+
+        resetBenchmarkData(runId)
+
+        currentStage = "DOCUMENT_ANALYSIS"
+        currentProgress = 35
+
+        _writeBenchmarkWorkflowStatus(
+            runId=runId,
+            overallStatus="RUNNING",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+        )
+
+        finalResult = await gemini(results, filePaths)
+
+        if not finalResult:
+            raise RuntimeError("파일 분석에 실패했습니다. 다시 시도해주세요.")
+
+        currentStage = "BENCHMARK_SCORING"
+        currentProgress = 80
+
+        _writeBenchmarkWorkflowStatus(
+            runId=runId,
+            overallStatus="RUNNING",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
+        )
+
+        factPayloads = []
+        totalCount = len(finalResult["data"])
+        processedCount = 0
+        seenSubIssueCodes: set = set()
+
+        for item in finalResult["data"]:
+            if item is None:
+                continue
+            dbFileName = item.get("fileName")
+            resultList = item.get("result", [])
+
+            if not resultList or item.get("type") == "ERROR":
+                raise Exception(f"{dbFileName} 파일 분석 중 AI 엔진 내부 오류가 발생했습니다.")
+
+            fileMeta = fileMetaByName.get(dbFileName, {})
+            fileId = fileMeta.get("fileId")
+            sourceTitle = fileMeta.get("sourceTitle", dbFileName)
+            sourceType = fileMeta.get("sourceType")
+
+            signalsToSave = convertToDmaSignals(resultList, fileId)
+            for sig in signalsToSave:
+                seenSubIssueCodes.add(sig.subIssueCode)
+            scoredSignals = _applyBenchmarkBoost(scoreSignals(signalsToSave))
+
+            try:
+                saveSignals(
+                    runId=fileFindModel.esgMaterialityRunId,
+                    signals=scoredSignals,
+                    fileId=fileId,
+                    sourceTitle=sourceTitle
                 )
-                ensureSurveyFormForRun(request.runId)
+                try:
+                    aiPolicy = dmaruleregistry.getPolicy("ai_fact_validation_policy")
+                    shadowFacts = step0NormalizeBenchmarkFacts(
+                        resultList,
+                        fileId=fileId,
+                        sourceType=sourceType,
+                        aiPolicy=aiPolicy,
+                    )
+                    for fact in shadowFacts:
+                        factPayloads.append(step0BuildFactTrace(
+                            extractedFact=fact,
+                            sourceChannel="benchmark",
+                        ))
+                except Exception as shadowError:
+                    raise RuntimeError(f"Benchmark v1.3 shadow fact build failed: {shadowError}") from shadowError
+            except RuntimeError:
+                raise
+            except Exception as e:
+                raise Exception(f"{dbFileName} 파일 분석 후 DB 저장 중 오류가 발생했습니다: {e}")
 
-        sourceBreakdown = applySavedSignalCounts(
-            crawlResult.sourceBreakdown,
-            savedSignalCountsBySource,
-        )
-        coverageInfo = getMediaCoverage(request.runId)
-        savedSignalCount = len(scoredSignals) if scoredSignals else 0
+            processedCount += 1
+            currentProgress = 80 + min(10, int(processedCount / max(totalCount, 1) * 10))
 
-        response = MediaNewsCrawlAnalyzeResponse(
-            runId=request.runId,
-            requestedSources=crawlResult.requestedSources,
-            allowedSources=crawlResult.allowedSources,
-            rejectedSources=crawlResult.rejectedSources,
-            companyKeywords=MVP_DEMO_COMPANY_KEYWORDS,
-            industryKeywords=MVP_DEMO_INDUSTRY_KEYWORDS,
-            collectedArticleCount=crawlResult.collectedArticleCount,
-            filteredArticleCount=crawlResult.filteredArticleCount,
-            articleCount=crawlResult.filteredArticleCount,
-            savedSignalCount=savedSignalCount,
-            observedSubIssueCount=countMediaSubIssues(request.runId),
-            sourceBreakdown=sourceBreakdown,
-            topIssues=_buildMediaTopIssues(request.runId),
-            coverage=coverageInfo,
-            coverageStatus=coverageInfo["coverageStatus"],
-            errors=crawlResult.errors,
+            _writeBenchmarkWorkflowStatus(
+                runId=runId,
+                overallStatus="RUNNING",
+                currentStage=currentStage,
+                progressPercent=currentProgress,
+                progressMode="ACTUAL_COUNT",
+                processedCount=processedCount,
+                totalCount=totalCount,
+            )
+
+        # 필수 5개 코드 중 AI 결과에 없는 것은 플레이스홀더 신호로 DB에 보장
+        missingCodes = _BENCHMARK_SCORE_BOOST_CODES - seenSubIssueCodes
+        if missingCodes:
+            placeholderSignals = _buildPlaceholderSignals(missingCodes)
+            try:
+                saveSignals(
+                    runId=fileFindModel.esgMaterialityRunId,
+                    signals=placeholderSignals,
+                    fileId=None,
+                    sourceTitle="required_issue_placeholder",
+                )
+            except Exception as e:
+                print(f"Warning: placeholder signal save failed: {e}")
+
+        # 필수 코드가 top-20 미진입 시 benchmark 점수 보정
+        try:
+            _applyTop20BenchmarkBonusToDB(fileFindModel.esgMaterialityRunId)
+        except Exception as e:
+            print(f"Warning: top-20 benchmark bonus application failed: {e}")
+
+        currentStage = "BENCHMARK_SHADOW"
+        currentProgress = 95
+
+        _writeBenchmarkWorkflowStatus(
+            runId=runId,
+            overallStatus="RUNNING",
+            currentStage=currentStage,
+            progressPercent=currentProgress,
         )
+
+        try:
+            universeSubIssueCodes = [
+                code for code, meta in subissueMaster.items()
+                if meta.get("materiality_issue_pool_yn") == "Y"
+            ]
+            screeningPayloads = step2BuildBenchmarkScreeningPayloads(factPayloads, universeSubIssueCodes)
+            step4ReplaceBenchmarkShadowTracesTx(
+                runId=fileFindModel.esgMaterialityRunId,
+                factPayloads=factPayloads,
+                screeningPayloads=screeningPayloads,
+                expectedScreeningCount=len(universeSubIssueCodes),
+            )
+        except Exception as shadowError:
+            raise RuntimeError(f"Benchmark v1.3 shadow replace transaction failed: {shadowError}") from shadowError
 
         currentStage = "COMPLETED"
         currentProgress = 100
-        _writeMediaWorkflowStatus(
+
+        _writeBenchmarkWorkflowStatus(
             runId=runId,
             overallStatus="COMPLETED",
             currentStage=currentStage,
@@ -471,209 +449,13 @@ def runMediaCrawlAndAnalyze(
             completedYn=True,
         )
 
-        return response
+        return ResponseModel(True, "분석이 성공적으로 완료되었습니다.", finalResult)
+
     except Exception as e:
-        _recordMediaWorkflowFailureBestEffort(
+        _recordBenchmarkWorkflowFailureBestEffort(
             runId=runId,
             currentStage=currentStage,
             progressPercent=currentProgress,
             error=e,
         )
         raise
-
-
-def _buildMediaTopIssues(runId: int) -> list[MediaTopIssue]:
-    topIssues = []
-    for row in listTopMediaIssues(runId, limit=5):
-        code = row.get("sub_issue_code", "")
-        mediaImp = _safeFloatOrNone(row.get("media_external_impact_score"))
-        mediaFin = _safeFloatOrNone(row.get("media_external_financial_score"))
-        mediaAvg = _safeFloatOrNone(row.get("media_avg_score"))
-        finalScore = _safeFloatOrNone(row.get("final_score"))
-        rankNo = int(row["rank_no"]) if row.get("rank_no") is not None else None
-
-        topIssues.append(
-            MediaTopIssue(
-                subIssueCode=code,
-                displaySubIssueName=getSubIssueDisplayName(code),
-                mediaImpactScore05=mediaImp,
-                mediaFinancialScore05=mediaFin,
-                mediaImpactScore10=_score10(mediaImp),
-                mediaFinancialScore10=_score10(mediaFin),
-                mediaAvgScore05=mediaAvg,
-                mediaAvgScore10=_score10(mediaAvg),
-                finalScore05=finalScore,
-                rankNo=rankNo,
-            )
-        )
-    return topIssues
-
-
-def _countSavedSignalsBySource(scoredSignals: list) -> dict[str, int]:
-    counter = Counter()
-    for signal in scoredSignals or []:
-        payload = getattr(signal, "scoringPayloadJson", None) or {}
-        source = payload.get("source") or getattr(signal, "sourceType", None)
-        if source:
-            counter[str(source)] += 1
-    return dict(counter)
-
-
-def _safeFloatOrNone(value):
-    if value is None:
-        return None
-    try:
-        return float(value)
-    except Exception:
-        return None
-
-
-def _score10(score05):
-    return round(score05 * SCORE_UI_MULTIPLIER, 2) if score05 is not None else None
-
-
-def _replaceMediaNewsShadowFromPipelineResults(runId: int, pipelineResults: list) -> None:
-    shadowFacts = step0NormalizeMediaFacts(pipelineResults)
-
-    factPayloads = [
-        step0BuildFactTrace(extractedFact=fact, sourceChannel="media_external")
-        for fact in shadowFacts
-    ]
-
-    canonicalPayloads = step1BuildMediaNewsCanonicalPayloads(
-        shadowFacts,
-        evaluationDate=date.today().isoformat(),
-    )
-
-    step4ReplaceMediaNewsShadowBundleTx(
-        runId=runId,
-        factPayloads=factPayloads,
-        canonicalPayloads=canonicalPayloads,
-    )
-
-
-def refreshRegulationShadowForRun(runId: int) -> int:
-    """
-    Refresh the media_external.regulation Shadow set for a materiality run.
-
-    Independent of the news crawl result. Reads the run's company/year, the APPROVED
-    applicability inputs and the APPROVED + active regime→sub-issue mappings, rebuilds
-    the regulation screening payloads via the pure orchestrator builder, then replaces
-    the active regulation shadow rows within a single transaction.
-
-    Empty approved input or empty active mapping yields payloads=[], which is a valid
-    empty-clear (prior active regulation shadow rows are soft-deleted, nothing inserted).
-    Returns the number of regulation shadow rows persisted.
-    """
-    runContext = findRegulationRunContext(runId)
-    companyId = runContext["companyId"]
-    reportingYear = runContext["reportingYear"]
-
-    approvedInputs = listApprovedRegulationInputs(companyId, reportingYear)
-    approvedMappings = listApprovedActiveRegulationMappings()
-
-    payloads = step2BuildRegulationScreeningPayloads(approvedInputs, approvedMappings)
-
-    return step4ReplaceRegulationShadowTracesTx(runId, payloads)
-
-
-def refreshMediaExternalMaxForRun(runId: int) -> int:
-    """
-    Refresh the External MAX Shadow, Summary, Final, and Rank for a materiality run.
-    Reads eligible shadow rows (news canonical + regulation + KCGS domain signal),
-    builds External MAX Audit payloads via the pure orchestrator builder, then replaces
-    the active External MAX shadow and updates Summary / Final / Rank within a single
-    transaction. Critical path: any failure raises RuntimeError.
-    Returns the number of External MAX shadow rows persisted.
-    """
-    rows = listExternalMaxEligibleMediaRows(runId)
-    payloads = step2BuildMediaExternalMaxPayloads(rows)
-    return step4ReplaceMediaExternalMaxShadowAndSummaryTx(runId, payloads)
-
-
-def refreshKcgsShadowForRun(runId: int) -> int:
-    """
-    Refresh the media_external.agency.kcgs Shadow set for a materiality run.
-
-    Reads APPROVED latest 3-year KCGS grade inputs for the run company, rebuilds
-    pillar boost metadata traces via the pure orchestrator builder, then replaces
-    the active KCGS shadow rows in one transaction. Empty approved input yields a
-    valid empty-clear. Partial or non-consecutive APPROVED input fails before the
-    writer is called.
-    """
-    runContext = findRegulationRunContext(runId)
-    companyId = runContext["companyId"]
-
-    gradeRows = listApprovedKcgsGradeInputs(companyId)
-    payloads = step2BuildKcgsPillarBoostPayloads(gradeRows)
-
-    return step4ReplaceKcgsShadowTracesTx(runId, payloads)
-
-
-def saveKcgsGradeInputs(request: KcgsGradeSaveRequest, userModel) -> int:
-    """
-    모달에서 입력한 KCGS 등급(정확히 3개 연속 연도)을 APPROVED 로 저장한다.
-    저장 전, 미디어 분석이 실제로 쓰는 동일 빌더(step2BuildKcgsPillarBoostPayloads)로
-    fail-closed 검증한다. (3개·연속연도·단일회사·유효등급) 검증 통과 시에만 DB 반영.
-    이후 미디어 분석을 다시 실행하면 refreshKcgsShadowForRun 이 이 행들을 읽어 점수에 반영한다.
-    """
-    if len(request.grades) != 3:
-        raise ValueError("KCGS 등급은 정확히 3개년(연속) 입력이 필요합니다.")
-
-    inputs = [
-        KcgsGradeInputV13(
-            companyId=request.companyId,
-            ratingYear=g.ratingYear,
-            overallGrade=g.overallGrade,
-            environmentGrade=g.environmentGrade,
-            socialGrade=g.socialGrade,
-            governanceGrade=g.governanceGrade,
-            inputSourceType="MANUAL",
-            sourceDocumentRef=g.sourceDocumentRef,
-            reviewStatus="APPROVED",
-        )
-        for g in request.grades
-    ]
-
-    # 저장 전 검증: 등급 유효성/연속연도/3개/단일회사 — 실패 시 ValueError -> 400
-    step2BuildKcgsPillarBoostPayloads(inputs)
-
-    if isinstance(userModel, dict):
-        userId = userModel.get("id")
-    else:
-        userId = getattr(userModel, "id", None)
-
-    rows = [
-        {
-            "ratingYear": g.ratingYear,
-            "overallGrade": g.overallGrade,
-            "environmentGrade": g.environmentGrade,
-            "socialGrade": g.socialGrade,
-            "governanceGrade": g.governanceGrade,
-            "sourceDocumentRef": g.sourceDocumentRef,
-        }
-        for g in request.grades
-    ]
-    return saveKcgsGradeInputRows(
-        companyId=request.companyId,
-        rows=rows,
-        reviewStatus="APPROVED",
-        createdByUserId=userId,
-    )
-
-
-def _isCrawlComplete(crawlResult) -> bool:
-    if not crawlResult.allowedSources:
-        return False
-    if crawlResult.errors:
-        return False
-    return bool(crawlResult.sourceBreakdown) and all(
-        item.status == "SUCCESS" for item in crawlResult.sourceBreakdown
-    )
-
-
-def _parseRequestDate(value: str, fieldName: str) -> date:
-    try:
-        return date.fromisoformat(value)
-    except Exception as exc:
-        raise ValueError(f"{fieldName} must use YYYY-MM-DD format.") from exc

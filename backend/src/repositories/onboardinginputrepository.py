@@ -4,6 +4,15 @@ from typing import Optional
 
 from src.utils.db import findAll, findOne, getConn
 from src.repositories.onboardingscoperepository import METRIC_ID_G0_02
+from src.utils.typeutils import (
+    safeFloat,
+    safeInt,
+    formatDatetime,
+    truthy,
+    firstNonNull,
+    groupRows,
+    normalizeIssueDomain,
+)
 
 
 def listValueRows(
@@ -612,49 +621,10 @@ def approvedAt(inputs: list[dict], facts: list[dict], latestHistory: dict):
     approvedValues.extend([row.get("approved_at") for row in facts if row.get("approved_at")])
     return max(approvedValues) if approvedValues else None
 
-def firstNonNull(values: list) -> Optional[int]:
-    for value in values:
-        if value is not None:
-            return int(value)
-    return None
-
-def formatDatetime(value) -> Optional[str]:
-    if value is None:
-        return None
-    return str(value)
-
 def hasMetricValue(row: dict) -> bool:
     if row.get("value_numeric") is not None:
         return True
     return str(row.get("value_text") or "").strip() != ""
-
-def truthy(value) -> bool:
-    if isinstance(value, bool):
-        return value
-    if value is None:
-        return False
-    try:
-        return int(value) != 0
-    except (TypeError, ValueError):
-        return str(value).strip().lower() in {"y", "yes", "true", "1"}
-
-def groupRows(rows: list[dict], key: str) -> dict[str, list[dict]]:
-    grouped = {}
-    for row in rows:
-        grouped.setdefault(row.get(key), []).append(row)
-    return grouped
-
-def normalizeIssueDomain(value: Optional[str]) -> Optional[str]:
-    normalizedValue = str(value or "").strip().upper()
-    if normalizedValue in {"E", "ENVIRONMENT", "ENVIRONMENTAL"} or normalizedValue.startswith("E_"):
-        return "environmental"
-    if normalizedValue in {"S", "SOCIAL"} or normalizedValue.startswith("S_"):
-        return "social"
-    if normalizedValue in {"G", "GOVERNANCE"} or normalizedValue.startswith("G_"):
-        return "governance"
-    if normalizedValue in {"G0", "GENERAL"}:
-        return "general"
-    return None
 
 def listPromotableInputAtomicRowsTx(cur, metricId: str) -> list[dict]:
     cur.execute(

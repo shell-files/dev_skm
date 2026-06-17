@@ -28,6 +28,7 @@ from typing import List, Dict, Any, Optional, Sequence, Union, Literal
 from collections import defaultdict
 from datetime import datetime
 from src.utils.db import save, addKey, findAll, findOne, getConn
+from src.utils.typeutils import safeFloat as _safeFloatBase
 from src.models.dmaengine import (
     DMASignal,
     FinalMaterialityScore,
@@ -379,20 +380,10 @@ def upsertStage(runId: int, subIssueCode: str, stage: str, impactScore: Optional
         print(f"Error upserting stage summary for {subIssueCode}: {e}")
 
 def safeFloat(value, default=0.0):
-    if value is None:
-        return default
-    try:
-        return float(value)
-    except Exception:
-        return default
+    return _safeFloatBase(value, default=default)
 
 def safeFloatOrNone(value):
-    if value is None:
-        return None
-    try:
-        return float(value)
-    except Exception:
-        return None
+    return _safeFloatBase(value, default=None)
 
 def recalcFinal(runId: int, subIssueCode: str, updateRankingsYn: bool = True):
     sql = """

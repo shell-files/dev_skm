@@ -14,6 +14,8 @@
 | 2 | `[BE] utils/rollupcalculator.py를 services/rollups/calculator.py로 이동 (#257)` | ✅ 완료 |
 | 3 | `[BE] 개발 컨벤션 및 리팩토링 계획 문서 추가 (#257)` | ✅ 완료 |
 | 4 | `[BE] API-Service-Repository 계층 위반 수정 (#257)` | ✅ 완료 |
+| 5 | `[BE] 중복 유틸 함수 typeutils로 통합 (#257)` | ✅ 완료 |
+| 6 | `[BE] README WBS 정리 및 scratch 파일 제거 (#257)` | ✅ 완료 |
 
 ---
 

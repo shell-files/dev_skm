@@ -40,6 +40,7 @@ from src.models.rollup import (
 )
 from src.utils.companyscope import checkScope, resolveScope
 from src.utils.calculationengine import normalizeSource, STATUS_CALCULATED
+from src.utils.typeutils import formatDatetime as formatDateTime
 
 class RollupError(Exception):
     def __init__(self, statusCode: int, code: str, message: str, data: Optional[dict] = None):
@@ -1071,13 +1072,6 @@ def getSource(userModel) -> int:
     if sourceCompanyId is None:
         raise RollupError(403, "COMPANY_SCOPE_REQUIRED", "Company scope is required.")
     return int(sourceCompanyId)
-
-def formatDateTime(value) -> Optional[str]:
-    if value is None:
-        return None
-    if hasattr(value, "isoformat"):
-        return value.isoformat()
-    return str(value)
 
 def dumpModel(model) -> dict:
     if hasattr(model, "model_dump"):

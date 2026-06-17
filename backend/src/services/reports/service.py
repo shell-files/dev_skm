@@ -1,6 +1,7 @@
 ﻿import json
-from decimal import Decimal
 from typing import Optional
+
+from src.utils.typeutils import safeFloat as _safeFloat, safeInt as _safeInt
 
 from src.models.report import (
     CompanyBreakdownDto,
@@ -349,21 +350,3 @@ def _valueFromRow(row: dict):
     return row.get("value_text")
 
 
-def _safeFloat(value):
-    if value is None:
-        return None
-    if isinstance(value, Decimal):
-        return float(value)
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _safeInt(value):
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None

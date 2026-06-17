@@ -1,5 +1,6 @@
-﻿from decimal import Decimal
-from typing import Optional
+﻿from typing import Optional
+
+from src.utils.typeutils import safeFloat as _safeFloat, safeInt as _safeInt
 
 from src.models.materiality import (
     BenchmarkObservationIssueDto,
@@ -787,24 +788,6 @@ def _quadrant(impactScore10: Optional[float], financialScore10: Optional[float])
     return "LOW_IMPACT_LOW_FINANCIAL"
 
 
-def _safeFloat(value) -> Optional[float]:
-    if value is None:
-        return None
-    if isinstance(value, Decimal):
-        return float(value)
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _safeInt(value) -> Optional[int]:
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
 
 
 def _toScore10(score05) -> Optional[float]:

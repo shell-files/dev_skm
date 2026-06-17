@@ -36,12 +36,13 @@ Do not:
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Optional
+from typing import Optional
 
 from src.models.dmaengine import DMASignal, FinancialFactor
 from src.repositories.companycontextrepository import getMaterialityRunContext
 from src.repositories.financialbasisrepository import getBasis
 from src.utils.subissuemaster import getScoringAllowedIros
+from src.utils.typeutils import safeFloat as _safeFloat
 
 # LEGACY ONLY:
 # Applies existing G0 financial basis to legacy DMASignal financial factors.
@@ -708,13 +709,6 @@ def _appendTraceWarning(signal: DMASignal, warning: str) -> DMASignal:
     return signal.copy(update={"scoringPayloadJson": scoringPayload})
 
 
-def _safeFloat(value: Any, default: Optional[float] = None) -> Optional[float]:
-    try:
-        if value is None:
-            return default
-        return float(value)
-    except (TypeError, ValueError):
-        return default
 
 
 # Compatibility aliases / short naming wrappers

@@ -32,6 +32,7 @@ from src.repositories import onboardingassignmentrepository as assignmentRepo
 from src.repositories import onboardingrepository as repo
 from src.repositories import onboardingscoperepository as scopeRepo
 from src.utils.companyscope import checkScope
+from src.utils.typeutils import normalizeIssueDomain, groupRows
 from src.services.onboardings import approval_service as approvalService
 from src.services.calculations.service import invalidateAffectedEntityFactsTx
 
@@ -127,7 +128,7 @@ def listMetrics(
         includeGroupRollupResultYn=(actualCycleType != repo.CYCLE_TYPE_ROLLUP_RESPONSE),
     )
     assignmentByMetric = {row["metric_id"]: buildAssignment(row) for row in assignmentRows}
-    atomicRowsByMetric = groupBy(masterRows, "metric_id")
+    atomicRowsByMetric = groupRows(masterRows, "metric_id")
 
     from src.repositories.onboardingapprovalrepository import listCycleApprovalInboxRows
     approvalSummaries = listCycleApprovalInboxRows(
@@ -515,17 +516,6 @@ def resolveScopeMetadata(scope: dict, cycle: dict) -> dict:
     }
 
 
-def normalizeIssueDomain(value: Optional[str]) -> Optional[str]:
-    normalizedValue = str(value or "").strip().upper()
-    if normalizedValue in {"E", "ENVIRONMENT", "ENVIRONMENTAL"} or normalizedValue.startswith("E_"):
-        return "environmental"
-    if normalizedValue in {"S", "SOCIAL"} or normalizedValue.startswith("S_"):
-        return "social"
-    if normalizedValue in {"G", "GOVERNANCE"} or normalizedValue.startswith("G_"):
-        return "governance"
-    if normalizedValue in {"G0", "GENERAL"}:
-        return "general"
-    return None
 
 
 def buildAtomicItem(row: dict, value: dict) -> OnboardingAtomicItemDto:
@@ -642,11 +632,6 @@ def maskEmail(email: Optional[str]) -> Optional[str]:
     return f"{name[0]}***@{domain}"
 
 
-def groupBy(rows: list[dict], key: str) -> dict[str, list[dict]]:
-    grouped = {}
-    for row in rows:
-        grouped.setdefault(row.get(key), []).append(row)
-    return grouped
 
 
 def floatOrNone(value):

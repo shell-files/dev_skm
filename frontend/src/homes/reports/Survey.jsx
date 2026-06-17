@@ -3,8 +3,10 @@ import { useNavigate } from "react-router";
 import { useSelector, useDispatch } from "react-redux";
 import "@styles/sr.css";
 import "@styles/survey.css";
+import "@styles/dma-robot-stage.css";
 
 import robot from "@assets/images/robot/robot_servey_t.png";
+import surveyIcon from "@assets/icons/steps/survey.png";
 
 import {
   showDefaultAlert,
@@ -627,23 +629,11 @@ const Survey = () => {
           </div>
         </div>
 
-        {/* Body */}
+        {/* Body — result only */}
+        {recalcDone && groups ? (
         <div className="sv-dashboard-body">
-          {isAnalyzing ? (
-            /* ── 분석 진행 중 ── */
-            <div className="sv-dashboard-analyzing">
-              <div className="sv-dashboard-robot">
-                <img src={robot} alt="robot" className="sv-robot-img sv-robot-img--bounce" />
-              </div>
-              <h3 className="sv-dashboard-state-title">이중 중대성 매트릭스 분석 중...</h3>
-              <p className="sv-dashboard-state-desc">AI 기반 알고리즘이 설문 응답을 이중 중대성 평가 점수에 반영하고 있습니다.</p>
-              <div className="sv-analyzing-bar">
-                <div className="sv-analyzing-bar-fill" />
-              </div>
-            </div>
-          ) : recalcDone && groups ? (
-            /* ── 분석 완료 — KPI + 결과 ── */
-            <>
+          <>
+
               <div className="sv-dashboard-complete-banner">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12"/>
@@ -804,17 +794,50 @@ const Survey = () => {
 
               </div>
             </>
-          ) : (
-            /* ── 대기 중 — 로봇 + 안내 ── */
-            <div className="sv-dashboard-analyzing">
-              <div className="sv-dashboard-robot">
-                <img src={robot} alt="robot" className="sv-robot-img sv-robot-img--idle" />
-              </div>
-              <h3 className="sv-dashboard-state-title">분석 미실행 상태</h3>
-              <p className="sv-dashboard-state-desc">응답 가져오기 후 <strong>응답 집계 반영</strong> 버튼을 눌러 설문 결과를 분석해주세요.</p>
+          </div>
+        ) : (
+          /* ── 대기 중 / 분석 진행 중 ── */
+          <div
+            className={`sv-dashboard-analyzing dma-stage ${isAnalyzing ? "dma-stage--running" : ""}`}
+            style={{ '--dma-icon': `url(${surveyIcon})`, '--dma-accent': 'var(--survey-primary)' }}
+          >
+            <div id="particle-field" className="particle-field"></div>
+            <div className="dma-stage__blobs" aria-hidden="true">
+              <div className="dma-stage__blob dma-stage__blob--1" />
+              <div className="dma-stage__blob dma-stage__blob--2" />
+              <div className="dma-stage__blob dma-stage__blob--3" />
+              <div className="dma-stage__blob dma-stage__blob--4" />
+              <div className="dma-stage__blob dma-stage__blob--5" />
+              <div className="dma-stage__blob dma-stage__blob--6" />
+              <div className="dma-stage__blob dma-stage__blob--7" />
+              <div className="dma-stage__blob dma-stage__blob--8" />
+              <div className="dma-stage__blob dma-stage__blob--9" />
+              <div className="dma-stage__blob dma-stage__blob--10" />
+              <div className="dma-stage__blob dma-stage__blob--11" />
+              <div className="dma-stage__blob dma-stage__blob--12" />
             </div>
-          )}
-        </div>
+            <div className="dma-stage__content">
+              <div className="dma-stage__robot">
+                <img src={robot} alt="robot" className="dma-stage__img" />
+              </div>
+              <h3 className="dma-stage__title">
+                {isAnalyzing ? "AI 분석 진행 중..." : "분석 준비가 완료되었습니다"}
+              </h3>
+              <p className="dma-stage__desc">
+                {isAnalyzing
+                  ? "설문 응답을 이중 중대성 평가 점수에 반영하고 있습니다."
+                  : <>응답 가져오기 후 <strong>응답 집계 반영</strong> 버튼을 눌러 설문 결과를 분석해주세요.</>}
+              </p>
+              {isAnalyzing && (
+                <div className="dma-stage__progress dma-stage__progress--indeterminate">
+                  <div className="dma-stage__progress-bar">
+                    <div className="dma-stage__progress-fill" />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

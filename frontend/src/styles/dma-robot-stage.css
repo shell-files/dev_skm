@@ -1,0 +1,305 @@
+/* =================================================================
+   DMA Robot Stage — 분석 대기 / 진행 화면 공통 스타일
+   BenchMarking · Media · Survey 3페이지 공유
+================================================================= */
+
+/* ── Full-overlay 컨테이너 (BenchMarking, Media) ── */
+.dma-stage {
+  flex: 1;
+  padding: 30px 50px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  gap: 0;
+  background: #f8fafc;
+}
+
+/* ── Compact 컨테이너 (Survey 슬라이드 대시보드 내부) ── */
+.dma-stage--compact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  gap: 0;
+  padding: 28px 24px;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   배경 블롭 — 12개 이미지를 크기 다양하게 전체에 흩뿌림
+───────────────────────────────────────────────────────────── */
+.dma-stage__blobs {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.dma-stage__blob {
+  position: absolute;
+  background-repeat: no-repeat;
+  background-size: contain;
+  opacity: 0.14;
+}
+
+/* ─── 상단 좌측 (large) — GateBg1 */
+.dma-stage__blob--1 {
+  width: 100px; height: 100px;
+  top: 5%; left: 4%;
+  background-image: url('../assets/images/backgrounds/GateBg1.png');
+  animation: dma-blob-drift1 9s ease-in-out infinite;
+}
+/* ─── 하단 좌측 (large) — GateBg2 */
+.dma-stage__blob--2 {
+  width: 105px; height: 105px;
+  bottom: 5%; left: 3%;
+  background-image: url('../assets/images/backgrounds/GateBg2.png');
+  animation: dma-blob-drift2 11s ease-in-out infinite;
+}
+/* ─── 중간 우측 (medium) — GateBg3 */
+.dma-stage__blob--3 {
+  width: 88px; height: 88px;
+  top: 40%; right: 5%;
+  background-image: url('../assets/images/backgrounds/GateBg3.png');
+  animation: dma-blob-drift3 7s ease-in-out infinite;
+}
+/* ─── 상단 우중 (small) — login-blob-main */
+.dma-stage__blob--4 {
+  width: 68px; height: 68px;
+  top: 4%; right: 22%;
+  opacity: 0.12;
+  background-image: url('../assets/images/backgrounds/login-blob-main.png');
+  animation: dma-blob-drift4 13s ease-in-out infinite;
+}
+/* ─── 상단 우측 (medium-large) — login-floating-orb */
+.dma-stage__blob--5 {
+  width: 115px; height: 115px;
+  top: 8%; right: 4%;
+  opacity: 0.12;
+  background-image: url('../assets/images/backgrounds/login-floating-orb.png');
+  animation: dma-blob-drift5 8s ease-in-out infinite;
+}
+/* ─── 중간 좌측 (medium) — login-soft-cube */
+.dma-stage__blob--6 {
+  width: 78px; height: 78px;
+  top: 42%; left: 3%;
+  background-image: url('../assets/images/backgrounds/login-soft-cube.png');
+  animation: dma-blob-drift6 10s ease-in-out infinite;
+}
+/* ─── 상단 중좌 (tiny) — GateBg1 */
+.dma-stage__blob--7 {
+  width: 52px; height: 52px;
+  top: 9%; left: 26%;
+  opacity: 0.11;
+  background-image: url('../assets/images/backgrounds/GateBg1.png');
+  animation: dma-blob-drift2 8s ease-in-out infinite;
+}
+/* ─── 하단 중 (small) — GateBg2 */
+.dma-stage__blob--8 {
+  width: 62px; height: 62px;
+  bottom: 12%; left: 33%;
+  opacity: 0.11;
+  background-image: url('../assets/images/backgrounds/GateBg2.png');
+  animation: dma-blob-drift1 12s ease-in-out infinite;
+}
+/* ─── 중하 우중 (tiny) — GateBg3 */
+.dma-stage__blob--9 {
+  width: 54px; height: 54px;
+  top: 60%; right: 20%;
+  opacity: 0.11;
+  background-image: url('../assets/images/backgrounds/GateBg3.png');
+  animation: dma-blob-drift4 9s ease-in-out infinite;
+}
+/* ─── 하단 우중 (small) — login-blob-main */
+.dma-stage__blob--10 {
+  width: 66px; height: 66px;
+  bottom: 9%; right: 24%;
+  opacity: 0.11;
+  background-image: url('../assets/images/backgrounds/login-blob-main.png');
+  animation: dma-blob-drift3 11s ease-in-out infinite;
+}
+/* ─── 하단 우측 (large) — login-floating-orb */
+.dma-stage__blob--11 {
+  width: 98px; height: 98px;
+  bottom: 4%; right: 4%;
+  opacity: 0.12;
+  background-image: url('../assets/images/backgrounds/login-floating-orb.png');
+  animation: dma-blob-drift6 9s ease-in-out infinite;
+}
+/* ─── 중간 좌중 (tiny) — login-soft-cube */
+.dma-stage__blob--12 {
+  width: 48px; height: 48px;
+  top: 46%; left: 20%;
+  opacity: 0.11;
+  background-image: url('../assets/images/backgrounds/login-soft-cube.png');
+  animation: dma-blob-drift5 13s ease-in-out infinite;
+}
+
+/* compact 사이즈 조정 */
+.dma-stage--compact .dma-stage__blob--1  { width: 62px;  height: 62px; }
+.dma-stage--compact .dma-stage__blob--2  { width: 66px;  height: 66px; }
+.dma-stage--compact .dma-stage__blob--3  { width: 56px;  height: 56px; }
+.dma-stage--compact .dma-stage__blob--4  { width: 44px;  height: 44px; }
+.dma-stage--compact .dma-stage__blob--5  { width: 72px;  height: 72px; }
+.dma-stage--compact .dma-stage__blob--6  { width: 50px;  height: 50px; }
+.dma-stage--compact .dma-stage__blob--7  { width: 34px;  height: 34px; }
+.dma-stage--compact .dma-stage__blob--8  { width: 40px;  height: 40px; }
+.dma-stage--compact .dma-stage__blob--9  { width: 34px;  height: 34px; }
+.dma-stage--compact .dma-stage__blob--10 { width: 42px;  height: 42px; }
+.dma-stage--compact .dma-stage__blob--11 { width: 62px;  height: 62px; }
+.dma-stage--compact .dma-stage__blob--12 { width: 30px;  height: 30px; }
+
+@keyframes dma-blob-drift1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(-12px, 10px) scale(1.05); }
+}
+@keyframes dma-blob-drift2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(10px, -12px) scale(1.07); }
+}
+@keyframes dma-blob-drift3 {
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  50%       { transform: translate(-8px, 6px) scale(0.95) rotate(5deg); }
+}
+@keyframes dma-blob-drift4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(8px, 12px) scale(1.04); }
+}
+@keyframes dma-blob-drift5 {
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  50%       { transform: translate(-6px, -10px) scale(1.08) rotate(-4deg); }
+}
+@keyframes dma-blob-drift6 {
+  0%, 100% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  50%       { transform: translate(8px, -6px) scale(0.93) rotate(6deg); }
+}
+
+/* ── 내부 콘텐츠 래퍼 ── */
+.dma-stage__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 2;
+}
+
+/* ── 로봇 이미지 래퍼 & float 애니메이션 ── */
+.dma-stage__robot {
+  margin-bottom: 16px;
+  animation: dma-float 3.5s ease-in-out infinite;
+  z-index: 2;
+}
+
+.dma-stage--running .dma-stage__robot,
+.dma-stage--compact.dma-stage--running .dma-stage__robot {
+  animation-duration: 1.4s;
+}
+
+@keyframes dma-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+/* ── 로봇 이미지 ── */
+.dma-stage__img {
+  width: 150px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.07));
+}
+
+/* ── 제목 ── */
+.dma-stage__title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 0 0 6px;
+  letter-spacing: -0.015em;
+  text-align: center;
+  z-index: 2;
+}
+
+/* ── 설명 ── */
+.dma-stage__desc {
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: #64748b;
+  margin: 0;
+  text-align: center;
+  max-width: 360px;
+  line-height: 1.65;
+  z-index: 2;
+}
+
+/* ── 진행 바 (% 표시 — BenchMarking, Media) ── */
+.dma-stage__progress {
+  width: 280px;
+  margin-top: 18px;
+  z-index: 2;
+}
+
+.dma-stage__progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.dma-stage__progress-fill {
+  height: 100%;
+  background: var(--dma-accent, #6366f1);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.dma-stage__progress-pct {
+  margin-top: 7px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--dma-accent, #6366f1);
+  text-align: center;
+}
+
+/* ── 인디케이터 바 (무한 진행 — Survey) ── */
+.dma-stage__progress--indeterminate {
+  width: 220px;
+  margin-top: 14px;
+  z-index: 2;
+}
+
+.dma-stage__progress--indeterminate .dma-stage__progress-bar {
+  height: 5px;
+}
+
+.dma-stage__progress--indeterminate .dma-stage__progress-fill {
+  width: 38%;
+  animation: dma-indeterminate 1.6s ease-in-out infinite;
+}
+
+@keyframes dma-indeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(600%); }
+}
+
+/* ── 반응형 ── */
+@media (max-width: 900px) {
+  .dma-stage { padding: 20px 24px; }
+  .dma-stage__img { width: 120px; }
+  .dma-stage__title { font-size: 1rem; }
+  .dma-stage__progress { width: 220px; }
+  .dma-stage__blob--1 { width: 200px; height: 200px; }
+  .dma-stage__blob--2 { width: 160px; height: 160px; }
+  .dma-stage__blob--3 { width: 130px; height: 130px; }
+}
+
+@media (max-width: 600px) {
+  .dma-stage__img { width: 100px; }
+  .dma-stage__progress { width: 180px; }
+  .dma-stage__blob--3 { display: none; }
+}

@@ -651,46 +651,6 @@ def insertHistory(
     )
 
 
-def submitG002Approval(companyId: int, reportingYear: int, reportBasisType=None, sourceMaterialityRunId=None, actorUserId=None) -> dict:
-    from src.services.onboardings.approval_service import submitMetricApproval
-
-    return submitMetricApproval(
-        companyId=companyId,
-        reportingYear=reportingYear,
-        cycleType=CYCLE_TYPE_PRE_DMA_G0,
-        metricId=METRIC_ID_G0_02,
-        actorUserId=actorUserId,
-        commentText=None,
-        reportBasisType=reportBasisType,
-        sourceMaterialityRunId=sourceMaterialityRunId,
-    )
-
-
-def approveG002Approval(companyId: int, reportingYear: int, actorUserId: Optional[int], commentText: Optional[str] = None) -> dict:
-    from src.services.onboardings.approval_service import approveMetricApproval
-
-    return approveMetricApproval(
-        companyId=companyId,
-        reportingYear=reportingYear,
-        cycleType=CYCLE_TYPE_PRE_DMA_G0,
-        metricId=METRIC_ID_G0_02,
-        actorUserId=actorUserId,
-        commentText=commentText,
-    )
-
-
-def rejectG002Approval(companyId: int, reportingYear: int, actorUserId: Optional[int], commentText: str) -> dict:
-    from src.services.onboardings.approval_service import rejectMetricApproval
-
-    return rejectMetricApproval(
-        companyId=companyId,
-        reportingYear=reportingYear,
-        cycleType=CYCLE_TYPE_PRE_DMA_G0,
-        metricId=METRIC_ID_G0_02,
-        actorUserId=actorUserId,
-        commentText=commentText,
-    )
-
 __all__ = [
     "CYCLE_TYPE_PRE_DMA_G0",
     "CYCLE_TYPE_POST_DMA_DISCLOSURE",
@@ -709,8 +669,5 @@ __all__ = [
     "listApprovalSummaries",
     "buildApprovalSummary",
     "insertHistory",
-    "submitG002Approval",
-    "approveG002Approval",
-    "rejectG002Approval",
     "resolveRequiredApprovalAtomicIds",
 ]

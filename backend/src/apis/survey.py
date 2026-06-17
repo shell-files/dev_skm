@@ -8,7 +8,7 @@ from src.models.dmasurveyscore import SurveyScorePreviewDto, SurveyScoreRecalcul
 from src.models.dmasurveyresponsestatus import SurveyResponseStatusDto, SurveyResponseTargetsRequestDto
 
 from src.services.surveys.service import exportCsvProcess, getRawProcess
-from src.services.surveys.formservice import createFormProcess, ensureSurveyFormForRun
+from src.services.surveys.formservice import createFormProcess, ensureSurveyFormForRun, getSurveyFormDetail
 from src.services.surveys.importservice import (
     importSurveyResponsesForRun,
     previewSurveyResponses,
@@ -18,7 +18,6 @@ from src.services.surveys.scoringservice import (
     recalculateSurveyScoresForRun,
 )
 from src.services.surveys.statusservice import getSurveyResponseStatus, saveSurveyResponseTargets
-from src.repositories.dmasurveyformrepository import getSurveyFormByRunId, toSurveyFormResponse
 
 router = APIRouter()
 
@@ -47,14 +46,14 @@ def getRaw():
 )
 async def get_survey_form(runId: int, token=Depends(get_token)):
     try:
-        row = getSurveyFormByRunId(runId)
+        result = getSurveyFormDetail(runId)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    if row is None:
+    if result is None:
         raise HTTPException(status_code=404, detail=f"Survey form not found for runId={runId}")
-    return toSurveyFormResponse(row)
+    return result
 
 
 @router.post(

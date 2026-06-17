@@ -22,9 +22,9 @@ from src.services.materialities.service import (
     getOnboardingProgress,
     getSelectionProcess,
     getSurveyResult,
+    getWorkflowStatus,
 )
 from src.utils.auth import get_token
-from src.repositories.dmaworkflowrepository import getDmaWorkflowStatusOrDefault
 
 
 router = APIRouter(tags=["materiality"])
@@ -129,7 +129,7 @@ async def get_company_context_profile(runId: int, userModel=Depends(get_token)):
 )
 async def get_dma_workflow_status(runId: int, workflowType: str, userModel=Depends(get_token)):
     try:
-        return getDmaWorkflowStatusOrDefault(runId=runId, workflowType=workflowType)
+        return getWorkflowStatus(runId=runId, workflowType=workflowType)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

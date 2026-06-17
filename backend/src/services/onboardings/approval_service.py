@@ -73,7 +73,7 @@ def submitMetricApproval(
                 actorUserId=actorUserId,
                 batchId=batchId,
             )
-            requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
+            scopeRepo.requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             scope = requireApprovalScopeTx(cur, cycle, companyId, metricId)
             requiredAtomicIds = resolveRequiredApprovalAtomicIdsTx(cur, cycleType, batchId, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
@@ -147,7 +147,7 @@ def reviewMetricApproval(
     try:
         with conn.cursor(dictionary=True) as cur:
             cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType, batchId=batchId)
-            requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
+            scopeRepo.requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             requireApprovalScopeTx(cur, cycle, companyId, metricId)
             requiredAtomicIds = resolveRequiredApprovalAtomicIdsTx(cur, cycleType, batchId, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
@@ -209,7 +209,7 @@ def approveMetricApproval(
     try:
         with conn.cursor(dictionary=True) as cur:
             cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType, batchId=batchId)
-            requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
+            scopeRepo.requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             scope = requireApprovalScopeTx(cur, cycle, companyId, metricId)
             requiredAtomicIds = resolveRequiredApprovalAtomicIdsTx(cur, cycleType, batchId, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
@@ -368,7 +368,7 @@ def rejectMetricApproval(
     try:
         with conn.cursor(dictionary=True) as cur:
             cycle = resolveExistingActiveCycleTx(cur, companyId, reportingYear, cycleType, batchId=batchId)
-            requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
+            scopeRepo.requireWritableCycleTx(cur, cycle, companyId, batchId=batchId)
             requireApprovalScopeTx(cur, cycle, companyId, metricId)
             requiredAtomicIds = resolveRequiredApprovalAtomicIdsTx(cur, cycleType, batchId, metricId)
             assignment = inputRepo.resolveAssignment(cur, int(cycle["id"]), companyId, metricId)
@@ -557,31 +557,6 @@ def setMetricInputStatusTx(
         tuple(params),
     )
 
-
-def requireWritableCycleTx(cur, cycle: dict, companyId: int, batchId: Optional[int] = None) -> None:
-    scopeRepo.requireRollupResponseBatchContext(cycle, batchId)
-    if str(cycle.get("cycle_type") or "").strip().upper() != scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
-        return
-    dbBatchId = cycle.get("parent_rollup_batch_id")
-    if dbBatchId is None:
-        return
-    cur.execute(
-        """
-        SELECT transfer_status
-        FROM ESG_ROLLUP_SOURCE_STATUS
-        WHERE esg_rollup_batch_id = ?
-          AND source_company_id = ?
-          AND delete_yn = 0
-        LIMIT 1
-        FOR UPDATE
-        """,
-        (int(dbBatchId), companyId),
-    )
-    row = cur.fetchone()
-    if row and str(row.get("transfer_status") or "").lower() in {"sent", "received"}:
-        err = ValueError("ROLLUP_RESPONSE workspace is read-only after transfer.")
-        err.statusCode = 409
-        raise err
 
 def syncRollupSourceReadinessIfNeededTx(
     cur,

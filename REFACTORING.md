@@ -12,7 +12,8 @@
 |---|------------|------|
 | 1 | `[BE] utils/*repository.py 파일 repositories/ 폴더로 계층 분리 (#257)` | ✅ 완료 |
 | 2 | `[BE] utils/rollupcalculator.py를 services/rollups/calculator.py로 이동 (#257)` | ✅ 완료 |
-| 3 | `[BE] 개발 컨벤션 및 리팩토링 계획 문서 추가 (#257)` | 🔲 예정 |
+| 3 | `[BE] 개발 컨벤션 및 리팩토링 계획 문서 추가 (#257)` | ✅ 완료 |
+| 4 | `[BE] API-Service-Repository 계층 위반 수정 (#257)` | ✅ 완료 |
 
 ---
 
@@ -21,7 +22,7 @@
 | 우선순위 | 항목 | 상태 |
 |----------|------|------|
 | 1 | 비대해진 파일 분리 | 🔲 대기 |
-| 2 | API → Service → Repository 계층 준수 | 🔲 대기 |
+| 2 | API → Service → Repository 계층 준수 | ✅ 완료 |
 | **3** | **Repository 분리 및 정리** | **✅ 완료** |
 | **4** | **Utils 남용 방지** | **✅ 완료** |
 | 5 | Frontend 페이지 분리 | 🔲 대기 |
@@ -124,13 +125,35 @@ services/rollups/service.py
 
 ---
 
-### 🔲 [우선순위 2] API → Service → Repository 계층 준수
+### ✅ [우선순위 2] API → Service → Repository 계층 준수 — 2026-06-17
 
-계층 위반 여부 전수 검사 필요
+#### 수정된 계층 위반 4건
 
-- API가 Repository를 직접 호출하는 경우
-- Service가 SQL을 직접 작성하는 경우
-- Utils에 비즈니스 로직이 남아있는 경우
+| 위반 파일 | 위반 내용 | 처리 |
+|-----------|-----------|------|
+| `repositories/onboardingapprovalrepository.py` | Repository → Service 순환 의존 (G002 wrapper 3개) | `_deprecated.py`로 이동 |
+| `repositories/onboardingassignmentrepository.py` | Repository → Service (`requireWritableCycleTx`) | `scopeRepo`로 경로 변경 |
+| `apis/materiality.py` | API → Repository 직접 호출 | `service.getWorkflowStatus` wrapper 추가 |
+| `apis/survey.py` | API → Repository 직접 호출 | `formservice.getSurveyFormDetail` wrapper 추가 |
+
+#### 변경 파일 목록
+
+- `repositories/onboardingscoperepository.py` — `requireWritableCycleTx` 함수 이동 (service → repository)
+- `repositories/onboardingapprovalrepository.py` — G002 wrapper 3개 제거 (→ `_deprecated.py`)
+- `repositories/onboardingassignmentrepository.py` — `approval_service` import 제거, `scopeRepo` import 추가
+- `repositories/_deprecated.py` — 신규 생성 (사용처 없는 dead code 보관용)
+- `services/onboardings/approval_service.py` — `requireWritableCycleTx` 정의 제거, `scopeRepo` 경유 호출
+- `services/onboardings/service.py` — `scopeRepo` import 추가, lazy import 제거
+- `services/materialities/service.py` — `getWorkflowStatus` wrapper 추가
+- `services/surveys/formservice.py` — `getSurveyFormDetail` wrapper 추가
+- `apis/materiality.py` — `dmaworkflowrepository` 직접 import 제거
+- `apis/survey.py` — `dmasurveyformrepository` 직접 import 제거
+
+#### 미완료 (서비스 내 SQL 직접 작성)
+
+7개 service 파일의 SQL 직접 작성은 규모가 크고 파일 분리와 함께 처리 예정 (우선순위 1 작업 시 동반)
+
+---
 
 ---
 

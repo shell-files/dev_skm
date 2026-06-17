@@ -29,6 +29,7 @@ from src.models.materiality import (
 )
 from src.utils.db import findAll, findOne
 from src.utils.dmaaggregator import getCoverageStatus
+from src.repositories.dmaworkflowrepository import getDmaWorkflowStatusOrDefault as _getDmaWorkflowStatusOrDefault
 from src.repositories.dmarepository import (
     countObservedSubIssues,
     listResults,
@@ -817,3 +818,7 @@ def _rate(value: int, total: int) -> Optional[float]:
     if total <= 0:
         return None
     return round((value / total) * 100, 1)
+
+
+def getWorkflowStatus(runId: int, workflowType: str) -> dict:
+    return _getDmaWorkflowStatusOrDefault(runId=runId, workflowType=workflowType)

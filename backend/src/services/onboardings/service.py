@@ -30,6 +30,7 @@ from src.models.onboarding import (
 )
 from src.repositories import onboardingassignmentrepository as assignmentRepo
 from src.repositories import onboardingrepository as repo
+from src.repositories import onboardingscoperepository as scopeRepo
 from src.utils.companyscope import checkScope
 from src.services.onboardings import approval_service as approvalService
 from src.services.calculations.service import invalidateAffectedEntityFactsTx
@@ -226,8 +227,7 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                 )
                 cycleRow = cur.fetchone()
                 if cycleRow:
-                    from src.services.onboardings.approval_service import requireWritableCycleTx
-                    requireWritableCycleTx(cur, cycleRow, companyId, batchId=group.get("batchId"))
+                    scopeRepo.requireWritableCycleTx(cur, cycleRow, companyId, batchId=group.get("batchId"))
 
                 # Collect old values for change detection
                 oldByAtomic = {}

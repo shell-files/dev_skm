@@ -427,3 +427,10 @@ def ensureSurveyFormForRun(runId: int) -> dict:
 
 async def createFormProcess(req, token) -> dict:
     return ensureSurveyFormForRun(req.runId)
+
+
+def getSurveyFormDetail(runId: int) -> dict | None:
+    row = getSurveyFormByRunId(runId)
+    if row is None:
+        return None
+    return toSurveyFormResponse(row)

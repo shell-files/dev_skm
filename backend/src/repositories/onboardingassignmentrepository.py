@@ -7,6 +7,7 @@ from src.utils.db import findAll, findOne, getConn
 from src.utils.rediscl import setInviteRedis
 from src.utils.settings import settings
 from src.utils.tokenset import generateInviteTokenWithUuid
+from src.repositories import onboardingscoperepository as scopeRepo
 
 
 SUPPORTED_TARGET_ROLE = "EMPLOYEE"
@@ -396,9 +397,7 @@ def bulkUnassignMetrics(companyId: int, reportingYear: int, cycle: dict, metricI
 
 
 def requireWritableAssignmentCycleTx(cur, cycle: dict, companyId: int) -> None:
-    from src.services.onboardings import approval_service
-
-    approval_service.requireWritableCycleTx(
+    scopeRepo.requireWritableCycleTx(
         cur,
         cycle,
         companyId,

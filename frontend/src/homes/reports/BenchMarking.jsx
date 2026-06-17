@@ -2,7 +2,9 @@ import { useRef, useState, Fragment, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import "@styles/benchmarking.css";
+import "@styles/dma-robot-stage.css";
 import robot from "@assets/images/robot/robot_repoting_transparent.png";
+import benchIcon from "@assets/icons/steps/benchmarking.png";
 import {
   showDefaultAlert,
   showConfirmAlert,
@@ -563,27 +565,47 @@ const Benchmarking = () => {
             {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인 (클릭)" : "실시간 분석 대기 중"}
           </div>
         </div>
-        <div className={`bench-robot-view-container ${isAnalyzing ? "analyzing" : ""} ${showResult ? "showing-result" : ""}`}>
+        <div
+          className={`bench-robot-view-container dma-stage ${isAnalyzing ? "analyzing dma-stage--running" : ""} ${showResult ? "showing-result" : ""}`}
+          style={{ '--dma-icon': `url(${benchIcon})`, '--dma-accent': '#6366f1' }}
+        >
           <div id="particle-field" className="particle-field" ref={particleRef}></div>
+          {!showResult && (
+            <div className="dma-stage__blobs" aria-hidden="true">
+              <div className="dma-stage__blob dma-stage__blob--1" />
+              <div className="dma-stage__blob dma-stage__blob--2" />
+              <div className="dma-stage__blob dma-stage__blob--3" />
+              <div className="dma-stage__blob dma-stage__blob--4" />
+              <div className="dma-stage__blob dma-stage__blob--5" />
+              <div className="dma-stage__blob dma-stage__blob--6" />
+              <div className="dma-stage__blob dma-stage__blob--7" />
+              <div className="dma-stage__blob dma-stage__blob--8" />
+              <div className="dma-stage__blob dma-stage__blob--9" />
+              <div className="dma-stage__blob dma-stage__blob--10" />
+              <div className="dma-stage__blob dma-stage__blob--11" />
+              <div className="dma-stage__blob dma-stage__blob--12" />
+            </div>
+          )}
 
           {!showResult ? (
-            <div id="loading-content" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-              <div className="robot-stage">
-                <div className="robot-float-wrap">
-                  <img src={robot} className="robot-main-img mascot-entrance-pop" alt="robot" />
-                </div>
+            <div className="dma-stage__content">
+              <div className="dma-stage__robot">
+                <img src={robot} className="dma-stage__img" alt="robot" />
               </div>
-              <h3 style={{ fontSize: "1.2rem", fontWeight: 850, margin: "0 0 4px 0" }}>
-                {isAnalyzing ? "벤치마킹 분석 진행 중..." : "분석 준비가 완료되었습니다"}
+              <h3 className="dma-stage__title">
+                {isAnalyzing ? "AI 분석 진행 중..." : "분석 준비가 완료되었습니다"}
               </h3>
+              <p className="dma-stage__desc">
+                {isAnalyzing
+                  ? "벤치마킹 보고서를 분석하고 있습니다. 잠시 기다려 주세요."
+                  : "파일을 업로드하고 벤치마킹 분석을 시작하세요."}
+              </p>
               {isAnalyzing && (
-                <div className="progress-section">
-                  <div className="progress-bar-wrap">
-                    <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
+                <div className="dma-stage__progress">
+                  <div className="dma-stage__progress-bar">
+                    <div className="dma-stage__progress-fill" style={{ width: `${progress}%` }}></div>
                   </div>
-                  <div style={{ marginTop: "6px", fontWeight: 900, fontSize: "0.85rem", color: "var(--Bench-primary)" }}>
-                    {progress}% 분석 중
-                  </div>
+                  <div className="dma-stage__progress-pct">{progress}% 분석 중</div>
                 </div>
               )}
             </div>

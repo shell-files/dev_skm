@@ -272,16 +272,7 @@ def replaceSurveyScoresAndRecalculateFinalTx(
 
         rank_updated = 0
         if ranked_rows:
-
-            from src.services.benchmarks.service import ensure_required_issues_in_top20
-            
-            # 20위 안에 들어가지 못한 필수 5대 이슈의 final_score를 동적으로 올리고 재정렬
-            adjusted_rows = ensure_required_issues_in_top20(ranked_rows)
-            
-            # 만약 점수가 보정되었다면, DB의 final_score도 업데이트 해주는 쿼리가 필요할 수 있습니다.
-            # (또는 여기서 계산된 adjusted_rows의 최종 정렬 순서대로 순위만 새로 매겨 업데이트합니다)
-            rank_params = [(i + 1, r["id"]) for i, r in enumerate(adjusted_rows)]
-            
+            rank_params = [(i + 1, r["id"]) for i, r in enumerate(ranked_rows)]
             with conn.cursor() as cur:
                 cur.executemany(_UPDATE_RANK_SQL, rank_params)
             rank_updated = len(rank_params)

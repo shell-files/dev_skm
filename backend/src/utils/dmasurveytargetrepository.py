@@ -9,12 +9,19 @@ WHERE esg_materiality_run_id = ?
   AND delete_yn = 0
 """
 
-_UPSERT_TARGET_SQL = """
+_SOFT_DELETE_TARGETS_SQL = """
+UPDATE ESG_DMA_SURVEY_TARGET
+SET delete_yn = 1
+WHERE esg_materiality_run_id = ? AND delete_yn = 0
+"""
+
+_INSERT_TARGET_SQL = """
 INSERT INTO ESG_DMA_SURVEY_TARGET
   (esg_materiality_run_id, respondent_group, target_count)
 VALUES (?, ?, ?)
 ON DUPLICATE KEY UPDATE
   target_count = VALUES(target_count),
+  delete_yn = 0,
   updated_at = CURRENT_TIMESTAMP
 """
 
@@ -37,6 +44,7 @@ def getTargetsByRunId(runId: int) -> dict:
 
 def upsertTargetsTx(conn, runId: int, targets: dict) -> None:
     with conn.cursor() as cur:
+        cur.execute(_SOFT_DELETE_TARGETS_SQL, (runId,))
         for group in SURVEY_TARGET_GROUPS:
             if group in targets:
-                cur.execute(_UPSERT_TARGET_SQL, (runId, group, targets[group]))
+                cur.execute(_INSERT_TARGET_SQL, (runId, group, targets[group]))

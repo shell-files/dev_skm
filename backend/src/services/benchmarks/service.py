@@ -11,7 +11,10 @@ from src.utils.dmarepository import (
     saveSignals,
     step4ReplaceBenchmarkShadowTracesTx,
     resetBenchmarkData,
+    recalcFinal,
+    updateRanks,
 )
+from src.utils.db import save, findAll
 from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
 from src.utils.dmascoring import scoreSignals
 from src.services.benchmarks.adapter import convertToDmaSignals, step0NormalizeBenchmarkFacts
@@ -20,6 +23,7 @@ from src.services.materialities.orchestrator import (
     step2BuildBenchmarkScreeningPayloads,
 )
 from src.utils.subissuemaster import subissueMaster
+from src.models.dmaengine import DMASignal
 
 
 def _writeBenchmarkWorkflowStatus(
@@ -82,7 +86,72 @@ _BENCHMARK_SCORE_BOOST_CODES = {
     "S_PRODUCT_RESP__PRODUCT_SAFETY_QUALITY",
 }
 
+_PLACEHOLDER_BASE_SCORE = 2.5
+
+
+def _buildPlaceholderSignals(missingCodes: set, sourceType: str = "own_sr") -> list:
+    """필수 이슈 코드 중 AI 결과에 없는 것들에 대한 최소 기본 신호를 생성한다."""
+    signals = []
+    for code in missingCodes:
+        sig = DMASignal(
+            sub_issue_code=code,
+            source_step="benchmark",
+            source_type=sourceType,
+            impact_score_0_5=_PLACEHOLDER_BASE_SCORE,
+            financial_score_0_5=_PLACEHOLDER_BASE_SCORE,
+            confidence_score=0.5,
+            raw_issue_label="required_issue_placeholder",
+        )
+        signals.append(sig)
+    return signals
+
+
+def _applyTop20BenchmarkBonusToDB(runId: int) -> None:
+    """
+    SCORE_SUMMARY에서 필수 5개 코드가 top-20에 없으면 benchmark 점수를 직접 보정해
+    20위 안에 진입하도록 DB를 업데이트한다.
+    """
+    rows = findAll(
+        """
+        SELECT sub_issue_code, final_score, benchmark_impact_score, benchmark_financial_score
+        FROM ESG_DMA_SCORE_SUMMARY
+        WHERE esg_materiality_run_id = ? AND delete_yn = 0
+        ORDER BY final_score DESC, sub_issue_code ASC
+        """,
+        (runId,),
+    )
+    if not rows:
+        return
+
+    top20_codes = {r["sub_issue_code"] for r in rows[:20]}
+    missing = _BENCHMARK_SCORE_BOOST_CODES - top20_codes
+    if not missing:
+        return
+
+    cutoff = float(rows[19]["final_score"] or 0.0) if len(rows) >= 20 else 0.0
+    target = min(5.0, cutoff + 0.1)
+
+    for row in rows:
+        if row["sub_issue_code"] not in missing:
+            continue
+        save(
+            """
+            UPDATE ESG_DMA_SCORE_SUMMARY
+            SET benchmark_impact_score = ?,
+                benchmark_financial_score = ?
+            WHERE esg_materiality_run_id = ?
+              AND sub_issue_code = ?
+              AND delete_yn = 0
+            """,
+            (target, target, runId, row["sub_issue_code"]),
+        )
+        recalcFinal(runId, row["sub_issue_code"], updateRankingsYn=False)
+
+    updateRanks(runId)
+
+
 def _applyBenchmarkBoost(signals: list) -> list:
+    """필수 코드 신호에 소폭 보너스를 적용한다 (signal 레벨)."""
     for sig in signals:
         if sig.subIssueCode in _BENCHMARK_SCORE_BOOST_CODES:
             if sig.impactScore05 is not None:
@@ -263,6 +332,7 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
         factPayloads = []
         totalCount = len(finalResult["data"])
         processedCount = 0
+        seenSubIssueCodes: set = set()
 
         for item in finalResult["data"]:
             if item is None:
@@ -279,6 +349,8 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
             sourceType = fileMeta.get("sourceType")
 
             signalsToSave = convertToDmaSignals(resultList, fileId)
+            for sig in signalsToSave:
+                seenSubIssueCodes.add(sig.subIssueCode)
             scoredSignals = _applyBenchmarkBoost(scoreSignals(signalsToSave))
 
             try:
@@ -320,6 +392,26 @@ async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
                 processedCount=processedCount,
                 totalCount=totalCount,
             )
+
+        # 필수 5개 코드 중 AI 결과에 없는 것은 플레이스홀더 신호로 DB에 보장
+        missingCodes = _BENCHMARK_SCORE_BOOST_CODES - seenSubIssueCodes
+        if missingCodes:
+            placeholderSignals = _buildPlaceholderSignals(missingCodes)
+            try:
+                saveSignals(
+                    runId=fileFindModel.esgMaterialityRunId,
+                    signals=placeholderSignals,
+                    fileId=None,
+                    sourceTitle="required_issue_placeholder",
+                )
+            except Exception as e:
+                print(f"Warning: placeholder signal save failed: {e}")
+
+        # 필수 코드가 top-20 미진입 시 benchmark 점수 보정
+        try:
+            _applyTop20BenchmarkBonusToDB(fileFindModel.esgMaterialityRunId)
+        except Exception as e:
+            print(f"Warning: top-20 benchmark bonus application failed: {e}")
 
         currentStage = "BENCHMARK_SHADOW"
         currentProgress = 95

@@ -84,7 +84,7 @@ def getMaterialityResults(runId: int) -> MaterialityResultsResponseDto:
 
     items = [_buildResultItem(row, selectedCodes) for row in rows]
     scoredItems = [item for item in items if item.finalScore05 is not None]
-    matrixItems = [_buildMatrixItem(item) for item in scoredItems[:MATRIX_TOP_N]]
+    matrixItems = [_buildMatrixItem(item) for item in scoredItems]
     topItems = _buildTopIssues(items, selectedCodes)
     highPriorityCount = sum(1 for item in matrixItems if item.quadrant == "HIGH_IMPACT_HIGH_FINANCIAL")
     selectionReasons = _buildSelectionReasons(selectedContext, items)

@@ -1,15 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.models.media import (
-    MediaAnalyzeRequest,
-    MediaAnalyzeResponse,
     MediaNewsCrawlAnalyzeRequest,
     MediaNewsCrawlAnalyzeResponse,
 )
 from src.models.dmakcgsgrade import KcgsGradeSaveRequest, KcgsGradeSaveResponse
-from src.services.medias.service import (
-    buildMediaAnalyzeResponse,
-    runMediaAnalysis,
+from src.services.medias.newsservice import (
     runMediaCrawlAndAnalyze,
     saveKcgsGradeInputs,
 )
@@ -17,23 +13,6 @@ from src.utils.auth import get_token
 
 
 router = APIRouter(tags=["media"])
-
-
-@router.post(
-    "/news/analyze",
-    response_model=MediaAnalyzeResponse,
-    summary="언론 기사 수동 분석 및 저장",
-)
-async def analyze_media_news(request: MediaAnalyzeRequest, userModel=Depends(get_token)):
-    try:
-        scoredSignals = runMediaAnalysis(request.articles, request.runId, request.keywords, usePgPipeline=request.usePgPipeline)
-        return buildMediaAnalyzeResponse(
-            runId=request.runId,
-            articleCount=len(request.articles),
-            savedSignalCount=len(scoredSignals) if scoredSignals else 0,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post(

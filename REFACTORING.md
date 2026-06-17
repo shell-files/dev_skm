@@ -16,6 +16,7 @@
 | 4 | `[BE] API-Service-Repository 계층 위반 수정 (#257)` | ✅ 완료 |
 | 5 | `[BE] 중복 유틸 함수 typeutils로 통합 (#257)` | ✅ 완료 |
 | 6 | `[BE] README WBS 정리 및 scratch 파일 제거 (#257)` | ✅ 완료 |
+| 7 | `[BE] media 뉴스 분석 서비스 newsservice.py로 분리 및 중복 함수 통합 (#257)` | ✅ 완료 |
 
 ---
 
@@ -101,6 +102,32 @@ services/rollups/service.py
   from src.utils import rollupcalculator
   → from src.services.rollups import calculator
 ```
+
+---
+
+### ✅ media 뉴스 분석 서비스 분리 및 중복 함수 통합 — 2026-06-17
+
+**목적:** media 서비스 계층 분리 및 3개 adapter 파일의 중복 `firstPresent` 통합
+
+#### 변경 내용
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| `services/medias/newsservice.py` | 신규 생성 — `runMediaCrawlAndAnalyze`, `saveKcgsGradeInputs` 및 내부 헬퍼 |
+| `apis/media.py` | import 경로: `service` → `newsservice` |
+| `repositories/dmarepository.py` | `countTop20RankedSubIssues`, `saveKcgsGradeInputRows` 신규 추가 |
+| `utils/typeutils.py` | `firstPresent` 함수 추가 (`Mapping[str, Any]` 키 우선 탐색) |
+| `services/benchmarks/adapter.py` | 로컬 `firstPresent` 제거 → `typeutils` import |
+| `services/medias/adapter.py` | 로컬 `firstPresent` 제거 → `typeutils` import |
+| `services/surveys/adapter.py` | 로컬 `firstPresent` 제거 → `typeutils` import |
+
+#### 잔여 중복 (이번 커밋 미처리)
+
+| 함수 | 파일 수 | 비고 |
+|------|---------|------|
+| `statusForValueError` | 4개 API 파일 | 구현이 서로 달라 즉시 통합 불가 — Priority 1 분리 시 처리 |
+| `getLatestReportRunByMaterialityRun` | dmarepository + reportrepository | SELECT 컬럼 상이 — 호환 분석 필요 |
+| `safeFloat` | dmarepository (wrapper) | typeutils 위임 래퍼 — 의도적 유지 |
 
 ---
 

@@ -1,16 +1,9 @@
 from typing import Any, Mapping, Optional
 
+from src.utils.typeutils import firstPresent
 
 VALID_RESPONDENT_GROUPS = {"employee", "management", "external"}
 VALID_AXES = {"impact", "financial"}
-
-
-def firstPresent(row: Mapping[str, Any], keys: tuple[str, ...], default: Any = None) -> Any:
-    for key in keys:
-        value = row.get(key)
-        if value is not None:
-            return value
-    return default
 
 
 def normalizeScore(value: Any) -> Optional[float]:

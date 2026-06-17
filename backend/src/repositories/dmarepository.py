@@ -2608,6 +2608,61 @@ def resetMediaData(runId: int) -> dict:
         conn.close()
 
 
+def countTop20RankedSubIssues(runId: int) -> int:
+    sql = """
+        SELECT COUNT(*) AS cnt
+        FROM ESG_DMA_SCORE_SUMMARY
+        WHERE esg_materiality_run_id = ?
+          AND rank_no IS NOT NULL
+          AND rank_no <= 20
+          AND delete_yn = 0
+    """
+    row = findOne(sql, (runId,))
+    return int(row["cnt"]) if row else 0
+
+
+def saveKcgsGradeInputRows(
+    companyId: int,
+    rows: list[dict],
+    reviewStatus: str = "APPROVED",
+    createdByUserId=None,
+) -> int:
+    sql = """
+        INSERT INTO ESG_DMA_KCGS_GRADE_INPUT (
+            company_id, rating_year, overall_grade,
+            environment_grade, social_grade, governance_grade,
+            source_type, source_document_ref,
+            review_status, created_by_user_id, delete_yn
+        )
+        VALUES (?, ?, ?, ?, ?, ?, 'MANUAL', ?, ?, ?, 0)
+        ON DUPLICATE KEY UPDATE
+            overall_grade = VALUES(overall_grade),
+            environment_grade = VALUES(environment_grade),
+            social_grade = VALUES(social_grade),
+            governance_grade = VALUES(governance_grade),
+            source_document_ref = VALUES(source_document_ref),
+            review_status = VALUES(review_status),
+            created_by_user_id = VALUES(created_by_user_id),
+            delete_yn = 0
+    """
+    saved = 0
+    for row in rows:
+        params = (
+            companyId,
+            row["ratingYear"],
+            row.get("overallGrade"),
+            row.get("environmentGrade"),
+            row.get("socialGrade"),
+            row.get("governanceGrade"),
+            row.get("sourceDocumentRef"),
+            reviewStatus,
+            createdByUserId,
+        )
+        save(sql, params)
+        saved += 1
+    return saved
+
+
 __all__ = [
     "saveSignals",
     "saveDmaSignals",
@@ -2697,4 +2752,7 @@ __all__ = [
     "step4ReadTrace",
     "step4UpdateTrace",
     "appendFactorTrace",
+    "countTop20RankedSubIssues",
+    "saveKcgsGradeInputRows",
+    "resetMediaData",
 ]

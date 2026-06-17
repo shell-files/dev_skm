@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Optional
+from typing import Any, Mapping, Optional, Sequence
 
 
 def safeFloat(value, default: Optional[float] = None) -> Optional[float]:
@@ -53,6 +53,14 @@ def groupRows(rows: list[dict], key: str) -> dict[str, list[dict]]:
     for row in rows:
         grouped.setdefault(row.get(key), []).append(row)
     return grouped
+
+
+def firstPresent(row: Mapping[str, Any], keys: Sequence[str], default: Any = None) -> Any:
+    for key in keys:
+        value = row.get(key)
+        if value is not None:
+            return value
+    return default
 
 
 def normalizeIssueDomain(value: Optional[str]) -> Optional[str]:

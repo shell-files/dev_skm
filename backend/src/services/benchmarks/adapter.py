@@ -11,14 +11,7 @@ from typing import Any, List, Mapping, Optional, Sequence
 
 from src.models.dmaengine import DMASignal, EvidenceSpanV13, ExtractedFactsV13
 from src.utils.subissuemaster import isAllowedIro, getScoringAllowedIros
-
-
-def firstPresent(row: Mapping[str, Any], keys: Sequence[str], default: Any = None) -> Any:
-    for key in keys:
-        value = row.get(key)
-        if value is not None:
-            return value
-    return default
+from src.utils.typeutils import firstPresent
 
 
 def asFloat(value: Any) -> Optional[float]:

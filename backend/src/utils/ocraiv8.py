@@ -197,6 +197,16 @@ def _is_quota_error(e: Exception) -> bool:
     s = str(e).upper()
     return any(x in s for x in ["429", "RESOURCE_EXHAUSTED", "QUOTA"])
 
+def _is_key_blocked_error(e: Exception) -> bool:
+    """이 API 키 자체가 차단/거부된 에러 → 다음 키 사용"""
+    s = str(e).upper()
+    return any(x in s for x in [
+        "PERMISSION_DENIED",
+        "YOUR PROJECT HAS BEEN DENIED",
+        "API_KEY_INVALID",
+        "UNAUTHENTICATED",
+    ])
+
 def _get_active_key_idx() -> int | None:
     """소진되지 않은 첫 번째 키 인덱스를 반환합니다 (_key_lock 보유 상태에서 호출)."""
     for i in range(len(_API_KEYS)):
@@ -447,13 +457,13 @@ async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> Respons
                             pass
                         uploadedFile = None
 
-                    if _is_quota_error(e):
-                        # 429 quota 초과 → 다음 키 사용
+                    if _is_quota_error(e) or _is_key_blocked_error(e):
+                        # 429 quota 초과 또는 프로젝트/키 차단 → 다음 키 사용
                         _exhaust_key(active_idx)
                         key_rotated = True
                         break  # for 루프 탈출 → while 루프에서 다음 키 시도
 
-                    # 나머지 모든 오류(400/403/500/503 등) → 즉시 중단
+                    # 나머지 모든 오류(400/500/503 등) → 즉시 중단
                     print(f"[{fileName}] 오류 발생 — 즉시 중단: {e}")
                     return {"fileName": fileName, "companyName": companyName, "type": type, "result": []}
 

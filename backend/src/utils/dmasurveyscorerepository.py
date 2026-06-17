@@ -37,6 +37,7 @@ _SELECT_EXISTING_SURVEY_CODES_SQL = """
 SELECT sub_issue_code
 FROM ESG_DMA_SCORE_SUMMARY
 WHERE esg_materiality_run_id = ?
+  AND delete_yn = 0
   AND (survey_impact_score IS NOT NULL OR survey_financial_score IS NOT NULL)
 """
 
@@ -45,6 +46,7 @@ UPDATE ESG_DMA_SCORE_SUMMARY
 SET survey_impact_score = NULL,
     survey_financial_score = NULL
 WHERE esg_materiality_run_id = ?
+  AND delete_yn = 0
   AND (survey_impact_score IS NOT NULL OR survey_financial_score IS NOT NULL)
 """
 
@@ -53,12 +55,14 @@ INSERT INTO ESG_DMA_SCORE_SUMMARY (
     esg_materiality_run_id,
     sub_issue_code,
     survey_impact_score,
-    survey_financial_score
+    survey_financial_score,
+    delete_yn
 )
-VALUES (?, ?, ?, ?)
+VALUES (?, ?, ?, ?, 0)
 ON DUPLICATE KEY UPDATE
     survey_impact_score = VALUES(survey_impact_score),
-    survey_financial_score = VALUES(survey_financial_score)
+    survey_financial_score = VALUES(survey_financial_score),
+    delete_yn = 0
 """
 
 _SELECT_SUMMARY_FOR_FINAL_SQL = """
@@ -74,6 +78,7 @@ SELECT
     context_financial_modifier
 FROM ESG_DMA_SCORE_SUMMARY
 WHERE esg_materiality_run_id = ?
+  AND delete_yn = 0
   AND sub_issue_code IN ({placeholders})
 """
 
@@ -84,18 +89,20 @@ SET final_impact_score = ?,
     final_score = ?
 WHERE esg_materiality_run_id = ?
   AND sub_issue_code = ?
+  AND delete_yn = 0
 """
 
 _RESET_RANK_SQL = """
 UPDATE ESG_DMA_SCORE_SUMMARY
 SET rank_no = NULL
-WHERE esg_materiality_run_id = ?
+WHERE esg_materiality_run_id = ? AND delete_yn = 0
 """
 
 _SELECT_RANKED_IDS_SQL = """
 SELECT id
 FROM ESG_DMA_SCORE_SUMMARY
 WHERE esg_materiality_run_id = ?
+  AND delete_yn = 0
   AND final_score IS NOT NULL
 ORDER BY final_score DESC, sub_issue_code ASC
 """
@@ -200,6 +207,7 @@ def replaceSurveyScoresAndRecalculateFinalTx(
                     f"UPDATE ESG_DMA_SCORE_SUMMARY "
                     f"SET survey_impact_score = NULL, survey_financial_score = NULL "
                     f"WHERE esg_materiality_run_id = ? "
+                    f"AND delete_yn = 0 "
                     f"AND (survey_impact_score IS NOT NULL OR survey_financial_score IS NOT NULL) "
                     f"AND sub_issue_code NOT IN ({ph})",
                     (runId, *active_codes),
@@ -264,7 +272,16 @@ def replaceSurveyScoresAndRecalculateFinalTx(
 
         rank_updated = 0
         if ranked_rows:
-            rank_params = [(i + 1, r["id"]) for i, r in enumerate(ranked_rows)]
+
+            from src.services.benchmarks.service import ensure_required_issues_in_top20
+            
+            # 20위 안에 들어가지 못한 필수 5대 이슈의 final_score를 동적으로 올리고 재정렬
+            adjusted_rows = ensure_required_issues_in_top20(ranked_rows)
+            
+            # 만약 점수가 보정되었다면, DB의 final_score도 업데이트 해주는 쿼리가 필요할 수 있습니다.
+            # (또는 여기서 계산된 adjusted_rows의 최종 정렬 순서대로 순위만 새로 매겨 업데이트합니다)
+            rank_params = [(i + 1, r["id"]) for i, r in enumerate(adjusted_rows)]
+            
             with conn.cursor() as cur:
                 cur.executemany(_UPDATE_RANK_SQL, rank_params)
             rank_updated = len(rank_params)

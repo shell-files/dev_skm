@@ -13,9 +13,11 @@ WHERE esg_materiality_run_id = ?
 """
 
 _DELETE_RESPONSES_SQL = """
-DELETE FROM ESG_DMA_SURVEY_RESPONSE
+UPDATE ESG_DMA_SURVEY_RESPONSE
+SET delete_yn = 1
 WHERE survey_form_id = ?
   AND esg_materiality_run_id = ?
+  AND delete_yn = 0
 """
 
 _INSERT_RESPONSE_SQL = """

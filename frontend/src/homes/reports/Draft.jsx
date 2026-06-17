@@ -980,7 +980,7 @@ const Draft = () => {
                 <div className="panel-inner">
                   <div className="panel-hd">
                     <span className="panel-hd-title">데이터 추적</span>
-                    <button className="panel-close-btn" onClick={() => { setPanelMetricIds([]); setTrackId(null); }}>✕</button>
+                    <button className="panel-close-btn" onClick={() => { setTrackId(null); }}>✕</button>
                   </div>
 
                   {/* 지표 선택 — 이 섹션에서 사용된 모든 metric_id */}

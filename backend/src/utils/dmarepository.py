@@ -345,31 +345,34 @@ def recalcSurvey(runId: int, subIssueCode: str):
 def upsertStage(runId: int, subIssueCode: str, stage: str, impactScore: Optional[float], financialScore: Optional[float]):
     if stage == "benchmark":
         sql = """
-            INSERT INTO ESG_DMA_SCORE_SUMMARY (esg_materiality_run_id, sub_issue_code, benchmark_impact_score, benchmark_financial_score)
-            VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE 
+            INSERT INTO ESG_DMA_SCORE_SUMMARY (esg_materiality_run_id, sub_issue_code, benchmark_impact_score, benchmark_financial_score, delete_yn)
+            VALUES (?, ?, ?, ?, 0)
+            ON DUPLICATE KEY UPDATE
             benchmark_impact_score = VALUES(benchmark_impact_score),
-            benchmark_financial_score = VALUES(benchmark_financial_score)
+            benchmark_financial_score = VALUES(benchmark_financial_score),
+            delete_yn = 0
         """
     elif stage == "media_external":
         sql = """
-            INSERT INTO ESG_DMA_SCORE_SUMMARY (esg_materiality_run_id, sub_issue_code, media_external_impact_score, media_external_financial_score)
-            VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE 
+            INSERT INTO ESG_DMA_SCORE_SUMMARY (esg_materiality_run_id, sub_issue_code, media_external_impact_score, media_external_financial_score, delete_yn)
+            VALUES (?, ?, ?, ?, 0)
+            ON DUPLICATE KEY UPDATE
             media_external_impact_score = VALUES(media_external_impact_score),
-            media_external_financial_score = VALUES(media_external_financial_score)
+            media_external_financial_score = VALUES(media_external_financial_score),
+            delete_yn = 0
         """
     elif stage == "survey":
         sql = """
-            INSERT INTO ESG_DMA_SCORE_SUMMARY (esg_materiality_run_id, sub_issue_code, survey_impact_score, survey_financial_score)
-            VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE 
+            INSERT INTO ESG_DMA_SCORE_SUMMARY (esg_materiality_run_id, sub_issue_code, survey_impact_score, survey_financial_score, delete_yn)
+            VALUES (?, ?, ?, ?, 0)
+            ON DUPLICATE KEY UPDATE
             survey_impact_score = VALUES(survey_impact_score),
-            survey_financial_score = VALUES(survey_financial_score)
+            survey_financial_score = VALUES(survey_financial_score),
+            delete_yn = 0
         """
     else:
         return
-        
+
     try:
         save(sql, (runId, subIssueCode, impactScore, financialScore))
     except Exception as e:
@@ -393,13 +396,13 @@ def safeFloatOrNone(value):
 
 def recalcFinal(runId: int, subIssueCode: str, updateRankingsYn: bool = True):
     sql = """
-        SELECT 
+        SELECT
             benchmark_impact_score, benchmark_financial_score,
             media_external_impact_score, media_external_financial_score,
             survey_impact_score, survey_financial_score,
             context_impact_modifier, context_financial_modifier
         FROM ESG_DMA_SCORE_SUMMARY
-        WHERE esg_materiality_run_id = ? AND sub_issue_code = ?
+        WHERE esg_materiality_run_id = ? AND sub_issue_code = ? AND delete_yn = 0
     """
     row = findOne(sql, (runId, subIssueCode))
     if not row:
@@ -433,7 +436,7 @@ def updateRanks(runId: int):
     sql = """
         SELECT id
         FROM ESG_DMA_SCORE_SUMMARY
-        WHERE esg_materiality_run_id = ? AND final_score IS NOT NULL
+        WHERE esg_materiality_run_id = ? AND final_score IS NOT NULL AND delete_yn = 0
         ORDER BY final_score DESC
     """
     rows = findAll(sql, (runId,))
@@ -467,14 +470,15 @@ def countTop20RankedSubIssues(runId: int) -> int:
 def upsertFinal(runId: int, score: FinalMaterialityScore):
     sql = """
         INSERT INTO ESG_DMA_SCORE_SUMMARY (
-            esg_materiality_run_id, sub_issue_code, 
-            final_impact_score, final_financial_score, final_score
+            esg_materiality_run_id, sub_issue_code,
+            final_impact_score, final_financial_score, final_score, delete_yn
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, 0)
         ON DUPLICATE KEY UPDATE
         final_impact_score = VALUES(final_impact_score),
         final_financial_score = VALUES(final_financial_score),
-        final_score = VALUES(final_score)
+        final_score = VALUES(final_score),
+        delete_yn = 0
     """
     params = (
         runId, score.subIssueCode, 
@@ -496,7 +500,7 @@ def listResults(runId: int) -> list:
     final_score가 NULL인 행도 포함하되, rank_no가 있는 행이 먼저 나옵니다.
     """
     sql = """
-        SELECT 
+        SELECT
             sub_issue_code,
             benchmark_impact_score,
             benchmark_financial_score,
@@ -509,8 +513,8 @@ def listResults(runId: int) -> list:
             final_score,
             rank_no
         FROM ESG_DMA_SCORE_SUMMARY
-        WHERE esg_materiality_run_id = ?
-        ORDER BY 
+        WHERE esg_materiality_run_id = ? AND delete_yn = 0
+        ORDER BY
             CASE WHEN rank_no IS NULL THEN 1 ELSE 0 END,
             rank_no ASC
     """
@@ -542,6 +546,7 @@ def listTopMediaIssues(runId: int, limit: int = 5) -> list:
             ) AS media_avg_score
         FROM ESG_DMA_SCORE_SUMMARY
         WHERE esg_materiality_run_id = ?
+          AND delete_yn = 0
           AND (media_external_impact_score IS NOT NULL OR media_external_financial_score IS NOT NULL)
         ORDER BY media_avg_score DESC
         LIMIT ?
@@ -561,7 +566,7 @@ def getMediaCoverage(runId: int) -> dict:
             SUM(CASE WHEN benchmark_impact_score IS NOT NULL OR benchmark_financial_score IS NOT NULL THEN 1 ELSE 0 END) AS benchmark_count,
             SUM(CASE WHEN survey_impact_score IS NOT NULL OR survey_financial_score IS NOT NULL THEN 1 ELSE 0 END) AS survey_count
         FROM ESG_DMA_SCORE_SUMMARY
-        WHERE esg_materiality_run_id = ?
+        WHERE esg_materiality_run_id = ? AND delete_yn = 0
     """
     row = findOne(sql, (runId,))
     if not row:
@@ -586,6 +591,7 @@ def countMediaSubIssues(runId: int) -> int:
         SELECT COUNT(*) AS cnt
         FROM ESG_DMA_SCORE_SUMMARY
         WHERE esg_materiality_run_id = ?
+          AND delete_yn = 0
           AND (
             media_external_impact_score IS NOT NULL
             OR media_external_financial_score IS NOT NULL
@@ -2392,7 +2398,7 @@ def step4ReplaceMediaExternalMaxShadowAndSummaryTx(
                 SET
                     media_external_impact_score = NULL,
                     media_external_financial_score = NULL
-                WHERE esg_materiality_run_id = ?
+                WHERE esg_materiality_run_id = ? AND delete_yn = 0
                 """,
                 (runId,),
             )
@@ -2404,12 +2410,14 @@ def step4ReplaceMediaExternalMaxShadowAndSummaryTx(
                         esg_materiality_run_id,
                         sub_issue_code,
                         media_external_impact_score,
-                        media_external_financial_score
+                        media_external_financial_score,
+                        delete_yn
                     )
-                    VALUES (?, ?, ?, ?)
+                    VALUES (?, ?, ?, ?, 0)
                     ON DUPLICATE KEY UPDATE
                         media_external_impact_score = VALUES(media_external_impact_score),
-                        media_external_financial_score = VALUES(media_external_financial_score)
+                        media_external_financial_score = VALUES(media_external_financial_score),
+                        delete_yn = 0
                     """,
                     summaryRows,
                 )
@@ -2427,7 +2435,7 @@ def step4ReplaceMediaExternalMaxShadowAndSummaryTx(
                     context_impact_modifier,
                     context_financial_modifier
                 FROM ESG_DMA_SCORE_SUMMARY
-                WHERE esg_materiality_run_id = ?
+                WHERE esg_materiality_run_id = ? AND delete_yn = 0
                 ORDER BY sub_issue_code
                 """,
                 (runId,),
@@ -2454,6 +2462,7 @@ def step4ReplaceMediaExternalMaxShadowAndSummaryTx(
                         final_score = ?
                     WHERE esg_materiality_run_id = ?
                       AND sub_issue_code = ?
+                      AND delete_yn = 0
                     """,
                     (
                         finalScore.finalImpactScore,
@@ -2465,7 +2474,7 @@ def step4ReplaceMediaExternalMaxShadowAndSummaryTx(
                 )
 
             cur.execute(
-                "UPDATE ESG_DMA_SCORE_SUMMARY SET rank_no = NULL WHERE esg_materiality_run_id = ?",
+                "UPDATE ESG_DMA_SCORE_SUMMARY SET rank_no = NULL WHERE esg_materiality_run_id = ? AND delete_yn = 0",
                 (runId,),
             )
 
@@ -2475,6 +2484,7 @@ def step4ReplaceMediaExternalMaxShadowAndSummaryTx(
                 FROM ESG_DMA_SCORE_SUMMARY
                 WHERE esg_materiality_run_id = ?
                   AND final_score IS NOT NULL
+                  AND delete_yn = 0
                 ORDER BY final_score DESC, sub_issue_code ASC
                 """,
                 (runId,),
@@ -2509,6 +2519,7 @@ def step4ReplaceMediaExternalMaxShadowAndSummaryTx(
                 SELECT COUNT(*) AS observed_count
                 FROM ESG_DMA_SCORE_SUMMARY
                 WHERE esg_materiality_run_id = ?
+                  AND delete_yn = 0
                   AND (
                     media_external_impact_score IS NOT NULL
                     OR media_external_financial_score IS NOT NULL
@@ -2632,7 +2643,7 @@ def resetBenchmarkData(runId: int) -> dict:
             )
             signal_count = cur.rowcount
             cur.execute(
-                "UPDATE ESG_DMA_SCORE_SUMMARY SET benchmark_impact_score = NULL, benchmark_financial_score = NULL WHERE esg_materiality_run_id = ?",
+                "UPDATE ESG_DMA_SCORE_SUMMARY SET benchmark_impact_score = NULL, benchmark_financial_score = NULL WHERE esg_materiality_run_id = ? AND delete_yn = 0",
                 (runId,),
             )
         conn.commit()
@@ -2662,7 +2673,7 @@ def resetMediaData(runId: int) -> dict:
             )
             signal_count = cur.rowcount
             cur.execute(
-                "UPDATE ESG_DMA_SCORE_SUMMARY SET media_external_impact_score = NULL, media_external_financial_score = NULL WHERE esg_materiality_run_id = ?",
+                "UPDATE ESG_DMA_SCORE_SUMMARY SET media_external_impact_score = NULL, media_external_financial_score = NULL WHERE esg_materiality_run_id = ? AND delete_yn = 0",
                 (runId,),
             )
         conn.commit()

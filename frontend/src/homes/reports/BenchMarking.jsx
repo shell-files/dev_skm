@@ -563,7 +563,7 @@ const Benchmarking = () => {
             {isAnalyzing ? "AI 분석 진행 중..." : showResult ? "분석 완료 - 결과 요약 확인 (클릭)" : "실시간 분석 대기 중"}
           </div>
         </div>
-        <div className={`robot-view-container ${isAnalyzing ? "analyzing" : ""} ${showResult ? "showing-result" : ""}`}>
+        <div className={`bench-robot-view-container ${isAnalyzing ? "analyzing" : ""} ${showResult ? "showing-result" : ""}`}>
           <div id="particle-field" className="particle-field" ref={particleRef}></div>
 
           {!showResult ? (

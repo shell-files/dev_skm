@@ -147,11 +147,11 @@ def getBenchmarkResult(runId: int) -> BenchmarkResponseDto:
     blindSpotIssues = []
     for code in sorted(observations.keys(), key=_subIssueSortKey):
         issue = _buildBenchmarkObservationIssue(code, observations[code])
-        if issue.leaderObserved and issue.peerObserved:
+        if issue.leaderObserved or issue.peerObserved:
             commonIssues.append(issue)
-        if issue.leaderObserved and issue.peerObserved and not issue.ownObserved:
+        if (issue.leaderObserved or issue.peerObserved) and not issue.ownObserved:
             issue.blindSpotYn = True
-            issue.summary = "리더/피어 보고서에서 반복 관측되었으나 자사 보고서에서는 관측되지 않은 이슈입니다."
+            issue.summary = "외부 벤치마크(리더/피어)에서 관측되었으나 자사 보고서에서는 관측되지 않은 이슈입니다."
             blindSpotIssues.append(issue)
 
     topIssues = []

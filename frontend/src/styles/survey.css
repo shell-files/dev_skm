@@ -2075,14 +2075,7 @@
 
 /* 분석 중 / 대기 중 공통 레이아웃 */
 .sv-dashboard-analyzing {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 180px;
-    gap: 10px;
     text-align: center;
-    padding: 8px 0;
 }
 
 .sv-dashboard-robot {

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+﻿from fastapi import APIRouter, Depends, HTTPException
 
 from src.models.materiality import (
     BenchmarkResponseDto,
@@ -24,7 +24,7 @@ from src.services.materialities.service import (
     getSurveyResult,
 )
 from src.utils.auth import get_token
-from src.utils.dmaworkflowrepository import getDmaWorkflowStatusOrDefault
+from src.repositories.dmaworkflowrepository import getDmaWorkflowStatusOrDefault
 
 
 router = APIRouter(tags=["materiality"])

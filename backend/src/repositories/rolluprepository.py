@@ -1,4 +1,4 @@
-from typing import Optional
+﻿from typing import Optional
 from src.utils.db import findAll, findOne, getConn
 
 # Enums
@@ -24,7 +24,7 @@ TRANSFER_STATUS_SENT = "sent"
 TRANSFER_STATUS_NOT_SENT = "not_sent"
 
 # Explicit re-exports from new repositories
-from src.utils.rollupscoperepository import (
+from src.repositories.rollupscoperepository import (
     listEffectiveSourceCompanies,
     listBatchRules,
     listBatchRuleSources,
@@ -53,7 +53,7 @@ from src.utils.rollupscoperepository import (
     buildSourceReadinessTx,
 )
 
-from src.utils.rollupbatchrepository import (
+from src.repositories.rollupbatchrepository import (
     getActiveBatch,
     listRequests,
     getBatch,

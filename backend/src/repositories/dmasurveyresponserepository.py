@@ -37,15 +37,6 @@ INSERT INTO ESG_DMA_SURVEY_RESPONSE (
     delete_yn
 )
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-ON DUPLICATE KEY UPDATE
-    esg_materiality_run_id = VALUES(esg_materiality_run_id),
-    mapped_axis = VALUES(mapped_axis),
-    respondent_user_id = VALUES(respondent_user_id),
-    department_code = VALUES(department_code),
-    answer_numeric = VALUES(answer_numeric),
-    answer_text = VALUES(answer_text),
-    normalized_score = VALUES(normalized_score),
-    delete_yn = 0
 """
 
 

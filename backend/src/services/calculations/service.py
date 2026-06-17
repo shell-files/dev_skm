@@ -1,4 +1,4 @@
-"""
+﻿"""
 Calculation bounded context orchestration.
 
 Responsibilities:
@@ -20,7 +20,7 @@ from __future__ import annotations
 from typing import Optional
 
 from src.utils import calculationengine as calcEngine
-from src.utils import calculationrepository as calcRepo
+from src.repositories import calculationrepository as calcRepo
 
 
 def calculateAffectedEntityFactsTx(

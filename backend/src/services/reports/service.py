@@ -1,4 +1,4 @@
-import json
+﻿import json
 from decimal import Decimal
 from typing import Optional
 
@@ -16,7 +16,7 @@ from src.models.report import (
     ReportTraceResponseDto,
     YearValueDto,
 )
-from src.utils.reportrepository import (
+from src.repositories.reportrepository import (
     getAtomicMetricRows,
     getCalculationRuleByAtomicMetric,
     getDraftById,

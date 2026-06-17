@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Optional
 
@@ -28,8 +28,8 @@ from src.models.onboarding import (
     OnboardingMetricValuesRequestDto,
     OnboardingMetricValuesResponseDto,
 )
-from src.utils import onboardingassignmentrepository as assignmentRepo
-from src.utils import onboardingrepository as repo
+from src.repositories import onboardingassignmentrepository as assignmentRepo
+from src.repositories import onboardingrepository as repo
 from src.utils.companyscope import checkScope
 from src.services.onboardings import approval_service as approvalService
 from src.services.calculations.service import invalidateAffectedEntityFactsTx
@@ -115,7 +115,7 @@ def listMetrics(
     actualCycleType = str(cycle.get("cycle_type") or cycleType).strip().upper()
     
     if actualCycleType == repo.CYCLE_TYPE_ROLLUP_RESPONSE and batchId:
-        from src.utils import rolluprepository as rollupRepo
+        from src.repositories import rolluprepository as rollupRepo
         snapshotAtomicIds = set(rollupRepo.resolveExternalEntitySourceAtomicIds(int(batchId)))
         masterRows = [row for row in masterRows if row.get("atomic_metric_id") in snapshotAtomicIds]
 
@@ -128,7 +128,7 @@ def listMetrics(
     assignmentByMetric = {row["metric_id"]: buildAssignment(row) for row in assignmentRows}
     atomicRowsByMetric = groupBy(masterRows, "metric_id")
 
-    from src.utils.onboardingapprovalrepository import listCycleApprovalInboxRows
+    from src.repositories.onboardingapprovalrepository import listCycleApprovalInboxRows
     approvalSummaries = listCycleApprovalInboxRows(
         companyId=companyId,
         reportingYear=year,
@@ -204,8 +204,8 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
     if not groups:
         return 0
     from src.utils.db import getConn
-    from src.utils import onboardinginputrepository as inputRepo
-    from src.utils import rolluprepository as rollupRepo
+    from src.repositories import onboardinginputrepository as inputRepo
+    from src.repositories import rolluprepository as rollupRepo
     conn = getConn()
     if not conn:
         raise RuntimeError("DB connection failed")
@@ -424,7 +424,7 @@ def resolveCycleSourceMaterialityRunId(
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType != CYCLE_TYPE_POST_DMA_DISCLOSURE:
         return None
-    from src.utils import reportworkflowrepository
+    from src.repositories import reportworkflowrepository
 
     currentRun = reportworkflowrepository.getCurrent(companyId, reportingYear)
     if currentRun.get("id") is None:

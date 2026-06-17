@@ -1,4 +1,4 @@
-from collections import Counter
+﻿from collections import Counter
 from datetime import date
 from typing import Optional
 
@@ -22,7 +22,7 @@ from src.services.materialities.orchestrator import (
     step2BuildMediaExternalMaxPayloads,
     step2BuildRegulationScreeningPayloads,
 )
-from src.utils.dmarepository import (
+from src.repositories.dmarepository import (
     getMediaCoverage,
     countMediaSubIssues,
     listTopMediaIssues,
@@ -43,7 +43,7 @@ from src.utils.dmarepository import (
 from src.models.dmaengine import KcgsGradeInputV13
 from src.models.dmakcgsgrade import KcgsGradeSaveRequest
 from src.utils.dmascoring import SCORE_UI_MULTIPLIER, scoreSignals
-from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
+from src.repositories.dmaworkflowrepository import upsertDmaWorkflowStatus
 from src.utils.subissuemaster import getSubIssueDisplayName
 from src.services.surveys.formservice import ensureSurveyFormForRun
 

@@ -1,5 +1,5 @@
-from src.utils.dmaaggregator import SURVEY_GROUP_WEIGHTS
-from src.utils.dmasurveyscorerepository import (
+﻿from src.utils.dmaaggregator import SURVEY_GROUP_WEIGHTS
+from src.repositories.dmasurveyscorerepository import (
     getReadySurveyFormForScore,
     listActiveSurveyResponsesForScore,
     replaceSurveyScoresAndRecalculateFinalTx,

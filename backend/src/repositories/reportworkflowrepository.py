@@ -1,4 +1,4 @@
-"""
+﻿"""
 Domain: Report Workflow
 Layer: utils/repository
 Responsibility:
@@ -25,7 +25,7 @@ from typing import Optional
 from uuid import uuid4
 
 from src.utils.db import addKey, findAll, findOne, save
-from src.utils.financialbasisrepository import checkBasisReady
+from src.repositories.financialbasisrepository import checkBasisReady
 
 
 BASIS_SELECTED_STATUS = "BASIS_SELECTED"

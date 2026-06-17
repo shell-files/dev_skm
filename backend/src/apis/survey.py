@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+﻿from fastapi import APIRouter, Depends, HTTPException
 
 from src.utils.auth import get_token
 from src.models.survey import SurveyCreateRequestDto
@@ -18,7 +18,7 @@ from src.services.surveys.scoringservice import (
     recalculateSurveyScoresForRun,
 )
 from src.services.surveys.statusservice import getSurveyResponseStatus, saveSurveyResponseTargets
-from src.utils.dmasurveyformrepository import getSurveyFormByRunId, toSurveyFormResponse
+from src.repositories.dmasurveyformrepository import getSurveyFormByRunId, toSurveyFormResponse
 
 router = APIRouter()
 

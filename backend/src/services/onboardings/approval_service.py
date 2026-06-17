@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Optional
 
 from src.utils.db import getConn
-from src.utils import onboardingapprovalrepository as approvalRepo
-from src.utils import onboardinginputrepository as inputRepo
-from src.utils import onboardingscoperepository as scopeRepo
+from src.repositories import onboardingapprovalrepository as approvalRepo
+from src.repositories import onboardinginputrepository as inputRepo
+from src.repositories import onboardingscoperepository as scopeRepo
 from src.services.calculations.service import calculateAffectedEntityFactsTx
 
 
@@ -31,7 +31,7 @@ def resolveRequiredApprovalAtomicIdsTx(
         if batchId is None:
             raise ValueError("batchId is required for ROLLUP_RESPONSE")
 
-        from src.utils import rolluprepository as rollupRepo
+        from src.repositories import rolluprepository as rollupRepo
 
         atomicIds = rollupRepo.resolveExternalEntitySourceAtomicIdsByMetricTx(
             cur,
@@ -482,7 +482,7 @@ def resolveExistingActiveCycleTx(
     normalizedCycleType = normalizeCycleType(cycleType)
     effectiveRunId = sourceMaterialityRunId
     if effectiveRunId is None and normalizedCycleType == scopeRepo.CYCLE_TYPE_POST_DMA_DISCLOSURE:
-        from src.utils import reportworkflowrepository
+        from src.repositories import reportworkflowrepository
 
         currentRun = reportworkflowrepository.getCurrent(companyId, reportingYear)
         effectiveRunId = int(currentRun["id"]) if currentRun.get("id") is not None else 0
@@ -597,7 +597,7 @@ def syncRollupSourceReadinessIfNeededTx(
         or batchId is None
     ):
         return
-    from src.utils import rolluprepository as rollupRepo
+    from src.repositories import rolluprepository as rollupRepo
 
     rollupRepo.syncSourceReadinessTx(
         cur,

@@ -1,9 +1,9 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Optional
 
 from src.utils.db import findAll, findOne, getConn
-from src.utils.onboardingscoperepository import METRIC_ID_G0_02
+from src.repositories.onboardingscoperepository import METRIC_ID_G0_02
 
 
 def listValueRows(

@@ -1,4 +1,4 @@
-import json
+﻿import json
 from decimal import Decimal
 from typing import Any, Optional
 from src.utils.db import findAll, findOne
@@ -422,7 +422,7 @@ def syncSourceReadinessTx(
     sourceCompanyId: int,
     reportingYear: int,
 ) -> dict:
-    from src.utils.rollupscoperepository import buildSourceReadinessTx
+    from src.repositories.rollupscoperepository import buildSourceReadinessTx
 
     readiness = buildSourceReadinessTx(cur, batchId, [sourceCompanyId], reportingYear)
     requiredAtomicCount = int(readiness.get("requiredAtomicCount") or 0)

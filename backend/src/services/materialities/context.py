@@ -1,4 +1,4 @@
-"""
+﻿"""
 Domain: DMA Materiality
 Layer: service/workflow
 Responsibility:
@@ -43,7 +43,7 @@ from src.models.materialitycontext import (
     SubIssueContextModifierDto,
 )
 from src.services.materialities.contextgraph import buildCompanyContextProfileWithOptionalGraph
-from src.utils.companycontextrepository import (
+from src.repositories.companycontextrepository import (
     getLatestProfile,
     getRun,
     listG0Facts,
@@ -52,8 +52,8 @@ from src.utils.companycontextrepository import (
     updateModifiers,
 )
 from src.utils.dmaaggregator import calcFinal
-from src.utils.dmarepository import recalcFinal
-from src.utils.dmarepository import updateRanks
+from src.repositories.dmarepository import recalcFinal
+from src.repositories.dmarepository import updateRanks
 from src.utils.dmascoring import clamp
 from src.utils.subissuemaster import subissueMaster
 

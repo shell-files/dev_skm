@@ -1,11 +1,11 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from typing import Optional
 
 from src.utils.db import findAll, findOne
-from src.utils import onboardingscoperepository as scopeRepo
-from src.utils import onboardinginputrepository as inputRepo
-from src.utils.onboardingassignmentrepository import listAssignmentRows
+from src.repositories import onboardingscoperepository as scopeRepo
+from src.repositories import onboardinginputrepository as inputRepo
+from src.repositories.onboardingassignmentrepository import listAssignmentRows
 
 
 CYCLE_TYPE_PRE_DMA_G0 = scopeRepo.CYCLE_TYPE_PRE_DMA_G0
@@ -25,7 +25,7 @@ def resolveRequiredApprovalAtomicIds(
         if batchId is None:
             raise ValueError("batchId is required for ROLLUP_RESPONSE")
 
-        from src.utils import rolluprepository as rollupRepo
+        from src.repositories import rolluprepository as rollupRepo
 
         return rollupRepo.resolveExternalEntitySourceAtomicIdsByMetric(
             int(batchId),

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Domain: DMA Materiality (v1.3 MVP)
 Layer: service/orchestrator
 Responsibility:
@@ -32,7 +32,7 @@ from src.services.medias.eventresolver import (
     resolveMediaNewsEventObservation,
 )
 from src.utils import dmaruleregistry, dmascoring
-from src.utils.dmarepository import (
+from src.repositories.dmarepository import (
     step4BuildTrace,
     MEDIA_EXTERNAL_AGENCY_KCGS_V13_SHADOW_SOURCE_STEP,
     MEDIA_EXTERNAL_NEWS_V13_CANONICAL_SHADOW_SOURCE_STEP,

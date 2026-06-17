@@ -1,10 +1,10 @@
-import copy
+﻿import copy
 import json
 
 import requests
 
 from src.utils.settings import settings
-from src.utils.dmasurveyformrepository import (
+from src.repositories.dmasurveyformrepository import (
     SURVEY_FORM_WORKFLOW_TYPE,
     SURVEY_TEMPLATE_VERSION,
     claimRetryableSurveyFormTx,
@@ -15,7 +15,7 @@ from src.utils.dmasurveyformrepository import (
     markSurveyFormRetryableBestEffort,
     toSurveyFormResponse,
 )
-from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
+from src.repositories.dmaworkflowrepository import upsertDmaWorkflowStatus
 
 APPS_SCRIPT_URL = settings.APPS_SCRIPT_URL
 

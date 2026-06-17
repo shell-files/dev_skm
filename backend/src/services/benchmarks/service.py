@@ -1,4 +1,4 @@
-import uuid
+﻿import uuid
 import shutil
 from pathlib import Path
 from src.utils.settings import settings
@@ -7,7 +7,7 @@ from src.models.model import ResponseModel, UserModel
 from src.models.benchmk import FileModel, FileFindModel
 from src.utils.ocraiv8 import gemini
 from src.utils import dmaruleregistry
-from src.utils.dmarepository import (
+from src.repositories.dmarepository import (
     saveSignals,
     step4ReplaceBenchmarkShadowTracesTx,
     resetBenchmarkData,
@@ -15,7 +15,7 @@ from src.utils.dmarepository import (
     updateRanks,
 )
 from src.utils.db import save, findAll
-from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
+from src.repositories.dmaworkflowrepository import upsertDmaWorkflowStatus
 from src.utils.dmascoring import scoreSignals
 from src.services.benchmarks.adapter import convertToDmaSignals, step0NormalizeBenchmarkFacts
 from src.services.materialities.orchestrator import (

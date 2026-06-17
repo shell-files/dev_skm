@@ -1,4 +1,4 @@
-"""
+﻿"""
 Domain: Report Workflow
 Layer: services
 Responsibility:
@@ -233,8 +233,8 @@ def _resolvePostDmaState(run: dict) -> tuple:
     예외 발생 시 안전한 기본값(PRE_DMA_G0)을 반환한다.
     """
     try:
-        from src.utils.dmarepository import listSelectedSubIssues
-        from src.utils.onboardingscoperepository import getCycle, listMetricScopes
+        from src.repositories.dmarepository import listSelectedSubIssues
+        from src.repositories.onboardingscoperepository import getCycle, listMetricScopes
 
         runId = int(run["id"])
         companyId = int(run["company_id"])
@@ -349,7 +349,7 @@ def resolveProjectStageLabel(run: dict, basisStatus: dict | None = None) -> str:
 
 def countPendingPreDmaG0Approvals(companyId: int, reportingYear: int) -> int:
     try:
-        from src.utils import onboardingrepository
+        from src.repositories import onboardingrepository
 
         rows = onboardingrepository.listCycleApprovalInboxRows(
             companyId=companyId,
@@ -386,7 +386,7 @@ def ensureWorkflowPostDmaDisclosureCycle(run: dict, actorUserId: int | None = No
 
 
 def loadRepository():
-    from src.utils import reportworkflowrepository
+    from src.repositories import reportworkflowrepository
 
     return reportworkflowrepository
 

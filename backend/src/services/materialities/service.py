@@ -1,4 +1,4 @@
-from decimal import Decimal
+﻿from decimal import Decimal
 from typing import Optional
 
 from src.models.materiality import (
@@ -29,7 +29,7 @@ from src.models.materiality import (
 )
 from src.utils.db import findAll, findOne
 from src.utils.dmaaggregator import getCoverageStatus
-from src.utils.dmarepository import (
+from src.repositories.dmarepository import (
     countObservedSubIssues,
     listResults,
     listEvidenceCounts,

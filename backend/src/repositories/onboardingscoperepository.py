@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional
@@ -1418,7 +1418,7 @@ def ensureRollupResponseWorkspaceTx(
             (cycleId,)
         )
 
-    from src.utils.rollupscoperepository import resolveExternalEntitySourceAtomicIdsByMetricTx
+    from src.repositories.rollupscoperepository import resolveExternalEntitySourceAtomicIdsByMetricTx
     for displayIndex, metricId in enumerate(actionableInputMetricIds, start=1):
         sourceAtomicIds = resolveExternalEntitySourceAtomicIdsByMetricTx(cur, batchId, metricId)
         if not sourceAtomicIds:

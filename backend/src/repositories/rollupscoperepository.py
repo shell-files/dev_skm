@@ -1,8 +1,8 @@
-import json
+﻿import json
 from typing import Optional
 from src.utils.db import findAll, findOne
 from src.utils.calculationengine import normalizeSource, topologicalSortRules
-from src.utils.calculationrepository import listApprovedEntityFacts, listApprovedEntityFactsTx
+from src.repositories.calculationrepository import listApprovedEntityFacts, listApprovedEntityFactsTx
 
 def listEffectiveSourceCompanies(parentCompanyId: int, reportingYear: int, rollupPurposeCode: str) -> list[dict]:
     # strict DB-driven relation. self relation check is done by caller if needed
@@ -33,15 +33,15 @@ def listEffectiveSourceCompanies(parentCompanyId: int, reportingYear: int, rollu
     ]
 
 def listBatchRules(metricIds: list[str]) -> list[dict]:
-    from src.utils.calculationrepository import listActiveRules
+    from src.repositories.calculationrepository import listActiveRules
     return listActiveRules(executionScope="CONSOLIDATED", metricIds=metricIds)
 
 def listBatchRuleSources(ruleCodes: list[str]) -> list[dict]:
-    from src.utils.calculationrepository import listRuleSources
+    from src.repositories.calculationrepository import listRuleSources
     return listRuleSources(ruleCodes)
 
 def listProducerRulesByTargetAtomicIds(atomicMetricIds: list[str]) -> list[dict]:
-    from src.utils.calculationrepository import listActiveRulesByTargetAtomicIds
+    from src.repositories.calculationrepository import listActiveRulesByTargetAtomicIds
     return listActiveRulesByTargetAtomicIds(atomicMetricIds, executionScope="CONSOLIDATED")
 
 def resolveConsolidatedRuleClosure(initialMetricIds: list[str]) -> tuple[list[dict], list[dict]]:
@@ -102,7 +102,7 @@ def resolveConsolidatedRuleClosure(initialMetricIds: list[str]) -> tuple[list[di
     ]
 
 def resolveConsolidatedRulesFromBatchScopeTx(cur, batchId: int) -> tuple[list[dict], list[dict]]:
-    from src.utils.calculationrepository import listActiveRulesByTargetAtomicIdsTx, listRuleSourcesTx
+    from src.repositories.calculationrepository import listActiveRulesByTargetAtomicIdsTx, listRuleSourcesTx
 
     scopes = listScopeTx(cur, batchId)
     snapshotTargetAtomicIds = sorted({
@@ -392,7 +392,7 @@ def resolveConsolidatedSourceAtomicIdsFromBatchTx(cur, batchId: int) -> list[str
     batch scope의 consolidated rule source 메타데이터에서 source_scope=CONSOLIDATED 인
     source atomic id 를 추출한다. (검증 없이 readiness 계산용 경량 조회)
     """
-    from src.utils.calculationrepository import listActiveRulesByTargetAtomicIdsTx, listRuleSourcesTx
+    from src.repositories.calculationrepository import listActiveRulesByTargetAtomicIdsTx, listRuleSourcesTx
 
     targetAtomicIds = resolveConsolidatedTargetAtomicIdsFromScopes(listScopeTx(cur, batchId))
     if not targetAtomicIds:

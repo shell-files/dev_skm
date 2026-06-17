@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 import json
@@ -234,7 +234,7 @@ def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseD
             if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
                 metricIds = ["G0-02"]
             else:
-                from src.utils.onboardingscoperepository import listMetricScopesTx
+                from src.repositories.onboardingscoperepository import listMetricScopesTx
                 scopeRows = listMetricScopesTx(cur, request.sourceCycleId, parentCompanyId)
                 metricIds = [r["metric_id"] for r in scopeRows if r.get("approval_policy_code") == "PROMOTE_TO_KPI_FACT_AND_ROLLUP"]
                 if not metricIds:
@@ -446,7 +446,7 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
                 rollupRepository.finalizeDmaPrecheckTx(cur, batchId, runId, actorUserId)
             else:
                 rollupRepository.finalizeReportDisclosureTx(cur, batchId, actorUserId)
-                from src.utils.onboardingscoperepository import ensureRollupCycleTx, seedRollupMetricScopeTx
+                from src.repositories.onboardingscoperepository import ensureRollupCycleTx, seedRollupMetricScopeTx
                 ensureRollupCycleTx(cur, parentCompanyId, reportingYear, batchId)
                 seedRollupMetricScopeTx(cur, parentCompanyId, reportingYear, actorUserId)
 
@@ -554,7 +554,7 @@ def getScopePreview(
     if not rules:
         raise RollupError(422, "ROLLUP_RULE_NOT_FOUND", "No consolidated calculation rules were found in rollup scope.")
     requiredAtomicIds = resolveExternalAtomicIdsFromRules(rules, sources)
-    from src.utils.onboardinginputrepository import getMetricName
+    from src.repositories.onboardinginputrepository import getMetricName
     items = []
     for metricId in metricIds:
         items.append(RollupRequestMetricItemDto(
@@ -790,7 +790,7 @@ def getActiveBatchStatus(
 def resolvePreviewMetricIds(rollupRepository, purposeCode: str, parentCompanyId: int, sourceCycleId: Optional[int]) -> list[str]:
     if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
         return ["G0-02"]
-    from src.utils.onboardingscoperepository import listMetricScopes
+    from src.repositories.onboardingscoperepository import listMetricScopes
     scopeRows = listMetricScopes(int(sourceCycleId), parentCompanyId)
     metricIds = [
         str(row.get("metric_id") or "").strip()
@@ -1095,7 +1095,7 @@ def getActorUserId(userModel) -> Optional[int]:
         return None
 
 def loadRepository():
-    from src.utils import rolluprepository
+    from src.repositories import rolluprepository
     return rolluprepository
 
 def ensureRollupResponseWorkspace(batchId: int, userModel) -> RollupRequestDetailResponseDto:
@@ -1127,7 +1127,7 @@ def ensureRollupResponseWorkspace(batchId: int, userModel) -> RollupRequestDetai
     conn = rollupRepository.getConn()
     try:
         with conn.cursor(dictionary=True) as cur:
-            from src.utils.onboardingscoperepository import ensureRollupResponseWorkspaceTx
+            from src.repositories.onboardingscoperepository import ensureRollupResponseWorkspaceTx
             ensureRollupResponseWorkspaceTx(cur, sourceCompanyId, reportingYear, batchId, actionableInputMetricIds, actorUserId)
         conn.commit()
     except ValueError as e:
@@ -1338,8 +1338,8 @@ def saveBaselineValues(batchId: int, request: RollupBaselineValuesRequestDto, us
     )
 
 def loadCalculator():
-    from src.utils import rollupcalculator
-    return rollupcalculator
+    from src.services.rollups import calculator
+    return calculator
 
 __all__ = [
     "listSubsidiaries",

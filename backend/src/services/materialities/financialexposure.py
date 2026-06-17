@@ -1,4 +1,4 @@
-"""
+﻿"""
 Domain: DMA Materiality
 Layer: service/workflow
 Responsibility:
@@ -39,8 +39,8 @@ from copy import deepcopy
 from typing import Any, Optional
 
 from src.models.dmaengine import DMASignal, FinancialFactor
-from src.utils.companycontextrepository import getMaterialityRunContext
-from src.utils.financialbasisrepository import getBasis
+from src.repositories.companycontextrepository import getMaterialityRunContext
+from src.repositories.financialbasisrepository import getBasis
 from src.utils.subissuemaster import getScoringAllowedIros
 
 # LEGACY ONLY:

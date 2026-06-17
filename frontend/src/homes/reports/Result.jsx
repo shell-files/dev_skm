@@ -390,7 +390,7 @@ const DoubleMaterialityMatrix = ({ data = MATRIX_POINTS }) => {
 
       {/* 선정 이슈 목록 */}
       <div className="dmat-issue-grid">
-        {data.map((p) => {
+        {data.slice(0, 10).map((p) => {
           const cfg = CAT_CONFIG[p.cat] ?? { bg: "rgba(148,163,184,0.9)", badge: { bg: "#f1f5f9", color: "#475569" } };
           const key = `${p.cat}-${p.rank}`;
           return (
@@ -1356,7 +1356,7 @@ const Result = () => {
                       <tr><th>순위</th><th>구분</th><th>탑 이슈</th><th>재무중요성</th><th>영향중요성</th></tr>
                     </thead>
                     <tbody>
-                      {scatterTableRows.map((row) => (
+                      {scatterTableRows.slice(0, 10).map((row) => (
                         <tr key={row.rank}>
                           <td className="score-main">{row.rank}</td>
                           <td><span className={`badge badge-${row.cat?.toLowerCase()}`}>{row.cat}</span></td>

@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import "@styles/media.css";
+import "@styles/dma-robot-stage.css";
 import robot from "@assets/images/robot/robot_media_t.png";
+import analyzingIcon from "@assets/icons/steps/analyzing.png";
 import { showDefaultAlert, showConfirmAlert } from "@components/UI/ServiceAlert";
 import { useAuth } from "@hooks/AuthContext";
 import {
@@ -917,21 +919,40 @@ const Media = () => {
             </div>
           </div>
           {(dashboardOpen || isAnalyzing || showResult) && (
-            <div className={`robot-view-container ${showResult ? "showing-result" : ""}`}>
+            <div
+              className={`robot-view-container dma-stage ${isAnalyzing ? "dma-stage--running" : ""} ${showResult ? "showing-result" : ""}`}
+              style={{ '--dma-icon': `url(${analyzingIcon})`, '--dma-accent': 'var(--media-primary)' }}
+            >
               <div id="particle-field" ref={particleRef}></div>
-              {!showResult && <img src={robot} className="robot-media-main-img" alt="마스코트 로봇" />}
               {!showResult && (
-                <div style={{ textAlign: "center", zIndex: 3 }}>
-                  <h3 style={{ fontSize: "1.1rem", fontWeight: 850, margin: "0 0 4px 0" }}>{loadingTitle}</h3>
-                  <p style={{ fontSize: "0.85rem", color: "#64748b", margin: 0 }}>{loadingDesc}</p>
+                <div className="dma-stage__blobs" aria-hidden="true">
+                  <div className="dma-stage__blob dma-stage__blob--1" />
+                  <div className="dma-stage__blob dma-stage__blob--2" />
+                  <div className="dma-stage__blob dma-stage__blob--3" />
+                  <div className="dma-stage__blob dma-stage__blob--4" />
+                  <div className="dma-stage__blob dma-stage__blob--5" />
+                  <div className="dma-stage__blob dma-stage__blob--6" />
+                  <div className="dma-stage__blob dma-stage__blob--7" />
+                  <div className="dma-stage__blob dma-stage__blob--8" />
+                  <div className="dma-stage__blob dma-stage__blob--9" />
+                  <div className="dma-stage__blob dma-stage__blob--10" />
+                  <div className="dma-stage__blob dma-stage__blob--11" />
+                  <div className="dma-stage__blob dma-stage__blob--12" />
+                </div>
+              )}
+              {!showResult && (
+                <div className="dma-stage__content">
+                  <div className="dma-stage__robot">
+                    <img src={robot} className="dma-stage__img" alt="마스코트 로봇" />
+                  </div>
+                  <h3 className="dma-stage__title">{loadingTitle}</h3>
+                  <p className="dma-stage__desc">{loadingDesc}</p>
                   {isAnalyzing && (
-                    <div className="progress-section" style={{ margin: "12px auto 0" }}>
-                      <div className="progress-bar-wrap">
-                        <div className="progress-bar-fill" style={{ width: `${progress}%` }}></div>
+                    <div className="dma-stage__progress">
+                      <div className="dma-stage__progress-bar">
+                        <div className="dma-stage__progress-fill" style={{ width: `${progress}%` }}></div>
                       </div>
-                      <div style={{ marginTop: "6px", fontWeight: 900, fontSize: "0.85rem", color: "var(--media-primary)" }}>
-                        {progress}% 분석 중
-                      </div>
+                      <div className="dma-stage__progress-pct">{progress}% 분석 중</div>
                     </div>
                   )}
                 </div>

@@ -24,6 +24,7 @@
 | 12 | `surveys/importservice.py 분리 — importmeta, importparser로 추출 (#257)` | ✅ 완료 |
 | 13 | `materialities/orchestrator.py 분리 — screeningbuilder로 배치 빌더 추출 (#257)` | ✅ 완료 |
 | 14 | `materialities/context.py 분리 — contextbuilder로 프로파일/수정자 계산 추출 (#257)` | ✅ 완료 |
+| 15 | `onboardings/approvalservice.py 분리 — approvalcycle로 사이클/스코프 헬퍼 추출 (#257)` | ✅ 완료 |
 
 ---
 

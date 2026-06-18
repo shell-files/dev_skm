@@ -780,21 +780,6 @@ def insertPostDmaCycleTx(
         ),
     )
 
-def listMetricScopesTx(cur, cycleId: int, companyId: int) -> list[dict]:
-    cur.execute(
-        """
-        SELECT *
-        FROM ESG_ONBOARDING_CYCLE_METRIC_SCOPE
-        WHERE esg_onboarding_cycle_id = ?
-          AND company_id = ?
-          AND active_yn = 1
-          AND delete_yn = 0
-        ORDER BY display_order, metric_id
-        """,
-        (cycleId, companyId),
-    )
-    return cur.fetchall() or []
-
 def resolveCycleMetricScopeRowsTx(
     cur,
     *,

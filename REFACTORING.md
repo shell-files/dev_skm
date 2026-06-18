@@ -10,23 +10,24 @@
 
 | # | 커밋 메시지 | 상태 |
 |---|------------|------|
-| 1 | `[BE] utils/*repository.py 파일 repositories/ 폴더로 계층 분리 (#257)` | ✅ 완료 |
-| 2 | `[BE] utils/rollupcalculator.py를 services/rollups/calculator.py로 이동 (#257)` | ✅ 완료 |
-| 3 | `[BE] 개발 컨벤션 및 리팩토링 계획 문서 추가 (#257)` | ✅ 완료 |
-| 4 | `[BE] API-Service-Repository 계층 위반 수정 (#257)` | ✅ 완료 |
-| 5 | `[BE] 중복 유틸 함수 typeutils로 통합 (#257)` | ✅ 완료 |
-| 6 | `[BE] README WBS 정리 및 scratch 파일 제거 (#257)` | ✅ 완료 |
-| 7 | `[BE] media 뉴스 분석 서비스 newsservice.py로 분리 및 중복 함수 통합 (#257)` | ✅ 완료 |
-| 8 | `[BE] rollups/service.py 분리 — rollupbuilder, rollupbaseline, rollupexceptions (#257)` | ✅ 완료 |
-| 9 | `[BE] onboardings/service.py 분리 — assignmentService, approvalHandler, approvalService (#257)` | ✅ 완료 |
-| 10 | `materialities/service.py 분리 — materialitybuilder로 빌더 함수 추출 (#257)` | ✅ 완료 |
-| 11 | `materialities/financialexposure.py 분리 — financialexposurecalc으로 계산 로직 추출 (#257)` | ✅ 완료 |
-| 12 | `surveys/importservice.py 분리 — importmeta, importparser로 추출 (#257)` | ✅ 완료 |
-| 13 | `materialities/orchestrator.py 분리 — screeningbuilder로 배치 빌더 추출 (#257)` | ✅ 완료 |
-| 14 | `materialities/context.py 분리 — contextbuilder로 프로파일/수정자 계산 추출 (#257)` | ✅ 완료 |
-| 15 | `onboardings/approvalservice.py 분리 — approvalcycle로 사이클/스코프 헬퍼 추출 (#257)` | ✅ 완료 |
-| 16 | `utils/dmaruleregistry.py 분리 — dmarulevalidator로 정책 검증 로직 추출 (#257)` | ✅ 완료 |
-| 17 | `중복 함수 통합 — medias/service 삭제, asFloat/dedupeItems/validateRunId 공통화 (#257)` | ✅ 완료 |
+| 1 | `[BE] utils/*repository.py 파일 repositories/ 폴더로 계층 분리 (#257)` |  완료 |
+| 2 | `[BE] utils/rollupcalculator.py를 services/rollups/calculator.py로 이동 (#257)` |  완료 |
+| 3 | `[BE] 개발 컨벤션 및 리팩토링 계획 문서 추가 (#257)` |  완료 |
+| 4 | `[BE] API-Service-Repository 계층 위반 수정 (#257)` |  완료 |
+| 5 | `[BE] 중복 유틸 함수 typeutils로 통합 (#257)` |  완료 |
+| 6 | `[BE] README WBS 정리 및 scratch 파일 제거 (#257)` |  완료 |
+| 7 | `[BE] media 뉴스 분석 서비스 newsservice.py로 분리 및 중복 함수 통합 (#257)` |  완료 |
+| 8 | `[BE] rollups/service.py 분리 — rollupbuilder, rollupbaseline, rollupexceptions (#257)` |  완료 |
+| 9 | `[BE] onboardings/service.py 분리 — assignmentService, approvalHandler, approvalService (#257)` |  완료 |
+| 10 | `materialities/service.py 분리 — materialitybuilder로 빌더 함수 추출 (#257)` |  완료 |
+| 11 | `materialities/financialexposure.py 분리 — financialexposurecalc으로 계산 로직 추출 (#257)` |  완료 |
+| 12 | `surveys/importservice.py 분리 — importmeta, importparser로 추출 (#257)` |  완료 |
+| 13 | `materialities/orchestrator.py 분리 — screeningbuilder로 배치 빌더 추출 (#257)` |  완료 |
+| 14 | `materialities/context.py 분리 — contextbuilder로 프로파일/수정자 계산 추출 (#257)` |  완료 |
+| 15 | `onboardings/approvalservice.py 분리 — approvalcycle로 사이클/스코프 헬퍼 추출 (#257)` |  완료 |
+| 16 | `utils/dmaruleregistry.py 분리 — dmarulevalidator로 정책 검증 로직 추출 (#257)` |  완료 |
+| 17 | `중복 함수 통합 — medias/service 삭제, asFloat/dedupeItems/validateRunId 공통화 (#257)` |  완료 |
+| 18 | `중복 함수 추가 통합 — maskEmail/inviteExpireSeconds 공통화, listMetricScopesTx 중복 정의 제거 (#257)` |  완료 |
 
 ---
 
@@ -34,15 +35,15 @@
 
 | 우선순위 | 항목 | 상태 |
 |----------|------|------|
-| **1** | **비대해진 파일 분리** | **✅ 완료** |
-| 2 | API → Service → Repository 계층 준수 | ✅ 완료 |
-| **3** | **Repository 분리 및 정리** | **✅ 완료** |
-| 4 | Service 의존성 정리 및 순환 참조 제거 | 🔲 대기 |
-| 5 | 중복 코드 제거 | 🔲 대기 |
-| **6** | **Utils 남용 방지** | **✅ 완료** |
-| 7 | Frontend 페이지 분리 | 🔲 대기 |
-| 8 | 공통 컴포넌트 재사용 | 🔲 대기 |
-| 9 | 컨벤션 준수 및 문서화 | 🔲 대기 |
+| **1** | **비대해진 파일 분리** | ** 완료** |
+| 2 | API → Service → Repository 계층 준수 |  완료 |
+| **3** | **Repository 분리 및 정리** | ** 완료** |
+| 4 | Service 의존성 정리 및 순환 참조 제거 |  대기 |
+| 5 | 중복 코드 제거 |  진행 중 (46→35개) |
+| **6** | **Utils 남용 방지** | ** 완료** |
+| 7 | Frontend 페이지 분리 |  대기 |
+| 8 | 공통 컴포넌트 재사용 |  대기 |
+| 9 | 컨벤션 준수 및 문서화 |  대기 |
 
 ---
 
@@ -50,7 +51,7 @@
 
 ---
 
-### ✅ [우선순위 3] Repository 분리 — 2026-06-17
+###  [우선순위 3] Repository 분리 — 2026-06-17
 
 **목적:** `utils/`에 혼재하던 Repository 파일 20개를 `repositories/` 전용 폴더로 이전
 
@@ -89,7 +90,7 @@ src/
 
 ---
 
-### ✅ [우선순위 4] Utils 남용 방지 — 2026-06-17
+###  [우선순위 4] Utils 남용 방지 — 2026-06-17
 
 **목적:** `utils/`에 있던 비즈니스 로직 파일을 적절한 계층으로 이동
 
@@ -97,7 +98,7 @@ src/
 
 | 파일 | 줄 수 | 판단 | 처리 |
 |------|-------|------|------|
-| `utils/rollupcalculator.py` | 604 | 비즈니스 로직 (rollup 전용) | ✅ 이동 |
+| `utils/rollupcalculator.py` | 604 | 비즈니스 로직 (rollup 전용) |  이동 |
 | `utils/dmascoring.py` | 778 | LEGACY + 여러 services 공통 사용 | 유지 |
 | `utils/dmaruleregistry.py` | 623 | 설정/캐시 인프라 | 유지 |
 | `utils/calculationengine.py` | 512 | 공통 수식 엔진 (여러 계층 공통) | 유지 |
@@ -117,7 +118,7 @@ services/rollups/service.py
 
 ---
 
-### ✅ media 뉴스 분석 서비스 분리 및 중복 함수 통합 — 2026-06-17
+###  media 뉴스 분석 서비스 분리 및 중복 함수 통합 — 2026-06-17
 
 **목적:** media 서비스 계층 분리 및 3개 adapter 파일의 중복 `firstPresent` 통합
 
@@ -135,7 +136,7 @@ services/rollups/service.py
 
 ---
 
-### ✅ rollups/service.py 분리 — 2026-06-18
+###  rollups/service.py 분리 — 2026-06-18
 
 **목적:** 1,354줄 대형 파일을 책임 단위로 분리
 
@@ -169,26 +170,26 @@ services/rollups/service.py
 
 ---
 
-### 🔲 [우선순위 1] 비대한 파일 분리
+###  [우선순위 1] 비대한 파일 분리
 
 500줄 이상 파일 중 분리가 필요한 대상 (subissuemaster.py 제외 — 현 구조 유지)
 
 | 파일 | 줄 수 | 비고 |
 |------|-------|------|
-| ~~`services/rollups/service.py`~~ | ~~1,360~~ → 889 | ✅ 완료 |
-| ~~`services/onboardings/service.py`~~ | ~~1,179~~ → 735 | ✅ 완료 |
-| ~~`services/materialities/financialexposure.py`~~ | ~~820~~ → 424 | ✅ 완료 |
-| ~~`services/materialities/service.py`~~ | ~~819~~ → 472 | ✅ 완료 |
-| ~~`services/surveys/importservice.py`~~ | ~~751~~ → 78 | ✅ 완료 |
-| ~~`services/materialities/orchestrator.py`~~ | ~~736~~ → 190 | ✅ 완료 |
-| ~~`services/materialities/context.py`~~ | ~~715~~ → 230 | ✅ 완료 |
-| ~~`services/onboardings/approvalservice.py`~~ | ~~634~~ → 429 | ✅ 완료 |
-| ~~`utils/dmaruleregistry.py`~~ | ~~623~~ → 186 | ✅ 완료 |
-| ~~`services/medias/service.py`~~ | ~~533~~ → 459 | ✅ 완료 (newsservice.py 분리 시 이미 감소) |
+| ~~`services/rollups/service.py`~~ | ~~1,360~~ → 889 |  완료 |
+| ~~`services/onboardings/service.py`~~ | ~~1,179~~ → 735 |  완료 |
+| ~~`services/materialities/financialexposure.py`~~ | ~~820~~ → 424 |  완료 |
+| ~~`services/materialities/service.py`~~ | ~~819~~ → 472 |  완료 |
+| ~~`services/surveys/importservice.py`~~ | ~~751~~ → 78 |  완료 |
+| ~~`services/materialities/orchestrator.py`~~ | ~~736~~ → 190 |  완료 |
+| ~~`services/materialities/context.py`~~ | ~~715~~ → 230 |  완료 |
+| ~~`services/onboardings/approvalservice.py`~~ | ~~634~~ → 429 |  완료 |
+| ~~`utils/dmaruleregistry.py`~~ | ~~623~~ → 186 |  완료 |
+| ~~`services/medias/service.py`~~ | ~~533~~ → 459 |  완료 (newsservice.py 분리 시 이미 감소) |
 
 ---
 
-### ✅ [우선순위 2] API → Service → Repository 계층 준수 — 2026-06-17
+###  [우선순위 2] API → Service → Repository 계층 준수 — 2026-06-17
 
 #### 수정된 계층 위반 4건
 
@@ -220,13 +221,13 @@ services/rollups/service.py
 
 ---
 
-### 🔲 [우선순위 5] Frontend 페이지 분리
+###  [우선순위 5] Frontend 페이지 분리
 
 300줄 이상 파일 분리 검토 필요 (미진단)
 
 ---
 
-### 🔲 [우선순위 6] 공통 컴포넌트 재사용
+###  [우선순위 6] 공통 컴포넌트 재사용
 
 2회 이상 반복 사용 컴포넌트 추출 필요 (미진단)
 

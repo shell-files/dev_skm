@@ -14,7 +14,7 @@ from src.repositories import onboardingassignmentrepository as assignmentRepo
 from src.repositories import onboardingrepository as repo
 from src.repositories import onboardingscoperepository as scopeRepo
 from src.utils.companyscope import checkScope
-from src.utils.typeutils import normalizeIssueDomain, groupRows
+from src.utils.typeutils import normalizeIssueDomain, groupRows, maskEmail
 from src.services.calculations.service import invalidateAffectedEntityFactsTx
 
 
@@ -600,13 +600,6 @@ def buildAssignment(row: dict) -> OnboardingAssignmentDto:
     )
 
 
-def maskEmail(email: Optional[str]) -> Optional[str]:
-    if not email or "@" not in email:
-        return email
-    name, domain = email.split("@", 1)
-    if not name:
-        return f"***@{domain}"
-    return f"{name[0]}***@{domain}"
 
 
 

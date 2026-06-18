@@ -70,6 +70,15 @@ def firstPresent(row: Mapping[str, Any], keys: Sequence[str], default: Any = Non
     return default
 
 
+def maskEmail(email: Optional[str]) -> Optional[str]:
+    if not email or "@" not in email:
+        return email
+    name, domain = email.split("@", 1)
+    if not name:
+        return f"***@{domain}"
+    return f"{name[0]}***@{domain}"
+
+
 def normalizeIssueDomain(value: Optional[str]) -> Optional[str]:
     normalizedValue = str(value or "").strip().upper()
     if normalizedValue in {"E", "ENVIRONMENT", "ENVIRONMENTAL"} or normalizedValue.startswith("E_"):

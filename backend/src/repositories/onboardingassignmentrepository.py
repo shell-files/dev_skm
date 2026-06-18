@@ -4,6 +4,8 @@ from datetime import date
 from typing import Optional
 
 from src.utils.db import findAll, findOne, getConn
+from src.utils.typeutils import maskEmail
+from src.utils.invite import inviteExpireSeconds
 from src.utils.rediscl import setInviteRedis
 from src.utils.settings import settings
 from src.utils.tokenset import generateInviteTokenWithUuid
@@ -22,15 +24,6 @@ INVITE_STATE_REVOKED = "승인취소"
 
 def normalizeEmail(email: str) -> str:
     return str(email or "").strip().lower()
-
-
-def maskEmail(email: Optional[str]) -> Optional[str]:
-    if not email or "@" not in email:
-        return email
-    name, domain = email.split("@", 1)
-    if not name:
-        return f"***@{domain}"
-    return f"{name[0]}***@{domain}"
 
 
 def resolveExistingUser(companyId: int, normalizedEmail: str) -> Optional[int]:
@@ -186,10 +179,6 @@ def buildCommonInviteMailEvent(email: str, inviteUuid: str, companyName: str) ->
         "uuid": inviteUuid,
         "companyName": companyName,
     }
-
-
-def inviteExpireSeconds() -> int:
-    return max(1, int(settings.invite_token_expire_days)) * 24 * 60 * 60
 
 
 def resolveRoleIdTx(cur, roleCode: str) -> int:

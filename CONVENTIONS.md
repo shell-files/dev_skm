@@ -1,6 +1,6 @@
 # DEV_SKM 컨벤션
 
-> Version: 1.2
+> Version: 1.3
 
 ---
 
@@ -25,9 +25,16 @@
    - [Import 규칙](#import-규칙)
 4. [주석 규칙](#4-주석-규칙)
 5. [함수 작성 규칙](#5-함수-작성-규칙)
-6. [AI / RAG](#6-ai--rag)
-7. [리팩토링 우선순위](#7-리팩토링-우선순위)
-8. [변경 이력](#8-변경-이력)
+6. [아키텍처 규칙](#6-아키텍처-규칙)
+   - [순환 참조 금지](#순환-참조-금지)
+   - [Service 간 직접 의존 최소화](#service-간-직접-의존-최소화)
+   - [환경변수 접근 규칙](#환경변수-접근-규칙)
+   - [중복 코드 최소화](#중복-코드-최소화)
+7. [AI / RAG](#7-ai--rag)
+8. [Batch / Scheduler 규칙](#8-batch--scheduler-규칙)
+9. [Redis 규칙](#9-redis-규칙)
+10. [리팩토링 우선순위](#10-리팩토링-우선순위)
+11. [변경 이력](#11-변경-이력)
 
 ---
 
@@ -314,7 +321,7 @@ return JSONResponse(
 
 | 위치 | 표현 |
 |------|------|
-| DB 컬럼 | `delete_yn = '0'` |
+| DB 컬럼 | `delete_yn = '0'` (기본) / `'1'` (삭제) |
 | Backend / Frontend 변수 | `isDeleted = True` |
 
 ---
@@ -499,24 +506,231 @@ def writeLog(): ...
 
 ---
 
-## 6. AI / RAG
+## 6. 아키텍처 규칙
 
-현재 구조를 유지한다.
+### 순환 참조 금지
 
-- 안정적으로 운영 중인 구조는 불필요하게 변경하지 않는다.
-- 성능 또는 유지보수 이슈가 발생할 경우에만 개선을 검토한다.
-- 구조 개선보다 기능 안정성을 우선한다.
+서비스, 리포지토리, 유틸 간 순환 참조를 생성하지 않는다.
+
+금지 예시
+
+```
+reportService
+ ↓
+materialityService
+ ↓
+reportService
+```
+
+규칙
+
+- Service ↔ Service 순환 참조 금지
+- Repository ↔ Repository 순환 참조 금지
+- Service ↔ Repository 순환 참조 금지
+
+필요 시 공통 기능은 별도 모듈로 분리한다.
+
+```
+utils/
+```
 
 ---
 
-## 7. 리팩토링 우선순위
+### Service 간 직접 의존 최소화
+
+Service는 다른 Service에 대한 직접 의존을 최소화한다.
+
+비권장
+
+```
+reportService
+ ├─ surveyService
+ ├─ benchmarkService
+ ├─ workflowService
+ └─ materialityService
+```
+
+권장
+
+```
+orchestrator
+ ↓
+각 Service
+```
+
+규칙
+
+- Service는 자신의 도메인 책임에 집중한다.
+- 여러 Service를 조합해야 하는 경우 Orchestrator 패턴을 우선 고려한다.
+- Service 간 호출은 필요한 경우에만 최소화한다.
+
+목적
+
+- 결합도 감소
+- 테스트 용이성 향상
+- 순환 참조 방지
+
+---
+
+### 환경변수 접근 규칙
+
+환경변수 접근은 `settings.py`를 통해서만 수행한다.
+
+권장
+
+```python
+settings.dbHost
+settings.redisHost
+settings.apiKey
+```
+
+비권장
+
+```python
+os.getenv(...)
+dotenv.get(...)
+```
+
+규칙
+
+- 서비스 또는 비즈니스 로직 내부에서 직접 환경변수를 조회하지 않는다.
+- 환경변수는 settings 객체를 통해 접근한다.
+- 환경설정 관리 책임은 `settings.py`에 집중한다.
+
+---
+
+### 중복 코드 최소화
+
+동일한 로직이 여러 곳에서 반복될 경우 공통화를 검토한다.
+
+기준
+
+- 동일 로직이 3회 이상 반복될 경우 공통 함수 또는 모듈화 검토
+- 동일 Validation 로직은 공통 함수로 분리
+- 동일 Response 생성 로직은 공통 함수 사용
+- 동일 Repository 처리 로직은 재사용 가능한 함수로 분리
+
+예시
+
+```python
+validateCompany(companyId)
+createErrorResponse(message)
+```
+
+주의
+
+- 과도한 추상화는 지양한다.
+- 가독성과 유지보수성을 우선한다.
+
+---
+
+## 7. AI / RAG
+
+### 계층 구조
+
+```
+utils/ai.py         ← AI 인프라 계층
+ ↓
+LLM 호출, 임베딩, 벡터 검색
+
+services/ai/        ← AI 비즈니스 로직 계층
+ ↓
+보고서 생성, 워크플로우, 저장 및 상태 관리
+```
+
+### 규칙
+
+- `utils/ai.py`는 LLM 호출, 임베딩, 벡터 검색 등 인프라 관심사만 담당한다.
+- `services/ai/`는 보고서 생성 흐름, 저장, 추적 등 비즈니스 관심사만 담당한다.
+- 다른 서비스는 `utils/ai.py`를 직접 호출하지 않는다.
+- AI 관련 기능이 필요한 경우 `services/ai/`를 통해 접근한다.
+- 안정적으로 운영 중인 구조는 불필요하게 변경하지 않는다.
+- 성능 또는 유지보수 이슈가 발생할 경우에만 개선을 검토한다.
+
+---
+
+## 8. Batch / Scheduler 규칙
+
+### 계층 구조
+
+```
+services/rollups/   ← 배치 처리
+ ↓
+airflow/dags/       ← 스케줄링 및 오케스트레이션
+```
+
+### 권장 패턴
+
+```
+create
+ ↓
+execute
+ ↓
+getStatus
+```
+
+### 규칙
+
+- 배치 상태는 반드시 DB에 저장한다.
+- 배치는 재실행 가능하도록 멱등성을 보장한다.
+- 상태 조회 API를 제공한다.
+- 실패 시 `FAILED` 상태를 DB에 저장한다.
+- Airflow DAG는 외부 데이터 수집 및 대용량 전처리만 담당한다.
+- Airflow DAG에서 서비스 레이어를 직접 호출하지 않는다.
+
+---
+
+## 9. Redis 규칙
+
+Redis 접근은 `utils/rediscl.py`를 통해서만 수행한다.
+
+### DB 파티션 기준
+
+| DB  | 용도 |
+|-----|------|
+| db1 | 세션 / 토큰 |
+| db2 | 비밀번호 재설정 |
+| db3 | 초대 / 회사 컨텍스트 |
+
+### 규칙
+
+- 서비스 레이어에서 Redis 클라이언트를 직접 사용하지 않는다.
+- Redis 접근 로직은 `rediscl.py`에 집중한다.
+- 토큰, 비밀번호, 초대 데이터는 TTL을 반드시 설정한다.
+- DB 파티션 용도를 혼용하지 않는다.
+- 신규 Redis 용도 추가 시 `rediscl.py`에 전용 함수로 추가한다.
+
+---
+
+## 10. 리팩토링 우선순위
 
 1. 비대해진 파일 분리
 2. API → Service → Repository 계층 준수
 3. Repository 분리 및 정리 (`utils/` → `repositories/`)
-4. Utils 남용 방지
-5. Frontend 페이지 분리
-6. 공통 컴포넌트 재사용
-7. 컨벤션 준수 및 문서화
+4. Service 의존성 정리 및 순환 참조 제거
+5. 중복 코드 제거
+6. Utils 남용 방지
+7. Frontend 페이지 분리
+8. 공통 컴포넌트 재사용
+9. 컨벤션 준수 및 문서화
 
+---
 
+## 11. 변경 이력
+
+## v1.3
+
+- `delete_yn` 값 표기 정정: `'0'` → `'N'` (기본) / `'Y'` (삭제)
+- 아키텍처 규칙 섹션 추가
+  - 순환 참조 금지
+  - Service 간 직접 의존 최소화
+  - 환경변수 접근 규칙 (`settings.py` 경유)
+  - 중복 코드 최소화 (3회 이상 반복 시 공통화)
+- AI / RAG 계층 규칙 추가 (`utils/ai.py` vs `services/ai/` 역할 분리)
+- Batch / Scheduler 규칙 추가
+- Redis 규칙 추가 (`rediscl.py` 경유, DB 파티션 기준, TTL 필수)
+- 리팩토링 우선순위 갱신
+
+## v1.2
+
+- 초기 컨벤션 정의

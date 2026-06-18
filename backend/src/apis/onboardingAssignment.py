@@ -11,7 +11,7 @@ from src.models.onboarding import (
     OnboardingAssignmentListResponseDto,
     OnboardingAssignmentPatchRequestDto,
 )
-from src.services.onboardings.service import (
+from src.services.onboardings.assignmentService import (
     PreDmaG0CycleNotReadyError,
     bulkAssign,
     bulkUnassign,

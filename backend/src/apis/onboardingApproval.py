@@ -10,7 +10,7 @@ from src.models.onboarding import (
     OnboardingApprovalRequestDto,
     OnboardingApprovalStatusResponseDto,
 )
-from src.services.onboardings.service import (
+from src.services.onboardings.approvalHandler import (
     approveApproval,
     getApprovalDetail,
     getApprovalStatus,

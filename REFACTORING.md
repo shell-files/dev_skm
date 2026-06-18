@@ -1,6 +1,6 @@
 # DEV_SKM 리팩토링 로그
 
-> 기준 컨벤션: [CONVENTIONS.md](./CONVENTIONS.md) v1.2
+> 기준 컨벤션: [CONVENTIONS.md](./CONVENTIONS.md) v1.3
 > 시작일: 2026-06-17
 > 작업 브랜치: `Feature/refactoring_lch`
 
@@ -18,6 +18,7 @@
 | 6 | `[BE] README WBS 정리 및 scratch 파일 제거 (#257)` | ✅ 완료 |
 | 7 | `[BE] media 뉴스 분석 서비스 newsservice.py로 분리 및 중복 함수 통합 (#257)` | ✅ 완료 |
 | 8 | `[BE] rollups/service.py 분리 — rollupbuilder, rollupbaseline, rollupexceptions (#257)` | ✅ 완료 |
+| 9 | `[BE] onboardings/service.py 분리 — assignmentService, approvalHandler, approvalService (#257)` | ✅ 완료 |
 
 ---
 
@@ -164,14 +165,14 @@ services/rollups/service.py
 
 | 파일 | 줄 수 | 비고 |
 |------|-------|------|
-| `services/rollups/service.py` | 1,360 | 분리 필요 |
-| `services/onboardings/service.py` | 1,179 | 분리 필요 |
+| ~~`services/rollups/service.py`~~ | ~~1,360~~ → 889 | ✅ 완료 |
+| ~~`services/onboardings/service.py`~~ | ~~1,179~~ → 735 | ✅ 완료 |
 | `services/materialities/financialexposure.py` | 820 | 분리 검토 |
 | `services/materialities/service.py` | 819 | 분리 검토 |
 | `services/surveys/importservice.py` | 751 | 분리 검토 |
 | `services/materialities/orchestrator.py` | 736 | 분리 검토 |
 | `services/materialities/context.py` | 715 | 분리 검토 |
-| `services/onboardings/approval_service.py` | 634 | 분리 검토 |
+| `services/onboardings/approvalService.py` | 634 | 분리 검토 |
 | `utils/dmaruleregistry.py` | 623 | 분리 검토 |
 | `services/medias/service.py` | 533 | 분리 검토 |
 

@@ -716,21 +716,3 @@ Redis 접근은 `utils/rediscl.py`를 통해서만 수행한다.
 
 ---
 
-## 11. 변경 이력
-
-## v1.3
-
-- `delete_yn` 값 표기 정정: `'0'` → `'N'` (기본) / `'Y'` (삭제)
-- 아키텍처 규칙 섹션 추가
-  - 순환 참조 금지
-  - Service 간 직접 의존 최소화
-  - 환경변수 접근 규칙 (`settings.py` 경유)
-  - 중복 코드 최소화 (3회 이상 반복 시 공통화)
-- AI / RAG 계층 규칙 추가 (`utils/ai.py` vs `services/ai/` 역할 분리)
-- Batch / Scheduler 규칙 추가
-- Redis 규칙 추가 (`rediscl.py` 경유, DB 파티션 기준, TTL 필수)
-- 리팩토링 우선순위 갱신
-
-## v1.2
-
-- 초기 컨벤션 정의

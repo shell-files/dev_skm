@@ -29,10 +29,12 @@
 | 1 | 비대해진 파일 분리 | 🔲 대기 |
 | 2 | API → Service → Repository 계층 준수 | ✅ 완료 |
 | **3** | **Repository 분리 및 정리** | **✅ 완료** |
-| **4** | **Utils 남용 방지** | **✅ 완료** |
-| 5 | Frontend 페이지 분리 | 🔲 대기 |
-| 6 | 공통 컴포넌트 재사용 | 🔲 대기 |
-| 7 | 컨벤션 준수 및 문서화 | 🔲 대기 |
+| 4 | Service 의존성 정리 및 순환 참조 제거 | 🔲 대기 |
+| 5 | 중복 코드 제거 | 🔲 대기 |
+| **6** | **Utils 남용 방지** | **✅ 완료** |
+| 7 | Frontend 페이지 분리 | 🔲 대기 |
+| 8 | 공통 컴포넌트 재사용 | 🔲 대기 |
+| 9 | 컨벤션 준수 및 문서화 | 🔲 대기 |
 
 ---
 
@@ -172,7 +174,7 @@ services/rollups/service.py
 | `services/surveys/importservice.py` | 751 | 분리 검토 |
 | `services/materialities/orchestrator.py` | 736 | 분리 검토 |
 | `services/materialities/context.py` | 715 | 분리 검토 |
-| `services/onboardings/approvalService.py` | 634 | 분리 검토 |
+| `services/onboardings/approvalservice.py` | 634 | 분리 검토 |
 | `utils/dmaruleregistry.py` | 623 | 분리 검토 |
 | `services/medias/service.py` | 533 | 분리 검토 |
 

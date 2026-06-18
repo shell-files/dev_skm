@@ -15,7 +15,7 @@ from src.models.onboarding import (
     OnboardingApprovalStatusResponseDto,
 )
 from src.repositories import onboardingrepository as repo
-from src.services.onboardings import approvalService
+from src.services.onboardings import approvalservice
 from src.utils.companyscope import checkScope
 
 
@@ -29,7 +29,7 @@ def submitApproval(request: OnboardingApprovalRequestDto, userModel) -> Onboardi
         metricId=request.metricId,
         userModel=userModel,
     )
-    summary = approvalService.submitMetricApproval(
+    summary = approvalservice.submitMetricApproval(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
         cycleType=request.cycleType,
@@ -45,7 +45,7 @@ def reviewApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
     from src.services.onboardings.service import getActorUserId
     checkScope(request.companyId, userModel)
     checkReviewer(userModel)
-    summary = approvalService.reviewMetricApproval(
+    summary = approvalservice.reviewMetricApproval(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
         cycleType=request.cycleType,
@@ -61,7 +61,7 @@ def approveApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
     from src.services.onboardings.service import getActorUserId
     checkScope(request.companyId, userModel)
     checkApprover(userModel)
-    summary = approvalService.approveMetricApproval(
+    summary = approvalservice.approveMetricApproval(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
         cycleType=request.cycleType,
@@ -80,7 +80,7 @@ def rejectApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
     commentText = (getattr(request, "commentText", None) or "").strip()
     if not commentText:
         raise ValueError("commentText is required for rejection")
-    summary = approvalService.rejectMetricApproval(
+    summary = approvalservice.rejectMetricApproval(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
         cycleType=request.cycleType,
@@ -137,7 +137,7 @@ def getApprovalStatus(
     from src.services.onboardings.service import resolveCycleSourceMaterialityRunId, checkMetricStatusPermission
     checkScope(companyId, userModel)
     sourceMaterialityRunId = resolveCycleSourceMaterialityRunId(companyId, reportingYear, cycleType)
-    summary = approvalService.buildMetricApprovalSummary(
+    summary = approvalservice.buildMetricApprovalSummary(
         companyId,
         reportingYear,
         metricId,
@@ -168,7 +168,7 @@ def getApprovalDetail(
         batchId=batchId,
         sourceMaterialityRunId=sourceMaterialityRunId,
     )
-    summary = approvalService.buildMetricApprovalSummary(
+    summary = approvalservice.buildMetricApprovalSummary(
         companyId,
         reportingYear,
         metricId,

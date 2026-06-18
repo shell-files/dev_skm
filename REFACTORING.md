@@ -19,6 +19,9 @@
 | 7 | `[BE] media 뉴스 분석 서비스 newsservice.py로 분리 및 중복 함수 통합 (#257)` | ✅ 완료 |
 | 8 | `[BE] rollups/service.py 분리 — rollupbuilder, rollupbaseline, rollupexceptions (#257)` | ✅ 완료 |
 | 9 | `[BE] onboardings/service.py 분리 — assignmentService, approvalHandler, approvalService (#257)` | ✅ 완료 |
+| 10 | `materialities/service.py 분리 — materialitybuilder로 빌더 함수 추출 (#257)` | ✅ 완료 |
+| 11 | `materialities/financialexposure.py 분리 — financialexposurecalc으로 계산 로직 추출 (#257)` | ✅ 완료 |
+| 12 | `surveys/importservice.py 분리 — importmeta, importparser로 추출 (#257)` | ✅ 완료 |
 
 ---
 
@@ -26,7 +29,7 @@
 
 | 우선순위 | 항목 | 상태 |
 |----------|------|------|
-| 1 | 비대해진 파일 분리 | 🔲 대기 |
+| 1 | 비대해진 파일 분리 | 🔄 진행 중 |
 | 2 | API → Service → Repository 계층 준수 | ✅ 완료 |
 | **3** | **Repository 분리 및 정리** | **✅ 완료** |
 | 4 | Service 의존성 정리 및 순환 참조 제거 | 🔲 대기 |
@@ -169,9 +172,9 @@ services/rollups/service.py
 |------|-------|------|
 | ~~`services/rollups/service.py`~~ | ~~1,360~~ → 889 | ✅ 완료 |
 | ~~`services/onboardings/service.py`~~ | ~~1,179~~ → 735 | ✅ 완료 |
-| `services/materialities/financialexposure.py` | 820 | 분리 검토 |
-| `services/materialities/service.py` | 819 | 분리 검토 |
-| `services/surveys/importservice.py` | 751 | 분리 검토 |
+| ~~`services/materialities/financialexposure.py`~~ | ~~820~~ → 424 | ✅ 완료 |
+| ~~`services/materialities/service.py`~~ | ~~819~~ → 472 | ✅ 완료 |
+| ~~`services/surveys/importservice.py`~~ | ~~751~~ → 78 | ✅ 완료 |
 | `services/materialities/orchestrator.py` | 736 | 분리 검토 |
 | `services/materialities/context.py` | 715 | 분리 검토 |
 | `services/onboardings/approvalservice.py` | 634 | 분리 검토 |

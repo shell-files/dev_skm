@@ -30,6 +30,8 @@
 | 18 | `중복 함수 추가 통합 — maskEmail/inviteExpireSeconds 공통화, listMetricScopesTx 중복 정의 제거 (#257)` |  완료 |
 | 19 | `Draft.jsx 분리 — TrendChart/buildMetricsFromEdits/export 로직 추출 (#257)` |  완료 |
 | 20 | `OnBoard.jsx 분리 — OnboardingStatCards/WorkflowCta/MetricTable 추출 (#257)` |  완료 |
+| 21 | `Result.jsx 분리 — DoubleMaterialityChart/ImportanceBadge 추출 및 result/ 폴더 정리 (#257)` |  완료 |
+| 22 | `Media.jsx 분리 — MediaResultDashboard/mediaData 추출 및 media/ 폴더 정리 (#257)` |  완료 |
 
 ---
 
@@ -229,15 +231,16 @@ services/rollups/service.py
 
 | 파일 | 원본 줄 수 | 추출 결과 |
 |------|-----------|-----------|
-| `Draft.jsx` | 908 | `TrendChart.jsx`, `draftExport.js`, `srHelpers.jsx` (+buildMetricsFromEdits) |
-| `OnBoard.jsx` | 1,570 | `OnboardingStatCards.jsx`, `OnboardingWorkflowCta.jsx`, `OnboardingMetricTable.jsx` |
+| `Draft.jsx` | 908 | `srTemplates/core/TrendChart.jsx`, `srTemplates/core/draftExport.js` |
+| `OnBoard.jsx` | 1,570 → 1,177 | `OnboardingStatCards.jsx`, `OnboardingWorkflowCta.jsx`, `OnboardingMetricTable.jsx` |
+| `Result.jsx` | 1,399 → 817 | `result/DoubleMaterialityChart.jsx`, `result/ImportanceBadge.jsx` (result/ 폴더 분리) |
 
 #### 대기 중
 
 | 파일 | 줄 수 | 우선순위 |
 |------|-------|---------|
-| `Result.jsx` | 1,399 | 높음 |
-| `Media.jsx` | 1,229 | 높음 |
+| ~~`Result.jsx`~~ | ~~1,399~~ → 817 |  완료 |
+| ~~`Media.jsx`~~ | ~~1,323~~ → 997 |  완료 |
 | `Survey.jsx` | 790 | 중간 |
 | `BenchMarking.jsx` | 740 | 중간 |
 | `ManagerData.jsx` | 733 | 중간 |

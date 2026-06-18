@@ -26,16 +26,7 @@ def _parseQuestionMarker(part: str):
     return (qcode.strip(), route.strip())
 
 
-def _getSheetsService():
-    from src.utils.settings import settings
-    from googleapiclient.discovery import build
-    from google.oauth2 import service_account
-
-    creds = service_account.Credentials.from_service_account_file(
-        settings.GOOGLE_APPLICATION_CREDENTIALS,
-        scopes=["https://www.googleapis.com/auth/spreadsheets.readonly"],
-    )
-    return build("sheets", "v4", credentials=creds)
+from src.utils.sheetsutils import getSheetsService as _getSheetsService
 
 
 def _sheetValuesToDictRows(values: list) -> list:

@@ -1,11 +1,7 @@
-from src.utils.settings import settings
-
-from googleapiclient.discovery import build
-from google.oauth2 import service_account
-
 import csv
 import os
 
+from src.utils.sheetsutils import getSheetsService as _getSheetsService
 from src.services.surveys.formservice import (
     buildQuestion,
     buildRespondent,
@@ -13,21 +9,6 @@ from src.services.surveys.formservice import (
     createFormProcess,
     loadSurveyTemplate,
 )
-
-# =========================
-# Google Sheets API — Lazy Init
-# =========================
-SCOPES = [
-    "https://www.googleapis.com/auth/spreadsheets.readonly"
-]
-
-
-def _getSheetsService():
-    creds = service_account.Credentials.from_service_account_file(
-        settings.GOOGLE_APPLICATION_CREDENTIALS,
-        scopes=SCOPES,
-    )
-    return build("sheets", "v4", credentials=creds)
 
 
 # =========================

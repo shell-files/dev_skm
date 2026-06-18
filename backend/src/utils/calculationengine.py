@@ -508,5 +508,8 @@ __all__ = [
     "allResultsCalculated",
     "buildFactMap",
     "groupSourcesByRule",
+    "normalizeSources",
+    "ruleCode",
+    "targetAtomicMetricId",
     "STATUS_REFERENCE_SOURCE_AMBIGUOUS",
 ]

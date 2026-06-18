@@ -10,6 +10,8 @@ from src.utils.calculationengine import (
     calculateRule,
     groupSourcesByRule,
     normalizeSources,
+    ruleCode,
+    targetAtomicMetricId,
     topologicalSortRules,
 )
 
@@ -570,14 +572,6 @@ def splitYoySources(sources: list[dict]) -> tuple[list[dict], list[dict]]:
     if not priorSources:
         priorSources = currentSources
     return currentSources, priorSources
-
-
-def ruleCode(rule: dict) -> str:
-    return str(rule.get("calculation_rule_code") or rule.get("ruleCode") or "").strip()
-
-
-def targetAtomicMetricId(rule: dict) -> str:
-    return str(rule.get("target_atomic_metric_id") or rule.get("targetAtomicMetricId") or "").strip()
 
 
 def getFactValue(fact: Optional[dict]) -> Any:

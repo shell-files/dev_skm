@@ -17,6 +17,7 @@
 | 5 | `[BE] 중복 유틸 함수 typeutils로 통합 (#257)` | ✅ 완료 |
 | 6 | `[BE] README WBS 정리 및 scratch 파일 제거 (#257)` | ✅ 완료 |
 | 7 | `[BE] media 뉴스 분석 서비스 newsservice.py로 분리 및 중복 함수 통합 (#257)` | ✅ 완료 |
+| 8 | `[BE] rollups/service.py 분리 — rollupbuilder, rollupbaseline, rollupexceptions (#257)` | ✅ 완료 |
 
 ---
 
@@ -120,6 +121,28 @@ services/rollups/service.py
 | `services/benchmarks/adapter.py` | 로컬 `firstPresent` 제거 → `typeutils` import |
 | `services/medias/adapter.py` | 로컬 `firstPresent` 제거 → `typeutils` import |
 | `services/surveys/adapter.py` | 로컬 `firstPresent` 제거 → `typeutils` import |
+
+---
+
+### ✅ rollups/service.py 분리 — 2026-06-18
+
+**목적:** 1,354줄 대형 파일을 책임 단위로 분리
+
+#### 변경 내용
+
+| 파일 | 줄 수 | 비고 |
+|------|-------|------|
+| `services/rollups/rollupexceptions.py` | 10 | 신규 — `RollupError` 단일 정의 |
+| `services/rollups/rollupbuilder.py` | 290 | 신규 — 빌더/헬퍼 함수 + `loadRepository`, `loadCalculator` |
+| `services/rollups/rollupbaseline.py` | 203 | 신규 — `getBaselineRequirements`, `saveBaselineValues`, `resolveBaselineRequirementTuples` |
+| `services/rollups/service.py` | 889 (-465) | 수정 — 주요 서비스 함수만 유지, 위 3파일 import |
+| `services/rollups/calculator.py` | 598 (-8) | `ruleCode`, `targetAtomicMetricId` 로컬 중복 제거 → `calculationengine` import |
+| `utils/calculationengine.py` | +3 | `ruleCode`, `targetAtomicMetricId`, `normalizeSources` `__all__` 추가 |
+
+#### API 영향 없음
+`apis/rollup.py`는 동일한 `service.py` 경로에서 동일한 public 함수명으로 import — 변경 불필요
+
+---
 
 #### 잔여 중복 (이번 커밋 미처리)
 

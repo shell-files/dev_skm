@@ -7,7 +7,7 @@ import Onboarding from '@onboards/OnBoard.jsx';
 import Benchmarking from '@reports/Benchmarking.jsx';
 import Media from '@reports/Media.jsx';
 import Survey from '@reports/Survey.jsx';
-import Result from '@reports/Result.jsx';
+import Result from '@reports/result/Result.jsx';
 import Draft from '@reports/Draft.jsx';
 import Mypage from '@mains/Mypage.jsx';
 import Manager from '@mains/Manager.jsx';

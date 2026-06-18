@@ -25,6 +25,7 @@
 | 13 | `materialities/orchestrator.py 분리 — screeningbuilder로 배치 빌더 추출 (#257)` | ✅ 완료 |
 | 14 | `materialities/context.py 분리 — contextbuilder로 프로파일/수정자 계산 추출 (#257)` | ✅ 완료 |
 | 15 | `onboardings/approvalservice.py 분리 — approvalcycle로 사이클/스코프 헬퍼 추출 (#257)` | ✅ 완료 |
+| 16 | `utils/dmaruleregistry.py 분리 — dmarulevalidator로 정책 검증 로직 추출 (#257)` | ✅ 완료 |
 
 ---
 
@@ -180,8 +181,8 @@ services/rollups/service.py
 | ~~`services/surveys/importservice.py`~~ | ~~751~~ → 78 | ✅ 완료 |
 | ~~`services/materialities/orchestrator.py`~~ | ~~736~~ → 190 | ✅ 완료 |
 | ~~`services/materialities/context.py`~~ | ~~715~~ → 230 | ✅ 완료 |
-| `services/onboardings/approvalservice.py` | 634 | 분리 검토 |
-| `utils/dmaruleregistry.py` | 623 | 분리 검토 |
+| ~~`services/onboardings/approvalservice.py`~~ | ~~634~~ → 429 | ✅ 완료 |
+| ~~`utils/dmaruleregistry.py`~~ | ~~623~~ → 186 | ✅ 완료 |
 | `services/medias/service.py` | 533 | 분리 검토 |
 
 ---

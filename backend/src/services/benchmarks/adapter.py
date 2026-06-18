@@ -11,16 +11,7 @@ from typing import Any, List, Mapping, Optional, Sequence
 
 from src.models.dmaengine import DMASignal, EvidenceSpanV13, ExtractedFactsV13
 from src.utils.subissuemaster import isAllowedIro, getScoringAllowedIros
-from src.utils.typeutils import firstPresent
-
-
-def asFloat(value: Any) -> Optional[float]:
-    if value is None or value == "":
-        return None
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
+from src.utils.typeutils import firstPresent, asFloat
 
 
 def buildEvidenceSpans(rawSpans: Any, sourceType: Optional[str]) -> List[EvidenceSpanV13]:

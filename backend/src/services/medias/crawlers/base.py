@@ -64,6 +64,17 @@ class BaseNewsCrawler:
     def crawl(self, dateFrom: Optional[date] = None) -> NewsCrawlerResult:
         raise NotImplementedError
 
+    def _dedupeItems(self, items: list[dict]) -> list[dict]:
+        seen: set[str] = set()
+        deduped: list[dict] = []
+        for item in items:
+            url = normalizeUrl(item.get("url", ""))
+            if not url or url in seen:
+                continue
+            seen.add(url)
+            deduped.append({**item, "url": url})
+        return deduped
+
 
 def fetchHtml(url: str, timeout: int = 15) -> str:
     request = Request(url, headers={"User-Agent": USER_AGENT})

@@ -26,6 +26,7 @@
 | 14 | `materialities/context.py 분리 — contextbuilder로 프로파일/수정자 계산 추출 (#257)` | ✅ 완료 |
 | 15 | `onboardings/approvalservice.py 분리 — approvalcycle로 사이클/스코프 헬퍼 추출 (#257)` | ✅ 완료 |
 | 16 | `utils/dmaruleregistry.py 분리 — dmarulevalidator로 정책 검증 로직 추출 (#257)` | ✅ 완료 |
+| 17 | `중복 함수 통합 — medias/service 삭제, asFloat/dedupeItems/validateRunId 공통화 (#257)` | ✅ 완료 |
 
 ---
 
@@ -33,7 +34,7 @@
 
 | 우선순위 | 항목 | 상태 |
 |----------|------|------|
-| 1 | 비대해진 파일 분리 | 🔄 진행 중 |
+| **1** | **비대해진 파일 분리** | **✅ 완료** |
 | 2 | API → Service → Repository 계층 준수 | ✅ 완료 |
 | **3** | **Repository 분리 및 정리** | **✅ 완료** |
 | 4 | Service 의존성 정리 및 순환 참조 제거 | 🔲 대기 |
@@ -183,7 +184,7 @@ services/rollups/service.py
 | ~~`services/materialities/context.py`~~ | ~~715~~ → 230 | ✅ 완료 |
 | ~~`services/onboardings/approvalservice.py`~~ | ~~634~~ → 429 | ✅ 완료 |
 | ~~`utils/dmaruleregistry.py`~~ | ~~623~~ → 186 | ✅ 완료 |
-| `services/medias/service.py` | 533 | 분리 검토 |
+| ~~`services/medias/service.py`~~ | ~~533~~ → 459 | ✅ 완료 (newsservice.py 분리 시 이미 감소) |
 
 ---
 

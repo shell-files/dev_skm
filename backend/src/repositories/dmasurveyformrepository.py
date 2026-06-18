@@ -1,6 +1,7 @@
 import json
 
 from src.utils.db import getConn
+from src.repositories.dmasurveyvalidation import validateRunId as _validateRunId
 
 SURVEY_FORM_STATUSES = frozenset({
     "GENERATING",
@@ -93,13 +94,6 @@ WHERE id = ?
   AND survey_status = 'RETRYABLE'
   AND delete_yn = 0
 """
-
-
-def _validateRunId(runId) -> None:
-    if isinstance(runId, bool) or not isinstance(runId, int):
-        raise ValueError(f"runId must be a strict int, got {type(runId).__name__}")
-    if runId <= 0:
-        raise ValueError(f"runId must be > 0, got {runId}")
 
 
 def _parseSnapshot(raw) -> list:

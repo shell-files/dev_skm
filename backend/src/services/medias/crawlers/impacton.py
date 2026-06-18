@@ -113,13 +113,3 @@ class ImpactOnCrawler(BaseNewsCrawler):
             if "<임팩트온>은 지난주 지속가능경영" not in paragraph
         ]
 
-    def _dedupeItems(self, items: list[dict]) -> list[dict]:
-        seen = set()
-        deduped = []
-        for item in items:
-            url = normalizeUrl(item.get("url", ""))
-            if not url or url in seen:
-                continue
-            seen.add(url)
-            deduped.append({**item, "url": url})
-        return deduped

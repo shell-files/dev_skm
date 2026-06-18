@@ -2,6 +2,13 @@ from decimal import Decimal
 from typing import Any, Mapping, Optional, Sequence
 
 
+def asFloat(value: Any, default: Optional[float] = None) -> Optional[float]:
+    """safeFloat alias used by adapter layers; explicitly treats '' as None."""
+    if value == "":
+        return default
+    return safeFloat(value, default)
+
+
 def safeFloat(value, default: Optional[float] = None) -> Optional[float]:
     if value is None:
         return default

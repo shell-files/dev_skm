@@ -115,13 +115,3 @@ class EsgEconomyCrawler(BaseNewsCrawler):
             if not any(keyword in paragraph for keyword in excludeKeywords)
         ]
 
-    def _dedupeItems(self, items: list[dict]) -> list[dict]:
-        seen = set()
-        deduped = []
-        for item in items:
-            url = normalizeUrl(item.get("url", ""))
-            if not url or url in seen:
-                continue
-            seen.add(url)
-            deduped.append({**item, "url": url})
-        return deduped

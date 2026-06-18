@@ -18,10 +18,8 @@ from src.utils.db import save, findAll
 from src.repositories.dmaworkflowrepository import upsertDmaWorkflowStatus
 from src.utils.dmascoring import scoreSignals
 from src.services.benchmarks.adapter import convertToDmaSignals, step0NormalizeBenchmarkFacts
-from src.services.materialities.orchestrator import (
-    step0BuildFactTrace,
-    step2BuildBenchmarkScreeningPayloads,
-)
+from src.services.materialities.orchestrator import step0BuildFactTrace
+from src.services.materialities.screeningbuilder import step2BuildBenchmarkScreeningPayloads
 from src.utils.subissuemaster import subissueMaster
 from src.models.dmaengine import DMASignal
 

@@ -15,8 +15,8 @@ from src.services.medias.baseline import applyMediaBaseline
 from src.services.medias.crawler import applySavedSignalCounts, crawlNewsArticles
 from src.services.medias.pg_pipeline import fetchMediaChunksFromPg
 from src.services.medias.pipeline import processMediaPipeline
-from src.services.materialities.orchestrator import (
-    step0BuildFactTrace,
+from src.services.materialities.orchestrator import step0BuildFactTrace
+from src.services.materialities.screeningbuilder import (
     step1BuildMediaNewsCanonicalPayloads,
     step2BuildKcgsPillarBoostPayloads,
     step2BuildMediaExternalMaxPayloads,

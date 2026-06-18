@@ -22,6 +22,7 @@
 | 10 | `materialities/service.py 분리 — materialitybuilder로 빌더 함수 추출 (#257)` | ✅ 완료 |
 | 11 | `materialities/financialexposure.py 분리 — financialexposurecalc으로 계산 로직 추출 (#257)` | ✅ 완료 |
 | 12 | `surveys/importservice.py 분리 — importmeta, importparser로 추출 (#257)` | ✅ 완료 |
+| 13 | `materialities/orchestrator.py 분리 — screeningbuilder로 배치 빌더 추출 (#257)` | ✅ 완료 |
 
 ---
 
@@ -175,7 +176,7 @@ services/rollups/service.py
 | ~~`services/materialities/financialexposure.py`~~ | ~~820~~ → 424 | ✅ 완료 |
 | ~~`services/materialities/service.py`~~ | ~~819~~ → 472 | ✅ 완료 |
 | ~~`services/surveys/importservice.py`~~ | ~~751~~ → 78 | ✅ 완료 |
-| `services/materialities/orchestrator.py` | 736 | 분리 검토 |
+| ~~`services/materialities/orchestrator.py`~~ | ~~736~~ → 190 | ✅ 완료 |
 | `services/materialities/context.py` | 715 | 분리 검토 |
 | `services/onboardings/approvalservice.py` | 634 | 분리 검토 |
 | `utils/dmaruleregistry.py` | 623 | 분리 검토 |

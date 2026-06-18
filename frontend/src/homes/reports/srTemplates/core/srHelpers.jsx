@@ -308,3 +308,19 @@ export function Narrative({
   }
   return <NarrativeStatic template={tpl} metrics={metrics} metricIds={metricIds} />;
 }
+
+export function buildMetricsFromEdits(adapter, editMetrics, rows) {
+  const map = { ...adapter(rows) };
+  Object.entries(editMetrics || {}).forEach(([id, raw]) => {
+    const t = (raw ?? "").trim();
+    if (!t) return;
+    const n = parseFloat(t.replace(/[^0-9.\-]/g, ""));
+    map[id] = {
+      ...(map[id] || {}),
+      displayValue: t,
+      value: Number.isNaN(n) ? t : n,
+      status: "DRAFT",
+    };
+  });
+  return map;
+}

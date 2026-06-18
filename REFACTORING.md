@@ -236,15 +236,14 @@ services/rollups/service.py
 | `Draft.jsx` | 908 | `srTemplates/core/TrendChart.jsx`, `srTemplates/core/draftExport.js` |
 | `OnBoard.jsx` | 1,570 → 1,177 | `OnboardingStatCards.jsx`, `OnboardingWorkflowCta.jsx`, `OnboardingMetricTable.jsx` |
 | `Result.jsx` | 1,399 → 817 | `result/DoubleMaterialityChart.jsx`, `result/ImportanceBadge.jsx` (result/ 폴더 분리) |
+| `Media.jsx` | 1,323 → 997 | `media/mediaData.jsx`, `media/MediaResultDashboard.jsx` (media/ 폴더 분리) |
+| `BenchMarking.jsx` | 819 → 543 | `bench/benchConfig.js`, `bench/BenchResultDashboard.jsx` (bench/ 폴더 분리) |
+| `Survey.jsx` | 847 → 577 | `survey/surveyConstants.jsx`, `survey/SurveyResultDashboard.jsx` (survey/ 폴더 분리) |
 
 #### 대기 중
 
 | 파일 | 줄 수 | 우선순위 |
 |------|-------|---------|
-| ~~`Result.jsx`~~ | ~~1,399~~ → 817 |  완료 |
-| ~~`Media.jsx`~~ | ~~1,323~~ → 997 |  완료 |
-| `Survey.jsx` | 790 | 중간 |
-| `BenchMarking.jsx` | 740 | 중간 |
 | `ManagerData.jsx` | 733 | 중간 |
 | `OnboardingModalShell.jsx` | 652 | 중간 |
 | `Signup.jsx` | 607 | 낮음 |

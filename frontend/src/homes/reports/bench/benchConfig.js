@@ -1,0 +1,33 @@
+export const BENCHMARK_GROUP_CONFIG = {
+  leader: { fileType: "Leader", label: "리더",  letter: "L", color: "green"  },
+  peer:   { fileType: "Peer",   label: "피어",  letter: "P", color: "blue"   },
+  sub:    { fileType: "Own",    label: "자사",  letter: "S", color: "orange" },
+};
+
+export const mapBenchmarkResultToDashboard = (dto) => ({
+  stats: {
+    reports: dto.summary?.analyzedReportCount ?? 0,
+    leaderCount: dto.summary?.leaderReportCount ?? 0,
+    peerCount: dto.summary?.peerReportCount ?? 0,
+    ownCount: dto.summary?.ownReportCount ?? 0,
+    identifiedIssues: dto.summary?.identifiedIssueCount ?? 0,
+    commonIssues: dto.summary?.commonIssueCount ?? 0,
+    blindSpots: dto.summary?.blindSpotCount ?? 0,
+  },
+  topIssues: (dto.topIssues || []).map((item) => ({
+    rank: item.rankNo,
+    name: item.displaySubIssueName || item.subIssueCode,
+    impact: item.benchmarkImpactScore10 ?? item.benchmarkImpactScore05 ?? 0,
+    financial: item.benchmarkFinancialScore10 ?? item.benchmarkFinancialScore05 ?? 0,
+  })),
+  commonIssues: (dto.commonIssues || []).map((item) => ({
+    name: item.displaySubIssueName || item.subIssueCode,
+    leader: Boolean(item.leaderObserved),
+    peer: Boolean(item.peerObserved),
+    own: Boolean(item.ownObserved),
+  })),
+  blindSpots: (dto.blindSpotIssues || []).map((item) => ({
+    title: item.displaySubIssueName || item.subIssueCode,
+    desc: item.summary || "리더·피어 보고서 대비 자사 보고서에서 관측되지 않은 이슈입니다.",
+  })),
+});

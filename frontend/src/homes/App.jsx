@@ -4,9 +4,9 @@ import '@styles/App.css'
 import "@styles/mains.css";
 import NotFound from '@errors/NotFound.jsx';
 import Onboarding from '@onboards/OnBoard.jsx';
-import Benchmarking from '@reports/Benchmarking.jsx';
+import Benchmarking from '@reports/bench/BenchMarking.jsx';
 import Media from '@reports/media/Media.jsx';
-import Survey from '@reports/Survey.jsx';
+import Survey from '@reports/survey/Survey.jsx';
 import Result from '@reports/result/Result.jsx';
 import Draft from '@reports/Draft.jsx';
 import Mypage from '@mains/Mypage.jsx';

@@ -32,6 +32,8 @@
 | 20 | `OnBoard.jsx 분리 — OnboardingStatCards/WorkflowCta/MetricTable 추출 (#257)` |  완료 |
 | 21 | `Result.jsx 분리 — DoubleMaterialityChart/ImportanceBadge 추출 및 result/ 폴더 정리 (#257)` |  완료 |
 | 22 | `Media.jsx 분리 — MediaResultDashboard/mediaData 추출 및 media/ 폴더 정리 (#257)` |  완료 |
+| 23 | `BenchMarking.jsx 분리 — BenchResultDashboard/benchConfig 추출 및 bench/ 폴더 정리 (#257)` |  완료 |
+| 24 | `Survey.jsx 분리 — SurveyResultDashboard/surveyConstants 추출 및 survey/ 폴더 정리 (#257)` |  완료 |
 
 ---
 

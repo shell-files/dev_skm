@@ -1,4 +1,25 @@
+/**
+ * OnboardingMetricTable.jsx
+ * 레이어: Component (onboards)
+ * 역할: 온보딩 지표 목록을 테이블로 렌더링하며, 담당자 지정·일괄 선택·입력 버튼 등을 제공하는 데이터 테이블
+ *
+ * Props:
+ *   g0Error — 지표 조회 오류 메시지
+ *   g0Items — 표시할 지표 항목 배열 (할당·승인 상태 포함)
+ *   loadingG0 — 지표 로딩 여부
+ *   selectedMetricIds — 일괄 선택된 metricId 배열
+ *   onSelectMetric — 행 체크박스 토글 핸들러
+ *   onToggleSelectAll — 전체 선택/해제 핸들러
+ *   onBulkAssignRequested — 일괄 담당자 지정 요청 핸들러
+ *   onOpenMetric — 지표 입력 모달 열기 핸들러
+ *   onRetry — 오류 발생 시 재시도 핸들러
+ *   viewerRole — 현재 사용자 역할
+ *   canManageAssignments — 담당자 지정 권한 여부
+ *   isConsultantViewer — 컨설턴트 뷰어 여부 (읽기 전용 상세 보기만 허용)
+ *   readOnlyYn — 읽기 전용 모드 여부
+ */
 import { calculateMetricStatus } from "./onboardingUtils";
+import EmptyState from "@components/UI/EmptyState";
 
 const groupByMetric = (items = []) => {
   const grouped = [];
@@ -50,10 +71,10 @@ const OnboardingMetricTable = ({
 
   if (g0Items.length === 0) {
     return (
-      <div className="ob1-empty-state">
-        <p className="ob1-empty-title">할당된 데이터가 없습니다.</p>
-        <p className="ob1-empty-desc">보고서 워크플로우를 먼저 시작해 주세요.</p>
-      </div>
+      <EmptyState
+        title="할당된 데이터가 없습니다."
+        desc="보고서 워크플로우를 먼저 시작해 주세요."
+      />
     );
   }
 

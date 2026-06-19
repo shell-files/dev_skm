@@ -1,3 +1,11 @@
+/**
+ * OnboardingStatCards.jsx
+ * 레이어: Component (onboards)
+ * 역할: 온보딩 지표 입력 진행 현황을 전체·완료·진행·미입력 수치와 프로그레스 바로 시각화하는 통계 카드
+ *
+ * Props:
+ *   stats — 통계 객체 { totalCount, completedCount, inProgressCount, notStartedCount }
+ */
 const OnboardingStatCards = ({ stats }) => {
   const total = stats.totalCount || 1;
   const completed = stats.completedCount || 0;

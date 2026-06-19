@@ -1,3 +1,12 @@
+/**
+ * RollupInboxPanel.jsx
+ * 레이어: Component (onboards)
+ * 역할: ROLLUP_RESPONSE 모드에서 자회사가 수신한 지주사 데이터 요청 목록(받은 요청함)을 테이블로 표시하고 상세 진입을 지원하는 패널
+ *
+ * Props:
+ *   requests — 수신된 롤업 요청 배열 (batchId, parentCompanyName, transferStatus 등 포함)
+ *   onRefresh — 목록 새로고침 핸들러
+ */
 import React from "react";
 import { useNavigate } from "react-router";
 import { useDispatch } from "react-redux";

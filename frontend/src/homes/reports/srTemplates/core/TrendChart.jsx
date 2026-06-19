@@ -1,3 +1,11 @@
+/**
+ * TrendChart.jsx
+ * 레이어: Component (srTemplates/core)
+ * 역할: 지표의 연도별 추이 데이터를 SVG 꺾은선 그래프로 렌더링하는 미니 트렌드 차트
+ *
+ * Props:
+ *   trend — 연도·값 배열 [{ y: string, v: number }, ...]
+ */
 const TrendChart = ({ trend }) => {
   const W = 280, H = 60, pad = 20;
   const vals = trend.map((t) => t.v);

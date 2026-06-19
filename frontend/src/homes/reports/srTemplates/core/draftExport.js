@@ -1,3 +1,13 @@
+/**
+ * draftExport.js
+ * 레이어: Utils (srTemplates/core)
+ * 역할: 보고서 초안 화면을 PDF 또는 PPT(이미지형/편집형)로 내보내는 비동기 내보내기 유틸
+ *
+ * exports:
+ *   exportPdf — 서브이슈 페이지를 A4 가로 PDF로 저장 (목차·페이지 내부 링크 포함)
+ *   exportPptNative — DOM 요소를 직접 파싱해 텍스트·표·도형 기반 편집형 PPTX로 저장
+ *   exportPptImg — 각 페이지를 canvas 이미지로 캡처한 이미지형 PPTX로 저장
+ */
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import pptxgen from "pptxgenjs";

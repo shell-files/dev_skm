@@ -1,3 +1,13 @@
+/**
+ * UserManagementModal.jsx
+ * 레이어: Component (mains/modal)
+ * 역할: 개별 사용자의 기본 정보·역할·담당 데이터 현황을 조회하고 권한 변경·연결 해제 등 관리 액션을 제공하는 모달
+ *
+ * Props:
+ *   isOpen — 모달 표시 여부
+ *   onClose — 모달 닫기 핸들러
+ *   userItem — 관리할 사용자 객체 (name, email, company, role, assignmentScopes 등)
+ */
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { showDefaultAlert } from '@components/UI/ServiceAlert';

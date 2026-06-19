@@ -26,6 +26,7 @@ import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert"
 import { useAuth } from "@hooks/AuthContext";
 import ApprovalProjectSelectModal from "../modal/ApprovalProjectSelectModal";
 import PageHeader from "@components/UI/PageHeader";
+import EmptyState from "@components/UI/EmptyState";
 import {
   DEFAULT_REPORTING_YEAR,
   clearApprovalProject,
@@ -640,10 +641,10 @@ const ManagerData = () => {
         {activeTab === "data" && (
           <div className="manager-data-tab-container">
             {!hasValidRollupApprovalContext ? (
-              <div className="ob1-empty-state">
-                <p className="ob1-empty-title">데이터 요청 정보가 없습니다.</p>
-                <p className="ob1-empty-desc">받은 요청함에서 다시 진입해 주세요.</p>
-              </div>
+              <EmptyState
+                title="데이터 요청 정보가 없습니다."
+                desc="받은 요청함에서 다시 진입해 주세요."
+              />
             ) : (
               <DataTab
                 activeService={activeService}

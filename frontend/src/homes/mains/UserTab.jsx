@@ -1,3 +1,20 @@
+/**
+ * UserTab.jsx
+ * 레이어: Component (mains)
+ * 역할: Manager 페이지의 사용자 관리 탭 — 사용자 검색·목록 테이블 렌더링, 역할·연결 상태·담당 영역 표시, 개별 관리 모달 진입을 담당
+ *
+ * Props:
+ *   isLoading — 데이터 로딩 여부
+ *   userSearch — 검색 키워드
+ *   setUserSearch — 검색어 상태 업데이트 함수
+ *   fetchData — 사용자 목록 새로고침 핸들러
+ *   pagedUsers — 현재 페이지에 표시할 사용자 배열
+ *   filteredUsers — 검색 필터 적용된 전체 사용자 배열 (페이지네이션 계산용)
+ *   PAGE_SIZE — 페이지당 표시 건수
+ *   userPage — 현재 페이지 번호
+ *   setUserPage — 페이지 번호 업데이트 함수
+ *   onOpenUserManagement — 사용자 관리 모달 열기 핸들러
+ */
 import React, { useState } from 'react';
 
 const UserTab = ({

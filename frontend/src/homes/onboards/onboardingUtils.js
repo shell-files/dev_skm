@@ -1,3 +1,20 @@
+/**
+ * onboardingUtils.js
+ * 레이어: Utils (onboards)
+ * 역할: 온보딩 지표 입력 모드 판별·상태 계산·통계 집계 등 순수 유틸리티 함수 모음
+ *
+ * exports:
+ *   STRUCTURED_LOOKUP_IDS — 구조화 조회 입력 대상 atomicMetricId 집합
+ *   EDITABLE_INPUT_MODES — 수기 입력 가능한 inputMode 집합
+ *   getAtomicId — atomicMetricId 추출
+ *   resolveG0InputMode — 지표 항목의 입력 모드 결정 (MANUAL_NUMBER / MANUAL_TEXTAREA / YEAR_RANGE / STRUCTURED_LOOKUP / ROLLUP_READONLY)
+ *   isEditableItem — 수기 입력 가능 여부 판별
+ *   getInputTypeBadge — 입력 유형 표시용 배지 레이블·CSS 클래스 반환
+ *   hasAtomicValue — atomic 항목에 입력값이 존재하는지 여부 판별
+ *   calculateMetricStatus — 지표 그룹의 입력 완료 상태 계산
+ *   calculateProfileStats — 전체 지표 목록의 완료·진행·미입력 통계 집계
+ *   getStatusInfo — 프로필 상태 코드를 레이블·CSS 클래스로 변환
+ */
 export const STRUCTURED_LOOKUP_IDS = new Set(["G0-05__QL0002", "G0-06__QL0001"]);
 export const EDITABLE_INPUT_MODES = new Set([
   "MANUAL_NUMBER",

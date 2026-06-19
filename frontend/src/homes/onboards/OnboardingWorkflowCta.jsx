@@ -1,3 +1,16 @@
+/**
+ * OnboardingWorkflowCta.jsx
+ * 레이어: Component (onboards)
+ * 역할: 온보딩 워크플로우 단계(nextAction)에 따라 CTA 버튼 텍스트·활성화 여부를 동적으로 렌더링하는 컴포넌트
+ *
+ * Props:
+ *   variant — "action" (헤더용 버튼) 또는 "noRun" (NO_RUN 상태 안내 카드)
+ *   loadingWorkflow — 워크플로우 로딩 여부
+ *   workflow — 현재 워크플로우 객체 (nextAction 포함)
+ *   isNoRunWorkflow — 워크플로우가 NO_RUN인지 판별하는 함수
+ *   onBasisModalOpen — 보고서 발행 기준 선택 모달 열기 핸들러
+ *   onCtaClick — CTA 버튼 클릭 핸들러
+ */
 const OnboardingWorkflowCta = ({
   loadingWorkflow,
   variant = "action",

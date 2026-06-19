@@ -1,3 +1,18 @@
+/**
+ * ManagerData.jsx
+ * 레이어: Page (mains) — 구버전 파일
+ * 역할: ESG 통합 관리 페이지의 데이터 승인 전담 컨테이너 — 보고서 프로젝트·승인 사이클 선택, 승인·반려·검토 일괄 처리, KPI 카드 표시를 담당
+ *
+ * 주요 상태:
+ *   approvalCycleType — 현재 승인 범위 (PRE_DMA_G0 / POST_DMA_DISCLOSURE / ROLLUP_RESPONSE)
+ *   selectedIds — 일괄 처리를 위해 선택된 metricId 배열
+ *   isApprovalProjectModalOpen — 보고서 프로젝트 선택 모달 표시 여부
+ *   isRejectModalOpen — 단건 반려 사유 입력 모달 표시 여부
+ *
+ * 의존 컴포넌트:
+ *   DataTab — 승인 항목 테이블 및 액션 버튼
+ *   ApprovalProjectSelectModal — 보고서 프로젝트 선택 모달
+ */
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams, useLocation } from "react-router";

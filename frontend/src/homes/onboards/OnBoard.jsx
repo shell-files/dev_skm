@@ -1,3 +1,26 @@
+/**
+ * OnBoard.jsx
+ * 레이어: Page (onboards)
+ * 역할: 온보딩 메인 페이지 — ESG 지표 입력·할당·롤업 요청·승인 워크플로우를 통합 관리하는 최상위 컨테이너
+ *
+ * Props / 주요 상태:
+ *   workflow — Redux에서 읽은 현재 워크플로우 정보 (nextAction, reportBasisType 등)
+ *   activeCycleType — PRE_DMA_G0 / POST_DMA_DISCLOSURE / ROLLUP_RESPONSE 중 현재 사이클
+ *   selectedMetricIds — 일괄 담당자 지정을 위해 선택된 metricId 배열
+ *   g0Items — 플래튼된 온보딩 지표 항목 목록 (할당 정보 병합 포함)
+ *
+ * 의존 컴포넌트:
+ *   OnboardingStatCards — 전체·완료·진행·미입력 통계 카드
+ *   OnboardingWorkflowCta — 워크플로우 단계별 CTA 버튼
+ *   OnboardingMetricTable — 지표 목록 테이블
+ *   OnboardingModalShell — 지표 입력 모달
+ *   MetricAssignmentModal — 담당자 지정 모달 (단건·일괄)
+ *   SubsidiaryRequestModal — 자회사 데이터 요청 모달
+ *   SubsidiaryTransferModal — 자회사 데이터 전송 모달
+ *   RollupSummaryPanel — 자회사 데이터 취합 현황 패널
+ *   RollupInboxPanel — 받은 요청함 패널 (ROLLUP_RESPONSE 모드)
+ *   ApprovalProjectSelectModal — 보고서 프로젝트 선택 모달
+ */
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";

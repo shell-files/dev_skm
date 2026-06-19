@@ -1,17 +1,28 @@
+/**
+ * OnboardingModalShell.jsx
+ * 레이어: Component (onboards/modal)
+ * 역할: 온보딩 지표의 세부 atomic 항목을 그룹별(집계형·입력형·참조형·계산형)로 분류하여 입력·조회할 수 있는 공통 지표 입력 모달 쉘
+ *
+ * Props:
+ *   isOpen — 모달 표시 여부
+ *   onClose — 모달 닫기 핸들러
+ *   metricItem — 선택된 상위 지표 항목 (metricId, metricName, status 등)
+ *   subMetrics — 해당 지표의 atomic 입력 항목 배열
+ *   onSaveAndSubmit — 임시저장·승인 요청 공통 핸들러 (values, files, status 전달)
+ *   submitLabel — 제출 버튼 레이블 (기본값: "승인 요청")
+ *   onOpenAssignment — 담당자 지정 모달 열기 핸들러
+ *   canManageAssignments — 담당자 지정 권한 여부
+ *   isConsultantViewer — 컨설턴트 읽기 전용 모드 여부
+ *   readOnlyYn — 읽기 전용 모드 여부 (전송 완료된 ROLLUP_RESPONSE 등)
+ *
+ * 의존 컴포넌트:
+ *   TextEditorModal — 서술형·구조화 조회 항목의 전체 화면 텍스트 편집기 모달
+ */
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import '@styles/onboardingModal.css';
 import { getAtomicId, isEditableItem, resolveG0InputMode } from '../onboardingUtils';
 import TextEditorModal from './TextEditorModal';
-
-/**
- * OnboardingModalShell
- *
- * G0 공통 입력 modal shell.
- * - key: atomicMetricId (issueId fallback 제거)
- * - inputMode / editableYn 기준으로 입력, lookup, read-only renderer를 분기
- * - rollup/derived 값은 수기 입력하지 않음
- */
 export default function OnboardingModalShell({
   isOpen,
   onClose,

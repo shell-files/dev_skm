@@ -1,3 +1,8 @@
+/**
+ * BenchMarking.jsx
+ * 레이어: Page
+ * 역할: 리더·피어·자사 ESG 보고서(SR) PDF를 업로드하여 AI 벤치마킹 분석을 실행하고, 이슈 점수·공통 이슈·Blind Spot 결과를 표시하는 페이지
+ */
 import { useRef, useState, Fragment, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";

@@ -1,3 +1,11 @@
+/**
+ * climateTarget.jsx
+ * 레이어: Component (srTemplates/subIssues)
+ * 역할: 기후목표·전환계획 서브이슈의 SR 페이지 컴포넌트, adapter, metricFields, 서브이슈 매니페스트를 하나의 파일로 통합한 모듈
+ *
+ * exports:
+ *   climateTarget (default) — id·label·adapter·metricFields·pages를 포함하는 서브이슈 매니페스트 객체
+ */
 // srTemplates/subIssues/climateTarget.jsx
 // 기후목표·전환계획 서브이슈 단일 파일
 // (통합: index.js + adapter.js + metricFields.js + pages/ClimateTargetPageA.jsx)

@@ -1,3 +1,19 @@
+/**
+ * Manager.jsx
+ * 레이어: Page (mains)
+ * 역할: ESG 통합 관리 시스템 페이지 — 사용자 관리 탭(UserTab)과 관계·초대 관리 탭(Invite)을 전환하며 사용자 목록을 조회·관리하는 컨테이너
+ *
+ * 주요 상태:
+ *   activeTab — 현재 활성 탭 ("user" / "Invite")
+ *   users — 조회된 사용자 목록
+ *   isUserMgmtModalOpen — 사용자 관리 모달 표시 여부
+ *   selectedUserForMgmt — 모달에서 관리할 선택된 사용자 객체
+ *
+ * 의존 컴포넌트:
+ *   UserTab — 사용자 목록 조회·검색 탭
+ *   Invite — 컨설턴트·자회사 관계 초대 관리 탭
+ *   UserManagementModal — 개별 사용자 권한·할당 관리 모달
+ */
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import '@styles/Manager.css';
 import Invite from './Invite.jsx'

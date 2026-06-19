@@ -1,3 +1,15 @@
+/**
+ * App.jsx
+ * 레이어: Page (루트 레이아웃)
+ * 역할: 인증 상태에 따라 로그인 라우트와 메인 레이아웃(헤더·사이드바·라우트)을 분기 렌더링하는 최상위 컴포넌트
+ *
+ * 의존 컴포넌트:
+ *   Headernav — 상단 전역 헤더
+ *   Sidebarnav — 좌측 전역 사이드바
+ *   Dashboard — 메인 대시보드 페이지
+ *   NotFound — 404 에러 페이지
+ *   Login, SignUp, CompanySelect — 로그인 관련 페이지
+ */
 import React, { useState, useEffect } from "react";
 import { Routes, Route, Outlet } from "react-router";
 import '@styles/App.css'

@@ -1,3 +1,14 @@
+/**
+ * Draft.jsx
+ * 레이어: Page
+ * 역할: SR 템플릿 기반 ESG 보고서 초안을 페이지 단위로 미리보기·편집하고, PDF/PPT 내보내기 및 데이터 추적 패널을 제공하는 보고서 초안 작성 페이지
+ *
+ * 의존 컴포넌트:
+ *   TrendChart — 지표 연도별 추이 SVG 차트
+ *   subIssues (registry) — 서브이슈별 SR 페이지 컴포넌트 레지스트리
+ *   buildMetricsFromEdits (srHelpers) — 편집값과 DB 지표를 병합해 MetricsMap 반환
+ *   exportPdf, exportPptNative (draftExport) — PDF·PPT 내보내기 유틸
+ */
 import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
 import "@styles/draft.css";

@@ -38,6 +38,7 @@
 | 26 | `FE 파일 주석 정리 — 섹션 레이블 제거 및 파일 상단 헤더 추가 (#257)` |  완료 |
 | 27 | `BE 파일 주석 정리 — 영문 주석 한국어 번역 및 파일 상단 역할 설명 추가 (#257)` |  완료 |
 | 28 | `[BE] Service 의존성 정리 — contextgraph os.getenv→settings, service.py lazy import 제거 (#257)` |  완료 |
+| 29 | `[FE] 공통 EmptyState 컴포넌트 추출 및 FE 파일 전체 헤더 주석 추가 (#257)` |  완료 |
 
 ---
 
@@ -52,8 +53,8 @@
 | 5 | 중복 코드 제거 |  완료 (46→32개, 나머지는 의도적 패턴) |
 | **6** | **Utils 남용 방지** | ** 완료** |
 | 7 | Frontend 페이지 분리 + 주석 정리 |  완료 (reportSlice.js는 별도 검토) |
-| 8 | 공통 컴포넌트 재사용 |  대기 |
-| 9 | 컨벤션 준수 및 문서화 |  진행 중 (FE/BE 주석 정리 완료) |
+| 8 | 공통 컴포넌트 재사용 |  완료 (EmptyState 추출) |
+| 9 | 컨벤션 준수 및 문서화 |  완료 (FE 전체 헤더 + BE 주석 완료) |
 
 ---
 
@@ -310,9 +311,53 @@ services/rollups/service.py
 
 ---
 
-###  [우선순위 8] 공통 컴포넌트 재사용
+###  [우선순위 8] 공통 컴포넌트 재사용 — 2026-06-19
 
-2회 이상 반복 사용 컴포넌트 추출 필요 (미진단)
+**목적:** 인라인으로 중복 사용된 UI 패턴을 `components/UI/` 공통 컴포넌트로 추출
+
+#### 변경 내용
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| `components/UI/EmptyState.jsx` | 신규 — 빈 상태 안내 컴포넌트 (title/desc/icon props) |
+| `homes/onboards/OnboardingMetricTable.jsx` | `ob1-empty-state` div → `<EmptyState>` 교체 |
+| `homes/mains/managerdata/ManagerData.jsx` | `ob1-empty-state` div → `<EmptyState>` 교체 |
+
+#### 진단 결과 — 추출 불필요 항목
+
+| 패턴 | 판단 |
+|------|------|
+| `ob1-empty-state` CSS 클래스 | `onboarding1.css` 미import 파일에서 사용 중 → EmptyState 인라인 스타일로 통합 |
+| StatusBadge / 상태 뱃지 | 파일마다 상태값·레이블·className이 달라 즉시 통합 실익 없음 |
+| SectionHeader | 페이지마다 h1~h3 레벨, 버튼 구성이 달라 공통화 범위 불명확 |
+
+---
+
+###  [우선순위 9] 컨벤션 준수 및 문서화 — 2026-06-19
+
+**목적:** FE 미완료 파일 헤더 일괄 추가 + API 정의서 생성
+
+#### 변경 내용
+
+**FE 파일 헤더 추가 (41개)**
+
+| 폴더 | 파일 수 |
+|------|---------|
+| `homes/onboards/` | 7개 (OnBoard, MetricTable, StatCards, WorkflowCta, RollupInboxPanel, RollupSummaryPanel, onboardingUtils) |
+| `homes/onboards/modal/` | 6개 (MetricAssignment, ModalShell, RollupStatus, SubsidiaryRequest, SubsidiaryTransfer, TextEditor) |
+| `homes/mains/` | 5개 (Invite, Manager, ManagerData 구버전, DataTab 구버전, UserTab) |
+| `homes/mains/modal/` | 3개 (ApprovalDetail, ApprovalProjectSelect, UserManagement) |
+| `homes/logins/` | 3개 (CompanySelect, LoginVisualPanel, Signup) |
+| `homes/` | 3개 (App, Dashboard, errors/NotFound) |
+| `homes/reports/` | 3개 (BenchMarking, Draft, Survey — 구버전 래퍼) |
+| `homes/reports/srTemplates/core/` | 4개 (SRChrome, TrendChart, draftExport, srHelpers) |
+| `homes/reports/srTemplates/subIssues/` | 5개 (climateTarget, ecoProduct, productSafety, supplyChain, talentDev) |
+| `homes/reports/srTemplates/` | 1개 (registry) |
+
+**docs/API.md 생성**
+
+- 17개 도메인, 엔드포인트별 Method/URL/Description/Auth/Request Parameters/Response Body 상세 정의
+- 형식: 각 엔드포인트마다 헤더 테이블 + 파라미터 테이블 + 성공/실패 JSON 예시
 
 ---
 

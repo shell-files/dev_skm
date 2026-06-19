@@ -165,6 +165,7 @@ def _applyBenchmarkBoost(signals: list) -> list:
 
 
 def normalizeSourceType(value: str) -> str:
+    """다양한 표현의 sourceType 입력을 내부 표준 키(leader_sr, peer_sr 등)로 정규화한다."""
     if not value:
         raise ValueError("sourceType is required. Provide sourceType or TE_SR_FILE.type.")
 
@@ -199,6 +200,7 @@ def normalizeSourceType(value: str) -> str:
 
 
 def uploadSr(fileModel: FileModel, userModel: UserModel):
+    """SR PDF 파일을 검증해 서버에 저장하고 DB에 파일 메타데이터를 기록한다."""
     files = fileModel.file
     if len(files) == 0:
         return ResponseModel(False, "업로드된 파일이 없습니다.")
@@ -237,6 +239,7 @@ def uploadSr(fileModel: FileModel, userModel: UserModel):
 
 
 async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
+    """업로드된 SR PDF를 Gemini OCR로 분석해 DMASignal을 저장하고 v1.3 Shadow Trace를 교체한다."""
     runId = fileFindModel.esgMaterialityRunId
 
     # PG 모드 제외 — 파일 업로드 모드만 사용

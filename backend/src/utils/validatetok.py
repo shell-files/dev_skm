@@ -9,6 +9,11 @@ from src.utils.db import findOne, save
 from src.models.model import ResponseModel
 
 def validateToken(currentUuid: str):
+    """
+    UUID로 Redis 세션을 검증한다.
+    동시 요청 Race Condition을 방지하기 위해 rotatedKey를 먼저 확인하며,
+    액세스 토큰 만료 시 refresh token으로 재발급하고 구 UUID를 30초간 유예한다.
+    """
     try:
         # 0. 다른 동시 요청이 이미 이 UUID를 갱신했는지 먼저 확인 (Race Condition 방지)
         rotatedRes = getRotatedTokenRedis(currentUuid)

@@ -27,6 +27,7 @@ INVITE_STATE_EXPIRED = "토큰만료"
 
 
 def inviteProcess(inviteId: str):
+    """초대 링크 접근 시 회원가입 SPA 페이지를 HTML로 반환한다."""
     html = """
     <!DOCTYPE html>
     <html lang="ko">
@@ -54,6 +55,10 @@ def inviteProcess(inviteId: str):
 
 
 def inviteSignUp(inviteId: str, inviteSignUpUserInfo: inviteSignUpUserInfo):
+    """
+    Redis 초대 토큰을 검증하고 회원가입을 완료한다.
+    USER 생성, USER_ROLE 등록, ESG_METRIC_ASSIGNMENT 갱신, INVITE 상태 변경을 하나의 트랜잭션으로 처리한다.
+    """
     email = str(inviteSignUpUserInfo.email or "").strip().lower()
     password = inviteSignUpUserInfo.password
     name = inviteSignUpUserInfo.name
@@ -169,6 +174,10 @@ def inviteSignUp(inviteId: str, inviteSignUpUserInfo: inviteSignUpUserInfo):
 
 
 def inviteConsultantProcess(inviteConsultantModel, userModel):
+    """
+    컨설턴트 초대 토큰을 생성하고 Redis에 저장한 후 Kafka로 초대 메일을 발송한다.
+    이미 가입된 사용자와 미가입 사용자를 구분하여 다른 Kafka 이벤트 타입을 사용한다.
+    """
     try:
         userId = userModel.id
         companySql = f"""
@@ -221,6 +230,10 @@ def inviteConsultantProcess(inviteConsultantModel, userModel):
 
 
 def inviteMember(inviteMemberModel: inviteMemberModel, userModel=Depends(get_token)):
+    """
+    일반 멤버 초대 토큰을 생성하고 Redis에 저장한 후 Kafka로 초대 메일을 발송한다.
+    프로젝트 ID와 이슈 그룹을 포함한 초대 정보를 JWE 토큰에 담아 전달한다.
+    """
     try:
         userId = userModel.id
         selectSql = f"""
@@ -283,4 +296,5 @@ def inviteMember(inviteMemberModel: inviteMemberModel, userModel=Depends(get_tok
 
 
 def inviteExpireSeconds() -> int:
+    """설정값(invite_token_expire_days)을 초 단위로 변환하여 반환한다 (최소 1일 보장)."""
     return max(1, int(settings.invite_token_expire_days)) * 24 * 60 * 60

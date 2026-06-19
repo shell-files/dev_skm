@@ -50,6 +50,7 @@ MEDIA_SOURCE_TYPES = ["news", "agency", "regulation"]
 
 
 def buildResultItem(row: dict, selectedCodes: list) -> MaterialityResultItemDto:
+    """스코어 요약 행 하나를 MaterialityResultItemDto로 변환한다."""
     code = row.get("sub_issue_code", "")
     benchImp = _safeFloat(row.get("benchmark_impact_score"))
     benchFin = _safeFloat(row.get("benchmark_financial_score"))
@@ -94,6 +95,7 @@ def buildResultItem(row: dict, selectedCodes: list) -> MaterialityResultItemDto:
 
 
 def buildMatrixItem(item: MaterialityResultItemDto) -> MatrixItemDto:
+    """결과 아이템에서 매트릭스 시각화용 x/y 좌표 객체를 생성한다."""
     return MatrixItemDto(
         subIssueCode=item.subIssueCode,
         displaySubIssueName=item.displaySubIssueName,
@@ -110,6 +112,7 @@ def buildMatrixItem(item: MaterialityResultItemDto) -> MatrixItemDto:
 
 
 def buildTopIssues(items: list, selectedCodes: list) -> list:
+    """선정된 코드 순서대로 Top 이슈 DTO 목록을 생성하며, 선정 이슈가 없으면 점수 상위 N개로 대체한다."""
     byCode = {item.subIssueCode: item for item in items}
     selectedItems = [byCode[code] for code in selectedCodes if code in byCode]
     if not selectedItems:
@@ -143,6 +146,7 @@ def buildTopIssues(items: list, selectedCodes: list) -> list:
 
 
 def buildCoverageSummary(items: list) -> CoverageSummaryDto:
+    """전체 이슈 목록의 단계별 커버리지 상태를 집계해 요약 DTO를 반환한다."""
     counts = {"FULL": 0, "PARTIAL": 0, "LIMITED": 0, "NO_DATA": 0}
     for item in items:
         observedCount = sum([item.coverage.benchmarkObserved, item.coverage.mediaObserved, item.coverage.surveyObserved])
@@ -156,6 +160,7 @@ def buildCoverageSummary(items: list) -> CoverageSummaryDto:
 
 
 def resolveSelectedContext(runId: int, rows: list) -> dict:
+    """확정 선정 테이블을 우선 조회하고, 없으면 점수 순위로 대체해 선정 컨텍스트를 반환한다."""
     selectedRows = listSelectedSubIssues(runId)
     if selectedRows:
         selectedCodes = [row["sub_issue_code"] for row in selectedRows if row.get("sub_issue_code")][:SELECTED_TOP_N]
@@ -177,6 +182,7 @@ def resolveSelectedContext(runId: int, rows: list) -> dict:
 
 
 def buildSelectionReasons(selectedContext: dict, items: list) -> list:
+    """선정된 코드별로 선정 근거 DTO를 생성해 반환한다."""
     byCode = {item.subIssueCode: item for item in items}
     selectedRowsByCode = {row.get("sub_issue_code"): row for row in selectedContext.get("selectedRows", [])}
     reasons = []
@@ -206,6 +212,7 @@ def buildSelectionReasons(selectedContext: dict, items: list) -> list:
 
 
 def buildObservationMap(rows: list) -> dict:
+    """신호 집계 행 목록을 {subIssueCode: {sourceType: {count}}} 형태의 관측 맵으로 변환한다."""
     observations = {}
     for row in rows:
         code = row.get("sub_issue_code")
@@ -221,6 +228,7 @@ def buildObservationMap(rows: list) -> dict:
 
 
 def buildEvidenceSourceCounts(rows: list) -> dict:
+    """증거 집계 행 목록을 {sourceType: {evidenceCount, reportCount}} 형태로 변환한다."""
     result = {}
     for row in rows:
         sourceType = row.get("source_type")
@@ -234,6 +242,7 @@ def buildEvidenceSourceCounts(rows: list) -> dict:
 
 
 def buildBenchmarkObservationIssue(code: str, obs: dict) -> BenchmarkObservationIssueDto:
+    """서브이슈 코드와 관측 맵으로 벤치마크 관측 이슈 DTO를 생성한다."""
     return BenchmarkObservationIssueDto(
         **subIssueBase(code),
         leaderObserved=isObserved(obs, "leader_sr"),
@@ -246,6 +255,7 @@ def buildBenchmarkObservationIssue(code: str, obs: dict) -> BenchmarkObservation
 
 
 def buildSurveyGroupScoreMap(rows: list) -> dict:
+    """설문 그룹별 점수 행을 {subIssueCode: {group: {axis: score}}} 맵으로 변환한다."""
     result = {}
     for row in rows:
         code = row.get("sub_issue_code")
@@ -265,6 +275,7 @@ def subIssueBase(
     selectedYn: bool = False,
     quadrant: Optional[str] = None,
 ) -> dict:
+    """서브이슈 코드로 메타 정보를 조회해 DTO 공통 필드 dict를 반환한다."""
     meta = getSubIssueMeta(code)
     return {
         "subIssueCode": code,
@@ -279,15 +290,18 @@ def subIssueBase(
 
 
 def subIssueSortKey(code: str):
+    """서브이슈 코드를 domain → issueGroup → sort 순서의 정렬 키로 변환한다."""
     meta = getSubIssueMeta(code)
     return (meta.get("domain", ""), meta.get("issueGroup", ""), meta.get("subIssueSort", 999), code)
 
 
 def isObserved(obs: dict, sourceType: str) -> bool:
+    """관측 맵에서 특정 sourceType의 신호 수가 1 이상이면 True를 반환한다."""
     return int(obs.get(sourceType, {}).get("signalCount", 0)) > 0
 
 
 def toScore10(score05) -> Optional[float]:
+    """0–5 스케일 점수를 0–10 스케일로 변환한다."""
     value = _safeFloat(score05)
     if value is None:
         return None
@@ -295,6 +309,7 @@ def toScore10(score05) -> Optional[float]:
 
 
 def rate(value: int, total: int) -> Optional[float]:
+    """value/total 비율을 백분율(소수점 1자리)로 반환하며, total이 0이면 None을 반환한다."""
     if total <= 0:
         return None
     return round((value / total) * 100, 1)

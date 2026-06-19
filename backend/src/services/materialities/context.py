@@ -45,6 +45,7 @@ from src.utils.subissuemaster import subissueMaster
 
 
 def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
+    """G0 Fact 기반 컨텍스트 프로필을 빌드하고 서브이슈별 modifier를 계산해 DB에 적용한다."""
     runContext = getRun(runId)
     if not runContext:
         return CompanyContextModifierResponseDto(
@@ -139,6 +140,7 @@ def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
 
 
 def getProfile(runId: int) -> CompanyContextProfileResponseDto:
+    """저장된 최신 컨텍스트 프로필과 modifier 목록을 조회해 반환한다."""
     row = getLatestProfile(runId)
     if not row:
         return CompanyContextProfileResponseDto(
@@ -187,10 +189,12 @@ def getProfile(runId: int) -> CompanyContextProfileResponseDto:
 # 이전 공개 이름과의 호환성 래퍼
 
 def applyCompanyContextModifiers(runId: int, userModel) -> CompanyContextModifierResponseDto:
+    """applyModifiers의 이전 공개 이름 호환 래퍼."""
     return applyModifiers(runId)
 
 
 def getCompanyContextProfile(runId: int, userModel) -> CompanyContextProfileResponseDto:
+    """getProfile의 이전 공개 이름 호환 래퍼."""
     return getProfile(runId)
 
 
@@ -199,6 +203,7 @@ def buildCompanyContextProfile(
     runContext: dict,
     facts: list[CompanyContextFactDto],
 ) -> CompanyContextProfileDto:
+    """buildProfile의 이전 공개 이름 호환 래퍼."""
     return buildProfile(runId, runContext, facts)
 
 
@@ -207,16 +212,19 @@ def calculateContextModifier(
     row: dict,
     profileConfidence: Optional[float] = None,
 ) -> SubIssueContextModifierDto:
+    """calcModifier의 이전 공개 이름 호환 래퍼."""
     return calcModifier(profile, row, profileConfidence)
 
 
 def applyRankMovementGuards(
     modifiers: list[SubIssueContextModifierDto],
 ) -> list[SubIssueContextModifierDto]:
+    """applyRankGuards의 이전 공개 이름 호환 래퍼."""
     return applyRankGuards(modifiers)
 
 
 def hasObservedStage(row: dict) -> bool:
+    """checkObservedStage의 이전 공개 이름 호환 래퍼."""
     return checkObservedStage(row)
 
 

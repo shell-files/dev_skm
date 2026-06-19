@@ -248,6 +248,11 @@ def _runMediaCrawlAndAnalyzePg(request: MediaNewsCrawlAnalyzeRequest) -> MediaNe
 def runMediaCrawlAndAnalyze(
     request: MediaNewsCrawlAnalyzeRequest, userModel: UserModel
 ) -> MediaNewsCrawlAnalyzeResponse:
+    """
+    뉴스 크롤링 → AI 분석 → DMA 시그널 저장 → shadow 갱신 → 설문 폼 확정 전체 파이프라인을 실행한다.
+    usePgPipeline 플래그에 따라 PG 사전 분석 결과 경로와 실시간 크롤링 경로를 분기한다.
+    각 단계의 진행 상황을 DMA workflow status로 기록한다.
+    """
     if _resolvePgMode(request.usePgPipeline):
         return _runMediaCrawlAndAnalyzePg(request)
 
@@ -394,6 +399,10 @@ def runMediaCrawlAndAnalyze(
 
 
 def saveKcgsGradeInputs(request: KcgsGradeSaveRequest, userModel) -> int:
+    """
+    3개년 KCGS 등급 입력을 검증하고 DB에 저장한다.
+    저장 전 step2BuildKcgsPillarBoostPayloads를 호출하여 입력 유효성을 사전 확인한다.
+    """
     if len(request.grades) != 3:
         raise ValueError("KCGS 등급은 정확히 3개년(연속) 입력이 필요합니다.")
 
@@ -439,6 +448,10 @@ def saveKcgsGradeInputs(request: KcgsGradeSaveRequest, userModel) -> int:
 
 
 def refreshRegulationShadowForRun(runId: int) -> int:
+    """
+    특정 run의 regulation shadow trace를 최신 승인 입력 기반으로 재생성하여 교체한다.
+    runId → 회사/보고연도 → 승인된 regulation 입력 및 매핑 → shadow payload 구성 → DB 교체 순으로 실행한다.
+    """
     runContext = findRegulationRunContext(runId)
     companyId = runContext["companyId"]
     reportingYear = runContext["reportingYear"]
@@ -449,12 +462,17 @@ def refreshRegulationShadowForRun(runId: int) -> int:
 
 
 def refreshMediaExternalMaxForRun(runId: int) -> int:
+    """외부 스크리닝 신호 후보 행을 집계하여 media external max shadow와 summary를 원자적으로 교체한다."""
     rows = listExternalMaxEligibleMediaRows(runId)
     payloads = step2BuildMediaExternalMaxPayloads(rows)
     return step4ReplaceMediaExternalMaxShadowAndSummaryTx(runId, payloads)
 
 
 def refreshKcgsShadowForRun(runId: int) -> int:
+    """
+    특정 run의 KCGS pillar boost shadow trace를 최신 승인 등급 기반으로 재생성하여 교체한다.
+    runId → 회사 → 승인된 KCGS 등급 → pillar boost payload 구성 → DB 교체 순으로 실행한다.
+    """
     runContext = findRegulationRunContext(runId)
     companyId = runContext["companyId"]
     gradeRows = listApprovedKcgsGradeInputs(companyId)

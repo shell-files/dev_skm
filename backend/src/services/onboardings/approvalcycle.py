@@ -18,6 +18,7 @@ def resolveRequiredApprovalAtomicIdsTx(
     batchId: Optional[int],
     metricId: str,
 ) -> list[str]:
+    """사이클 유형에 따라 결재에 필요한 원자 지표 ID 목록을 트랜잭션 내에서 조회한다."""
     if str(cycleType or "").strip().upper() == scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE:
         if batchId is None:
             raise ValueError("batchId is required for ROLLUP_RESPONSE")
@@ -49,6 +50,7 @@ def resolveActiveCycleTx(
     actorUserId: Optional[int],
     batchId: Optional[int] = None,
 ) -> dict:
+    """PRE_DMA_G0이면 사이클을 자동 생성하고, 그 외 유형은 기존 활성 사이클을 조회한다."""
     normalizedCycleType = normalizeCycleType(cycleType)
     if normalizedCycleType == scopeRepo.CYCLE_TYPE_PRE_DMA_G0:
         return scopeRepo.ensureCycleTx(
@@ -77,6 +79,7 @@ def resolveExistingActiveCycleTx(
     batchId: Optional[int] = None,
     sourceMaterialityRunId: Optional[int] = None,
 ) -> dict:
+    """기존 활성 사이클을 조회하고 없거나 비활성이면 ValueError를 발생시킨다."""
     normalizedCycleType = normalizeCycleType(cycleType)
     effectiveRunId = sourceMaterialityRunId
     if effectiveRunId is None and normalizedCycleType == scopeRepo.CYCLE_TYPE_POST_DMA_DISCLOSURE:
@@ -100,6 +103,7 @@ def resolveExistingActiveCycleTx(
 
 
 def requireApprovalScopeTx(cur, cycle: dict, companyId: int, metricId: str) -> dict:
+    """지표가 활성 결재 범위에 속하는지 검증하고 범위 행을 반환하며, 불가 시 ValueError를 발생시킨다."""
     from src.repositories import onboardingscoperepository as scopeRepo
     from src.repositories import onboardinginputrepository as inputRepo
 
@@ -134,6 +138,7 @@ def setMetricInputStatusTx(
     status: str,
     actorUserId: Optional[int],
 ) -> None:
+    """트랜잭션 내에서 원자 지표 입력값의 결재 상태를 일괄 갱신한다."""
     STATE_APPROVED = "approved"
     STATE_SUBMITTED = "submitted"
     STATE_REVIEWED = "reviewed"
@@ -175,6 +180,7 @@ def syncRollupSourceReadinessIfNeededTx(
     reportingYear: int,
     batchId: Optional[int] = None,
 ) -> None:
+    """ROLLUP_RESPONSE 사이클이고 batchId가 있을 때만 소스 준비 상태를 동기화한다."""
     if (
         str(cycle.get("cycle_type") or "").strip().upper()
         != scopeRepo.CYCLE_TYPE_ROLLUP_RESPONSE
@@ -192,6 +198,7 @@ def syncRollupSourceReadinessIfNeededTx(
 
 
 def normalizeCycleType(cycleType: str) -> str:
+    """cycleType 문자열을 대문자로 정규화하고 지원하지 않는 값이면 ValueError를 발생시킨다."""
     normalizedCycleType = str(cycleType or scopeRepo.CYCLE_TYPE_PRE_DMA_G0).strip().upper()
     if normalizedCycleType not in {
         scopeRepo.CYCLE_TYPE_PRE_DMA_G0,
@@ -203,6 +210,7 @@ def normalizeCycleType(cycleType: str) -> str:
 
 
 def checkRowsAllStatus(rows: list[dict], requiredAtomicIds: list[str], status: str) -> bool:
+    """필수 원자 지표 전체가 지정 status인지 여부를 반환한다."""
     if not requiredAtomicIds:
         return False
     rowByAtomic = {row.get("atomic_metric_id"): row for row in rows}
@@ -215,6 +223,7 @@ def checkRowsAllStatus(rows: list[dict], requiredAtomicIds: list[str], status: s
 
 
 def checkRowsAnyStatus(rows: list[dict], requiredAtomicIds: list[str], statuses: set[str]) -> bool:
+    """필수 원자 지표 중 하나라도 지정 status 집합에 포함되는지 여부를 반환한다."""
     rowByAtomic = {row.get("atomic_metric_id"): row for row in rows}
     return any(
         atomicId in rowByAtomic

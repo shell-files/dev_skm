@@ -53,6 +53,10 @@ def calculateRules(
     currentFacts: list[dict],
     priorFacts: Optional[list[dict]] = None,
 ) -> list[dict]:
+    """
+    규칙 목록을 위상 정렬 후 순서대로 실행하여 계산 결과 목록을 반환한다.
+    계산된 결과는 이후 규칙의 입력(factMap)으로 즉시 반영된다.
+    """
     orderedRules = topologicalSortRules(rules, sources)
     sourceByRule = groupSourcesByRule(sources)
     currentFactMap = buildFactMap(currentFacts)
@@ -80,6 +84,7 @@ def calculateRule(
     currentFactMap: dict[str, dict],
     priorFactMap: Optional[dict[str, dict]] = None,
 ) -> dict:
+    """formulaType을 식별하여 해당 계산 함수로 위임하고 결과 dict를 반환한다."""
     formulaType = normalizeFormulaType(rule.get("formula_type") or rule.get("formulaType"))
     normalizedSources = normalizeSources(sources)
     priorFactMap = priorFactMap or {}
@@ -110,6 +115,7 @@ def calculateRule(
 
 
 def calculateReferenceCopy(base: dict, sources: list[dict], currentFactMap: dict[str, dict]) -> dict:
+    """단일 소스 값을 그대로 복사한다. 소스가 2개 이상이면 AMBIGUOUS 상태를 반환한다."""
     if len(sources) >= 2:
         return {
             **base,
@@ -133,6 +139,7 @@ def calculateReferenceCopy(base: dict, sources: list[dict], currentFactMap: dict
 
 
 def calculateSum(base: dict, sources: list[dict], currentFactMap: dict[str, dict]) -> dict:
+    """모든 소스 값을 합산하고 roundingPolicy를 적용한다."""
     values, missing = valuesForSources(sources, currentFactMap)
     if missing:
         return sourceNotReady(base, missing)
@@ -150,6 +157,11 @@ def calculateRatio(
     currentFactMap: dict[str, dict],
     multiplier: int,
 ) -> dict:
+    """
+    분자 합계 / 분모 합계 * multiplier 를 계산한다.
+    multiplier=100이면 비율(%), multiplier=1이면 단순 나눗셈(DIVIDE)이다.
+    분모가 0이면 zeroDivisionPolicy에 따라 처리한다.
+    """
     numeratorSources = [source for source in sources if source["sourceRole"] == "NUMERATOR"]
     denominatorSources = [source for source in sources if source["sourceRole"] == "DENOMINATOR"]
     if not numeratorSources or not denominatorSources:
@@ -189,6 +201,11 @@ def calculateYoy(
     priorFactMap: dict[str, dict],
     rateYn: bool,
 ) -> dict:
+    """
+    전년 대비 차이(diff) 또는 증감률(rate)을 계산한다.
+    rateYn=True 이면 (delta / priorValue * 100), False 이면 절대 delta.
+    yoyDirectionCode로 current-prior 또는 prior-current 방향을 지정한다.
+    """
     currentSources = [source for source in sources if source["sourceRole"] == "CURRENT"] or [sources[0]]
     priorSources = [source for source in sources if source["sourceRole"] == "PRIOR"] or currentSources
     currentValues, currentMissing = valuesForSources(currentSources, currentFactMap)
@@ -229,6 +246,10 @@ def resolveAffectedRuleGraph(
     sources: list[dict],
     changedAtomicMetricIds: list[str],
 ) -> list[dict]:
+    """
+    변경된 atomic metric ID에서 시작해 의존 그래프를 BFS로 탐색하여
+    영향받는 규칙을 위상 정렬된 순서로 반환한다.
+    """
     changed = set(changedAtomicMetricIds or [])
     if not changed:
         return []
@@ -254,6 +275,10 @@ def resolveAffectedRuleGraph(
 
 
 def topologicalSortRules(rules: list[dict], sources: list[dict]) -> list[dict]:
+    """
+    규칙 간 의존성을 분석하여 Kahn's algorithm으로 위상 정렬된 실행 순서를 반환한다.
+    중복 target이나 순환 의존이 감지되면 ValueError를 발생시킨다.
+    """
     duplicateTargets = duplicateTargetAtomicIds(rules)
     if duplicateTargets:
         raise ValueError(f"CALCULATION_TARGET_DUPLICATED: {', '.join(sorted(duplicateTargets))}")
@@ -301,6 +326,7 @@ def topologicalSortRules(rules: list[dict], sources: list[dict]) -> list[dict]:
 
 
 def duplicateTargetAtomicIds(rules: list[dict]) -> set[str]:
+    """규칙 목록에서 동일한 target atomic metric ID를 가진 중복 규칙의 ID 집합을 반환한다."""
     counts = defaultdict(int)
     for rule in rules:
         targetId = targetAtomicMetricId(rule)
@@ -310,6 +336,7 @@ def duplicateTargetAtomicIds(rules: list[dict]) -> set[str]:
 
 
 def allResultsCalculated(results: list[dict]) -> bool:
+    """결과 목록이 비어있지 않고 모든 항목이 CALCULATED 상태인지 확인한다."""
     return bool(results) and all(
         str(result.get("calculationStatus") or "").strip().upper() == STATUS_CALCULATED
         for result in results
@@ -317,6 +344,7 @@ def allResultsCalculated(results: list[dict]) -> bool:
 
 
 def buildFactMap(facts: list[dict]) -> dict[str, dict]:
+    """fact 목록을 atomic_metric_id 키의 dict로 변환한다 (camelCase/snake_case 모두 지원)."""
     result = {}
     for fact in facts or []:
         atomicId = fact.get("atomic_metric_id") or fact.get("atomicMetricId")
@@ -335,6 +363,7 @@ def semanticSourceKey(source: dict) -> tuple[str, str, str, str]:
 
 
 def groupSourcesByRule(sources: list[dict]) -> dict[str, list[dict]]:
+    """source 목록을 ruleCode 기준으로 그룹핑하고 sourceOrder로 정렬한다. 의미 중복은 제거한다."""
     grouped = defaultdict(list)
     seen = set()
     for source in sources or []:
@@ -351,6 +380,7 @@ def groupSourcesByRule(sources: list[dict]) -> dict[str, list[dict]]:
 
 
 def normalizeSources(sources: list[dict]) -> list[dict]:
+    """source 목록을 정규화하고 의미 중복(동일 ruleCode+sourceAtomicMetricId+role+scope)을 제거한다."""
     seen = set()
     deduped = []
     for source in sources or []:

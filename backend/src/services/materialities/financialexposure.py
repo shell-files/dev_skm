@@ -24,6 +24,7 @@ def buildFinancialExposureForSignal(
     reportingYear: int,
     preferConsolidated: bool = True,
 ) -> tuple[DMASignal, dict]:
+    """회사 재무 기준을 조회해 단일 DMASignal에 재무 노출 factor를 적용한다."""
     basis = getBasis(companyId, reportingYear, preferConsolidated)
     return buildFinancialExposureForSignalWithBasis(signal, basis)
 
@@ -34,6 +35,7 @@ def applyG0FinancialExposure(
     reportingYear: int,
     preferConsolidated: bool = True,
 ) -> list[DMASignal]:
+    """동일한 재무 기준을 사용해 DMASignal 목록 전체에 재무 노출 factor를 일괄 적용한다."""
     basis = getBasis(companyId, reportingYear, preferConsolidated)
     updatedSignals = []
     for signal in signals:
@@ -46,6 +48,7 @@ def applyG0FinancialExposureForRun(
     signals: list[DMASignal],
     runId: int,
 ) -> list[DMASignal]:
+    """runId로 회사·연도·연결 여부를 자동 결정해 DMASignal 목록에 재무 노출 factor를 적용한다."""
     runContext = getMaterialityRunContext(runId)
     if not runContext:
         return [
@@ -75,6 +78,7 @@ def buildFinancialExposureForSignalWithBasis(
     signal: DMASignal,
     financialBasis: dict,
 ) -> tuple[DMASignal, dict]:
+    """미리 조회된 재무 기준 dict를 사용해 단일 DMASignal에 규칙 기반 재무 factor를 산출·적용한다."""
     trace = _baseTrace(signal, financialBasis)
     sourceType = _normalizedSourceType(signal)
     confidence = _safeFloat(getattr(signal, "confidenceScore", None), 1.0)
@@ -175,6 +179,7 @@ def buildEnhancedFinancialFactor(
     sourceType: str,
     confidence: float,
 ) -> FinancialFactor:
+    """기존 factor에 채널별 새 magnitude를 병합해 업데이트된 FinancialFactor를 생성한다."""
     baseValues = _factorMagnitudeSnapshot(existingFactor)
     for channel in _fc.FINANCIAL_CHANNELS:
         if channel in newMagnitudes:
@@ -345,10 +350,12 @@ def applyExposure(
     reportingYear: int,
     preferConsolidated: bool = True,
 ) -> list[DMASignal]:
+    """applyG0FinancialExposure의 호환성 별칭."""
     return applyG0FinancialExposure(signals, companyId, reportingYear, preferConsolidated)
 
 
 def applyRunExposure(signals: list[DMASignal], runId: int) -> list[DMASignal]:
+    """applyG0FinancialExposureForRun의 호환성 별칭."""
     return applyG0FinancialExposureForRun(signals, runId)
 
 
@@ -358,10 +365,12 @@ def buildExposure(
     reportingYear: int,
     preferConsolidated: bool = True,
 ) -> tuple[DMASignal, dict]:
+    """buildFinancialExposureForSignal의 호환성 별칭."""
     return buildFinancialExposureForSignal(signal, companyId, reportingYear, preferConsolidated)
 
 
 def buildExposureWithBasis(signal: DMASignal, financialBasis: dict) -> tuple[DMASignal, dict]:
+    """buildFinancialExposureForSignalWithBasis의 호환성 별칭."""
     return buildFinancialExposureForSignalWithBasis(signal, financialBasis)
 
 
@@ -373,26 +382,32 @@ def calcChannelScore(
     sourceType: str,
     confidence: float,
 ) -> dict:
+    """calculateChannelScore의 호환성 별칭."""
     return _fc.calculateChannelScore(channel, ratioPreset, rationale, financialBasis, sourceType, confidence)
 
 
 def calcSourceBonus(channel: str, magnitude: int, sourceType: str, confidence: float) -> int:
+    """sourceTypeMagnitudeBonus의 호환성 별칭."""
     return _fc.sourceTypeMagnitudeBonus(channel, magnitude, sourceType, confidence)
 
 
 def calcConfidenceCap(confidence: float) -> Optional[int]:
+    """confidenceMagnitudeCap의 호환성 별칭."""
     return _fc.confidenceMagnitudeCap(confidence)
 
 
 def resolveDominant(magnitudes: dict) -> tuple[Optional[str], Optional[int]]:
+    """dominantMagnitude의 호환성 별칭."""
     return _fc.dominantMagnitude(magnitudes)
 
 
 def checkIro(subIssueCode: str, financialIroType: str) -> bool:
+    """canApplyFinancialExposure의 호환성 별칭."""
     return _fc.canApplyFinancialExposure(subIssueCode, financialIroType)
 
 
 def resolveScope(runContext: dict) -> tuple[bool, list]:
+    """resolvePreferConsolidated의 호환성 별칭."""
     return _fc.resolvePreferConsolidated(runContext)
 
 

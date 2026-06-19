@@ -266,6 +266,7 @@ def aggregateBenchmarkSignals(
     baselineImpactScore: float,
     baselineFinancialScore: float,
 ) -> StageScore:
+    """aggregateBenchmark의 이전 공개 이름 호환 래퍼."""
     return aggregateBenchmark(
         leaderRatio,
         peerRatio,
@@ -283,14 +284,17 @@ def aggregateSurveyScores(
     executiveScore: Optional[float],
     externalScore: Optional[float],
 ) -> Optional[float]:
+    """aggregateSurvey의 이전 공개 이름 호환 래퍼."""
     return aggregateSurvey(employeeScore, executiveScore, externalScore)
 
 
 def aggregateMediaSignals(signals: List[DMASignal]) -> StageScore:
+    """aggregateMedia의 이전 공개 이름 호환 래퍼."""
     return aggregateMedia(signals)
 
 
 def weightedAvgAvailable(items: List[Tuple[Optional[float], float]]) -> Optional[float]:
+    """calcWeightedAvg의 이전 공개 이름 호환 래퍼."""
     return calcWeightedAvg(items)
 
 
@@ -302,6 +306,7 @@ def calculateFinalMateriality(
     contextImpactModifier: float = 0.0,
     contextFinancialModifier: float = 0.0,
 ) -> FinalMaterialityScore:
+    """calcFinal의 이전 공개 이름 호환 래퍼."""
     return calcFinal(
         subIssueCode,
         surveyImpact,

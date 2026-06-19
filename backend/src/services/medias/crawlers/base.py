@@ -82,6 +82,7 @@ class BaseNewsCrawler:
 
 
 def fetchHtml(url: str, timeout: int = 15) -> str:
+    """지정 URL의 HTML을 HTTP GET으로 가져온다. Content-Type charset을 우선 적용하고 fallback은 utf-8이다."""
     request = Request(url, headers={"User-Agent": USER_AGENT})
     with urlopen(request, timeout=timeout) as response:
         raw = response.read()
@@ -93,6 +94,7 @@ def fetchHtml(url: str, timeout: int = 15) -> str:
 
 
 def cleanText(value: str) -> str:
+    """HTML에서 script/style/figure 태그와 모든 HTML 태그를 제거하고 공백을 정규화한다."""
     text = re.sub(r"<(script|style|figure)[\s\S]*?</\1>", " ", value, flags=re.I)
     text = re.sub(r"<[^>]+>", " ", text)
     text = unescape(text)
@@ -106,6 +108,10 @@ def normalizeUrl(url: str) -> str:
 
 
 def parseKoreanNewsDate(value: str, currentYear: Optional[int] = None) -> Optional[date]:
+    """
+    한국 뉴스 날짜 문자열을 date 객체로 파싱한다.
+    YYYY-MM-DD, MM.DD HH:MM, MM.DD 형식을 순서대로 시도하며 연도 생략 시 currentYear를 사용한다.
+    """
     text = (value or "").strip()
     if not text:
         return None
@@ -132,6 +138,10 @@ def parseKoreanNewsDate(value: str, currentYear: Optional[int] = None) -> Option
 
 
 def extractParagraphs(html: str, minLength: int = 25) -> list[str]:
+    """
+    HTML에서 <p> 태그 내 텍스트를 추출하여 minLength 이상인 단락 목록을 반환한다.
+    <p> 태그가 없으면 전체 텍스트를 정제하여 단락으로 반환한다.
+    """
     paragraphs = []
     for raw in re.findall(r"<p[^>]*>([\s\S]*?)</p>", html, flags=re.I):
         text = cleanText(raw)

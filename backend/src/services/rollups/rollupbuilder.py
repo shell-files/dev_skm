@@ -22,16 +22,19 @@ from src.services.rollups.rollupexceptions import RollupError
 
 
 def loadRepository():
+    """rolluprepository 모듈을 지연 임포트해 반환한다."""
     from src.repositories import rolluprepository
     return rolluprepository
 
 
 def loadCalculator():
+    """롤업 계산기 모듈을 지연 임포트해 반환한다."""
     from src.services.rollups import calculator
     return calculator
 
 
 def getActorUserId(userModel) -> Optional[int]:
+    """dict 또는 객체 형태의 userModel에서 현재 사용자 ID를 int로 추출한다."""
     if isinstance(userModel, dict):
         userId = userModel.get("id")
     else:
@@ -43,6 +46,7 @@ def getActorUserId(userModel) -> Optional[int]:
 
 
 def getSource(userModel) -> int:
+    """userModel에서 소스 기업 ID를 추출하고 없으면 RollupError를 발생시킨다."""
     sourceCompanyId = resolveScope(userModel)
     if sourceCompanyId is None:
         raise RollupError(403, "COMPANY_SCOPE_REQUIRED", "Company scope is required.")
@@ -50,12 +54,14 @@ def getSource(userModel) -> int:
 
 
 def dumpModel(model) -> dict:
+    """Pydantic v1/v2 모델을 dict로 직렬화한다."""
     if hasattr(model, "model_dump"):
         return model.model_dump()
     return model.dict()
 
 
 def resolvePreviewMetricIds(rollupRepository, purposeCode: str, parentCompanyId: int, sourceCycleId: Optional[int]) -> list[str]:
+    """목적 코드에 따라 미리보기 대상 지표 ID 목록을 조회해 반환한다."""
     if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
         return ["G0-02"]
     from src.repositories.onboardingscoperepository import listMetricScopes
@@ -69,6 +75,7 @@ def resolvePreviewMetricIds(rollupRepository, purposeCode: str, parentCompanyId:
 
 
 def resolveExternalAtomicIdsFromRules(rules: list[dict], sources: list[dict]) -> list[str]:
+    """계산 규칙 소스 원자 지표 중 산출 대상이 아닌 외부 입력용 원자 지표 ID 목록을 반환한다."""
     targetAtomicIds = {
         str(rule.get("target_atomic_metric_id") or "").strip()
         for rule in rules
@@ -83,6 +90,7 @@ def resolveExternalAtomicIdsFromRules(rules: list[dict], sources: list[dict]) ->
 
 
 def resolveBatchRequestedMetricIds(batch: dict) -> list[str]:
+    """배치 스냅샷 또는 목적 코드·사이클로부터 요청된 지표 ID 목록을 결정한다."""
     rollupRepository = loadRepository()
     batchId = batch.get("batchId") if batch.get("batchId") is not None else batch.get("id")
     if batchId is not None:
@@ -100,6 +108,7 @@ def resolveBatchRequestedMetricIds(batch: dict) -> list[str]:
 
 
 def buildReadinessStatus(requiredAtomicCount: int, approvedAtomicCount: int, missingAtomicCount: int) -> str:
+    """필수·승인·미승인 원자 수를 기반으로 NOT_STARTED·PARTIAL·READY 준비 상태 문자열을 반환한다."""
     if requiredAtomicCount <= 0:
         return "NOT_STARTED"
     if approvedAtomicCount <= 0:

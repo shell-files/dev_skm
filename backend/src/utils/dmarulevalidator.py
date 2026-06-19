@@ -53,6 +53,10 @@ _KCGS_TREND_MODIFIER_KEYS = frozenset({
 
 
 def validatePath(filename: Any) -> str:
+    """
+    config 파일명이 안전한지 검증하고 정규화된 이름을 반환한다.
+    경로 탐색(../), 절대경로, 서브디렉터리, .json 미확장자를 모두 차단한다.
+    """
     if not isinstance(filename, str):
         raise DmaRuleValidationError(f"Config filename must be a string, got {type(filename)!r}")
     raw = filename.strip()
@@ -74,6 +78,10 @@ def validatePath(filename: Any) -> str:
 
 
 def validateManifest(manifest: Dict[str, Any]) -> None:
+    """
+    manifest.json의 필수 필드(ruleVersion, architectureRevision, hashAlgorithm, runtimePolicyFiles,
+    serviceDirectJsonLoadAllowedYn, capabilities)를 검증한다. 위반 시 DmaRuleValidationError.
+    """
     if not isinstance(manifest, dict):
         raise DmaRuleValidationError("manifest.json must be a JSON object")
     rv = manifest.get("ruleVersion")
@@ -110,6 +118,7 @@ def validateManifest(manifest: Dict[str, Any]) -> None:
 
 
 def validatePolicies(filenames: Iterable[str]) -> None:
+    """정책 파일 집합이 EXPECTED_POLICY_FILES와 정확히 일치하는지 검증한다. 누락·초과 시 DmaRuleValidationError."""
     actual = set(filenames)
     missing = EXPECTED_POLICY_FILES - actual
     extra = actual - EXPECTED_POLICY_FILES
@@ -120,6 +129,7 @@ def validatePolicies(filenames: Iterable[str]) -> None:
 
 
 def validatePolicyVersions(policies: Dict[str, Dict[str, Any]]) -> None:
+    """각 정책 파일의 ruleVersion이 EXPECTED_RULE_VERSION과 일치하는지 검증한다."""
     for name, body in policies.items():
         if not isinstance(body, dict):
             raise DmaRuleValidationError(f"policy {name!r} must be a JSON object")
@@ -188,6 +198,10 @@ def _validateBandSection(section: Mapping[str, Any], section_name: str, must_hav
 
 
 def validateMediaEventResolverPolicy(policy: Mapping[str, Any]) -> None:
+    """
+    media_event_resolver_policy.json의 구조·값·밴드 연속성을 종합 검증한다.
+    scoreDecisionByAiAllowedYn=false, ratioValueContract, eventDedupRules 등 계약 위반 시 DmaRuleValidationError.
+    """
     if not isinstance(policy, Mapping):
         raise DmaRuleValidationError("media_event_resolver_policy must be a JSON object")
     for key in (
@@ -284,6 +298,10 @@ def validateMediaEventResolverPolicy(policy: Mapping[str, Any]) -> None:
 
 
 def validateKcgsScreeningPolicy(policy: Mapping[str, Any]) -> None:
+    """
+    screening_policy.json의 KCGS 섹션을 검증한다.
+    gradeOrderBestToWorst, trendModifier 키 집합, pillarSignalMax/maxSubIssueBoost/boostMultiplier 수치를 고정값으로 강제한다.
+    """
     if not isinstance(policy, Mapping):
         raise DmaRuleValidationError("screening_policy must be a JSON object")
     kcgs = policy.get("kcgs")
@@ -356,6 +374,10 @@ def validateKisScreeningPolicy(
     policy: Mapping[str, Any],
     manifest: Mapping[str, Any],
 ) -> None:
+    """
+    screening_policy.json의 KIS 섹션과 manifest capability 간 일관성을 검증한다.
+    kis.capability가 manifest.capabilities.kisFinancialResilience와 동일해야 한다.
+    """
     if not isinstance(policy, Mapping):
         raise DmaRuleValidationError("screening_policy must be a JSON object")
     kis = policy.get("kis")
@@ -400,6 +422,7 @@ def validateKisScreeningPolicy(
 
 
 def validateBundle(manifest: Dict[str, Any], policies: Dict[str, Dict[str, Any]]) -> None:
+    """manifest와 정책 파일 집합 전체를 통합 검증한다 (manifest → policy files → versions → 도메인별 검증 순서)."""
     validateManifest(manifest)
     validatePolicies(policies.keys())
     validatePolicyVersions(policies)

@@ -19,6 +19,7 @@ from src.utils.ai import (
 
 
 def generateReportProcess(req, token):
+    """KPI Fact와 SR 지식 베이스를 결합해 섹션별 ESG 보고서 초안을 생성하고 DB에 저장한다."""
     factData = getFactData(req.companyId, req.year)
     
     reportOutput = []

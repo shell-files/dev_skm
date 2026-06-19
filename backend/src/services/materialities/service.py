@@ -51,6 +51,7 @@ from src.services.reportworkflows.service import initializePostDmaDisclosureScop
 
 
 def getMaterialityResults(runId: int) -> MaterialityResultsResponseDto:
+    """중대성 평가 전체 결과(이슈 목록·매트릭스·Top 이슈·다음 단계)를 조합해 반환한다."""
     rows = listResults(runId)
     selectedContext = _mb.resolveSelectedContext(runId, rows)
     selectedCodes = selectedContext["selectedCodes"]
@@ -104,6 +105,7 @@ def getMaterialityResults(runId: int) -> MaterialityResultsResponseDto:
 
 
 def getBenchmarkResult(runId: int) -> BenchmarkResponseDto:
+    """벤치마크 단계 증거 현황·관측 이슈·Top 이슈를 집계해 반환한다."""
     evidenceCounts = listEvidenceCounts(runId, "benchmark")
     observationRows = listSignalCounts(runId, "benchmark")
     observations = _mb.buildObservationMap(observationRows)
@@ -172,6 +174,7 @@ def getBenchmarkResult(runId: int) -> BenchmarkResponseDto:
 
 
 def getMediaResult(runId: int) -> MediaStageResponseDto:
+    """미디어·규제·전문기관 출처별 관측 결과와 Top 이슈를 집계해 반환한다."""
     evidenceCounts = listEvidenceCounts(runId, "media_external")
     observationRows = listSignalCounts(runId, "media_external")
     observations = _mb.buildObservationMap(observationRows)
@@ -238,6 +241,7 @@ def getMediaResult(runId: int) -> MediaStageResponseDto:
 
 
 def getSurveyResult(runId: int) -> SurveyResponseDto:
+    """설문 응답자 그룹별 현황과 이슈별 impact/financial 점수를 집계해 반환한다."""
     groupRows = listSurveyCounts(runId)
     groupCounts = {}
     for row in groupRows:
@@ -323,6 +327,7 @@ def getSurveyResult(runId: int) -> SurveyResponseDto:
 
 
 def getSelectionProcess(runId: int, userModel) -> SelectionProcessResponseDto:
+    """이슈 선정 과정(선정·미선정 이슈, 선정 규칙, 근거)을 상세히 반환한다."""
     from src.utils.subissuemaster import subissueMaster
     rows = listResults(runId)
     selectedContext = _mb.resolveSelectedContext(runId, rows)
@@ -365,6 +370,7 @@ def getSelectionProcess(runId: int, userModel) -> SelectionProcessResponseDto:
 
 
 def getOnboardingProgress(runId: int) -> dict:
+    """선정된 서브이슈별 필수 지표 입력 완료율을 조회해 반환한다."""
     run = findOne(
         "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? AND delete_yn = 0",
         (runId,),
@@ -412,6 +418,7 @@ def getOnboardingProgress(runId: int) -> dict:
 
 
 def finalizeSelectedSubIssues(runId: int, userModel) -> FinalizeSelectedSubIssuesResponseDto:
+    """최종 점수 기준 Top 5 서브이슈를 선정 테이블에 확정하고 POST-DMA 온보딩 Scope를 초기화한다."""
     run = findOne(
         "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? AND delete_yn = 0",
         (runId,),
@@ -463,6 +470,7 @@ def finalizeSelectedSubIssues(runId: int, userModel) -> FinalizeSelectedSubIssue
 
 
 def getWorkflowStatus(runId: int, workflowType: str) -> dict:
+    """지정된 DMA 워크플로우 타입의 현재 상태를 조회해 반환한다."""
     return _getDmaWorkflowStatusOrDefault(runId=runId, workflowType=workflowType)
 
 

@@ -41,6 +41,7 @@ POST_DMA_READ_ONLY_RUN_STATUSES = {
 
 
 def getCurrent(companyId: int, reportingYear: int) -> ReportWorkflowResponseDto:
+    """회사·연도 기준 현재 활성 워크플로우 상태를 조회해 반환하며, 없으면 NO_RUN 상태를 반환한다."""
     reportWorkflowRepository = loadRepository()
     run = reportWorkflowRepository.getCurrent(companyId, reportingYear)
     if not run:
@@ -65,6 +66,7 @@ def startWorkflow(
     request: ReportWorkflowStartRequestDto,
     actorUserId: int | None = None,
 ) -> ReportWorkflowResponseDto:
+    """보고 기준을 설정해 워크플로우를 시작하거나, 기존 워크플로우의 기준을 갱신한다."""
     reportWorkflowRepository = loadRepository()
     run = reportWorkflowRepository.getCurrent(
         request.companyId,
@@ -105,6 +107,7 @@ def startWorkflow(
 
 
 def getG0Status(runId: int) -> ReportWorkflowResponseDto:
+    """runId로 G0 온보딩 기준 워크플로우 현재 상태를 조회해 반환한다."""
     reportWorkflowRepository = loadRepository()
     run = reportWorkflowRepository.getRun(runId)
     if not run:
@@ -116,6 +119,7 @@ def resumeWorkflow(
     runId: int,
     actorUserId: int | None = None,
 ) -> ReportWorkflowResponseDto:
+    """중단된 워크플로우를 재개하고 PRE-DMA G0 사이클이 존재하는지 보장한다."""
     reportWorkflowRepository = loadRepository()
     run = reportWorkflowRepository.getRun(runId)
     if not run:
@@ -129,6 +133,7 @@ def initializePostDmaDisclosureScope(
     runId: int,
     actorUserId: int | None = None,
 ) -> ReportWorkflowPostDmaScopeResponseDto:
+    """DMA 선정 확정 후 POST_DMA_DISCLOSURE 사이클과 공시 지표 scope를 idempotent하게 초기화한다."""
     reportWorkflowRepository = loadRepository()
     run = reportWorkflowRepository.getRun(runId)
     if not run:
@@ -162,11 +167,13 @@ def initializePostDmaDisclosureScope(
 
 
 def getRun(runId: int) -> dict:
+    """runId에 해당하는 ESG_MATERIALITY_RUN 행을 반환한다."""
     reportWorkflowRepository = loadRepository()
     return reportWorkflowRepository.getRun(runId)
 
 
 def listProjects(companyId: int) -> ReportWorkflowProjectListResponseDto:
+    """회사의 전체 보고 프로젝트 목록과 각 프로젝트의 현재 단계 레이블을 반환한다."""
     reportWorkflowRepository = loadRepository()
     items = []
     for run in reportWorkflowRepository.listProjects(companyId):
@@ -208,6 +215,7 @@ def listProjects(companyId: int) -> ReportWorkflowProjectListResponseDto:
 
 
 def buildStatusResponse(run: dict) -> ReportWorkflowResponseDto:
+    """run 행으로 기준 상태를 조회해 표준 워크플로우 응답 DTO를 생성한다."""
     reportWorkflowRepository = loadRepository()
     basisStatus = reportWorkflowRepository.getBasisStatus(run)
     return ReportWorkflowResponseDto(data=buildStatusDto(run, basisStatus))
@@ -263,6 +271,7 @@ def _resolvePostDmaState(run: dict) -> tuple:
 
 
 def buildStatusDto(run: dict, basisStatus: dict) -> ReportWorkflowStatusDto:
+    """run과 기준 상태 dict를 결합해 POST-DMA 상태까지 포함한 상세 워크플로우 상태 DTO를 생성한다."""
     reportBasisType = normalizeReportBasisType(run.get("report_basis_type"))
     runId = int(run["id"]) if run.get("id") is not None else None
 
@@ -294,6 +303,7 @@ def buildStatusDto(run: dict, basisStatus: dict) -> ReportWorkflowStatusDto:
 
 
 def resolveWorkflow(basisStatus: str) -> str:
+    """basisStatus 값을 워크플로우 단계 레이블(NO_RUN·REPORT_BASIS·G0_ONBOARDING·DMA_READY)로 변환한다."""
     if basisStatus == "NO_RUN":
         return "NO_RUN"
     if basisStatus == "BASIS_NOT_SELECTED":
@@ -304,6 +314,7 @@ def resolveWorkflow(basisStatus: str) -> str:
 
 
 def resolveNextAction(basisStatus: str, fallbackAction: str | None = None) -> str:
+    """basisStatus를 프론트엔드 nextAction 문자열로 매핑하며, 알 수 없는 상태는 fallback 액션을 반환한다."""
     nextActionMap = {
         "NO_RUN": "SELECT_REPORT_BASIS",
         "BASIS_NOT_SELECTED": "SELECT_REPORT_BASIS",
@@ -318,6 +329,7 @@ def resolveNextAction(basisStatus: str, fallbackAction: str | None = None) -> st
 
 
 def resolveProjectStageLabel(run: dict, basisStatus: dict | None = None) -> str:
+    """프로젝트 목록 UI에 표시할 현재 단계 한 줄 레이블을 결정한다."""
     runStatus = str(run.get("run_status") or "").strip().upper()
     if runStatus == "COMPLETED":
         return "All approvals completed"
@@ -335,6 +347,7 @@ def resolveProjectStageLabel(run: dict, basisStatus: dict | None = None) -> str:
 
 
 def countPendingPreDmaG0Approvals(companyId: int, reportingYear: int) -> int:
+    """PRE_DMA_G0 사이클에서 미승인 항목 수를 반환하며, 오류 발생 시 0을 반환한다."""
     try:
         from src.repositories import onboardingrepository
 
@@ -354,6 +367,7 @@ def countPendingPreDmaG0Approvals(companyId: int, reportingYear: int) -> int:
 
 
 def normalizeReportBasisType(value):
+    """보고 기준 타입을 ENTITY·CONSOLIDATED 중 하나로 정규화하며, 유효하지 않으면 None을 반환한다."""
     normalizedValue = str(value or "").strip().upper()
     if normalizedValue in {"ENTITY", "CONSOLIDATED"}:
         return normalizedValue
@@ -361,18 +375,21 @@ def normalizeReportBasisType(value):
 
 
 def ensurePreDmaG0CycleForRun(run: dict, actorUserId: int | None = None) -> None:
+    """onboardings 서비스로 PRE_DMA_G0 사이클 생성을 위임하는 진입점."""
     from src.services.onboardings.service import ensureWorkflowPreDmaG0Cycle
 
     ensureWorkflowPreDmaG0Cycle(run, actorUserId)
 
 
 def ensureWorkflowPostDmaDisclosureCycle(run: dict, actorUserId: int | None = None) -> dict:
+    """onboardings 서비스로 POST_DMA_DISCLOSURE 사이클 생성을 위임하는 진입점."""
     from src.services.onboardings.service import ensureWorkflowPostDmaDisclosureCycle as ensurePostDmaCycle
 
     return ensurePostDmaCycle(run, actorUserId)
 
 
 def loadRepository():
+    """순환 참조 방지를 위해 reportworkflowrepository를 지연 임포트해 반환한다."""
     from src.repositories import reportworkflowrepository
 
     return reportworkflowrepository

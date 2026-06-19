@@ -75,6 +75,7 @@ def _aggregateReference(factsByCompany: dict[int, Any], code: str) -> Any:
 
 
 def buildSourceTrace(sourceCompanyValuesTrace: dict[str, dict]) -> dict:
+    """atomicId → {companyId → value} 형태의 추적 dict를 문자열 키로 직렬화 가능한 형태로 변환한다."""
     return {
         str(atomicId): {
             str(companyId): value
@@ -89,6 +90,10 @@ def buildMultiCompanyFactMap(
     atomicMetricIds: list[str],
     facts: list[dict],
 ) -> dict[tuple[int, str], dict]:
+    """
+    fact 목록을 (companyId, atomicMetricId) 복합 키 dict로 변환한다.
+    허용 목록에 없는 회사나 metric은 필터링하여 롤업 계산 범위를 제한한다.
+    """
     allowedCompanyIds = {int(companyId) for companyId in companyIds or []}
     allowedAtomicMetricIds = {str(atomicMetricId) for atomicMetricId in atomicMetricIds or []}
     factMap = {}
@@ -120,6 +125,7 @@ def calculateConsolidatedRules(
     priorFactsMap: dict[tuple[int, str], dict],
     companyIds: list[int],
 ) -> tuple[list[dict], list[dict], bool]:
+    """calculateConsolidatedRulesByYear의 단순화된 진입점 — 연도 맵을 current(0)/prior(-1)로 자동 구성한다."""
     return calculateConsolidatedRulesByYear(
         rules=rules,
         sources=sources,
@@ -155,6 +161,10 @@ def buildConsolidatedFactMap(rows: list[dict]) -> dict[str, dict]:
 
 
 def resolveHistoricalLookbackDepth(rules: list[dict], sources: list[dict]) -> int:
+    """
+    YoY 규칙의 의존성 체인을 재귀적으로 분석하여 필요한 최대 과거 연도 수를 반환한다.
+    YoY 규칙은 prior source 경로에 1년을 추가하며 순환 의존 시 ValueError를 발생시킨다.
+    """
     ruleByCode = {ruleCode(rule): rule for rule in rules or [] if ruleCode(rule)}
     producerByAtomicId = {
         targetAtomicMetricId(rule): ruleCode(rule)

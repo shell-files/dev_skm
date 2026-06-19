@@ -48,6 +48,7 @@ REPORT_MISSING_SCHEMA_FIELDS = [
 
 
 def getReportDrafts(runId: int) -> ReportDraftResponseDto:
+    """최신 보고서 실행의 초안 섹션·단락과 KPI 레퍼런스를 조합해 반환한다."""
     reportRun = getLatestReportRunByMaterialityRun(runId)
     reportRunId = _safeInt(reportRun.get("id"))
     if reportRunId is None:
@@ -140,6 +141,7 @@ def getReportDrafts(runId: int) -> ReportDraftResponseDto:
 
 
 def patchReportDraft(draftId: int, editedText: str) -> ReportDraftPatchResponseDto:
+    """초안 수정 요청을 수신하되, Phase 2A schema 미완성으로 실제 저장 없이 계약만 반환한다."""
     # Phase 2A에서는 edited_text 컬럼이 clean schema에 미포함이므로 보고서 초안을 수정하지 않음.
     existingDraft = getDraftById(draftId)
     if not existingDraft:
@@ -160,6 +162,7 @@ def patchReportDraft(draftId: int, editedText: str) -> ReportDraftPatchResponseD
 
 
 def getParagraphTrace(runId: int, paragraphId: int) -> ReportTraceResponseDto:
+    """단락 레퍼런스를 기반으로 KPI/롤업 출처 타입을 판별하고 값·연도 추이·계산식을 반환한다."""
     references = getReferencesForParagraph(paragraphId)
     traceType = _resolveTraceType(references)
     atomicIds = sorted({ref.get("atomic_metric_id") for ref in references if ref.get("atomic_metric_id")})
@@ -234,6 +237,7 @@ def getParagraphTrace(runId: int, paragraphId: int) -> ReportTraceResponseDto:
 
 
 def createReportDownload(runId: int, fileType: str) -> ReportDownloadResponseDto:
+    """다운로드 계약 응답을 반환하며, Phase 2A에서는 실제 파일 생성 없이 스켈레톤만 제공한다."""
     reportRun = getLatestReportRunByMaterialityRun(runId)
     reportRunId = _safeInt(reportRun.get("id"))
     return ReportDownloadResponseDto(

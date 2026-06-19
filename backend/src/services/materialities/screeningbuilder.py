@@ -46,6 +46,7 @@ _EXTERNAL_MAX_EXPECTED_SOURCE_TYPE: dict[str, str] = {
 
 
 def step2ResolveBenchmarkObservation(row: Mapping[str, Any]) -> str:
+    """리더·피어·자사 관측 여부를 분석해 BLIND_SPOT·COMMON_ISSUE·NONE 중 하나를 반환한다."""
     if not (row.get("sub_issue_code") or row.get("subIssueCode")):
         raise ValueError("sub_issue_code is required for benchmark observation resolution")
 
@@ -64,6 +65,7 @@ def step2BuildBenchmarkScreeningPayloads(
     factPayloads: Sequence[Mapping[str, Any]],
     universeSubIssueCodes: Sequence[str],
 ) -> list[dict]:
+    """벤치마크 Fact를 기반으로 유니버스 전체에 대한 스크리닝 페이로드를 생성한다."""
     universeSet = set(universeSubIssueCodes)
     observedByCode: dict[str, dict[str, bool]] = {}
     for fp in factPayloads:
@@ -123,6 +125,7 @@ def step2BuildRegulationScreeningPayloads(
     applicabilityInputs: Sequence[RegulationApplicabilityInputV13 | Mapping[str, Any]],
     mappingRows: Sequence[RegulationSubIssueMappingSeedV13 | Mapping[str, Any]],
 ) -> list[dict]:
+    """승인된 규제 적용성 입력과 서브이슈 매핑을 검증해 규제 스크리닝 페이로드를 생성한다."""
     screeningPolicy = dmaruleregistry.getPolicy("screening_policy")
     regulationPolicy = screeningPolicy.get("regulation")
     if not isinstance(regulationPolicy, Mapping):
@@ -210,6 +213,7 @@ def step2BuildRegulationScreeningPayloads(
 def step2BuildKcgsPillarBoostPayloads(
     gradeRows: Sequence[KcgsGradeInputV13 | Mapping[str, Any]],
 ) -> list[dict]:
+    """KCGS 등급 3개년 연속 행을 검증해 필러별 도메인 서브이슈에 대한 부스트 페이로드를 생성한다."""
     screeningPolicy = dmaruleregistry.getPolicy("screening_policy")
     kcgsPolicy = screeningPolicy["kcgs"]
     gradeOrder = set(kcgsPolicy["gradeOrderBestToWorst"])
@@ -304,6 +308,7 @@ def step2BuildKcgsPillarBoostPayloads(
 def step2BuildMediaExternalMaxPayloads(
     rows: Sequence[Mapping[str, Any]],
 ) -> list[dict]:
+    """뉴스·규제·KCGS 소스 행을 검증해 서브이슈별 External MAX 스크리닝 페이로드를 생성한다."""
     from collections import defaultdict
 
     groups: dict[str, list[ScreeningTraceV13]] = defaultdict(list)
@@ -462,6 +467,7 @@ def step1BuildMediaNewsCanonicalPayloads(
     *,
     evaluationDate: Optional[str] = None,
 ) -> list[dict]:
+    """뉴스 Fact를 이벤트 해소·중복 제거 후 IRO Canonical 트레이스 페이로드로 변환한다."""
     from src.services.medias.eventresolver import (
         resolveMediaNewsCanonicalFactors,
         resolveMediaNewsEventGroup,

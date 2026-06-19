@@ -40,6 +40,7 @@ def submitMetricApproval(
     sourceMaterialityRunId: Optional[int] = None,
     batchId: Optional[int] = None,
 ) -> dict:
+    """입력 완료된 지표를 submitted 상태로 전환하고 결재 이력을 기록한다."""
     conn = getConn()
     if not conn:
         raise RuntimeError("DB connection failed")
@@ -123,6 +124,7 @@ def reviewMetricApproval(
     commentText: Optional[str] = None,
     batchId: Optional[int] = None,
 ) -> dict:
+    """submitted 상태인 지표를 reviewed 상태로 전환하고 검토 이력을 기록한다."""
     conn = getConn()
     if not conn:
         raise RuntimeError("DB connection failed")
@@ -185,6 +187,7 @@ def approveMetricApproval(
     commentText: Optional[str] = None,
     batchId: Optional[int] = None,
 ) -> dict:
+    """지표를 approved 상태로 전환하고, 정책에 따라 KPI Fact 프로모션 및 계산을 트리거한다."""
     conn = getConn()
     if not conn:
         raise RuntimeError("DB connection failed")
@@ -344,6 +347,7 @@ def rejectMetricApproval(
     commentText: str,
     batchId: Optional[int] = None,
 ) -> dict:
+    """submitted 또는 reviewed 상태의 지표를 rejected로 되돌리고 반려 코멘트를 기록한다."""
     conn = getConn()
     if not conn:
         raise RuntimeError("DB connection failed")
@@ -405,6 +409,7 @@ def buildMetricApprovalSummary(
     batchId: Optional[int] = None,
     sourceMaterialityRunId: Optional[int] = None,
 ) -> dict:
+    """결재 현황 요약 dict를 조회하고 계산 결과가 있으면 병합해 반환한다."""
     summary = approvalRepo.buildApprovalSummary(
         companyId,
         reportingYear,

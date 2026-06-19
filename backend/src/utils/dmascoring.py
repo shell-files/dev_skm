@@ -31,10 +31,12 @@ SCORE_UI_MULTIPLIER = 2
 
 
 def clamp(value: float, min_val: float, max_val: float) -> float:
+    """값을 [min_val, max_val] 범위로 클리핑한다."""
     return max(min_val, min(value, max_val))
 
 
 def mapUrgency(timeHorizon: str) -> float:
+    """time_horizon 문자열을 urgency 점수(short=5.0, mid=3.0, long=1.0)로 변환한다."""
     if timeHorizon == "short": return 5.0
     if timeHorizon == "mid": return 3.0
     if timeHorizon == "long": return 1.0
@@ -42,6 +44,10 @@ def mapUrgency(timeHorizon: str) -> float:
 
 
 def calcImpact(factor: ImpactFactor, sourceType: str = "news", subIssueCode: str = "") -> float:
+    """
+    [LEGACY] ImpactFactor로 impact 점수(0~5)를 계산한다.
+    impactDirection에 따라 negative/positive 가중치 공식을 달리 적용한다.
+    """
     urgency = mapUrgency(factor.timeHorizon)
     likelihood = factor.likelihood if factor.likelihood is not None else 0.0
     irremediability = factor.irremediability if factor.irremediability is not None else 0.0
@@ -55,6 +61,10 @@ def calcImpact(factor: ImpactFactor, sourceType: str = "news", subIssueCode: str
 
 
 def calcFinancial(factor: FinancialFactor, sourceType: str = "news", subIssueCode: str = "") -> float:
+    """
+    [LEGACY] FinancialFactor로 financial 점수(0~5)를 계산한다.
+    복수 magnitude 채널 중 최대값을 baseMag로 사용하며 risk/opportunity 가중치를 달리 적용한다.
+    """
     magnitudes = [
         factor.revenueMagnitude, factor.costMagnitude, factor.capexMagnitude,
         factor.assetLiabilityMagnitude, factor.financingMagnitude, factor.legalRegulatoryMagnitude,
@@ -71,6 +81,7 @@ def calcFinancial(factor: FinancialFactor, sourceType: str = "news", subIssueCod
 
 
 def scoreSignals(signals: list) -> list:
+    """[LEGACY] 시그널 목록 각 항목의 impactFactor/financialFactor를 점수화하여 in-place 갱신한다."""
     for sig in signals:
         if sig.impactFactor:
             sig.impactScore05 = calcImpact(sig.impactFactor, sig.sourceType, sig.subIssueCode)
@@ -114,6 +125,7 @@ _FINANCIAL_MAGNITUDE_TIEBREAK = (
 
 
 def clampScore(value: float, lo: float, hi: float) -> float:
+    """값을 [lo, hi] 범위로 클리핑한다 (canonical IRO score 0~5 보정용)."""
     return max(lo, min(value, hi))
 
 
@@ -446,6 +458,11 @@ def step2ResolveKcgsTrend(
 
 
 def step2CalcKcgs(grade: str, trend: str, policy: Mapping[str, Any]) -> dict:
+    """
+    KCGS 등급(grade)과 추세(trend)를 조합하여 pillarSignal을 계산한다.
+    pillarSignal = min(pillarSignalMax, gradeRisk + trendModifier).
+    trendModifier가 UNOBSERVED이면 pillarSignal을 None(UNOBSERVED)으로 반환한다.
+    """
     kcgs = policy["kcgs"]
     gradeRiskMap = kcgs["gradeRisk"]
     trendMap = kcgs["trendModifier"]
@@ -514,6 +531,7 @@ def step2CalcExternalMax(signals: Sequence[ScreeningTraceV13], policy: Mapping[s
 
 
 def weightedAvg(values: Sequence[Tuple[Optional[float], float]]) -> Optional[float]:
+    """None을 제외한 관측치의 가중 평균을 계산한다. 관측치가 없으면 None을 반환한다."""
     observed = [(float(value), float(weight)) for value, weight in values if value is not None]
     weightSum = sum(weight for _, weight in observed)
     if not observed or weightSum <= 0:
@@ -522,6 +540,7 @@ def weightedAvg(values: Sequence[Tuple[Optional[float], float]]) -> Optional[flo
 
 
 def groupRowsByAxis(normalizedRows: Sequence[Mapping[str, Any]]) -> Dict[str, Dict[str, List[Optional[float]]]]:
+    """정규화된 설문 행을 축(impact/financial)과 응답자 그룹(employee/management/external)으로 분류한다."""
     grouped: Dict[str, Dict[str, List[Optional[float]]]] = {
         "impact": {"employee": [], "management": [], "external": []},
         "financial": {"employee": [], "management": [], "external": []},
@@ -604,6 +623,7 @@ class SelectionGovernanceError(ValueError):
 
 
 def getMaxAxis(impact: Optional[float], financial: Optional[float]) -> float:
+    """impact/financial 두 축 중 최대값을 반환한다. 둘 다 None이면 0.0을 반환한다."""
     candidates = [v for v in (impact, financial) if v is not None]
     return max(candidates) if candidates else 0.0
 

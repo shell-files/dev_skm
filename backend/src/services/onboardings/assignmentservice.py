@@ -27,6 +27,7 @@ class PreDmaG0CycleNotReadyError(ValueError):
 
 
 def publishMailEvent(mailEvent: Optional[dict]) -> tuple[bool, Optional[str]]:
+    """Kafka를 통해 메일 이벤트를 발행하고 성공 여부와 오류 메시지를 반환한다."""
     if not mailEvent:
         return False, None
     try:
@@ -38,6 +39,7 @@ def publishMailEvent(mailEvent: Optional[dict]) -> tuple[bool, Optional[str]]:
 
 
 def requirePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:
+    """활성 PRE_DMA_G0 사이클이 없으면 PreDmaG0CycleNotReadyError를 발생시킨다."""
     from src.services.onboardings.service import PRE_DMA_G0_CYCLE_NOT_READY_MESSAGE
     cycle = repo.resolvePreDmaG0Cycle(companyId=companyId, reportingYear=reportingYear)
     if not cycle:
@@ -46,11 +48,13 @@ def requirePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:
 
 
 def checkCycleType(cycleType: str) -> None:
+    """PRE_DMA_G0 이외의 cycleType이면 ValueError를 발생시킨다."""
     if str(cycleType or "").upper() != repo.CYCLE_TYPE_PRE_DMA_G0:
         raise ValueError("Only PRE_DMA_G0 cycleType is supported")
 
 
 def checkAssignmentCycleType(cycleType: str) -> str:
+    """배정 지원 사이클 유형인지 검증하고 정규화된 대문자 cycleType 문자열을 반환한다."""
     from src.services.onboardings.service import SUPPORTED_ASSIGNMENT_CYCLE_TYPES
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType not in SUPPORTED_ASSIGNMENT_CYCLE_TYPES:
@@ -59,6 +63,7 @@ def checkAssignmentCycleType(cycleType: str) -> str:
 
 
 def checkManager(userModel) -> None:
+    """배정 관리 권한이 없으면 PermissionError를 발생시킨다."""
     from src.services.onboardings.service import isAssignmentManager
     if isAssignmentManager(userModel):
         return
@@ -66,6 +71,7 @@ def checkManager(userModel) -> None:
 
 
 def bulkAssign(request: OnboardingAssignmentBulkAssignRequestDto, userModel) -> OnboardingAssignmentBulkAssignResponseDto:
+    """다수 지표에 담당자를 일괄 배정하고 초대 메일 발송 여부를 포함한 결과를 반환한다."""
     from src.services.onboardings.service import requireCycle, getActorUserId
     checkScope(request.companyId, userModel)
     checkManager(userModel)
@@ -106,6 +112,7 @@ def listAssignmentItems(
     userModel,
     batchId: Optional[int] = None,
 ) -> OnboardingAssignmentListResponseDto:
+    """사이클 내 전체 지표의 배정 현황 목록을 조회해 반환한다."""
     from src.services.onboardings.service import requireCycle
     checkScope(companyId, userModel)
     checkManager(userModel)
@@ -129,6 +136,7 @@ def getAssignmentItem(
     userModel,
     batchId: Optional[int] = None,
 ) -> OnboardingAssignmentDetailResponseDto:
+    """특정 지표의 배정 현황 상세 정보를 조회해 반환한다."""
     from src.services.onboardings.service import requireCycle
     checkScope(companyId, userModel)
     checkManager(userModel)
@@ -155,6 +163,7 @@ def getAssignmentItem(
 
 
 def patchAssignment(metricId: str, request: OnboardingAssignmentPatchRequestDto, userModel) -> OnboardingAssignmentBulkAssignResponseDto:
+    """단일 지표 배정 변경 요청을 일괄 배정 형식으로 변환해 처리한다."""
     bulkRequest = OnboardingAssignmentBulkAssignRequestDto(
         companyId=request.companyId,
         reportingYear=request.reportingYear,
@@ -169,6 +178,7 @@ def patchAssignment(metricId: str, request: OnboardingAssignmentPatchRequestDto,
 
 
 def bulkUnassign(request: OnboardingAssignmentBulkUnassignRequestDto, userModel) -> OnboardingAssignmentBulkUnassignResponseDto:
+    """다수 지표의 담당자 배정을 일괄 해제하고 처리 결과를 반환한다."""
     from src.services.onboardings.service import requireCycle
     checkScope(request.companyId, userModel)
     checkManager(userModel)

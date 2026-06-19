@@ -207,6 +207,7 @@ FINANCIAL_EXPOSURE_RULES = {
 
 
 def ratioToMagnitude(ratio: Optional[float]) -> int:
+    """재무 노출 비율을 0–5 단계 magnitude 정수로 변환한다."""
     if ratio is None or ratio <= 0:
         return 0
     if ratio < 0.001:
@@ -228,6 +229,7 @@ def calculateChannelScore(
     sourceType: str,
     confidence: float,
 ) -> dict:
+    """분모 선택 → magnitude 변환 → 소스 보너스·캡 적용의 3단계로 채널 스코어를 산출한다."""
     denominatorField, denominatorValue = selectDenominator(channel, financialBasis)
     estimatedExposure = None
     ratio = None
@@ -278,6 +280,7 @@ def calculateChannelScore(
 
 
 def canApplyFinancialExposure(subIssueCode: str, financialIroType: str) -> bool:
+    """해당 subIssueCode가 지정된 financialIroType의 스코어링을 허용하는지 마스터 데이터로 확인한다."""
     expectedIro = _financialIroToAllowedAxis(financialIroType)
     if not expectedIro:
         return False
@@ -285,6 +288,7 @@ def canApplyFinancialExposure(subIssueCode: str, financialIroType: str) -> bool:
 
 
 def resolvePreferConsolidated(runContext: dict) -> tuple[bool, list]:
+    """company_scope_type으로 연결 재무 우선 여부를 결정하며, 알 수 없는 scope는 연결 우선을 기본으로 한다."""
     scope = str(runContext.get("company_scope_type") or "").upper()
     if scope in {"PARENT", "GROUP", "HOLDING", "CONSOLIDATED"}:
         return True, []
@@ -296,6 +300,7 @@ def resolvePreferConsolidated(runContext: dict) -> tuple[bool, list]:
 
 
 def selectDenominator(channel: str, financialBasis: dict) -> tuple[Optional[str], Optional[float]]:
+    """채널 설정의 primary → fallback 순으로 유효한 분모 필드와 값을 선택한다."""
     config = CHANNEL_DENOMINATORS.get(channel) or {}
     for fieldName in (config.get("primary"), config.get("fallback")):
         if not fieldName:
@@ -313,6 +318,7 @@ def sourceTypeMagnitudeBonus(
     sourceType: str,
     confidence: float,
 ) -> int:
+    """규제·고신뢰 전문기관 출처에 대해 채널별 magnitude 보너스를 반환한다."""
     if magnitude <= 0:
         return 0
     if sourceType == "regulation" and channel == "legalRegulatoryMagnitude":
@@ -323,6 +329,7 @@ def sourceTypeMagnitudeBonus(
 
 
 def confidenceMagnitudeCap(confidence: float) -> Optional[int]:
+    """신뢰도 구간에 따라 magnitude 상한을 반환하며, 고신뢰(0.7+)이면 None(무제한)을 반환한다."""
     if confidence < 0.4:
         return 2
     if confidence < 0.7:
@@ -331,6 +338,7 @@ def confidenceMagnitudeCap(confidence: float) -> Optional[int]:
 
 
 def dominantMagnitude(magnitudes: dict) -> tuple[Optional[str], Optional[int]]:
+    """우선순위 목록 기준으로 magnitude가 가장 큰 채널 타입과 값을 반환한다."""
     bestType = None
     bestValue = None
     for channel in DOMINANT_MAGNITUDE_PRIORITY:

@@ -65,6 +65,7 @@ def validatePurposeScope(
     sourceCycleId,
     requireContext: bool = True,
 ) -> tuple[str, str]:
+    """허용된 rollupPurposeCode·metricScopeCode 조합인지 검증하고 정규화된 (purposeCode, scopeCode) 쌍을 반환한다."""
     rollupRepository = loadRepository()
     purposeCode = str(rollupPurposeCode or "").strip().upper()
     scopeCode = str(metricScopeCode or "").strip().upper()
@@ -93,6 +94,7 @@ def validatePurposeScope(
     )
 
 def validateSourceCycle(rollupRepository, sourceCycleId: int) -> dict:
+    """sourceCycleId가 유효한 POST_DMA_DISCLOSURE 사이클인지 확인하고 사이클 행을 반환한다."""
     conn = rollupRepository.getConn()
     try:
         with conn.cursor(dictionary=True) as cur:
@@ -127,6 +129,7 @@ def validateSourceCycle(rollupRepository, sourceCycleId: int) -> dict:
         conn.close()
 
 def resolveBatchContext(rollupRepository, purposeCode: str, runId: Optional[int], sourceCycleId: Optional[int]) -> dict:
+    """목적 코드에 따라 배치 컨텍스트(parentCompanyId, reportingYear, run/cycle)를 구성해 반환한다."""
     if purposeCode == rollupRepository.ROLLUP_PURPOSE_DMA_PRECHECK:
         run = getRunOrRaise(int(runId))
         checkConsolidatedRun(run)
@@ -146,6 +149,7 @@ def resolveBatchContext(rollupRepository, purposeCode: str, runId: Optional[int]
     }
 
 def listSubsidiaries(runId, sourceCycleId, rollupPurposeCode, metricScopeCode, userModel) -> RollupSubsidiaryResponseDto:
+    """목적 코드 및 지표 범위를 기준으로 롤업 참여 자회사 목록을 조회해 반환한다."""
     rollupRepository = loadRepository()
     purposeCode, scopeCode = validatePurposeScope(rollupPurposeCode, metricScopeCode, runId, sourceCycleId)
     context = resolveBatchContext(rollupRepository, purposeCode, runId, sourceCycleId)
@@ -169,6 +173,7 @@ def listSubsidiaries(runId, sourceCycleId, rollupPurposeCode, metricScopeCode, u
     return RollupSubsidiaryResponseDto(data=RollupSubsidiaryListDto(runId=runId, sourceCycleId=sourceCycleId, items=resItems))
 
 def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseDto:
+    """자회사 선택을 검증한 뒤 롤업 배치·범위·소스 준비 상태를 생성하고 배치 현황을 반환한다."""
     rollupRepository = loadRepository()
     purposeCode, metricScopeCode = validatePurposeScope(
         request.rollupPurposeCode,
@@ -330,6 +335,7 @@ def saveBatch(request: RollupBatchRequestDto, userModel) -> RollupBatchResponseD
     return RollupBatchResponseDto(data=buildBatchStatus(batch, includedCompanyIds))
 
 def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
+    """소스 전송 완료 여부를 확인한 뒤 연결식 계산을 실행하고 결과를 저장한다."""
     rollupRepository = loadRepository()
     rollupCalculator = loadCalculator()
 
@@ -474,6 +480,7 @@ def calcBatch(batchId: int, userModel) -> RollupCalculateResponseDto:
     )
 
 def listRequests(rollupPurposeCode: str, metricScopeCode: str, userModel) -> RollupRequestResponseDto:
+    """현재 소스 기업이 수신한 전체 롤업 요청 목록(전송 완료 포함)을 반환한다."""
     return listRequestsForSource(
         rollupPurposeCode=rollupPurposeCode,
         metricScopeCode=metricScopeCode,
@@ -491,6 +498,7 @@ def listRequestsForSource(
     allPurposesYn: bool,
     userModel,
 ) -> RollupRequestResponseDto:
+    """소스 기업 기준으로 필터 조건에 맞는 롤업 요청 목록과 준비 상태를 조회해 반환한다."""
     rollupRepository = loadRepository()
     if allPurposesYn:
         purposeCode, scopeCode = None, None
@@ -524,6 +532,7 @@ def getScopePreview(
     metricScopeCode: str,
     userModel,
 ) -> RollupScopePreviewResponseDto:
+    """배치 생성 전 연결식 계산에 포함될 지표·원자 지표 범위를 미리보기로 반환한다."""
     rollupRepository = loadRepository()
     purposeCode, scopeCode = validatePurposeScope(
         rollupPurposeCode,
@@ -568,6 +577,7 @@ def getScopePreview(
     )
 
 def getRequestDetail(batchId: int, userModel) -> RollupRequestDetailResponseDto:
+    """소스 기업의 관점에서 특정 배치에 대한 요청 상세 정보와 준비 현황을 반환한다."""
     rollupRepository = loadRepository()
     sourceCompanyId = getSource(userModel)
     batch = rollupRepository.getBatch(batchId)
@@ -633,6 +643,7 @@ def getRequestDetail(batchId: int, userModel) -> RollupRequestDetailResponseDto:
     )
 
 def listBatchSources(batchId: int, userModel) -> RollupBatchSourceListResponseDto:
+    """배치에 포함된 자회사별 전송 상태와 원자 지표 준비 현황 목록을 반환한다."""
     rollupRepository = loadRepository()
     batch = rollupRepository.getBatch(batchId)
     if not batch:
@@ -683,6 +694,7 @@ def listBatchSources(batchId: int, userModel) -> RollupBatchSourceListResponseDt
     )
 
 def sendSource(batchId: int, userModel) -> RollupSourceSendResponseDto:
+    """원자 지표 준비 상태를 확인한 뒤 소스 데이터를 지주사로 전송 완료 처리한다."""
     rollupRepository = loadRepository()
     sourceCompanyId = getSource(userModel)
     batch = rollupRepository.getBatch(batchId)
@@ -741,6 +753,7 @@ def sendSource(batchId: int, userModel) -> RollupSourceSendResponseDto:
     return RollupSourceSendResponseDto(data=buildSourceSendStatus(source))
 
 def getStatus(batchId: int, userModel) -> RollupBatchSummaryResponseDto:
+    """배치 전체 현황(요청 수·전송 수·계산 준비 여부 등)을 요약해 반환한다."""
     rollupRepository = loadRepository()
     batch = rollupRepository.getBatch(batchId)
     if not batch:
@@ -758,6 +771,7 @@ def getActiveBatchStatus(
     metricScopeCode: str,
     userModel,
 ) -> RollupActiveBatchResponseDto:
+    """목적 코드와 지표 범위에 해당하는 활성 배치를 조회하고 없으면 data=None으로 반환한다."""
     rollupRepository = loadRepository()
     purposeCode, scopeCode = validatePurposeScope(
         rollupPurposeCode,
@@ -777,6 +791,7 @@ def getActiveBatchStatus(
     return RollupActiveBatchResponseDto(data=buildBatchStatus(batch, includedCompanyIds))
 
 def ensureRollupResponseWorkspace(batchId: int, userModel) -> RollupRequestDetailResponseDto:
+    """소스 기업의 롤업 응답 작업 공간(ROLLUP_RESPONSE 사이클 및 범위)을 확보하고 요청 상세를 반환한다."""
     rollupRepository = loadRepository()
     sourceCompanyId = getSource(userModel)
     batch = rollupRepository.getBatch(batchId)
@@ -824,6 +839,7 @@ def ensureRollupResponseWorkspace(batchId: int, userModel) -> RollupRequestDetai
     return getRequestDetail(batchId, userModel)
 
 def getRunOrRaise(runId: int) -> dict:
+    """runId에 해당하는 보고 워크플로우 run을 조회하고 없으면 RollupError를 발생시킨다."""
     rollupRepository = loadRepository()
     run = rollupRepository.getRun(runId)
     if not run:
@@ -831,15 +847,18 @@ def getRunOrRaise(runId: int) -> dict:
     return run
 
 def checkConsolidatedRun(run: dict) -> None:
+    """보고 기준이 연결(CONSOLIDATED)이 아니면 RollupError를 발생시킨다."""
     if str(run.get("report_basis_type") or "").upper() != "CONSOLIDATED":
         raise RollupError(409, "REPORT_BASIS_NOT_CONSOLIDATED", "Rollup is available only for consolidated report basis.")
 
 def checkBatchActive(batch: dict) -> None:
+    """배치 상태가 완료·취소·삭제 등 비활성이면 RollupError를 발생시킨다."""
     batchStatus = str(batch.get("batch_status") or "").lower()
     if batchStatus in {"deleted", "cancelled", "canceled", "archived", "completed"}:
         raise RollupError(409, "ROLLUP_BATCH_NOT_ACTIVE", "Rollup batch is not active.")
 
 def checkTransferReady(batch: dict, sources: list[dict]) -> dict:
+    """지주사와 자회사 모두 전송 완료 상태인지 확인하고 미전송 기업 ID 목록을 반환한다."""
     rollupRepository = loadRepository()
     parentCompanyId = int(batch["parent_company_id"])
     parentReadyYn = any(
@@ -864,6 +883,7 @@ def checkTransferReady(batch: dict, sources: list[dict]) -> dict:
     }
 
 def normalizeCompanyIds(companyIds: list[int]) -> list[int]:
+    """기업 ID 목록을 int로 변환하고 중복이 있으면 RollupError를 발생시킨다."""
     normalizedIds = []
     seenIds = set()
     for companyId in companyIds:

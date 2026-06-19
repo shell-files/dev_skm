@@ -51,6 +51,7 @@ _cache: Optional[RuntimeConfigV13] = None
 
 
 def readJson(path: Path) -> Any:
+    """지정 경로의 JSON 파일을 읽어 파싱한다. 파일 미존재 또는 JSON 오류 시 DmaRuleValidationError를 발생시킨다."""
     if not path.exists():
         raise DmaRuleValidationError(f"Required runtime config file is missing: {path.name}")
     try:
@@ -68,6 +69,10 @@ def _canonicalJson(obj: Any) -> str:
 
 
 def computeConfigHash(policies: Mapping[str, Any]) -> str:
+    """
+    정책 파일 집합의 SHA-256 해시를 계산한다.
+    파일명을 정렬한 후 각 파일의 정규화 JSON을 순서대로 해싱하여 재현 가능성을 보장한다.
+    """
     digest = hashlib.sha256()
     for filename in sorted(policies):
         digest.update(filename.encode("utf-8"))
@@ -108,6 +113,10 @@ def _loadBundle() -> RuntimeConfigV13:
 
 
 def getDmaRules(forceReload: bool = False) -> RuntimeConfigV13:
+    """
+    v1.3 runtime config 번들을 반환한다.
+    스레드 안전 캐시를 사용하며 forceReload=True이면 디스크에서 재로드한다.
+    """
     global _cache
     with _lock:
         if _cache is None or forceReload:
@@ -116,20 +125,24 @@ def getDmaRules(forceReload: bool = False) -> RuntimeConfigV13:
 
 
 def resetDmaRulesForTest() -> None:
+    """테스트 격리를 위해 인메모리 캐시를 초기화한다."""
     global _cache
     with _lock:
         _cache = None
 
 
 def getManifest() -> Dict[str, Any]:
+    """로드된 manifest.json의 딥카피를 반환한다 (외부 변경 차단)."""
     return copy.deepcopy(getDmaRules().manifest)
 
 
 def getAllPolicies() -> Dict[str, Dict[str, Any]]:
+    """로드된 전체 정책 파일 맵의 딥카피를 반환한다."""
     return copy.deepcopy(getDmaRules().policies)
 
 
 def getPolicy(name: str) -> Dict[str, Any]:
+    """이름(확장자 선택)으로 단일 정책 파일을 조회하여 딥카피로 반환한다. 미존재 시 DmaRuleValidationError."""
     filename = name if name.endswith(".json") else f"{name}.json"
     filename = validatePath(filename)
     policies = getDmaRules().policies
@@ -139,22 +152,27 @@ def getPolicy(name: str) -> Dict[str, Any]:
 
 
 def getConfigHash() -> str:
+    """현재 로드된 정책 번들의 SHA-256 해시 문자열을 반환한다."""
     return getDmaRules().configHash
 
 
 def getRuleVersion() -> str:
+    """로드된 번들의 ruleVersion 문자열을 반환한다."""
     return getDmaRules().ruleVersion
 
 
 def getArchRevision() -> str:
+    """로드된 번들의 architectureRevision 문자열을 반환한다."""
     return getDmaRules().architectureRevision
 
 
 def getCapabilities() -> Dict[str, str]:
+    """manifest capabilities 전체의 딥카피를 반환한다."""
     return copy.deepcopy(getDmaRules().capabilities)
 
 
 def getCapability(name: str) -> Optional[str]:
+    """지정 capability 키의 값을 반환한다. 존재하지 않으면 None을 반환한다."""
     return getDmaRules().capabilities.get(name)
 
 

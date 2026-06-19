@@ -50,6 +50,10 @@ def crawlNewsArticles(
     companyKeywords: list[str],
     industryKeywords: list[str],
 ) -> CrawlExecutionResult:
+    """
+    요청된 소스 목록을 검증하고 각 크롤러를 실행하여 기사를 수집한다.
+    날짜 범위 필터, 키워드 매칭, URL 중복 제거를 적용하며 소스별 실행 결과를 집계하여 반환한다.
+    """
     requestedSources = sources or []
     result = CrawlExecutionResult(requestedSources=requestedSources)
     executableSources = _validateSources(requestedSources, result)
@@ -156,6 +160,7 @@ def applySavedSignalCounts(
     sourceBreakdown: list[MediaSourceBreakdown],
     savedSignalCountsBySource: dict[str, int],
 ) -> list[MediaSourceBreakdown]:
+    """소스별 저장된 시그널 수를 sourceBreakdown에 반영하여 갱신된 목록을 반환한다."""
     updated = []
     for item in sourceBreakdown:
         savedCount = savedSignalCountsBySource.get(item.sourceKey, 0)

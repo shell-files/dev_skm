@@ -15,6 +15,7 @@ from src.utils.db import save
 cookie_scheme = APIKeyCookie(name=settings.cookie_key)
 
 def get_domain(request: Request):
+    """요청 호스트명을 분석하여 쿠키에 설정할 도메인 스코프 문자열을 반환한다."""
     current_domain = request.url.hostname
     # 강의장용 DNS
     print(f"요청한 Domain : {current_domain}")
@@ -102,6 +103,7 @@ def get_token(request: Request, response: Response, token: str = Depends(cookie_
         )
         
 def delete_cookie(response: Response, request: Request, uuid: str):
+    """로그아웃 처리를 수행한다. DB TOKEN 소프트삭제, Redis UUID 제거, 쿠키 삭제를 순서대로 실행한다."""
     try:
         # 1. db에서 refresh token delete_yn 1으로 변경
         logoutSql="""

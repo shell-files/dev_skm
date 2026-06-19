@@ -32,6 +32,7 @@ def buildProfile(
     runContext: dict,
     facts: list[CompanyContextFactDto],
 ) -> CompanyContextProfileDto:
+    """G0 Fact 키워드 분석으로 노출 등급을 결정해 결정론적 컨텍스트 프로필을 생성한다."""
     combinedText = _combinedText(runContext, facts)
     evidenceMetricIds = _unique([fact.metricId for fact in facts if fact.metricId])
     evidenceAtomicMetricIds = _unique([fact.atomicMetricId for fact in facts if fact.atomicMetricId])
@@ -117,6 +118,7 @@ def calcModifier(
     row: dict,
     profileConfidence: Optional[float] = None,
 ) -> SubIssueContextModifierDto:
+    """컨텍스트 프로필 규칙을 서브이슈에 적용해 impact/financial modifier를 산출한다."""
     subIssueCode = row.get("sub_issue_code")
     rules: list[ContextRuleHitDto] = []
     confidence = _profileConfidence(profile) if profileConfidence is None else profileConfidence
@@ -167,6 +169,7 @@ def calcModifier(
 
 
 def checkObservedStage(row: dict) -> bool:
+    """스코어 요약 행에 benchmark·media·survey 중 하나라도 점수가 있으면 True를 반환한다."""
     return any([
         row.get("benchmark_impact_score") is not None,
         row.get("benchmark_financial_score") is not None,
@@ -180,6 +183,7 @@ def checkObservedStage(row: dict) -> bool:
 def applyRankGuards(
     modifiers: list[SubIssueContextModifierDto],
 ) -> list[SubIssueContextModifierDto]:
+    """순위 이동 한도와 Top5 진입 원순위 제한을 위반하는 modifier를 0으로 강제한다."""
     _assignRawRanks(modifiers)
     _assignAdjustedRanks(modifiers)
 

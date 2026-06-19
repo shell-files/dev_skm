@@ -25,6 +25,7 @@ from src.utils.companyscope import checkScope
 
 
 def submitApproval(request: OnboardingApprovalRequestDto, userModel) -> OnboardingApprovalActionResponseDto:
+    """입력 권한을 확인한 뒤 지표 결재 제출 요청을 처리하고 결재 현황 응답을 반환한다."""
     from src.services.onboardings.service import requireCycle, checkMetricInputPermission, getActorUserId
     checkScope(request.companyId, userModel)
     cycle = requireCycle(request.companyId, request.reportingYear, request.cycleType, batchId=getattr(request, "batchId", None))
@@ -47,6 +48,7 @@ def submitApproval(request: OnboardingApprovalRequestDto, userModel) -> Onboardi
 
 
 def reviewApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
+    """검토 권한을 확인한 뒤 지표를 reviewed 상태로 전환하고 결재 현황 응답을 반환한다."""
     from src.services.onboardings.service import getActorUserId
     checkScope(request.companyId, userModel)
     checkReviewer(userModel)
@@ -63,6 +65,7 @@ def reviewApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
 
 
 def approveApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
+    """승인 권한을 확인한 뒤 지표를 approved 상태로 전환하고 결재 현황 응답을 반환한다."""
     from src.services.onboardings.service import getActorUserId
     checkScope(request.companyId, userModel)
     checkApprover(userModel)
@@ -79,6 +82,7 @@ def approveApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
 
 
 def rejectApproval(request, userModel) -> OnboardingApprovalActionResponseDto:
+    """검토 권한과 코멘트 필수 여부를 확인한 뒤 지표를 rejected 상태로 전환한다."""
     from src.services.onboardings.service import getActorUserId
     checkScope(request.companyId, userModel)
     checkReviewer(userModel)
@@ -106,6 +110,7 @@ def listApprovals(
     userModel,
     batchId: Optional[int] = None,
 ) -> OnboardingApprovalListResponseDto:
+    """역할에 따라 열람 가능한 결재 현황 목록을 조회해 반환한다."""
     from src.services.onboardings.service import (
         resolveCycleSourceMaterialityRunId,
         isEmployee, isReviewer, isAssignmentManager,
@@ -139,6 +144,7 @@ def getApprovalStatus(
     cycleType: str = "PRE_DMA_G0",
     batchId: Optional[int] = None,
 ) -> OnboardingApprovalStatusResponseDto:
+    """열람 권한을 확인한 뒤 특정 지표의 결재 상태 요약을 반환한다."""
     from src.services.onboardings.service import resolveCycleSourceMaterialityRunId, checkMetricStatusPermission
     checkScope(companyId, userModel)
     sourceMaterialityRunId = resolveCycleSourceMaterialityRunId(companyId, reportingYear, cycleType)
@@ -163,6 +169,7 @@ def getApprovalDetail(
     userModel,
     batchId: Optional[int] = None,
 ) -> OnboardingApprovalDetailResponseDto:
+    """결재 현황과 원자 지표별 입력값 상세 내역을 포함한 결재 상세 응답을 반환한다."""
     from src.services.onboardings.service import requireCycle, resolveCycleSourceMaterialityRunId, checkMetricStatusPermission
     checkScope(companyId, userModel)
     sourceMaterialityRunId = resolveCycleSourceMaterialityRunId(companyId, reportingYear, cycleType)
@@ -200,6 +207,7 @@ def getApprovalDetail(
 
 
 def actionResponse(summary: dict, message: str) -> OnboardingApprovalActionResponseDto:
+    """결재 현황 요약과 메시지를 OnboardingApprovalActionResponseDto로 래핑한다."""
     return OnboardingApprovalActionResponseDto(
         data=statusDto(summary, None),
         message=message,
@@ -207,6 +215,7 @@ def actionResponse(summary: dict, message: str) -> OnboardingApprovalActionRespo
 
 
 def itemDto(summary: dict, userModel) -> OnboardingApprovalItemDto:
+    """결재 현황 요약을 목록 항목 DTO로 변환하면서 본인 제출 여부를 설정한다."""
     payload = dict(summary)
     payload.pop("selfSubmittedYn", None)
     return OnboardingApprovalItemDto(
@@ -216,6 +225,7 @@ def itemDto(summary: dict, userModel) -> OnboardingApprovalItemDto:
 
 
 def statusDto(summary: dict, userModel) -> OnboardingApprovalStatusDataDto:
+    """결재 현황 요약을 상태 DTO로 변환하면서 롤업 준비 여부와 본인 제출 여부를 계산해 설정한다."""
     payload = dict(summary)
     payload.pop("selfSubmittedYn", None)
     approvalPolicyCode = str(summary.get("approvalPolicyCode") or "").strip().upper()
@@ -237,6 +247,7 @@ def detailDto(
     atomicRows: list[dict],
     userModel,
 ) -> OnboardingApprovalDetailDataDto:
+    """상태 DTO에 원자 지표별 입력 상세 항목을 추가해 상세 DTO를 생성한다."""
     base = statusDto(summary, userModel)
     payload = base.model_dump() if hasattr(base, "model_dump") else base.dict()
     return OnboardingApprovalDetailDataDto(
@@ -262,12 +273,14 @@ def detailDto(
 
 
 def checkApprover(userModel) -> None:
+    """승인 권한이 없으면 PermissionError를 발생시킨다."""
     if isApprover(userModel):
         return
     raise PermissionError("Only ESG담당자 or 관리자 can approve/reject onboarding inputs")
 
 
 def checkReviewer(userModel) -> None:
+    """검토 권한이 없으면 PermissionError를 발생시킨다."""
     from src.services.onboardings.service import isReviewer
     if isReviewer(userModel):
         return
@@ -275,6 +288,7 @@ def checkReviewer(userModel) -> None:
 
 
 def isApprover(userModel) -> bool:
+    """사용자가 ADMIN 또는 ESG 담당자 역할(승인 권한)인지 여부를 반환한다."""
     from src.services.onboardings.service import APPROVER_ROLES, APPROVER_ROLE_NAMES, readUserField
     role = str(readUserField(userModel, "role") or "").strip().upper()
     roleName = str(readUserField(userModel, "role_name") or "").strip()
@@ -282,6 +296,7 @@ def isApprover(userModel) -> bool:
 
 
 def checkSelfSubmitted(summary: dict, userModel) -> bool:
+    """현재 사용자가 해당 지표를 직접 제출한 사람인지 여부를 반환한다."""
     from src.services.onboardings.service import getActorUserId
     actorUserId = getActorUserId(userModel)
     inputUserId = summary.get("inputUserId")

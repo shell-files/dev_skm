@@ -13,6 +13,7 @@ from src.utils.typeutils import firstPresent, asFloat
 
 
 def buildEvidenceSpans(rawSpans: Any, sourceType: Optional[str]) -> List[EvidenceSpanV13]:
+    """raw 증거 스팬 데이터를 EvidenceSpanV13 목록으로 정규화한다."""
     if rawSpans is None:
         return []
     if isinstance(rawSpans, (str, bytes)):
@@ -39,6 +40,7 @@ def buildEvidenceSpans(rawSpans: Any, sourceType: Optional[str]) -> List[Evidenc
 
 
 def sanitizeMetadata(value: Any, forbiddenFields: set[str]) -> Any:
+    """중첩 구조에서 금지 필드를 재귀적으로 제거해 AI 정책 준수 메타데이터를 반환한다."""
     if isinstance(value, Mapping):
         return {
             key: sanitizeMetadata(child, forbiddenFields)
@@ -56,6 +58,7 @@ def step0NormalizeBenchmarkFacts(
     sourceType: Optional[str],
     aiPolicy: Mapping[str, Any],
 ) -> list[ExtractedFactsV13]:
+    """벤치마크 AI 분석 결과를 검증하고 금지 필드를 제거해 ExtractedFactsV13 목록으로 변환한다."""
     forbiddenFields = set(aiPolicy["forbiddenFields"])
     facts: list[ExtractedFactsV13] = []
     for result in resultList or []:

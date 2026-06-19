@@ -1,3 +1,8 @@
+"""
+dmasurveyformrepository.py
+레이어: Repository
+역할: DMA 설문 폼 생성·조회·업데이트 DB 처리.
+"""
 import json
 
 from src.utils.db import getConn

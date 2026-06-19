@@ -1,3 +1,8 @@
+"""
+financialexposurecalc.py
+레이어: Service (materialities)
+역할: DMA 재무 노출 계산 엔진 — factor 기반 IRO 재무 점수 계산 순수 함수.
+"""
 from __future__ import annotations
 
 from typing import Optional

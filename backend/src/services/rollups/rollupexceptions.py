@@ -1,3 +1,8 @@
+"""
+rollupexceptions.py
+레이어: Service (rollups)
+역할: 롤업 서비스 커스텀 예외 클래스 정의.
+"""
 from typing import Optional
 
 

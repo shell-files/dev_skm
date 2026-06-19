@@ -1,3 +1,8 @@
+"""
+calculationengine.py
+레이어: Utils
+역할: KPI 계산 규칙 실행 엔진 — 위상 정렬 기반 의존성 해소 및 수식 평가.
+"""
 from __future__ import annotations
 
 from collections import defaultdict, deque

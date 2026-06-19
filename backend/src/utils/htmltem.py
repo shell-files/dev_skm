@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+"""
+htmltem.py
+레이어: Utils
+역할: 초대 이메일 HTML 템플릿 생성.
+"""
 from src.utils.settings import settings
 
 # html1: 신규 담당자 가입 초대

@@ -1,3 +1,8 @@
+"""
+calculationrepository.py
+레이어: Repository
+역할: KPI 계산 규칙 및 승인된 Fact 데이터 조회.
+"""
 from __future__ import annotations
 
 from typing import Optional

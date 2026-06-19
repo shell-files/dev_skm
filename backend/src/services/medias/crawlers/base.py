@@ -1,3 +1,8 @@
+"""
+base.py
+레이어: Service (medias/crawlers)
+역할: 미디어 크롤러 공통 기반 클래스 — HTML 파싱 및 뉴스 아이템 추상화.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field

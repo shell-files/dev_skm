@@ -1,4 +1,9 @@
-﻿from __future__ import annotations
+﻿"""
+orchestrator.py
+레이어: Service (materialities)
+역할: DMA 중대성 평가 오케스트레이터 — 미디어·벤치마크·설문 파이프라인 통합 실행.
+"""
+from __future__ import annotations
 
 from typing import Any, Mapping, Optional, Sequence
 
@@ -16,9 +21,9 @@ def step0BuildFactTrace(
     extractedFact: ExtractedFactsV13 | Mapping[str, Any],
     sourceChannel: str,
 ) -> dict:
-    # STEP 0. Fact-only DTO를 v1.3 Trace Payload로 감싼다.
-    # Input: ExtractedFactsV13 1건과 sourceChannel.
-    # Output: 점수/Screening 없는 ScoringPayloadV13 dict.
+    # 0단계: Fact-only DTO를 v1.3 Trace Payload로 감싼다.
+    # 입력: ExtractedFactsV13 1건과 sourceChannel
+    # 출력: 점수/Screening 없는 ScoringPayloadV13 dict
     fact = extractedFact if isinstance(extractedFact, ExtractedFactsV13) else ExtractedFactsV13(**dict(extractedFact))
     return step4BuildTrace(
         scorePurpose=ScorePurposeV13.PRESURVEY_SCREENING,
@@ -106,8 +111,8 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
         latestGrade = str(payload.get("latestGrade") or payload["grade"])
         state = dmascoring.step2CalcKcgs(latestGrade, str(payload["trend"]), screeningPolicy)
         subIssueBoost = dmascoring.step2CalcKcgsBoost(state["pillarSignal"], screeningPolicy)
-        # KCGS pillar movement is a symmetric E/S/G domain-level media_external signal.
-        # It participates in external MAX but is not added again at Top20.
+        # KCGS pillar movement은 E/S/G 도메인 레벨 media_external 신호로 대칭 처리.
+        # external MAX에 포함되지만 Top20에서 중복 추가하지 않음.
         trace = ScreeningTraceV13(
             channel="kcgs_pillar_domain_signal",
             scorePurpose=ScorePurposeV13.PRESURVEY_SCREENING,

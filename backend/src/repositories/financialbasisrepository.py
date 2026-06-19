@@ -1,35 +1,15 @@
 """
-Domain: DMA Materiality
-Layer: utils/repository
-Responsibility:
-- Read G0-02 financial basis for DMA financial exposure
-- Resolve entity vs consolidated financial basis
-- Return normalized financial basis payload for service layer
-Public functions:
-- getBasis
-- getG0FinancialBasis
-- buildPriority
-- buildFinancialBasisPriority
-- fetchRows
-- fetchFinancialBasisRows
-- checkBasisReady
-- fetchApprovedBasisRow
-- buildBasis
-- buildBasisFromRows
-- checkUsable
-- isUsableBasis
-- buildEmptyBasis
-- emptyFinancialBasis
-- normalizeValue
-- normalizeFinancialValue
-Do not:
-- do not mutate unrelated DB state
-- do not calculate final financial score
-- do not mutate DB
-- do not change scoring formula unless explicitly requested
-- do not use selected-subIssue onboarding metrics as DMA pre-selection basis
-- do not call FastAPI router directly
-- do not modify auth/token/common code
+financialbasisrepository.py
+레이어: Repository
+역할: G0-02 재무 기준 조회 — 단독/연결 재무 기준 판별 및 DMA 재무 노출 계산용 데이터 반환.
+
+주요 함수:
+  getBasis / getG0FinancialBasis              — 재무 기준 조회
+  buildPriority / buildFinancialBasisPriority — 우선순위 구성
+  fetchRows / fetchFinancialBasisRows          — DB 행 조회
+  checkBasisReady / isUsableBasis              — 기준 준비 여부 확인
+  buildEmptyBasis / emptyFinancialBasis        — 빈 기준 구성
+  normalizeValue / normalizeFinancialValue     — 값 정규화
 """
 
 from __future__ import annotations

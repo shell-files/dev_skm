@@ -1,3 +1,8 @@
+"""
+service.py
+레이어: Service (surveys)
+역할: 설문 생성·관리 서비스 — Google Sheets 연동 폼 생성 및 응답 수집 오케스트레이션.
+"""
 import csv
 import os
 
@@ -11,9 +16,7 @@ from src.services.surveys.formservice import (
 )
 
 
-# =========================
-# EXPORT CSV (Sheet 조회 API)
-# =========================
+
 async def exportCsvProcess(sheet_id, token):
     sheetsService = _getSheetsService()
     try:
@@ -71,8 +74,6 @@ async def exportCsvProcess(sheet_id, token):
         return {"status": "error", "message": str(e)}
 
 
-# =========================
-# 템플릿 조회
-# =========================
+
 def getRawProcess():
     return loadSurveyTemplate()

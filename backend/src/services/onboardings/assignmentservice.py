@@ -1,3 +1,8 @@
+"""
+assignmentservice.py
+레이어: Service (onboardings)
+역할: 온보딩 지표 배정 서비스 — 지표 배정 요청·조회·취소 처리.
+"""
 from __future__ import annotations
 
 from typing import Optional

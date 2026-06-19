@@ -1,3 +1,8 @@
+"""
+dmaworkflowrepository.py
+레이어: Repository
+역할: DMA 워크플로우 단계 상태 조회 및 업데이트.
+"""
 from datetime import datetime
 from typing import Optional
 

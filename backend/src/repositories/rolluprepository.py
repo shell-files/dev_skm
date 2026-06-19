@@ -1,7 +1,11 @@
-﻿from typing import Optional
+﻿"""
+rolluprepository.py
+레이어: Repository
+역할: 롤업 요청·결과 데이터 조회 및 저장.
+"""
+from typing import Optional
 from src.utils.db import findAll, findOne, getConn
 
-# Enums
 ROLLUP_PURPOSE_DMA_PRECHECK = "DMA_PRECHECK"
 ROLLUP_PURPOSE_REPORT_DISCLOSURE = "REPORT_DISCLOSURE"
 METRIC_SCOPE_G0_02_FINANCIAL_BASIS = "G0_02_FINANCIAL_BASIS"

@@ -1,3 +1,12 @@
+"""
+media.py
+레이어: API Router
+역할: 미디어 크롤링·분석 및 KCGS ESG 등급 저장 엔드포인트.
+
+엔드포인트:
+  POST /news/crawl-and-analyze  — MVP 고정 언론사 크롤링 및 미디어 분석
+  POST /kcgs/grades             — KCGS ESG 등급 입력 저장 (APPROVED)
+"""
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.models.media import (

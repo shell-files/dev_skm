@@ -1,3 +1,8 @@
+"""
+file.py
+레이어: Utils
+역할: 파일 업로드·저장·삭제 유틸리티.
+"""
 import uuid
 import shutil
 from pathlib import Path

@@ -1,4 +1,9 @@
-﻿import json
+﻿"""
+service.py
+레이어: Service (reports)
+역할: ESG 보고서 초안 서비스 — 섹션·단락 데이터 조회 및 다운로드 처리.
+"""
+import json
 from typing import Optional
 
 from src.utils.typeutils import safeFloat as _safeFloat, safeInt as _safeInt
@@ -135,7 +140,7 @@ def getReportDrafts(runId: int) -> ReportDraftResponseDto:
 
 
 def patchReportDraft(draftId: int, editedText: str) -> ReportDraftPatchResponseDto:
-    # Phase 2A does not mutate report drafts because edited_text columns are not in the clean schema yet.
+    # Phase 2A에서는 edited_text 컬럼이 clean schema에 미포함이므로 보고서 초안을 수정하지 않음.
     existingDraft = getDraftById(draftId)
     if not existingDraft:
         return ReportDraftPatchResponseDto(

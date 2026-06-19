@@ -1,3 +1,8 @@
+"""
+dmasurveyresponserepository.py
+레이어: Repository
+역할: DMA 설문 응답 데이터 저장·조회·제출 DB 처리.
+"""
 from src.utils.db import getConn
 from src.repositories.dmasurveyvalidation import validateRunId as _validateRunId, validateFormId as _validateFormId
 

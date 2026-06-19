@@ -1,4 +1,8 @@
-# ESG 온톨로지 사전 (v4.3)
+"""
+subissuemaster.py
+레이어: Utils
+역할: ESG 서브이슈 마스터 데이터 — 온톨로지 사전 v4.3.
+"""
 
 subissueMaster = {
     "E_CLIMATE__CLIMATE_GOVERNANCE_INVENTORY": {

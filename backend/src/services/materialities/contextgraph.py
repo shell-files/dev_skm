@@ -1,20 +1,10 @@
 """
-Domain: DMA Materiality
-Layer: service/optional-llm
-Responsibility:
-- Optionally build CompanyContextProfile with LangGraph/LangChain
-- Fallback to deterministic profile builder when LLM is disabled or fails
-- Validate and verify profile evidence
-Public functions:
-- buildCompanyContextProfileWithOptionalGraph
-Do not:
-- do not mutate unrelated DB state
-- do not calculate DMA score, modifier, rank, or selected issue
-- do not make LLM failure an API failure
-- do not change scoring formula unless explicitly requested
-- do not modify deterministic scoring pipeline
-- do not call FastAPI router directly
-- do not modify auth/token/common code
+contextgraph.py
+레이어: Service (materialities)
+역할: LangGraph/LangChain 기반 기업 컨텍스트 프로필 생성 — LLM 비활성화 시 결정론적 빌더 폴백.
+
+주요 함수:
+  buildCompanyContextProfileWithOptionalGraph — 기업 컨텍스트 프로필 생성
 """
 
 from __future__ import annotations

@@ -1,4 +1,9 @@
-﻿import uuid
+﻿"""
+service.py
+레이어: Service (benchmarks)
+역할: 벤치마크 SR 파일 처리 서비스 — 파일 업로드·OCR·DMA 시그널 저장.
+"""
+import uuid
 import shutil
 from pathlib import Path
 from src.utils.settings import settings

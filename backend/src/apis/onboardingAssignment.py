@@ -1,3 +1,15 @@
+"""
+onboardingAssignment.py
+레이어: API Router
+역할: 온보딩 지표 배정·해제·조회 엔드포인트.
+
+엔드포인트:
+  POST /bulk-assign      — 온보딩 지표 일괄 배정
+  GET  /                 — 온보딩 지표 배정 목록 조회
+  GET  /{metricId}       — 온보딩 지표 배정 단건 조회
+  PATCH /{metricId}      — 온보딩 지표 단건 배정
+  POST /bulk-unassign    — 온보딩 지표 일괄 배정 취소
+"""
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 
@@ -56,12 +68,12 @@ def statusForValueError(error: ValueError) -> int:
 @router.post(
     "/bulk-assign",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
-    summary="Bulk assign onboarding metrics",
+    summary="온보딩 지표 일괄 배정",
 )
 @onboardingAssignmentRouter.post(
     "/bulk-assign",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
-    summary="Bulk assign onboarding metrics",
+    summary="온보딩 지표 일괄 배정",
 )
 async def bulkAssignRoute(
     request: OnboardingAssignmentBulkAssignRequestDto,
@@ -82,12 +94,12 @@ async def bulkAssignRoute(
 @router.get(
     "",
     response_model=OnboardingAssignmentListResponseDto,
-    summary="List onboarding metric assignments",
+    summary="온보딩 지표 배정 목록 조회",
 )
 @onboardingAssignmentRouter.get(
     "",
     response_model=OnboardingAssignmentListResponseDto,
-    summary="List onboarding metric assignments",
+    summary="온보딩 지표 배정 목록 조회",
 )
 async def listAssignmentItemsRoute(
     companyId: int = Query(...),
@@ -109,12 +121,12 @@ async def listAssignmentItemsRoute(
 @router.get(
     "/{metricId}",
     response_model=OnboardingAssignmentDetailResponseDto,
-    summary="Get one onboarding metric assignment",
+    summary="온보딩 지표 배정 단건 조회",
 )
 @onboardingAssignmentRouter.get(
     "/{metricId}",
     response_model=OnboardingAssignmentDetailResponseDto,
-    summary="Get one onboarding metric assignment",
+    summary="온보딩 지표 배정 단건 조회",
 )
 async def getAssignmentItemRoute(
     metricId: str,
@@ -137,12 +149,12 @@ async def getAssignmentItemRoute(
 @router.patch(
     "/{metricId}",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
-    summary="Assign one onboarding metric",
+    summary="온보딩 지표 단건 배정",
 )
 @onboardingAssignmentRouter.patch(
     "/{metricId}",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
-    summary="Assign one onboarding metric",
+    summary="온보딩 지표 단건 배정",
 )
 async def patchAssignmentRoute(
     metricId: str,
@@ -164,12 +176,12 @@ async def patchAssignmentRoute(
 @router.post(
     "/bulk-unassign",
     response_model=OnboardingAssignmentBulkUnassignResponseDto,
-    summary="Bulk unassign onboarding metrics",
+    summary="온보딩 지표 일괄 배정 취소",
 )
 @onboardingAssignmentRouter.post(
     "/bulk-unassign",
     response_model=OnboardingAssignmentBulkUnassignResponseDto,
-    summary="Bulk unassign onboarding metrics",
+    summary="온보딩 지표 일괄 배정 취소",
 )
 async def bulkUnassignRoute(
     request: OnboardingAssignmentBulkUnassignRequestDto,

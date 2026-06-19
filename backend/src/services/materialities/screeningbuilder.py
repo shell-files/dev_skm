@@ -1,3 +1,8 @@
+"""
+screeningbuilder.py
+레이어: Service (materialities)
+역할: Pre-Survey Screening 신호 구성 — 미디어·벤치마크 기반 후보 이슈 1차 선별.
+"""
 from __future__ import annotations
 
 import json

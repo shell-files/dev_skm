@@ -1,6 +1,8 @@
-# 이 파일의 함수들은 사용처가 없거나 계층 위반으로 분리된 코드입니다.
-# 안정성 확인 후 일괄 제거 예정.
-
+"""
+_deprecated.py
+레이어: Repository
+역할: 사용처가 없거나 계층 위반으로 분리된 함수 보관 — 안정성 확인 후 일괄 제거 예정.
+"""
 from typing import Optional
 
 from src.repositories.onboardingscoperepository import (

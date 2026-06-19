@@ -1,3 +1,8 @@
+"""
+rollupbaseline.py
+레이어: Service (rollups)
+역할: 롤업 전년도 기준값 관리 서비스 — 요구사항 조회 및 기준값 저장.
+"""
 from __future__ import annotations
 
 from src.models.rollup import (

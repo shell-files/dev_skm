@@ -1,3 +1,8 @@
+"""
+dmaworkflowstatus.py
+레이어: Model
+역할: DMA 워크플로우 진행 상태 응답 DTO 정의.
+"""
 from datetime import datetime
 from typing import Optional
 

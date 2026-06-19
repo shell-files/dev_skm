@@ -1,3 +1,8 @@
+"""
+pipeline.py
+레이어: Service (medias)
+역할: 미디어 분석 파이프라인 — 크롤링·임베딩·유사도 계산·DMA 시그널 저장.
+"""
 import numpy as np
 import re
 from sentence_transformers import SentenceTransformer
@@ -22,7 +27,7 @@ def get_subissue_vectors():
     prototypes = []
     
     for subId, info in subissueMaster.items():
-        # User Instruction 5: sentence 필드 사용 (subIssueSentence 대신)
+        # 지침 5: sentence 필드 사용 (subIssueSentence 대신)
         anchorSentence = info.get("sentence", "")
         keywordsKr = " ".join(info.get("keywordKr", []))
         keywordsEn = " ".join(info.get("keywordForeignEn", []))

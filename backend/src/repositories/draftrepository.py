@@ -1,3 +1,8 @@
+"""
+draftrepository.py
+레이어: Repository
+역할: ESG 보고서 초안 KPI 데이터 조회 및 저장.
+"""
 from src.utils.db import findAll, findOne, saveMany, save
 
 

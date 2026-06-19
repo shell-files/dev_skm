@@ -1,4 +1,9 @@
-﻿import json
+﻿"""
+rollupbatchrepository.py
+레이어: Repository
+역할: 롤업 배치 CRUD — 배치 생성·상태 업데이트·조회.
+"""
+import json
 from decimal import Decimal
 from typing import Any, Optional
 from src.utils.db import findAll, findOne

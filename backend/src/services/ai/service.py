@@ -1,3 +1,8 @@
+"""
+service.py
+레이어: Service (ai)
+역할: AI ESG 보고서 생성 서비스 — LangChain + RAG 기반 섹션별 초안 생성.
+"""
 from src.models.model import ResponseModel
 
 from src.utils.ai import (

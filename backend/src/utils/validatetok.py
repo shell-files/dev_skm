@@ -1,3 +1,8 @@
+"""
+validatetok.py
+레이어: Utils
+역할: 세션 토큰 검증 — UUID 기반 Redis 조회 및 만료 시 자동 갱신.
+"""
 from src.utils.tokenset import decryptFromJwe, refreshAccessToken
 from src.utils.rediscl import getTokenRedis, setTokenRedis, delTokenRedis, getCompanyRedis, delCompanyRedis, setCompanyRedis, setRotatedTokenRedis, getRotatedTokenRedis
 from src.utils.db import findOne, save

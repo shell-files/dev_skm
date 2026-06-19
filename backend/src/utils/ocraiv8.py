@@ -1,3 +1,8 @@
+"""
+ocraiv8.py
+레이어: Utils
+역할: Google Gemini v8 기반 OCR 이미지 분석 — 비동기 멀티스레드 처리.
+"""
 from google import genai
 from google.genai import types
 import json

@@ -1,3 +1,8 @@
+"""
+auth.py
+레이어: Utils
+역할: FastAPI 쿠키 기반 인증 의존성 — 토큰 검증 및 회사 스코프 주입.
+"""
 from fastapi import Response, Depends, HTTPException, status, Request
 from fastapi.security import APIKeyCookie
 from src.utils.settings import settings

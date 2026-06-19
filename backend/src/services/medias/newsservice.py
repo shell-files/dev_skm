@@ -1,3 +1,8 @@
+"""
+newsservice.py
+레이어: Service (medias)
+역할: 뉴스 크롤링·분석 서비스 — 뉴스 수집, DMA 시그널 저장, 미디어 분석 결과 조회.
+"""
 from collections import Counter
 from datetime import date
 from typing import Optional

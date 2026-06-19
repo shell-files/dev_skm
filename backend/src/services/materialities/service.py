@@ -1,3 +1,8 @@
+"""
+service.py
+레이어: Service (materialities)
+역할: DMA 중대성 평가 서비스 — 결과 조회·저장·이슈 선정 API 처리.
+"""
 from typing import Optional
 
 from src.utils.typeutils import safeFloat as _safeFloat, safeInt as _safeInt

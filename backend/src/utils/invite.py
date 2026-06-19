@@ -1,3 +1,8 @@
+"""
+invite.py
+레이어: Utils
+역할: 초대 링크 검증 및 회원가입 처리 — 토큰 기반 초대 수락 흐름.
+"""
 from fastapi import Depends
 from fastapi.responses import HTMLResponse
 

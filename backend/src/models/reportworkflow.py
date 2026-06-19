@@ -1,3 +1,8 @@
+"""
+reportworkflow.py
+레이어: Model
+역할: 보고서 워크플로우 시작·상태·POST_DMA 범위·프로젝트 목록 DTO 정의.
+"""
 from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field

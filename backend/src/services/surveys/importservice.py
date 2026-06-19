@@ -1,3 +1,8 @@
+"""
+importservice.py
+레이어: Service (surveys)
+역할: 설문 응답 데이터 가져오기 서비스 — Sheets 데이터 파싱·검증·저장.
+"""
 from __future__ import annotations
 
 from src.repositories.dmasurveyresponserepository import (

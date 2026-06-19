@@ -1,3 +1,8 @@
+"""
+service.py
+레이어: Service (rollups)
+역할: 롤업 배치 서비스 — 배치 생성·상태 관리·계산 실행·결과 전송 처리.
+"""
 from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional

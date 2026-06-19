@@ -1,4 +1,9 @@
-﻿from __future__ import annotations
+﻿"""
+onboardingscoperepository.py
+레이어: Repository
+역할: 온보딩 스코프 초기화·조회 — 사이클별 지표 목록 및 진행 상태 관리.
+"""
+from __future__ import annotations
 
 from datetime import datetime
 from typing import Optional

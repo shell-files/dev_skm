@@ -36,6 +36,7 @@
 | 24 | `Survey.jsx 분리 — SurveyResultDashboard/surveyConstants 추출 및 survey/ 폴더 정리 (#257)` |  완료 |
 | 25 | `ManagerData.jsx/DataTab.jsx 분리 — managerDataUtils/dataTabUtils 추출 및 managerdata/ 폴더 정리 (#257)` |  완료 |
 | 26 | `FE 파일 주석 정리 — 섹션 레이블 제거 및 파일 상단 헤더 추가 (#257)` |  완료 |
+| 27 | `BE 파일 주석 정리 — 영문 주석 한국어 번역 및 파일 상단 역할 설명 추가 (#257)` |  완료 |
 
 ---
 
@@ -51,7 +52,7 @@
 | **6** | **Utils 남용 방지** | ** 완료** |
 | 7 | Frontend 페이지 분리 + 주석 정리 |  완료 (reportSlice.js는 별도 검토) |
 | 8 | 공통 컴포넌트 재사용 |  대기 |
-| 9 | 컨벤션 준수 및 문서화 |  대기 |
+| 9 | 컨벤션 준수 및 문서화 |  진행 중 (FE/BE 주석 정리 완료) |
 
 ---
 

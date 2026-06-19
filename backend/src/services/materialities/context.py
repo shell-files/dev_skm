@@ -1,3 +1,8 @@
+"""
+context.py
+레이어: Service (materialities)
+역할: 기업 컨텍스트 프로필·수정자 저장 서비스.
+"""
 from __future__ import annotations
 
 import json
@@ -179,7 +184,7 @@ def getProfile(runId: int) -> CompanyContextProfileResponseDto:
     )
 
 
-# Compatibility wrappers for previous public names
+# 이전 공개 이름과의 호환성 래퍼
 
 def applyCompanyContextModifiers(runId: int, userModel) -> CompanyContextModifierResponseDto:
     return applyModifiers(runId)

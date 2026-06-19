@@ -1,26 +1,13 @@
 ﻿"""
-Domain: Report Workflow
-Layer: services
-Responsibility:
-- Orchestrate report workflow Step A API behavior
-- Resolve current workflow status and next action from repository state
-- Preserve existing progressing run basis selections
-- Ensure PRE_DMA_G0 approval cycle exists after workflow start or resume
-Public functions:
-- getCurrent
-- startWorkflow
-- resumeWorkflow
-- getG0Status
-- getRun
-- listProjects
-- resolveWorkflow
-- resolveNextAction
-- resolveProjectStageLabel
-Do not:
-- do not create G0 input values or approval decisions
-- do not create or calculate rollup batches
-- do not call benchmark/media pipelines
-- do not connect applyRunExposure
+service.py
+레이어: Service (reportworkflows)
+역할: 보고서 워크플로우 Step A 오케스트레이션 — 현재 상태 조회, 시작·재개, G0 승인 사이클 관리.
+
+주요 함수:
+  getCurrent / getRun              — 현재 상태 및 실행 정보 조회
+  startWorkflow / resumeWorkflow   — 워크플로우 시작·재개
+  getG0Status / listProjects       — G0 상태 조회 및 프로젝트 목록
+  resolveWorkflow / resolveNextAction / resolveProjectStageLabel — 상태 판별 헬퍼
 """
 
 from __future__ import annotations

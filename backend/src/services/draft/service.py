@@ -1,4 +1,9 @@
-﻿import ast
+﻿"""
+service.py
+레이어: Service (draft)
+역할: ESG 보고서 초안 섹션 KPI 데이터 조회 및 저장 서비스.
+"""
+import ast
 import json as json_mod
 import operator
 import re

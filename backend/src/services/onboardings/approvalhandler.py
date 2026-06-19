@@ -1,3 +1,8 @@
+"""
+approvalhandler.py
+레이어: Service (onboardings)
+역할: 온보딩 결재 요청·처리 핸들러 — 결재 요청 생성 및 승인·반려 처리.
+"""
 from __future__ import annotations
 
 from typing import Optional

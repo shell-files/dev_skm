@@ -1,3 +1,8 @@
+"""
+ai.py
+레이어: Utils
+역할: AI ESG 보고서 생성 — LangChain + Ollama + pgvector 기반 RAG 파이프라인.
+"""
 import re
 import json
 import psycopg

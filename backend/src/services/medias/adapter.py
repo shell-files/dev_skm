@@ -1,3 +1,8 @@
+"""
+adapter.py
+레이어: Service (medias)
+역할: 미디어 AI 분석 결과를 DMASignal 객체로 변환.
+"""
 from typing import Any, List, Mapping, Optional, Sequence
 
 from src.models.dmaengine import DMASignal, EvidenceSpanV13, ExtractedFactsV13
@@ -92,9 +97,8 @@ def step0NormalizeMediaFacts(analysisResults: list) -> list[ExtractedFactsV13]:
     return facts
 
 
-# LEGACY ONLY:
-# Existing media -> DMASignal conversion path. Not called by the new v1.3 Orchestrator.
-# Delete after Phase C Runtime Migration confirms import count is 0.
+# [레거시] 기존 미디어 → DMASignal 변환 경로. v1.3 오케스트레이터에서 사용 안 함.
+# Phase C 런타임 마이그레이션 완료 후 삭제 예정.
 def convertMediaToDmaSignals(analysisResults: list) -> list[DMASignal]:
     """
     미디어/언론 분석 결과를 DMASignal 객체 리스트로 변환합니다.

@@ -1,3 +1,8 @@
+"""
+importparser.py
+레이어: Service (surveys)
+역할: 설문 응답 데이터 파싱 — Google Sheets 원시 데이터를 응답 DTO로 변환.
+"""
 from __future__ import annotations
 
 import re

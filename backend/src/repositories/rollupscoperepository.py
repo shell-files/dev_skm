@@ -1,4 +1,9 @@
-﻿import json
+﻿"""
+rollupscoperepository.py
+레이어: Repository
+역할: 롤업 스코프 지표 목록 조회 및 계산 규칙 정렬.
+"""
+import json
 from typing import Optional
 from src.utils.db import findAll, findOne
 from src.utils.calculationengine import normalizeSource, topologicalSortRules

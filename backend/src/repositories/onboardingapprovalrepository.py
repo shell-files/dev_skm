@@ -1,4 +1,9 @@
-﻿from __future__ import annotations
+﻿"""
+onboardingapprovalrepository.py
+레이어: Repository
+역할: 온보딩 결재 요청·이력 DB 조회 및 저장.
+"""
+from __future__ import annotations
 
 from typing import Optional
 

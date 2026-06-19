@@ -1,3 +1,8 @@
+"""
+companyutils.py
+레이어: Repository
+역할: 회사 정보 조회 유틸리티 — 회사명·사업자번호·규모 등 공통 조회.
+"""
 from typing import Optional
 
 from src.utils.db import findAll, findOne

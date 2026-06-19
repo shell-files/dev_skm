@@ -1,6 +1,7 @@
 """
-Pure functions for media_external.news Event Observation → Canonical Factor derivation.
-No DB connections, no Runtime Wiring, no repository writes.
+eventresolver.py
+레이어: Service (medias)
+역할: 미디어 뉴스 이벤트 관찰 → Canonical Factor 도출 순수 함수 모음 (DB/Redis 없음).
 """
 from __future__ import annotations
 
@@ -215,9 +216,6 @@ def resolveMediaNewsEventGroup(
     return results
 
 
-# ---------------------------------------------------------------------------
-# Private helpers
-# ---------------------------------------------------------------------------
 
 def _normalizeEventType(eventType: Optional[str], policy: Mapping[str, Any]) -> Optional[str]:
     if eventType is None:

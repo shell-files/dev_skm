@@ -1,3 +1,8 @@
+"""
+sheetsutils.py
+레이어: Utils
+역할: Google Sheets API 읽기 유틸리티 — 스프레드시트 데이터 조회.
+"""
 from src.utils.settings import settings
 
 

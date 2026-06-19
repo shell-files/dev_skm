@@ -1,3 +1,8 @@
+"""
+rediscl.py
+레이어: Utils
+역할: Redis 클라이언트 — 토큰·회사·로테이션 세션 저장·조회·삭제.
+"""
 from src.utils.settings import settings
 import redis
 

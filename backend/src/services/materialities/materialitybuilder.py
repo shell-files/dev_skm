@@ -1,3 +1,8 @@
+"""
+materialitybuilder.py
+레이어: Service (materialities)
+역할: DMA 중대성 평가 결과 빌더 — 점수 기반 이슈 랭킹 및 결과 구성.
+"""
 from __future__ import annotations
 
 from typing import Optional

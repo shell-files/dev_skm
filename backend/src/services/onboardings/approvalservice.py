@@ -1,3 +1,8 @@
+"""
+approvalservice.py
+레이어: Service (onboardings)
+역할: 온보딩 결재 서비스 — 결재 현황 조회 및 결재 실행 API 처리.
+"""
 from __future__ import annotations
 
 from typing import Optional
@@ -417,7 +422,7 @@ def buildMetricApprovalSummary(
     return summary
 
 
-# Compatibility re-exports for callers who imported helpers directly from this module
+# 이 모듈에서 직접 임포트하는 호출자를 위한 호환성 재내보내기
 resolveRequiredApprovalAtomicIdsTx = _ac.resolveRequiredApprovalAtomicIdsTx
 resolveActiveCycleTx = _ac.resolveActiveCycleTx
 resolveExistingActiveCycleTx = _ac.resolveExistingActiveCycleTx

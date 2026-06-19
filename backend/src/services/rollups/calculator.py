@@ -1,3 +1,8 @@
+"""
+calculator.py
+레이어: Service (rollups)
+역할: 롤업 계산 엔진 — 자회사 데이터 집계 및 연결 지표 산출.
+"""
 from __future__ import annotations
 
 from collections import defaultdict

@@ -1,37 +1,15 @@
 """
-Domain: DMA Materiality
-Layer: utils/aggregation
-Responsibility:
-- Aggregate media/benchmark/survey stage scores
-- Calculate final materiality score from stage scores
-- Apply additive context modifier only at final aggregation
-- Preserve None-as-unobserved behavior
-Public functions:
-- aggregateMedia
-- aggregateMediaSignals
-- aggregateBenchmark
-- aggregateBenchmarkSignals
-- aggregateSurvey
-- aggregateSurveyScores
-- calcWeightedAvg
-- weightedAvgAvailable
-- calcFinal
-- calculateFinalMateriality
-Do not:
-- do not mutate unrelated DB state
-- do not change scoring formula unless explicitly requested
-- do not change final/stage weights in this step
-- do not treat unobserved score as zero
-- do not call DB directly unless already existing behavior
-- do not call FastAPI router directly
-- do not modify auth/token/common code
+dmaaggregator.py
+레이어: Utils
+역할: DMA 중대성 점수 집계 — 미디어·벤치마크·설문 단계 점수 집계 및 최종 중대성 점수 산출.
+  v1 Freeze: DB/API canonical score = 0~5, NULL 제외 재가중 평균 적용.
 
-DMA Aggregator v1 (Freeze)
-
-Stage별 시그널 집계 및 Final Materiality Score 산출 모듈.
-- DB/API canonical score = 0~5
-- NULL 제외 재가중 평균(weightedAvgAvailable) 적용
-- benchmark ratio/blind spot 산식은 v1 provisional (후속 정교화 예정)
+주요 함수:
+  aggregateMedia / aggregateMediaSignals         — 미디어 시그널 집계
+  aggregateBenchmark / aggregateBenchmarkSignals — 벤치마크 시그널 집계
+  aggregateSurvey / aggregateSurveyScores        — 설문 점수 집계
+  calcWeightedAvg / weightedAvgAvailable         — 가중 평균 계산
+  calcFinal / calculateFinalMateriality          — 최종 중대성 점수 산출
 """
 
 # LEGACY ONLY:

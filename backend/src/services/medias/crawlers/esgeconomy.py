@@ -1,3 +1,8 @@
+"""
+esgeconomy.py
+레이어: Service (medias/crawlers)
+역할: ESG Economy 뉴스 크롤러.
+"""
 from __future__ import annotations
 
 from datetime import date, datetime

@@ -1,3 +1,8 @@
+"""
+dmasurveyvalidation.py
+레이어: Repository
+역할: DMA 설문 runId·formId 유효성 검증 헬퍼.
+"""
 from __future__ import annotations
 
 

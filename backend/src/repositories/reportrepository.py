@@ -1,3 +1,8 @@
+"""
+reportrepository.py
+레이어: Repository
+역할: ESG 보고서 실행 정보 조회.
+"""
 from src.utils.db import findAll, findOne
 
 

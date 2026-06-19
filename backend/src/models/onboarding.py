@@ -1,3 +1,8 @@
+"""
+onboarding.py
+레이어: Model
+역할: 온보딩 지표 조회·입력·배정·결재 관련 요청/응답 DTO 정의.
+"""
 from __future__ import annotations
 
 from datetime import date

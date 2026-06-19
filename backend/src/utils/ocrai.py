@@ -1,3 +1,8 @@
+"""
+ocrai.py
+레이어: Utils
+역할: Google Gemini AI를 이용한 OCR 이미지 분석 유틸리티.
+"""
 from google import genai
 from google.genai import types
 import json

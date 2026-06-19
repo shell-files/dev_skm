@@ -1,3 +1,8 @@
+"""
+typeutils.py
+레이어: Utils
+역할: 타입 변환 헬퍼 — Decimal·숫자·딕셔너리 안전 변환 유틸리티.
+"""
 from decimal import Decimal
 from typing import Any, Mapping, Optional, Sequence
 

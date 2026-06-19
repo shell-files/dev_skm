@@ -1,10 +1,8 @@
 """
-Benchmark Adapter (v1 Freeze)
-
-AI가 반환한 분석 결과를 DMASignal 객체로 변환합니다.
-AI가 반환한 iroHint는 isAllowedIro()로 검증하며,
-scoring_axis_allowed에 없는 iroHint는 scoring 가능한 4개 IRO 중 허용된 값으로 대체합니다.
-허용된 scoring IRO가 없으면 해당 축의 factor는 생성하지 않습니다.
+adapter.py
+레이어: Service (benchmarks)
+역할: 벤치마크 AI 분석 결과를 DMASignal 객체로 변환 (v1 Freeze).
+  iroHint 검증: scoring_axis_allowed 없으면 허용 IRO 대체값 사용, 없으면 factor 제외.
 """
 
 from typing import Any, List, Mapping, Optional, Sequence
@@ -40,9 +38,6 @@ def buildEvidenceSpans(rawSpans: Any, sourceType: Optional[str]) -> List[Evidenc
     return spans
 
 
-# STEP 0 internal helper. Removes AI score/factor fields from benchmark raw metadata.
-# Input: raw metadata and SSOT forbiddenFields.
-# Output: copied structure with forbidden keys recursively removed.
 def sanitizeMetadata(value: Any, forbiddenFields: set[str]) -> Any:
     if isinstance(value, Mapping):
         return {
@@ -128,9 +123,8 @@ def _validateIroHint(subIssueCode: str, iroHint: str) -> Optional[str]:
     return None
 
 
-# LEGACY ONLY:
-# Existing benchmark -> DMASignal conversion path. Not called by the new v1.3 Orchestrator.
-# Delete after Phase C Runtime Migration confirms import count is 0.
+# [레거시] 기존 벤치마크 → DMASignal 변환 경로. v1.3 오케스트레이터에서 사용 안 함.
+# Phase C 런타임 마이그레이션 완료 후 삭제 예정.
 def convertToDmaSignals(resultList: list, fileId: Optional[int]) -> list[DMASignal]:
     """
     분석 결과를 DMASignal 객체 리스트로 변환한다.

@@ -1,3 +1,8 @@
+"""
+fastset.py
+레이어: Utils
+역할: FastAPI 앱 초기화 — CORS 미들웨어 설정 및 라우터 등록.
+"""
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI
 from src.utils.settings import settings

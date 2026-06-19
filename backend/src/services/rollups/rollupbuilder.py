@@ -1,3 +1,8 @@
+"""
+rollupbuilder.py
+레이어: Service (rollups)
+역할: 롤업 배치 빌더 — 배치 생성·스코프 미리보기·요청 목록 구성.
+"""
 from __future__ import annotations
 
 from typing import Optional

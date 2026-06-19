@@ -1,3 +1,8 @@
+"""
+onboardingassignmentrepository.py
+레이어: Repository
+역할: 온보딩 지표 배정 요청·이력 DB 조회 및 저장.
+"""
 from __future__ import annotations
 
 from datetime import date

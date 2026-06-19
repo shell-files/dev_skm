@@ -1,20 +1,16 @@
 """
-미디어/언론 전용 Factor Baseline (v1 Freeze)
+baseline.py
+레이어: Service (medias)
+역할: 미디어/언론 전용 Factor Baseline (v1 Freeze) — sourceType별 DMASignal factor 생성.
 
 sourceType별 factor 생성 규칙:
-- news: embedding similarity → baseline factor + keyword hint
-- regulation: 고정 rule 우선 (향후 regulations/baseline.py로 이관 후 독립)
-- agency: 자료 유형 rule 우선
+  news: embedding similarity → baseline factor + keyword hint
+  regulation: 고정 rule 우선
+  agency: 자료 유형 rule 우선
 
 IRO 결정 우선순위:
-1순위: sourceType별 hard rule
-2순위: subissuemaster.py의 scoring_axis_allowed (isAllowedIro)
-3순위: 이 파일의 subIssue별 기본 factor
-4순위: AI/keyword hint
-
-bestSimilarityScore는 impact/financial 점수로 직접 쓰지 않습니다.
-bestSimilarityScore → confidenceScore / mappingWeight로만 사용합니다.
-실제 0~5 점수는 dmascoring.py가 factor 기반으로 계산합니다.
+  1. sourceType hard rule → 2. isAllowedIro → 3. subIssue 기본 factor → 4. AI/keyword hint
+  bestSimilarityScore는 점수가 아닌 confidenceScore/mappingWeight 용도로만 사용.
 """
 
 from src.models.dmaengine import ImpactFactor, FinancialFactor

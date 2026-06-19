@@ -1,16 +1,11 @@
 """
-Domain: DMA Materiality
-Layer: utils/scoring + screening + selection
-Responsibility:
-- LEGACY: 기존 DMA Pipeline 점수 계산 (서비스 호환용)
-- STEP 1: Canonical Impact / Financial IRO 점수 계산
-- STEP 2: Pre-Survey Screening 신호 계산
-- STEP 3: Materiality 후보 선정 / 정렬 / 거버넌스
-Do not:
-- do not mutate DB state
-- do not eval / exec config strings
-- do not connect to DB / Redis / Kafka
-- do not hardcode weights, thresholds, rule-card values (SSOT: runtime JSON)
+dmascoring.py
+레이어: Utils
+역할: DMA 점수 계산 유틸리티.
+  LEGACY: 기존 DMA Pipeline 점수 계산 (서비스 호환)
+  STEP 1: Canonical Impact / Financial IRO 점수 계산
+  STEP 2: Pre-Survey Screening 신호 계산
+  STEP 3: Materiality 후보 선정 / 정렬 / 거버넌스
 """
 
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple

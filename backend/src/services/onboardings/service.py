@@ -1,3 +1,8 @@
+"""
+service.py
+레이어: Service (onboardings)
+역할: 온보딩 지표 조회·입력·저장 서비스 — 사이클별 지표 목록 및 입력값 관리.
+"""
 from __future__ import annotations
 
 from typing import Optional
@@ -198,7 +203,7 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                 values = group["values"]
                 cycleId = group["cycleId"]
                 
-                # Check cycle writeability for ROLLUP_RESPONSE
+                # ROLLUP_RESPONSE 사이클 쓰기 가능 여부 확인
                 cur.execute(
                     "SELECT cycle_type, parent_rollup_batch_id FROM ESG_ONBOARDING_CYCLE WHERE id = ?",
                     (cycleId,),
@@ -207,7 +212,7 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                 if cycleRow:
                     scopeRepo.requireWritableCycleTx(cur, cycleRow, companyId, batchId=group.get("batchId"))
 
-                # Collect old values for change detection
+                # 변경 감지를 위한 기존 값 조회
                 oldByAtomic = {}
                 for value in values:
                     atomicId = value["atomicMetricId"]
@@ -227,7 +232,7 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                     )
                     oldByAtomic[atomicId] = cur.fetchone()
 
-                # Save
+                # 저장
                 savedCount += inputRepo.upsertMetricInputValuesTx(
                     cur,
                     cycleId=cycleId,
@@ -239,7 +244,7 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                     userId=group.get("userId"),
                 )
 
-                # Detect changed atomics
+                # 변경된 원자 지표 감지
                 changedAtomicIds = []
                 for value in values:
                     atomicId = value["atomicMetricId"]
@@ -247,7 +252,7 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                     if _atomicValueChanged(old, value):
                         changedAtomicIds.append(atomicId)
 
-                # Downstream invalidation for changed atomics
+                # 변경된 원자 지표 하위 무효화
                 if changedAtomicIds:
                     invalidateAffectedEntityFactsTx(
                         cur,
@@ -272,22 +277,22 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
 
 
 def _atomicValueChanged(oldRow: dict, newValue: dict) -> bool:
-    """Return True if the value actually changed compared to the existing DB row."""
+    """기존 DB 행과 비교해 값이 실제로 변경되었으면 True를 반환."""
     if oldRow is None:
-        # New insert — always counts as a change
+        # 신규 입력 — 항상 변경으로 간주
         return True
     oldNumeric = oldRow.get("value_numeric")
     newNumeric = newValue.get("valueNumeric")
     oldText = str(oldRow.get("value_text") or "").strip()
     newText = str(newValue.get("valueText") or "").strip()
-    # Compare numeric
+    # 수치 비교
     if oldNumeric is not None or newNumeric is not None:
         try:
             if float(oldNumeric or 0) != float(newNumeric or 0):
                 return True
         except (TypeError, ValueError):
             return True
-    # Compare text
+    # 텍스트 비교
     if oldText != newText:
         return True
     return False

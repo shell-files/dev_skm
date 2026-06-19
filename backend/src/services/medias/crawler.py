@@ -1,3 +1,8 @@
+"""
+crawler.py
+레이어: Service (medias)
+역할: 미디어 크롤러 추상 기반 클래스 및 공통 데이터 모델 정의.
+"""
 from __future__ import annotations
 
 from dataclasses import dataclass, field

@@ -1,3 +1,8 @@
+"""
+contextbuilder.py
+레이어: Service (materialities)
+역할: 기업 컨텍스트 프로필 결정론적 빌더 — G0 Fact 기반 규칙 적용.
+"""
 from __future__ import annotations
 
 from typing import Optional

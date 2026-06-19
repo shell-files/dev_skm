@@ -1,4 +1,22 @@
-﻿from fastapi import APIRouter, Depends, HTTPException
+"""
+survey.py
+레이어: API Router
+역할: 설문 생성·조회·응답 Import·점수 계산·현황 관리 엔드포인트.
+
+엔드포인트:
+  POST /                              — 구글 설문 생성
+  GET  /raw                           — 설문 템플릿 조회
+  GET  /form/{runId}                  — 설문 폼 상태 조회
+  POST /form/{runId}/retry            — 설문 폼 재시도
+  GET  /form/{runId}/responses/preview   — 응답 Import Preview (DB 저장 없음)
+  POST /form/{runId}/responses/import    — 응답 Import (ESG_DMA_SURVEY_RESPONSE UPSERT)
+  GET  /form/{runId}/scores/preview      — 점수 계산 Preview (DB 저장 없음)
+  POST /form/{runId}/scores/recalculate  — 점수 계산 및 Final Score 재계산
+  GET  /form/{runId}/response-status     — 응답 현황 조회
+  PUT  /form/{runId}/response-targets    — 목표 응답자 수 저장
+  GET  /{sheet_id}                    — 설문 결과 CSV 추출
+"""
+from fastapi import APIRouter, Depends, HTTPException
 
 from src.utils.auth import get_token
 from src.models.survey import SurveyCreateRequestDto

@@ -1,3 +1,8 @@
+"""
+dmaruleregistry.py
+레이어: Utils
+역할: DMA 규칙 레지스트리 — 규칙 카드 로딩·캐싱·버전 관리.
+"""
 from __future__ import annotations
 
 import copy

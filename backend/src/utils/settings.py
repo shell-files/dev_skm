@@ -1,4 +1,9 @@
-﻿from pydantic_settings import BaseSettings, SettingsConfigDict
+﻿"""
+settings.py
+레이어: Utils
+역할: 환경 변수 로딩 — .env 기반 앱 설정 관리.
+"""
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
   host_ip: str

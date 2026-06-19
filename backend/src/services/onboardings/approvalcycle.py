@@ -1,3 +1,8 @@
+"""
+approvalcycle.py
+레이어: Service (onboardings)
+역할: 온보딩 결재 사이클 관리 — 사이클 생성·조회·상태 전환.
+"""
 from __future__ import annotations
 
 from typing import Optional

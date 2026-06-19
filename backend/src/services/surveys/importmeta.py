@@ -1,3 +1,8 @@
+"""
+importmeta.py
+레이어: Service (surveys)
+역할: Google Sheets 설문 메타데이터 파싱 — 폼 레지스트리·셀렉터·질문·이슈 맵 로딩.
+"""
 from __future__ import annotations
 
 import re

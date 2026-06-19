@@ -1,3 +1,8 @@
+"""
+adapter.py
+레이어: Service (surveys)
+역할: 설문 응답 데이터 어댑터 — 외부 데이터 포맷을 내부 DTO로 변환.
+"""
 from typing import Any, Mapping, Optional
 
 from src.utils.typeutils import firstPresent
@@ -29,9 +34,6 @@ def resolveQuestionMeta(rawRowsKey: Any, questionMap: Mapping[str, Mapping[str, 
     return questionMap.get(str(rawRowsKey), {})
 
 
-# STEP 0 internal helper. Decides why a survey row is excluded.
-# Input: mapped row interpretation.
-# Output: skipReason or None.
 def getSkipReason(
     *,
     subIssueCode: Any,
@@ -51,9 +53,6 @@ def getSkipReason(
     return None
 
 
-# STEP 0. Normalizes survey source rows into overlay input rows.
-# Input: external response rows and question map.
-# Output: normalizedRows and skippedRows. Invalid rows are never silently dropped.
 def step0NormalizeSurveyRows(rawRows: list, questionMap: Mapping[str, Mapping[str, Any]]) -> dict:
     normalized: list[dict] = []
     skipped: list[dict] = []

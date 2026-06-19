@@ -1,3 +1,8 @@
+"""
+ocr.py
+레이어: Utils
+역할: Google Cloud Vision OCR — 이미지에서 텍스트 추출.
+"""
 import os
 import io
 import re

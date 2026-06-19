@@ -1,3 +1,8 @@
+"""
+dmasurveytargetrepository.py
+레이어: Repository
+역할: DMA 설문 참여 대상 그룹 및 인원 데이터 조회·저장.
+"""
 from src.utils.db import getConn
 
 SURVEY_TARGET_GROUPS = ("employee", "management", "external")

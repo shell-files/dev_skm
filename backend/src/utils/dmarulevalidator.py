@@ -1,3 +1,8 @@
+"""
+dmarulevalidator.py
+레이어: Utils
+역할: DMA 규칙 카드 유효성 검증 — 필드 타입·범위·의존성 검사.
+"""
 from __future__ import annotations
 
 import re

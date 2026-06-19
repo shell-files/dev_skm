@@ -1,3 +1,8 @@
+"""
+dmasurveyscorerepository.py
+레이어: Repository
+역할: DMA 설문 응답 점수 계산 및 저장.
+"""
 from src.utils.db import getConn
 from src.utils.dmaaggregator import calcFinal
 from src.repositories.dmasurveyvalidation import validateRunId as _validateRunId, validateFormId as _validateFormId

@@ -1,3 +1,8 @@
+"""
+dmasurveyscore.py
+레이어: Model
+역할: DMA 설문 점수 미리보기·재산정 결과 DTO 정의.
+"""
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
 

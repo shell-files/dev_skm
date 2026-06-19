@@ -1,33 +1,15 @@
 """
-Domain: DMA Materiality
-Layer: utils/repository
-Responsibility:
-- Read G0 facts and materiality run context
-- Persist latest company context profile and modifier payload
-- Update context modifier columns for DMA score summary
-Public functions:
-- getRun
-- getMaterialityRunContext
-- listG0Facts
-- getCompanyG0Facts
-- listScoreRows
-- getDmaScoreSummaryRowsForContext
-- replaceProfile
-- replaceCompanyContextProfile
-- updateModifiers
-- updateContextModifiers
-- getLatestProfile
-- getLatestCompanyContextProfile
-- clampModifier
-- clampSystemModifier
-- decimalToFloat
-Do not:
-- do not mutate unrelated DB state
-- do not calculate modifier rules
-- do not change scoring formula unless explicitly requested
-- do not change score formula
-- do not call FastAPI router directly
-- do not modify auth/token/common code
+companycontextrepository.py
+레이어: Repository
+역할: G0 Fact 조회 및 기업 컨텍스트 프로필·수정자 저장 — DMA 점수 요약 컨텍스트 수정자 업데이트.
+
+주요 함수:
+  getRun / getMaterialityRunContext               — 실행 컨텍스트 조회
+  listG0Facts / getCompanyG0Facts                 — G0 Fact 목록 조회
+  listScoreRows / getDmaScoreSummaryRowsForContext — 점수 행 조회
+  replaceProfile / replaceCompanyContextProfile   — 컨텍스트 프로필 저장
+  updateModifiers / updateContextModifiers        — 수정자 업데이트
+  getLatestProfile / getLatestCompanyContextProfile — 최신 프로필 조회
 """
 
 import json

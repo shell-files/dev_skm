@@ -1,16 +1,11 @@
 """
-Domain: Company Scope
-Layer: utils
-Responsibility:
-- Resolve selected company scope from user model or Redis
-- Provide shared company scope guard for API/service layers
-Public functions:
-- resolveScope
-- checkScope
-Do not:
-- do not modify auth/token/common code
-- do not mutate Redis or DB state
-- do not bypass tenant isolation
+companyscope.py
+레이어: Utils
+역할: 선택된 회사 스코프 확인 — UserModel 또는 Redis에서 companyId 조회 및 API/서비스 가드.
+
+주요 함수:
+  resolveScope — 회사 스코프 조회
+  checkScope   — 회사 스코프 유효성 검증
 """
 
 from __future__ import annotations

@@ -1,4 +1,9 @@
-﻿from __future__ import annotations
+﻿"""
+onboardinginputrepository.py
+레이어: Repository
+역할: 온보딩 지표 입력값 DB 조회·저장·업데이트.
+"""
+from __future__ import annotations
 
 from typing import Optional
 

@@ -1,3 +1,8 @@
+"""
+financialexposure.py
+레이어: Service (materialities)
+역할: DMA 재무 노출 평가 서비스 — 단독/연결 재무 기준 기반 IRO 재무 점수 산출.
+"""
 from __future__ import annotations
 
 from copy import deepcopy
@@ -9,10 +14,8 @@ from src.repositories.financialbasisrepository import getBasis
 from src.utils.typeutils import safeFloat as _safeFloat
 from src.services.materialities import financialexposurecalc as _fc
 
-# LEGACY ONLY:
-# Applies existing G0 financial basis to legacy DMASignal financial factors.
-# Not called by the new v1.3 Orchestrator foundation in Phase B.
-# Keep formula behavior unchanged until a later runtime migration explicitly rewires it.
+# [레거시] G0 재무 기준을 기존 DMASignal 재무 factor에 적용. v1.3 오케스트레이터 Phase B에서 사용 안 함.
+# 런타임 마이그레이션 전까지 수식 변경 금지.
 
 
 def buildFinancialExposureForSignal(
@@ -334,7 +337,7 @@ def _appendTraceWarning(signal: DMASignal, warning: str) -> DMASignal:
     return signal.copy(update={"scoringPayloadJson": scoringPayload})
 
 
-# Compatibility aliases
+# 호환성 별칭
 
 def applyExposure(
     signals: list[DMASignal],

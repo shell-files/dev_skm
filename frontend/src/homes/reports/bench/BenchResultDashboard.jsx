@@ -1,3 +1,19 @@
+/**
+ * BenchResultDashboard.jsx
+ * 벤치마킹 분석 결과 대시보드 슬라이드업 패널.
+ * BenchMarking.jsx에서 렌더링; showResult/isAnalyzing 상태에 따라
+ * 로딩 애니메이션 ↔ 결과(KPI + 3패널) 전환.
+ *
+ * props:
+ *   dashboardOpen / setDashboardOpen — 패널 열림/닫힘 상태
+ *   isAnalyzing   — 분석 진행 중 여부 (로봇 애니메이션 트리거)
+ *   showResult    — 결과 표시 여부
+ *   progress      — 분석 진행률 (0~100)
+ *   displayData   — mapBenchmarkResultToDashboard 변환 결과 (stats/topIssues/commonIssues/blindSpots)
+ *   navigate      — react-router useNavigate (다음 단계 이동)
+ *   particleRef   — particle-field DOM ref
+ */
+
 import robot from "@assets/images/robot/robot_repoting_transparent.png";
 import benchIcon from "@assets/icons/steps/benchmarking.png";
 
@@ -58,8 +74,6 @@ const BenchResultDashboard = ({
             </div>
           ) : (
             <div className="result-layout" id="benchmarking-result">
-
-              {/* 결과 배너 */}
               <div className="bench-result-banner">
                 <div className="bench-result-banner-left">
                   <span className="bench-result-banner-badge">
@@ -77,7 +91,6 @@ const BenchResultDashboard = ({
                 <img src={robot} className="bench-result-banner-robot" alt="robot" />
               </div>
 
-              {/* KPI 카드 */}
               <div className="result-stats-row">
                 <div className="result-stat-card">
                   <div className="stat-icon-wrap">
@@ -147,10 +160,7 @@ const BenchResultDashboard = ({
                 </div>
               </div>
 
-              {/* 3-패널 */}
               <div className="result-panels-row">
-
-                {/* 패널 1: Top 이슈 */}
                 <div className="result-panel panel-accent-green">
                   <div className="panel-header-row">
                     <span className="panel-title">
@@ -187,7 +197,6 @@ const BenchResultDashboard = ({
                   </div>
                 </div>
 
-                {/* 패널 2: 공통 선정 이슈 */}
                 <div className="result-panel panel-accent-blue">
                   <div className="panel-header-row">
                     <span className="panel-title">
@@ -220,7 +229,6 @@ const BenchResultDashboard = ({
                   </div>
                 </div>
 
-                {/* 패널 3: Blind Spot */}
                 <div className="result-panel panel-accent-orange">
                   <div className="panel-header-row">
                     <span className="panel-title">
@@ -245,7 +253,6 @@ const BenchResultDashboard = ({
                 </div>
               </div>
 
-              {/* 다음 단계 버튼 */}
               <div className="result-next-row">
                 <button type="button" className="result-next-btn" onClick={() => navigate("/media")}>
                   다음 단계: 미디어 분석으로 이동

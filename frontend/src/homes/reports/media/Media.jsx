@@ -1,3 +1,23 @@
+/**
+ * Media.jsx
+ * 미디어 분석 페이지 — DMA 2단계.
+ * 언론기사/전문기관/규제 데이터 수집 설정 후 AI 분석 실행, 결과 대시보드 표시.
+ *
+ * 주요 상태:
+ *   activeTab         — 현재 선택된 입력 탭 (press/regulation/institution)
+ *   kisData/kcgsData  — KIS/KCGS 평가 데이터 모달 입력값
+ *   isAnalyzing       — 분석 진행 중 여부
+ *   dashboardData     — mapMediaResultToDashboard 변환 결과
+ *
+ * 주요 핸들러:
+ *   runAnalysis           — 분석 실행 → MEDIA workflow polling → 결과 fetch
+ *   mapMediaResultToDashboard — API DTO → MediaResultDashboard 표시 데이터 변환
+ *
+ * 의존:
+ *   mediaData.jsx          — STEPS, REFLECT_METHODS, REGULATION_SOURCES, INSTITUTION_OPTIONS
+ *   MediaResultDashboard   — 결과 슬라이드업 패널
+ */
+
 import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
@@ -88,7 +108,6 @@ const Media = () => {
 
   const activeIndex = 1;
 
-  // --- 상태 관리 (States) ---
   const [activeSourceTab, setActiveSourceTab] = useState("press");
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -102,7 +121,6 @@ const Media = () => {
   const [selectedReg, setSelectedReg] = useState([]);
   const [selectedInstitutions, setSelectedInstitutions] = useState([]);
 
-  // KIS Modal State
   const [isKisModalOpen, setIsKisModalOpen] = useState(false);
   const [kisData, setKisData] = useState({
     company: "A_GROUP",
@@ -136,7 +154,6 @@ const Media = () => {
     }
   };
 
-  // KCGS Modal State
   const [isKcgsModalOpen, setIsKcgsModalOpen] = useState(false);
   const [kcgsData, setKcgsData] = useState({
     company: "A_GROUP",
@@ -496,7 +513,6 @@ const Media = () => {
         </header>
 
         <main className="media-main-content">
-          {/* 전체 콘텐츠를 감싸고, 중앙 정렬 & 최대 너비 부여 */}
           <div className="media-input-card">
             <div className="media-page-header">
               <div className="media-page-icon">
@@ -547,7 +563,6 @@ const Media = () => {
             </div>
 
             <div className="media-compact-workspace">
-              {/* 좌측 패널 */}
               <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
                 <div className="media-compact-tabs">
                   {[
@@ -571,7 +586,6 @@ const Media = () => {
                   })}
                 </div>
 
-                {/* 언론 채널 폼 */}
                 {activeSourceTab === "press" && (
                   <div className="media-compact-card">
                     <div className="media-press-layout">
@@ -617,7 +631,6 @@ const Media = () => {
                   </div>
                 )}
 
-                {/* 규제 기관 폼 */}
                 {activeSourceTab === "regulation" && (
                   <div className="media-compact-card">
                     <div className="form-group">
@@ -653,7 +666,6 @@ const Media = () => {
                   </div>
                 )}
 
-                {/* 전문 평가기관 폼 */}
                 {activeSourceTab === "institution" && (
                   <div className="media-compact-card">
                     <div className="form-group">
@@ -689,7 +701,6 @@ const Media = () => {
                   </div>
                 )}
 
-                {/* 체크리스트 및 CTA 버튼 */}
                 <div className="media-checklist-wrapper" style={{ marginTop: "auto", marginBottom: "0" }}>
                   <div className="media-checklist-title">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" /></svg>
@@ -714,7 +725,6 @@ const Media = () => {
                         </div>
                       ))}
                     </div>
-                    {/* CTA 버튼 (체크리스트 바로 우측) */}
                     <div className="media-cta-wrapper" style={{ margin: 0, display: "flex", flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: "6px" }}>
                       <button
                         className="Bench-btn"
@@ -735,7 +745,6 @@ const Media = () => {
                 </div>
               </div>
 
-              {/* 우측 패널 */}
               <div className="media-summary-col">
                 <div className="media-summary-card">
                   <div className="media-summary-title">

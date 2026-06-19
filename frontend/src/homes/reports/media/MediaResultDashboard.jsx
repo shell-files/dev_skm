@@ -1,3 +1,20 @@
+/**
+ * MediaResultDashboard.jsx
+ * 미디어 분석 결과 대시보드 슬라이드업 패널.
+ * Media.jsx에서 렌더링; showResult/isAnalyzing 상태에 따라
+ * 로딩 애니메이션 ↔ 결과(KPI + 3패널) 전환.
+ *
+ * props:
+ *   dashboardOpen / setDashboardOpen — 패널 열림/닫힘 상태
+ *   showResult    — 결과 표시 여부
+ *   isAnalyzing   — AI 파이프라인 수집 진행 중 여부
+ *   progress      — 분석 진행률 (0~100)
+ *   loadingTitle / loadingDesc — 로딩 상태 표시 텍스트 (Media.jsx에서 단계별로 변경)
+ *   dashboardData — mapMediaResultToDashboard 변환 결과 (stats/sourceTable/topIssues)
+ *   navigate      — react-router useNavigate (다음 단계 이동)
+ *   particleRef   — particle-field DOM ref
+ */
+
 import robot from "@assets/images/robot/robot_media_t.png";
 import analyzingIcon from "@assets/icons/steps/analyzing.png";
 import { REFLECT_METHODS } from "./mediaData";
@@ -62,8 +79,6 @@ const MediaResultDashboard = ({
           )}
           {showResult && (
             <div className="result-layout" style={{ zIndex: 3 }}>
-
-              {/* 결과 배너 */}
               <div className="media-result-banner">
                 <div className="media-result-banner-left">
                   <span className="media-result-banner-badge">
@@ -81,7 +96,6 @@ const MediaResultDashboard = ({
                 <img src={robot} className="media-result-banner-robot" alt="robot" />
               </div>
 
-              {/* KPI 카드 */}
               <div className="result-stats-row">
                 <div className="result-stat-card stat-card-blue">
                   <div className="stat-icon-wrap stat-icon-blue">
@@ -146,9 +160,7 @@ const MediaResultDashboard = ({
                 </div>
               </div>
 
-              {/* 3-패널 */}
               <div className="result-panels-row">
-                {/* 패널 1: Source 현황 */}
                 <div className="result-panel panel-accent-blue">
                   <div className="panel-header-row">
                     <span className="panel-title">
@@ -178,7 +190,6 @@ const MediaResultDashboard = ({
                   </div>
                 </div>
 
-                {/* 패널 2: TOP 이슈 */}
                 <div className="result-panel panel-accent-green">
                   <div className="panel-header-row">
                     <span className="panel-title">
@@ -217,7 +228,6 @@ const MediaResultDashboard = ({
                   </div>
                 </div>
 
-                {/* 패널 3: 반영 방식 */}
                 <div className="result-panel panel-accent-purple">
                   <div className="panel-header-row">
                     <span className="panel-title">
@@ -242,7 +252,6 @@ const MediaResultDashboard = ({
                 </div>
               </div>
 
-              {/* 다음 단계 버튼 */}
               <div className="result-next-row">
                 <button type="button" className="result-next-btn" onClick={() => navigate("/survey")}>
                   다음 단계: 이해관계자 설문으로 이동

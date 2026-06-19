@@ -1,3 +1,23 @@
+/**
+ * BenchMarking.jsx
+ * 벤치마킹 분석 페이지 — DMA 1단계.
+ * 리더/피어/자사 SR PDF 업로드 후 AI 분석 실행, 결과 대시보드 표시.
+ *
+ * 주요 상태:
+ *   fileStorage   — 그룹별 업로드 파일 목록 (로컬, 아직 서버 미전송)
+ *   companyNames  — 그룹별 회사명 입력값
+ *   isAnalyzing   — 분석 진행 중 여부
+ *   dashboardData — mapBenchmarkResultToDashboard 변환 결과
+ *
+ * 주요 핸들러:
+ *   runAnalysis       — 파일 업로드 → 분석 실행 → 결과 fetch 파이프라인
+ *   renderUploadGroup — 그룹별 업로드 카드 렌더 함수
+ *
+ * 의존:
+ *   benchConfig.js       — BENCHMARK_GROUP_CONFIG, mapBenchmarkResultToDashboard
+ *   BenchResultDashboard — 결과 슬라이드업 패널
+ */
+
 import { useRef, useState, Fragment, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
@@ -341,7 +361,6 @@ const Benchmarking = () => {
     return (
       <div className={`upload-group-container upload-group--${color}`} id={`group-${groupKey}`}>
 
-        {/* 카드 헤더 */}
         <div className="upload-group-header">
           <span className={`upload-group-letter upload-group-letter--${color}`}>{letter}</span>
           <div>
@@ -350,7 +369,6 @@ const Benchmarking = () => {
           </div>
         </div>
 
-        {/* 회사명 입력 + 업로드 버튼 */}
         <div className="upload-name-row">
           <div className="upload-name-input-wrap">
             <svg className="upload-name-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -376,7 +394,6 @@ const Benchmarking = () => {
           </label>
         </div>
 
-        {/* 파일 목록 */}
         <div className="file-list-container">
           {files.length === 0 ? (
             <div className="empty-file-zone">
@@ -413,7 +430,6 @@ const Benchmarking = () => {
           )}
         </div>
 
-        {/* 파일 카운트 */}
         {files.length > 0 && (
           <div className="upload-file-count">
             <span className={`upload-file-count-dot upload-file-count-dot--${color}`}/>
@@ -445,7 +461,6 @@ const Benchmarking = () => {
       <main className="Bench-main-content">
         <div className="Bench-input-card">
 
-          {/* ── 페이지 헤더 ── */}
           <div className="bench-page-header">
             <div className="bench-page-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -470,7 +485,6 @@ const Benchmarking = () => {
             </div>
           </div>
 
-          {/* ── 분석 대상 유형 안내 카드 ── */}
           <div className="bench-type-grid">
             <div className="bench-type-card bench-type-card--green">
               <div className="bench-type-card-head">

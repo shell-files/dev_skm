@@ -1,10 +1,29 @@
+/**
+ * Survey.jsx
+ * 이해관계자 설문 페이지 — DMA 3단계.
+ * 임직원/경영진/외부이해관계자 설문 URL 배포, 응답 동기화, 집계 반영 기능 제공.
+ *
+ * 주요 상태:
+ *   surveyForm        — 설문 폼 정보 (Redux: report.survey.form)
+ *   responseStatus    — 그룹별 응답 현황 (Redux: report.survey.responseStatus)
+ *   surveyResult      — 설문 점수 결과 (Redux: report.survey.result)
+ *   localTargets      — 그룹별 발송 목표 인원 (로컬 편집 상태)
+ *
+ * 주요 핸들러:
+ *   handleSyncSurveyResponses — Google Sheet 응답 동기화 → DB 저장
+ *   handleRecalculate         — 집계 반영 → 이중 중대성 평가 점수 갱신
+ *
+ * 의존:
+ *   surveyConstants.jsx — GROUP_META, GROUP_KEYS 등 공통 상수
+ *   SurveyResultDashboard — 결과 슬라이드업 패널
+ */
+
 import { useEffect, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
 import { useSelector, useDispatch } from "react-redux";
 import "@styles/sr.css";
 import "@styles/survey.css";
 import "@styles/dma-robot-stage.css";
-
 
 import {
   showDefaultAlert,
@@ -38,7 +57,6 @@ const Survey = () => {
   const currentRunId  = useSelector((state) => state.report.currentRunId);
   const currentYear   = useSelector((state) => state.report.currentYear);
 
-  /* Redux state */
   const surveyForm       = useSelector((s) => s.report.survey.form);
   const surveyFormLoading= useSelector((s) => s.report.loading.surveyForm);
   const responseStatus   = useSelector((s) => s.report.survey.responseStatus);
@@ -61,7 +79,6 @@ const Survey = () => {
   );
   const surveyError = surveyErrorRaw?.message ?? null;
 
-  /* 목표 인원 / 대시보드 로컬 상태 */
   const [localTargets, setLocalTargets] = useState({ employee: 150, management: 20, external: 80 });
   const [targetsDirty, setTargetsDirty] = useState(false);
   const [recalcDone, setRecalcDone] = useState(false);
@@ -93,8 +110,6 @@ const Survey = () => {
     },
   ];
 
-  /* ── Effects ───────────────────────────────────── */
-
   useEffect(() => {
     if (!currentRunId) {
       dispatch(clearSurveyState());
@@ -115,8 +130,6 @@ const Survey = () => {
     });
     setTargetsDirty(false);
   }, [responseStatus]);
-
-  /* ── Handlers ──────────────────────────────────── */
 
   const handleFetchSurveyForm = () => {
     if (!currentRunId) return;
@@ -196,8 +209,6 @@ const Survey = () => {
     }
   };
 
-  /* ── Helpers ──────────────────────────────────── */
-
   const copyUrl = async (url) => {
     try {
       if (navigator?.clipboard?.writeText) {
@@ -225,7 +236,6 @@ const Survey = () => {
     setTargetsDirty(true);
   };
 
-  /* ── Derived ──────────────────────────────────── */
   const isReady = surveyForm?.surveyStatus === "READY";
   const isActionDisabled = !currentRunId || surveyActionLoading || !isReady;
   const groups = responseStatus?.groups ?? null;
@@ -244,7 +254,6 @@ const Survey = () => {
       .slice(0, 2);
   });
 
-  /* ── URL panel ────────────────────────────────── */
   const renderUrlArea = () => {
     if (surveyFormLoading) return <p className="survey-status-box">설문 URL 상태를 불러오는 중...</p>;
     if (!currentRunId)     return <p className="survey-status-box">분석 실행 후 설문 URL이 자동 생성됩니다.</p>;
@@ -303,7 +312,6 @@ const Survey = () => {
     );
   };
 
-  /* ── Response rate panel ──────────────────────── */
   const renderResponseRate = () => {
     if (responseStatusLoading) return <p className="survey-status-box" style={{ marginTop: "12px" }}>응답 현황 불러오는 중...</p>;
     if (!currentRunId || !groups) return <p className="survey-status-box" style={{ marginTop: "12px" }}>runId를 선택하면 응답 현황이 표시됩니다.</p>;
@@ -376,10 +384,8 @@ const Survey = () => {
     );
   };
 
-  /* ── Render ────────────────────────────────────── */
   return (
     <div id="survey-page" className="survey-container">
-      {/* Stepper */}
       <header className="survey-header">
         <div className="survey-stepper-row">
           {steps.map((step, index) => (
@@ -397,9 +403,7 @@ const Survey = () => {
       <main className="main-content">
         <div className="survey-input-card">
 
-          {/* 상단 고정 영역 */}
           <div className="sv-top-section">
-            {/* 페이지 헤더 */}
             <div className="survey-page-header">
               <div className="survey-page-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -423,7 +427,6 @@ const Survey = () => {
               </div>
             </div>
 
-            {/* 그룹 카드 */}
             <div className="survey-group-grid">
               <div className="survey-group-card survey-group-card--green">
                 <div className="survey-group-card-head">
@@ -448,16 +451,12 @@ const Survey = () => {
               </div>
             </div>
 
-            {/* 에러 */}
             {surveyError && <div className="survey-error-box" style={{ marginTop: "10px" }}>{surveyError}</div>}
           </div>
 
-          {/* 2패널 그리드 */}
           <div className="survey-section-grid">
 
-            {/* ── 좌: URL & 목표 인원 ── */}
             <div className="sv-panel-card">
-              {/* 패널 헤더 */}
               <div className="sv-panel-header">
                 <div className="sv-panel-header-icon">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -471,11 +470,9 @@ const Survey = () => {
                 </div>
               </div>
 
-              {/* URL 영역 */}
               <div className="sv-panel-body">
                 {renderUrlArea()}
 
-                {/* 목표 인원 */}
                 <div className="sv-target-section">
                   <div className="sv-target-label">발송 목표 인원</div>
                   <div className="sv-target-row">
@@ -515,9 +512,7 @@ const Survey = () => {
               </div>
             </div>
 
-            {/* ── 우: 응답 현황 ── */}
             <div className="sv-panel-card">
-              {/* 패널 헤더 */}
               <div className="sv-panel-header">
                 <div className="sv-panel-header-icon">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -531,7 +526,6 @@ const Survey = () => {
                 </div>
               </div>
 
-              {/* 액션 버튼 */}
               <div className="sv-panel-body">
                 <div className="sv-action-row">
                   <button className="sv-action-btn sv-action-btn--outline" onClick={handleSyncSurveyResponses} disabled={isActionDisabled} title={!isReady ? "READY 상태 설문 폼이 필요합니다." : "Google Sheet 응답을 가져오고 현황을 갱신합니다."}>

@@ -1,3 +1,18 @@
+/**
+ * DoubleMaterialityChart.jsx
+ * 이중 중대성 매트릭스 차트 컴포넌트.
+ * Result.jsx에서 분석 결과 scatter plot 시각화에 사용.
+ *
+ * 주요 구성:
+ *   CAT_CONFIG           — E/S/G 카테고리별 색상/배지 설정
+ *   ZoneOverlay          — SVG로 핵심/보고/잠재적 이슈 구역 원형 레이어 렌더
+ *   RankedDot            — Recharts scatter 커스텀 도트 (순위 번호 표시)
+ *   MatrixTooltip        — scatter 호버 툴팁 (이슈명/카테고리/중요성 레벨)
+ *   DoubleMaterialityMatrix — 전체 매트릭스 차트 + 범례 + 이슈 그리드
+ *
+ * export default: DoubleMaterialityMatrix
+ */
+
 import { useState, useRef, useEffect } from "react";
 import {
   ScatterChart,
@@ -16,6 +31,7 @@ const CAT_CONFIG = {
   G: { label: "거버넌스(G)", bg: "rgba(245,43,43,0.88)", badge: { bg: "#fee2e2", color: "#dc2626" } },
 };
 
+/** 차트 플롯 영역에 핵심/보고/잠재적 구역 원형 그라데이션 오버레이 */
 const ZoneOverlay = ({ containerRef }) => {
   const [dims, setDims] = useState(null);
 
@@ -94,6 +110,7 @@ const ZoneOverlay = ({ containerRef }) => {
   );
 };
 
+/** Recharts scatter shape — 순위 번호를 원형 배지로 표시하는 커스텀 도트 */
 const RankedDot = (props) => {
   const { cx, cy, payload } = props;
   if (cx == null || cy == null) return null;
@@ -112,6 +129,7 @@ const RankedDot = (props) => {
   );
 };
 
+/** 이슈 호버 시 재무/영향 중요성 레벨을 표시하는 커스텀 툴팁 */
 const MatrixTooltip = ({ active, payload }) => {
   if (!active || !payload?.length) return null;
   const d = payload[0]?.payload;
@@ -139,6 +157,7 @@ const MatrixTooltip = ({ active, payload }) => {
   );
 };
 
+/** 이중 중대성 매트릭스 차트 — scatter plot + 구역 오버레이 + 이슈 그리드 */
 const DoubleMaterialityMatrix = ({ data = [] }) => {
   const [hoveredKey, setHoveredKey] = useState(null);
   const chartWrapRef = useRef(null);

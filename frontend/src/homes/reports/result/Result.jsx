@@ -1,3 +1,25 @@
+/**
+ * Result.jsx
+ * 전체 결과 페이지 — DMA 4단계. 이중 중대성 평가 최종 결과 표시.
+ * 좌측: 후보군 선정 과정 + 최종 선정/제외 이슈 테이블.
+ * 우측: 점수 해석(분석축 기여도/Blind Spot/매트릭스) + 상세 점수 탭.
+ *
+ * 주요 데이터:
+ *   matrixItems    — 이중 중대성 산점도 데이터 (10점 스케일 원본)
+ *   topIssues      — 최종 Top 이슈 목록 (final 점수 기준)
+ *   selectedItems  — 선정 과정 이슈 목록 (단계별 점수 포함)
+ *
+ * 주요 헬퍼 (파일 상단):
+ *   toScale3     — 10점 → 1~3 스케일 변환 (HIGH=7.0 기준)
+ *   toLevel3     — 10점 → ImportanceBadge 레벨 변환
+ *   axisAvg      — 분석축 평균 계산 (0값 제외)
+ *   stageWeights — 단계 점수 → 기여도 비율(%) 계산 (합=100 보장)
+ *
+ * 의존:
+ *   DoubleMaterialityChart — 이중 중대성 매트릭스 차트
+ *   ImportanceBadge        — 중요도 뱃지 컴포넌트
+ */
+
 import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate, useLocation } from "react-router";
 import Observing from "@assets/icons/result_page/observe.png";
@@ -14,7 +36,6 @@ import "@styles/benchmarking.css";
 import "@styles/media.css";
 
 
-// ── 점수 스케일 변환 헬퍼 ────────────────────────────────────────
 // 10점 스케일 → 차트용 1~3 스케일 (7.0 = High 기준)
 const normalize10to3 = (v10) => (v10 != null ? (v10 / 10) * 3 : null);
 // 10점 스케일 → ImportanceBadge용 1/2/3 레벨
@@ -29,7 +50,6 @@ const toImportanceLevel = (v10) => {
 const domainColor = { E: "#22c55e", S: "#f59e0b", G: "#3b82f6" };
 const getDomainColor = (domain) => domainColor[domain] ?? "#94a3b8";
 
-// ── 분석축 기여도 계산 헬퍼 ──────────────────────────────────────
 // 존재하는(>0) 값들만 평균. 모두 없으면 null
 const avgPresent = (...values) => {
   const nums = values
@@ -145,7 +165,6 @@ const Result = () => {
       ? rawInitialLeftTab
       : 0;
 
-  // ── API 데이터 ──────────────────────────────────────────────────
   const runId = useSelector((state) => state.report.currentRunId);
   const materialityResults = useSelector((state) => state.report.materialityResults);
   const materialitySelectionProcess = useSelector((state) => state.report.materialitySelectionProcess);
@@ -419,7 +438,6 @@ const Result = () => {
       <main id="result-main" className="main-content">
         <div id="result-panels-wrap">
 
-          {/* ── 왼쪽 패널 ── */}
           <section id="result-left-panel">
             <div className="result-tab-bar">
               {[ "후보군 최종선정 과정", "최종선정요약", "점수 해석"].map((label, i) => (
@@ -435,12 +453,10 @@ const Result = () => {
             {leftTab === 0 && (
               <div className="result-tab-pane" style={{ gap: "24px" }}>
 
-                {/* 후보군 최종 선정 과정 */}
                 <div className="process-card">
                   <div className="process-card-title">후보군 최종 선정 과정</div>
                   <div className="process-card-body">
 
-                    {/* 플로우 카드 */}
                     <div className="flow-col">
                       {[
                         {
@@ -469,7 +485,6 @@ const Result = () => {
                       ))}
                     </div>
 
-                    {/* 선정 기준 */}
                     <div className="criteria-card">
                       <div className="criteria-card-title">선정 기준</div>
                       <div className="criteria-item-list">
@@ -492,7 +507,6 @@ const Result = () => {
                   </div>
                 </div>
 
-                {/* 최종 선정 이슈 + 제외된 이슈 나란히 */}
                 <div className="card-container">
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px" }}>
                     <div>
@@ -561,7 +575,6 @@ const Result = () => {
                   </div>
                 </div>
 
-                {/* 확정 상태 배너 */}
                 {materialityResults?.selectionSource === "RANK_FALLBACK" && (
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", padding: "12px 16px" }}>
                     <span style={{ fontSize: "0.84rem", color: "#92400e", fontWeight: 600 }}>
@@ -619,15 +632,12 @@ const Result = () => {
               </div>
             )}
 
-            {/* 탭 1: 점수 해석 */}
             {leftTab === 2 && (
               <div className="card-container result-tab-pane">
                 <div className="card-title-row">
                   <span className="card-title">점수 해석</span>
-                  {/* <span className="info-mark">ⓘ</span> */}
                 </div>
 
-                {/* 1. 분석축 기여도 */}
                 <section id="result-contribution">
                   <div className="section-title">1. 분석축 기여도</div>
                   <div className="section-desc">각 주요 이슈 점수에 대한 분석축(벤치마킹/미디어/설문) 기여도를 보여줍니다.</div>
@@ -665,7 +675,6 @@ const Result = () => {
                   </div>
                 </section>
 
-                {/* 2. Blind Spot */}
                 <section id="result-blind-spot">
                   <div className="section-title">2. 분석축 간 불일치 / Blind Spot</div>
                   <div className="section-desc">분석축 간 점수 편차가 큰 이슈를 확인하여 전략적 블라인드 스팟을 식별합니다.</div>
@@ -686,7 +695,6 @@ const Result = () => {
                   </div>
                 </section>
 
-                {/* 3. 매트릭스 해석 */}
                 <section id="result-matrix-zones">
                   <div className="section-title">3. 매트릭스 해석</div>
                   <div className="section-desc">이중 중대성 매트릭스 영역별 의미를 안내합니다.</div>
@@ -747,7 +755,6 @@ const Result = () => {
             )}
           </section >
 
-          {/* ── 오른쪽 패널 ── */}
           < section id="result-right-panel" >
 
             {rightTab === 0 && (

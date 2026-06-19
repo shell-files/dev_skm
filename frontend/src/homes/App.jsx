@@ -11,7 +11,7 @@ import Result from '@reports/result/Result.jsx';
 import Draft from '@reports/Draft.jsx';
 import Mypage from '@mains/Mypage.jsx';
 import Manager from '@mains/Manager.jsx';
-import ManagerData from '@mains/ManagerData.jsx';
+import ManagerData from '@mains/managerdata/ManagerData.jsx';
 import Dashboard from './Dashboard.jsx';
 import Headernav from '@components/Layout/HeaderNav.jsx'
 import Sidebarnav from '@components/Layout/SidebarNav.jsx'

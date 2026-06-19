@@ -1,3 +1,17 @@
+/**
+ * mediaData.jsx
+ * 미디어 분석 페이지 공통 상수 및 UI 메타 데이터.
+ * Media.jsx · MediaResultDashboard.jsx에서 공유.
+ *
+ * exports:
+ *   STEPS             — DMA 진행 단계 목록 (경로 포함, 사이드바/스텝바 표시용)
+ *   REFLECT_METHODS   — 반영 방식 3종 (언론/전문기관/규제) 설명 카드 데이터
+ *   REGULATION_SOURCES — 활성화된 규제 소스 목록 (CBAM/CSRD/DPP만 사용)
+ *   INSTITUTION_OPTIONS — 활성화된 전문기관 목록 (KCGS/KIS만 사용)
+ *   TabIcons          — 탭 아이콘 렌더 함수 (color 파라미터 받음)
+ */
+
+/** DMA 분석 전체 진행 단계 — 스텝 표시 및 navigate 경로 */
 export const STEPS = [
   { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
   { id: 2, title: "미디어 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><polyline points="5,13 8,10 11,12 14,8 19,6" /></svg>, path: "/media" },
@@ -6,6 +20,7 @@ export const STEPS = [
   { id: 5, title: "보고서 초안", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>, path: "/draft" },
 ];
 
+/** 미디어 분석 반영 방식 3종 — MediaResultDashboard 패널 3에서 카드로 표시 */
 export const REFLECT_METHODS = [
   {
     key: "press",
@@ -31,7 +46,7 @@ export const REFLECT_METHODS = [
         <line x1="10" y1="18" x2="10" y2="11" />
         <line x1="14" y1="18" x2="14" y2="11" />
         <line x1="18" y1="18" x2="18" y2="11" />
-        <polygon points="12 2 2 7 22 7" />
+        <polygon points="12 2 7 22 7" />
       </svg>
     )
   },
@@ -47,19 +62,20 @@ export const REFLECT_METHODS = [
   }
 ];
 
-// 규제 기관 Source 정의: CBAM / CSRD / DPP만 사용한다. CSRS/ESRD는 사용 금지.
+/** 규제 소스 목록 — CBAM/CSRD/DPP만 사용. CSRS/ESRD는 Rule Logic 미구현으로 제외 */
 export const REGULATION_SOURCES = [
   { key: "CBAM", label: "CBAM", desc: "EU 탄소국경조정제도" },
   { key: "CSRD", label: "CSRD", desc: "EU 기업 지속가능성 공시지침\nESRS 기준 포함" },
   { key: "DPP", label: "DPP", desc: "EU 디지털 제품 여권" },
 ];
 
-// 전문기관 설정: 현재 Rule Logic이 존재하는 KCGS와 KIS만 선택 가능하다. Sustainalytics/MSCI 제거.
+/** 전문기관 목록 — KCGS/KIS만 선택 가능. Sustainalytics/MSCI는 Rule Logic 미구현으로 제외 */
 export const INSTITUTION_OPTIONS = [
   { key: "kcgs", label: "한국ESG기준원", desc: "KCGS ESG 등급 추이\nPre-Survey Boost" },
   { key: "kis", label: "한국신용평가", desc: "자동차산업 평가방법론\nFinancial Resilience Screening" },
 ];
 
+/** 탭 아이콘 렌더 함수 — color prop을 받아 stroke 색상 적용 */
 export const TabIcons = {
   press: (color) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

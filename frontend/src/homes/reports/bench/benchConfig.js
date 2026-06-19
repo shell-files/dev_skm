@@ -1,9 +1,21 @@
+/**
+ * benchConfig.js
+ * 벤치마킹 분석 설정 및 결과 매핑 유틸.
+ * BenchMarking.jsx에서 import하여 사용.
+ *
+ * exports:
+ *   BENCHMARK_GROUP_CONFIG       — 그룹(leader/peer/sub) UI 메타 설정
+ *   mapBenchmarkResultToDashboard — API DTO → 대시보드 표시 데이터 변환
+ */
+
+/** 그룹별 API fileType, 표시 레이블, 뱃지 문자, 색상 테마 */
 export const BENCHMARK_GROUP_CONFIG = {
   leader: { fileType: "Leader", label: "리더",  letter: "L", color: "green"  },
   peer:   { fileType: "Peer",   label: "피어",  letter: "P", color: "blue"   },
   sub:    { fileType: "Own",    label: "자사",  letter: "S", color: "orange" },
 };
 
+/** fetchBenchmarkResult API 응답 DTO → BenchResultDashboard props.displayData 형태로 변환 */
 export const mapBenchmarkResultToDashboard = (dto) => ({
   stats: {
     reports: dto.summary?.analyzedReportCount ?? 0,

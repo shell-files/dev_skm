@@ -1,3 +1,19 @@
+/**
+ * SurveyResultDashboard.jsx
+ * 이해관계자 설문 결과 대시보드 슬라이드업 패널.
+ * Survey.jsx에서 렌더링; recalcDone 이후 결과(KPI + 2패널) 표시.
+ *
+ * props:
+ *   dashboardOpen / setDashboardOpen — 패널 열림/닫힘 상태
+ *   isAnalyzing   — 집계 반영 진행 중 여부 (handle-pill 애니메이션)
+ *   recalcDone    — 집계 완료 여부 (결과 뷰 전환 조건)
+ *   groups        — 그룹별 응답 현황 (responseStatus.groups)
+ *   totals        — 전체 응답 요약 (responseStatus.totals)
+ *   surveyTopIssues      — 설문 Top 이슈 점수 목록
+ *   surveyResultLoading  — 설문 결과 로딩 중 여부
+ *   stakeholderTopIssues — 그룹별 상위 2개 Sub-Issue ({ employee, management, external })
+ */
+
 import robot from "@assets/images/robot/robot_servey_t.png";
 import surveyIcon from "@assets/icons/steps/survey.png";
 import {
@@ -11,7 +27,6 @@ const SurveyResultDashboard = ({
 }) => {
   return (
       <div className={`survey-result-dashboard ${dashboardOpen ? "open" : ""}`}>
-        {/* Handle */}
         <div className="dashboard-handle" onClick={() => setDashboardOpen((o) => !o)}>
           <div className={`handle-pill${isAnalyzing ? " handle-pill--analyzing" : recalcDone ? " handle-pill--done" : ""}`}>
             {isAnalyzing
@@ -34,7 +49,6 @@ const SurveyResultDashboard = ({
                 이중 중대성 평가 점수에 설문 응답이 반영되었습니다. <strong>전체 결과</strong> 페이지에서 상세 결과를 확인하세요.
               </div>
 
-              {/* KPI 4카드 */}
               <div className="survey-kpi-grid" style={{ marginTop: "14px" }}>
                 {GROUP_KEYS.map((key) => {
                   const grp  = groups[key];
@@ -73,7 +87,6 @@ const SurveyResultDashboard = ({
                 )}
               </div>
 
-              {/* 결과 2패널 */}
               <div className="survey-panels" style={{ marginTop: "16px" }}>
 
                 {/* Sub-Issue 점수 테이블 (GET /materiality/survey/{runId}) */}
@@ -138,7 +151,6 @@ const SurveyResultDashboard = ({
                   </div>
                 </div>
 
-                {/* 이해관계자 분석 패널 */}
                 <div className="survey-panel">
                   <div className="panel-header-row">
                     <div className="panel-title">이해관계자 분석</div>
@@ -189,7 +201,6 @@ const SurveyResultDashboard = ({
             </>
           </div>
         ) : (
-          /* ── 대기 중 / 분석 진행 중 ── */
           <div
             className={`sv-dashboard-analyzing dma-stage ${isAnalyzing ? "dma-stage--running" : ""}`}
             style={{ '--dma-icon': `url(${surveyIcon})`, '--dma-accent': 'var(--survey-primary)' }}

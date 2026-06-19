@@ -34,6 +34,8 @@
 | 22 | `Media.jsx 분리 — MediaResultDashboard/mediaData 추출 및 media/ 폴더 정리 (#257)` |  완료 |
 | 23 | `BenchMarking.jsx 분리 — BenchResultDashboard/benchConfig 추출 및 bench/ 폴더 정리 (#257)` |  완료 |
 | 24 | `Survey.jsx 분리 — SurveyResultDashboard/surveyConstants 추출 및 survey/ 폴더 정리 (#257)` |  완료 |
+| 25 | `ManagerData.jsx/DataTab.jsx 분리 — managerDataUtils/dataTabUtils 추출 및 managerdata/ 폴더 정리 (#257)` |  완료 |
+| 26 | `FE 파일 주석 정리 — 섹션 레이블 제거 및 파일 상단 헤더 추가 (#257)` |  완료 |
 
 ---
 
@@ -47,7 +49,7 @@
 | 4 | Service 의존성 정리 및 순환 참조 제거 |  대기 |
 | 5 | 중복 코드 제거 |  완료 (46→32개, 나머지는 의도적 패턴) |
 | **6** | **Utils 남용 방지** | ** 완료** |
-| 7 | Frontend 페이지 분리 |  진행 중 |
+| 7 | Frontend 페이지 분리 + 주석 정리 |  완료 (reportSlice.js는 별도 검토) |
 | 8 | 공통 컴포넌트 재사용 |  대기 |
 | 9 | 컨벤션 준수 및 문서화 |  대기 |
 
@@ -239,15 +241,47 @@ services/rollups/service.py
 | `Media.jsx` | 1,323 → 997 | `media/mediaData.jsx`, `media/MediaResultDashboard.jsx` (media/ 폴더 분리) |
 | `BenchMarking.jsx` | 819 → 543 | `bench/benchConfig.js`, `bench/BenchResultDashboard.jsx` (bench/ 폴더 분리) |
 | `Survey.jsx` | 847 → 577 | `survey/surveyConstants.jsx`, `survey/SurveyResultDashboard.jsx` (survey/ 폴더 분리) |
+| `ManagerData.jsx` | 798 → 722 | `managerdata/managerDataUtils.js`, `managerdata/DataTab.jsx` (managerdata/ 폴더 분리) |
+| `DataTab.jsx` | 654 → 594 | `managerdata/dataTabUtils.js` (managerdata/ 폴더 분리) |
+
+#### 검토 완료 — 분리 불필요
+
+| 파일 | 이유 |
+|------|------|
+| `OnboardingModalShell.jsx` | 이미 `onboards/modal/` 서브폴더에 위치. 내부 render 함수가 컴포넌트 state에 강하게 결합되어 외부 추출 실익 없음 |
+| `SignUp.jsx` | 단일 폼 컴포넌트. 102줄이 주석이며 하위 컴포넌트 추출 포인트 없음 |
+
+#### 주석 정리 — 2026-06-19
+
+전체 Priority 7 대상 파일의 주석 정리 완료.
+
+- **제거**: 섹션 레이블 주석 (`{/* 패널 1 */}`, `// ── Effects ──`, `/* Redux state */` 등)
+- **추가**: 각 파일 상단 `/** ... */` 헤더 블록 (역할, exports/props, 의존 컴포넌트)
+- **유지**: API 엔드포인트 참조, 게이트 판정 로직, 비즈니스 규칙 설명 주석
+
+| 파일 | 처리 내용 |
+|------|-----------|
+| `bench/benchConfig.js` | 파일 헤더 + 각 export inline 주석 |
+| `bench/BenchResultDashboard.jsx` | 파일 헤더 + JSX 섹션 레이블 제거 |
+| `bench/BenchMarking.jsx` | 파일 헤더 + JSX/JS 섹션 레이블 제거 |
+| `media/mediaData.jsx` | 파일 헤더 + 각 export inline 주석 (비즈니스 규칙 주석 유지) |
+| `media/MediaResultDashboard.jsx` | 파일 헤더 + JSX 섹션 레이블 제거 |
+| `media/Media.jsx` | 파일 헤더 + JS/JSX 섹션 레이블 전체 제거 |
+| `survey/surveyConstants.jsx` | 파일 헤더 + 섹션 레이블 제거, inline 주석 `/** */` 통일 |
+| `survey/SurveyResultDashboard.jsx` | 파일 헤더 + JSX 섹션 레이블 제거 |
+| `survey/Survey.jsx` | 파일 헤더 + JS/JSX 섹션 레이블 전체 제거 |
+| `result/DoubleMaterialityChart.jsx` | 파일 헤더 + 각 컴포넌트 inline 주석 |
+| `result/ImportanceBadge.jsx` | 파일 헤더 + inline 주석 |
+| `result/Result.jsx` | 파일 헤더 + JS/JSX 섹션 레이블 전체 제거 |
+| `managerdata/managerDataUtils.js` | 파일 헤더 + 각 export inline 주석 |
+| `managerdata/dataTabUtils.js` | 파일 헤더 + 각 export inline 주석 |
+| `managerdata/ManagerData.jsx` | 파일 헤더 |
+| `managerdata/DataTab.jsx` | 파일 헤더 |
 
 #### 대기 중
 
 | 파일 | 줄 수 | 우선순위 |
 |------|-------|---------|
-| `ManagerData.jsx` | 733 | 중간 |
-| `OnboardingModalShell.jsx` | 652 | 중간 |
-| `Signup.jsx` | 607 | 낮음 |
-| `DataTab.jsx` | 606 | 낮음 |
 | `reportSlice.js` | 1,854 | 별도 검토 |
 
 ---

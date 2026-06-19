@@ -1,3 +1,15 @@
+/**
+ * ImportanceBadge.jsx
+ * 중요도 값을 색상 뱃지로 표시하는 순수 표시 컴포넌트.
+ * Result.jsx 테이블 셀에서 재무/환경사회 중요도 표시용으로 사용.
+ *
+ * props:
+ *   value — 숫자(1/2/3), 문자열(low/medium/high), ⚫ 개수, 또는 기회/위기/장기/단기
+ *
+ * export default: ImportanceBadge
+ */
+
+/** 중요도 키 → 표시 텍스트/색상/배경색 설정 */
 const IMPORTANCE_LEVELS = {
   1: { text: "Low", color: "#64748b", bg: "#f1f5f9" },
   2: { text: "Middle", color: "#d97706", bg: "#fffbeb" },
@@ -11,6 +23,7 @@ const IMPORTANCE_LEVELS = {
   단기: { text: "위기", color: "#d97706", bg: "#f1f5f9" },
 };
 
+/** 다양한 입력 형식(숫자/문자열/⚫ 개수)을 IMPORTANCE_LEVELS 키로 정규화 */
 const normalizeImportance = (value) => {
   if (value === null || value === undefined || value === "") return null;
   const num = Number(value);

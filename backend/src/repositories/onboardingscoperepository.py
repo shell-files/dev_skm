@@ -46,6 +46,7 @@ APPROVAL_POLICY_NO_APPROVAL_REQUIRED = "NO_APPROVAL_REQUIRED"
 METRIC_ID_G0_02 = "G0-02"
 SUPPORTED_CYCLE_TYPE = CYCLE_TYPE_PRE_DMA_G0
 
+# 최근 입력 데이터 기준 보고 연도 조회 — 없으면 현재 연도 반환
 def resolveReportingYear(companyId: int, reportingYear: Optional[int] = None) -> int:
     if reportingYear is not None:
         return int(reportingYear)
@@ -74,6 +75,7 @@ def resolveReportingYear(companyId: int, reportingYear: Optional[int] = None) ->
     ) or {}
     return int(row.get("reporting_year") or datetime.now().year)
 
+# 기업·연도·유형 기준 온보딩 사이클 단건 조회 — 없으면 빈 dict
 def getCycle(
     companyId: int,
     reportingYear: int,
@@ -105,6 +107,7 @@ def getCycle(
         tuple(params),
     ) or {}
 
+# 사이클·기업 기준 활성 지표 스코프 목록 조회 — 지표 ID 필터 지원
 def listMetricScopes(cycleId: int, companyId: int, metricId: Optional[str] = None) -> list[dict]:
     params = [cycleId, companyId]
     metricFilter = ""
@@ -148,6 +151,7 @@ def listMetricScopes(cycleId: int, companyId: int, metricId: Optional[str] = Non
         tuple(params),
     ) or []
 
+# 지표 ID 기준 활성 원자 지표 마스터 목록 조회
 def listAtomicMaster(metricIds: list[str]) -> list[dict]:
     if not metricIds:
         return []
@@ -173,6 +177,7 @@ def listAtomicMaster(metricIds: list[str]) -> list[dict]:
         tuple(metricIds),
     ) or []
 
+# G0 필수 컨텍스트 지표 마스터 목록 조회
 def listG0MetricMaster() -> list[dict]:
     return findAll(
         """
@@ -185,6 +190,7 @@ def listG0MetricMaster() -> list[dict]:
         """
     ) or []
 
+# G0 지표 ID 목록 유효성 검증 — 미등록 ID 있으면 ValueError
 def validateG0MetricIds(metricIds: list[str]) -> list[str]:
     cleaned = []
     for metricId in metricIds or []:
@@ -203,6 +209,7 @@ def validateG0MetricIds(metricIds: list[str]) -> list[str]:
         raise ValueError(f"Unsupported metricId: {', '.join(invalid)}")
     return cleaned
 
+# Pre-DMA G0 온보딩 사이클 생성 또는 조회 — 중복 키 충돌 시 재시도
 def ensurePreDmaG0Cycle(
     companyId: int,
     reportingYear: int,
@@ -241,6 +248,7 @@ def ensurePreDmaG0Cycle(
     finally:
         conn.close()
 
+# Post-DMA 공시 온보딩 사이클 생성 또는 조회 — 중복 키 충돌 시 재시도
 def ensurePostDmaDisclosureCycle(
     companyId: int,
     reportingYear: int,
@@ -282,6 +290,7 @@ def ensurePostDmaDisclosureCycle(
     finally:
         conn.close()
 
+# 기업·연도 기준 Pre-DMA G0 사이클 단건 조회 — 없으면 빈 dict
 def resolvePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:
     return findOne(
         """
@@ -297,6 +306,7 @@ def resolvePreDmaG0Cycle(companyId: int, reportingYear: int) -> dict:
         (companyId, reportingYear, CYCLE_TYPE_PRE_DMA_G0),
     ) or {}
 
+# G0 필수 컨텍스트 지표 마스터 목록 조회 래퍼
 def listPreDmaG0MetricMaster() -> list[dict]:
     return findAll(
         """
@@ -309,9 +319,11 @@ def listPreDmaG0MetricMaster() -> list[dict]:
         """
     ) or []
 
+# 사이클·기업 기준 지표 스코프 목록 조회 래퍼
 def listCycleMetricScope(cycleId: int, companyId: int) -> list[dict]:
     return listMetricScopes(cycleId, companyId)
 
+# 사이클 스코프 지표 ID 목록 유효성 검증 — 미등록 ID 있으면 ValueError
 def validateCycleMetricIds(cycleId: int, companyId: int, metricIds: list[str]) -> list[str]:
     cleaned = []
     for metricId in metricIds or []:
@@ -330,6 +342,7 @@ def validateCycleMetricIds(cycleId: int, companyId: int, metricIds: list[str]) -
         raise ValueError(f"Unsupported metricId for cycle scope: {', '.join(invalid)}")
     return cleaned
 
+# 사이클 유형별 WHERE 절 필터 문자열 생성 — 유효하지 않으면 항상 거짓 필터 반환
 def cycleTypeFilter(cycleType: Optional[str]) -> str:
     if not cycleType:
         return ""
@@ -338,6 +351,7 @@ def cycleTypeFilter(cycleType: Optional[str]) -> str:
         return "AND 1 = 0"
     return f"AND (c.cycle_type = '{normalizedCycleType}' OR c.id IS NULL)"
 
+# 기업·연도·유형 기준 사이클 단건 조회 (트랜잭션 커서용)
 def resolveCycle(
     cur,
     companyId: int,
@@ -371,6 +385,7 @@ def resolveCycle(
     )
     return cur.fetchone() or {}
 
+# Pre-DMA G0 사이클 생성 또는 조회 및 스코프 시드 (트랜잭션 커서용)
 def ensureCycleTx(
     cur,
     companyId: int,
@@ -409,6 +424,7 @@ def ensureCycleTx(
     )
     return cycle
 
+# Post-DMA 공시 사이클 생성 또는 조회 및 스코프 시드 — 스코프 불일치 시 ValueError (트랜잭션 커서용)
 def ensurePostDmaDisclosureCycleTx(
     cur,
     companyId: int,

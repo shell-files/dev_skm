@@ -9,6 +9,7 @@ from src.utils.db import findAll, findOne
 from src.utils.settings import settings
 
 
+# COMPANY 테이블 컬럼 구조 조회 — 스키마별 id/name 컬럼명 및 delete_yn 여부 반환
 def getCompanyTableInfo(schemaName: Optional[str]) -> Optional[dict]:
     schemaFilter = "DATABASE()" if schemaName is None else "?"
     params = [] if schemaName is None else [schemaName]
@@ -37,6 +38,7 @@ def getCompanyTableInfo(schemaName: Optional[str]) -> Optional[dict]:
     }
 
 
+# COMPANY 테이블에서 회사명 조회 (다중 스키마 폴백: None→skm→with)
 def getCompanyNameFromCompanyTable(companyId: int) -> Optional[str]:
     for schemaName in [None, "skm", "with"]:
         tableInfo = getCompanyTableInfo(schemaName)
@@ -66,6 +68,7 @@ def getCompanyNameFromCompanyTable(companyId: int) -> Optional[str]:
     return None
 
 
+# 회사 ID 기준 회사명 조회 — COMPANY 테이블 우선, 없으면 ESG_COMPANY_PROFILE 폴백
 def getCompanyName(companyId: int) -> str:
     companyName = getCompanyNameFromCompanyTable(companyId)
     if companyName:

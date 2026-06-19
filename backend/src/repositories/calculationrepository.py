@@ -16,6 +16,7 @@ VALUE_SOURCE_TYPE_CALCULATION_ENGINE = "calculation_engine"
 APPROVAL_STATUS_APPROVED = "approved"
 
 
+# 실행 범위 기준 활성 계산 규칙 목록 조회
 def listActiveRules(
     executionScope: str,
     metricIds: Optional[list[str]] = None,
@@ -49,6 +50,7 @@ def listActiveRules(
     ) or []
 
 
+# 활성 계산 규칙 목록 조회 (트랜잭션 커서용)
 def listActiveRulesTx(
     cur,
     executionScope: str,
@@ -84,6 +86,7 @@ def listActiveRulesTx(
     return cur.fetchall() or []
 
 
+# 대상 원자 지표 ID 기준 활성 계산 규칙 조회
 def listActiveRulesByTargetAtomicIds(
     targetAtomicMetricIds: list[str],
     executionScope: str = EXECUTION_SCOPE_CONSOLIDATED,
@@ -120,6 +123,7 @@ def listActiveRulesByTargetAtomicIds(
     ) or []
 
 
+# 대상 원자 지표 ID 기준 활성 계산 규칙 조회 (트랜잭션 커서용)
 def listActiveRulesByTargetAtomicIdsTx(
     cur,
     targetAtomicMetricIds: list[str],
@@ -158,6 +162,7 @@ def listActiveRulesByTargetAtomicIdsTx(
     return cur.fetchall() or []
 
 
+# 계산 규칙 코드 기준 소스 지표 목록 조회
 def listRuleSources(ruleCodes: list[str]) -> list[dict]:
     cleaned = cleanList(ruleCodes)
     if not cleaned:
@@ -182,6 +187,7 @@ def listRuleSources(ruleCodes: list[str]) -> list[dict]:
     ) or []
 
 
+# 계산 규칙 소스 목록 조회 (트랜잭션 커서용)
 def listRuleSourcesTx(cur, ruleCodes: list[str]) -> list[dict]:
     cleaned = cleanList(ruleCodes)
     if not cleaned:
@@ -207,6 +213,7 @@ def listRuleSourcesTx(cur, ruleCodes: list[str]) -> list[dict]:
     return cur.fetchall() or []
 
 
+# 기업·연도·원자 지표 기준 승인된 ENTITY Fact 목록 조회
 def listApprovedEntityFacts(
     companyIds: list[int],
     reportingYear: int,
@@ -246,6 +253,7 @@ def listApprovedEntityFacts(
     ) or []
 
 
+# 승인된 ENTITY Fact 목록 조회 (트랜잭션 커서용)
 def listApprovedEntityFactsTx(
     cur,
     companyIds: list[int],
@@ -287,6 +295,7 @@ def listApprovedEntityFactsTx(
     return cur.fetchall() or []
 
 
+# 전년도(reportingYear - 1) 승인 Fact 목록 조회
 def listPriorYearFacts(
     companyIds: list[int],
     reportingYear: int,
@@ -295,6 +304,7 @@ def listPriorYearFacts(
     return listApprovedEntityFacts(companyIds, reportingYear - 1, atomicMetricIds)
 
 
+# 전년도 승인 Fact 목록 조회 (트랜잭션 커서용)
 def listPriorYearFactsTx(
     cur,
     companyIds: list[int],
@@ -304,6 +314,7 @@ def listPriorYearFactsTx(
     return listApprovedEntityFactsTx(cur, companyIds, reportingYear - 1, atomicMetricIds)
 
 
+# 변경된 소스 원자 지표에 영향 받는 계산 규칙 목록 조회
 def listAffectedRules(
     sourceAtomicMetricIds: list[str],
     executionScope: str = EXECUTION_SCOPE_ENTITY,
@@ -343,6 +354,7 @@ def listAffectedRules(
     ) or []
 
 
+# 영향 받는 계산 규칙 목록 조회 (트랜잭션 커서용)
 def listAffectedRulesTx(
     cur,
     sourceAtomicMetricIds: list[str],
@@ -384,6 +396,7 @@ def listAffectedRulesTx(
     return cur.fetchall() or []
 
 
+# 계산 엔진 결과 Fact upsert 저장 — 미완료 결과 포함 시 ValueError (트랜잭션용)
 def upsertCalculatedEntityFactsTx(
     cur,
     *,
@@ -452,6 +465,7 @@ def upsertCalculatedEntityFactsTx(
     return savedCount
 
 
+# 계산 엔진 생성 Fact 무효화 소프트 삭제 (트랜잭션용)
 def invalidateCalculatedEntityFactsTx(
     cur,
     *,
@@ -482,6 +496,7 @@ def invalidateCalculatedEntityFactsTx(
     return max(0, int(cur.rowcount or 0))
 
 
+# metric_id IN (...) 필터 SQL 조각 및 파라미터 생성
 def buildMetricFilter(metricIds: Optional[list[str]]) -> tuple[str, list[str]]:
     cleaned = cleanList(metricIds or [])
     if not cleaned:
@@ -490,6 +505,7 @@ def buildMetricFilter(metricIds: Optional[list[str]]) -> tuple[str, list[str]]:
     return f"AND metric_id IN ({placeholders})", cleaned
 
 
+# 문자열 목록 공백 제거 및 중복 제거
 def cleanList(values: list) -> list:
     cleaned = []
     for value in values or []:
@@ -499,6 +515,7 @@ def cleanList(values: list) -> list:
     return cleaned
 
 
+# Fact 조회용 companyId·atomicMetricId 목록 정규화
 def cleanFactInputs(companyIds: list[int], atomicMetricIds: list[str]) -> tuple[list[int], list[str]]:
     cleanedCompanyIds = []
     for companyId in companyIds or []:
@@ -511,6 +528,7 @@ def cleanFactInputs(companyIds: list[int], atomicMetricIds: list[str]) -> tuple[
     return cleanedCompanyIds, cleanList(atomicMetricIds)
 
 
+# execution scope 대문자 정규화
 def normalizeScope(executionScope: str) -> str:
     return str(executionScope or EXECUTION_SCOPE_ENTITY).strip().upper()
 

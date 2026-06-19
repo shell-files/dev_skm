@@ -6,6 +6,7 @@ dmasurveyvalidation.py
 from __future__ import annotations
 
 
+# runId 타입(strict int) 및 양수 여부 유효성 검증
 def validateRunId(runId) -> None:
     if isinstance(runId, bool) or not isinstance(runId, int):
         raise ValueError(f"runId must be a strict int, got {type(runId).__name__}")
@@ -13,6 +14,7 @@ def validateRunId(runId) -> None:
         raise ValueError(f"runId must be > 0, got {runId}")
 
 
+# surveyFormId 타입(strict int) 및 양수 여부 유효성 검증
 def validateFormId(formId) -> None:
     if isinstance(formId, bool) or not isinstance(formId, int):
         raise ValueError(f"surveyFormId must be a strict int, got {type(formId).__name__}")

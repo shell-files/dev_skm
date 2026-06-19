@@ -1,22 +1,15 @@
 ﻿"""
-Domain: Report Workflow
-Layer: utils/repository
-Responsibility:
-- Read and update ESG_MATERIALITY_RUN report workflow state
-- Resolve G0/DMA basis readiness for Step A API responses
-- Read rollup batch DMA readiness without calculating rollup results
-Public functions:
-- getCurrent
-- getRun
-- createRun
-- updateRunBasis
-- getBasisStatus
-- getRollupBatch
-Do not:
-- do not mutate auth/token/common code
-- do not calculate rollup batches
-- do not call benchmark/media pipelines
-- do not change DB schema or scoring formulas
+reportworkflowrepository.py
+레이어: Repository
+역할: ESG_MATERIALITY_RUN 보고서 워크플로우 상태 조회·갱신 — G0/DMA 재무 기준 준비도 판별.
+
+주요 함수:
+  getCurrent     — 현재 활성 run 조회
+  getRun         — runId 기준 run 단건 조회
+  createRun      — 새 run 생성
+  updateRunBasis — 보고 기준 업데이트
+  getBasisStatus — G0-02 재무 기준 준비 상태 반환
+  getRollupBatch — 롤업 배치 단건 조회
 """
 
 from __future__ import annotations
@@ -42,6 +35,7 @@ PROTECTED_BASIS_STATUSES = {
 }
 
 
+# 기업·연도 기준 현재 활성 materiality run 조회
 def getCurrent(companyId: int, reportingYear: int) -> dict:
     sql = """
         SELECT
@@ -69,6 +63,7 @@ def getCurrent(companyId: int, reportingYear: int) -> dict:
     return findOne(sql, (companyId, reportingYear)) or {}
 
 
+# runId 기준 materiality run 단건 조회
 def getRun(runId: int) -> dict:
     sql = """
         SELECT
@@ -86,6 +81,7 @@ def getRun(runId: int) -> dict:
     return findOne(sql, (runId,)) or {}
 
 
+# 기업별 연도별 최신 run 목록 조회
 def listProjects(companyId: int) -> list[dict]:
     sql = """
         SELECT
@@ -121,6 +117,7 @@ def listProjects(companyId: int) -> list[dict]:
     return findAll(sql, (companyId, companyId)) or []
 
 
+# 새 materiality run 생성 후 저장된 행 반환
 def createRun(companyId: int, reportingYear: int, reportBasisType: str) -> dict:
     runName = (
         f"REPORT_WORKFLOW_"
@@ -155,6 +152,7 @@ def createRun(companyId: int, reportingYear: int, reportBasisType: str) -> dict:
     return getRun(int(result[1]))
 
 
+# run의 보고 기준(단독/연결) 업데이트 — PROTECTED 상태면 차단
 def updateRunBasis(runId: int, reportBasisType: str) -> dict:
     currentRun = getRun(runId)
     if not currentRun:
@@ -183,6 +181,7 @@ def updateRunBasis(runId: int, reportBasisType: str) -> dict:
     return getRun(runId)
 
 
+# G0-02 재무 기준 준비 상태 및 다음 액션(nextAction) 반환
 def getBasisStatus(run: dict) -> dict:
     reportBasisType = normalizeReportBasisType(run.get("report_basis_type"))
     if not reportBasisType:
@@ -283,6 +282,7 @@ def getBasisStatus(run: dict) -> dict:
     )
 
 
+# rollupBatchId 기준 롤업 배치 단건 조회
 def getRollupBatch(rollupBatchId: int) -> dict:
     sql = """
         SELECT
@@ -300,6 +300,7 @@ def getRollupBatch(rollupBatchId: int) -> dict:
     return findOne(sql, (rollupBatchId,)) or {}
 
 
+# 기준 상태 응답 dict 구성 헬퍼
 def buildBasisStatus(
     readyYn: bool,
     basisStatus: str,
@@ -318,6 +319,7 @@ def buildBasisStatus(
     }
 
 
+# 보고 기준 타입 정규화 — ENTITY / CONSOLIDATED 외 None 반환
 def normalizeReportBasisType(value) -> Optional[str]:
     normalizedValue = str(value or "").strip().upper()
     if normalizedValue in {"ENTITY", "CONSOLIDATED"}:

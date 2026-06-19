@@ -9,8 +9,9 @@ from src.utils.db import findAll, findOne
 from src.utils.calculationengine import normalizeSource, topologicalSortRules
 from src.repositories.calculationrepository import listApprovedEntityFacts, listApprovedEntityFactsTx
 
+# 부모 회사·연도·목적 기준 롤업 소스 회사 목록 조회
 def listEffectiveSourceCompanies(parentCompanyId: int, reportingYear: int, rollupPurposeCode: str) -> list[dict]:
-    # strict DB-driven relation. self relation check is done by caller if needed
+    # DB 기반 관계 — 자기 참조 체크는 호출자 책임
     sql = """
         SELECT DISTINCT
             s.source_company_id AS companyId,
@@ -37,18 +38,22 @@ def listEffectiveSourceCompanies(parentCompanyId: int, reportingYear: int, rollu
         for row in rows
     ]
 
+# 연결 스코프 활성 계산 규칙 목록 조회
 def listBatchRules(metricIds: list[str]) -> list[dict]:
     from src.repositories.calculationrepository import listActiveRules
     return listActiveRules(executionScope="CONSOLIDATED", metricIds=metricIds)
 
+# 계산 규칙 코드 기준 소스 목록 조회
 def listBatchRuleSources(ruleCodes: list[str]) -> list[dict]:
     from src.repositories.calculationrepository import listRuleSources
     return listRuleSources(ruleCodes)
 
+# 대상 원자 지표별 연결 스코프 계산 규칙 목록 조회
 def listProducerRulesByTargetAtomicIds(atomicMetricIds: list[str]) -> list[dict]:
     from src.repositories.calculationrepository import listActiveRulesByTargetAtomicIds
     return listActiveRulesByTargetAtomicIds(atomicMetricIds, executionScope="CONSOLIDATED")
 
+# 계산 규칙 의존성 클로저 재귀 탐색 — 위상 정렬된 (rules, sources) 반환
 def resolveConsolidatedRuleClosure(initialMetricIds: list[str]) -> tuple[list[dict], list[dict]]:
     rules = listBatchRules(initialMetricIds)
     ruleByCode = {
@@ -106,6 +111,7 @@ def resolveConsolidatedRuleClosure(initialMetricIds: list[str]) -> tuple[list[di
         if source.get("calculation_rule_code") in orderedRuleCodes
     ]
 
+# 배치 스코프 기준 계산 규칙·소스 목록 검증 및 조회 — 스냅샷 불일치 시 ValueError (트랜잭션 커서용)
 def resolveConsolidatedRulesFromBatchScopeTx(cur, batchId: int) -> tuple[list[dict], list[dict]]:
     from src.repositories.calculationrepository import listActiveRulesByTargetAtomicIdsTx, listRuleSourcesTx
 
@@ -174,6 +180,7 @@ def resolveConsolidatedRulesFromBatchScopeTx(cur, batchId: int) -> tuple[list[di
         if source.get("calculation_rule_code") in orderedRuleCodes
     ]
 
+# 배치 스코프 기준 계산 규칙·소스 목록 검증 및 조회
 def resolveConsolidatedRulesFromBatchScope(batchId: int) -> tuple[list[dict], list[dict]]:
     from src.utils.db import getConn
     conn = getConn()
@@ -183,6 +190,7 @@ def resolveConsolidatedRulesFromBatchScope(batchId: int) -> tuple[list[dict], li
     finally:
         conn.close()
 
+# 계산 규칙에서 배치 원자 스코프 행 INSERT — 기존 스코프 변경 시 ValueError (트랜잭션 커서용)
 def saveScopeFromRulesTx(
     cur,
     batchId: int,
@@ -259,6 +267,7 @@ def saveScopeFromRulesTx(
                 )
             )
 
+# 배치 기준 활성 원자 스코프 목록 조회 (트랜잭션 커서용)
 def listScopeTx(cur, batchId: int) -> list[dict]:
     sql = """
         SELECT
@@ -284,6 +293,7 @@ def listScopeTx(cur, batchId: int) -> list[dict]:
         row["sourceAtomicMetricIds"] = decodeAtomicIds(row.get("source_atomic_metric_ids"))
     return rows
 
+# source_atomic_metric_ids JSON 문자열 → list 파싱
 def decodeAtomicIds(value) -> list[str]:
     if value is None:
         return []
@@ -302,6 +312,7 @@ def decodeAtomicIds(value) -> list[str]:
     except Exception:
         return [item.strip() for item in rawValue.split(",") if item.strip()]
 
+# 배치 기준 활성 원자 스코프 목록 조회
 def listScope(batchId: int) -> list[dict]:
     from src.utils.db import getConn
     conn = getConn()
@@ -311,6 +322,7 @@ def listScope(batchId: int) -> list[dict]:
     finally:
         conn.close()
 
+# 배치에서 직접 요청된(DIRECT_REQUEST) 지표 ID 목록 조회
 def listRequestedMetricIdsFromBatchScope(batchId: int) -> list[str]:
     rows = findAll(
         """
@@ -332,6 +344,7 @@ def listRequestedMetricIdsFromBatchScope(batchId: int) -> list[str]:
         if str(row.get("metric_id") or "").strip()
     ]
 
+# 원자 지표 ID 기준 지표명 메타데이터 목록 조회
 def listAtomicMetadata(atomicMetricIds: list[str]) -> list[dict]:
     cleaned = [
         str(atomicMetricId or "").strip()
@@ -357,6 +370,7 @@ def listAtomicMetadata(atomicMetricIds: list[str]) -> list[dict]:
         tuple(cleaned),
     ) or []
 
+# 스코프 목록에서 모든 소스 원자 지표 ID 추출
 def resolveAllRuleSourceAtomicIdsFromScopes(scopes: list[dict]) -> list[str]:
     atomicIds = set()
     for s in scopes:
@@ -364,6 +378,7 @@ def resolveAllRuleSourceAtomicIdsFromScopes(scopes: list[dict]) -> list[str]:
             atomicIds.add(a)
     return sorted(list(atomicIds))
 
+# 스코프 목록에서 연결 대상 원자 지표 ID 추출
 def resolveConsolidatedTargetAtomicIdsFromScopes(scopes: list[dict]) -> list[str]:
     return sorted({
         str(s.get("group_atomic_metric_id") or "").strip()
@@ -371,18 +386,14 @@ def resolveConsolidatedTargetAtomicIdsFromScopes(scopes: list[dict]) -> list[str
         if str(s.get("group_atomic_metric_id") or "").strip()
     })
 
+# 스코프 목록에서 연결 대상 제외 외부 ENTITY 소스 원자 지표 ID 추출
 def resolveExternalEntitySourceAtomicIdsFromScopes(scopes: list[dict]) -> list[str]:
     allRuleSourceAtomicIds = set(resolveAllRuleSourceAtomicIdsFromScopes(scopes))
     consolidatedTargetAtomicIds = set(resolveConsolidatedTargetAtomicIdsFromScopes(scopes))
     return sorted(allRuleSourceAtomicIds - consolidatedTargetAtomicIds)
 
+# 규칙 소스에서 source_scope=CONSOLIDATED인 원자 지표 ID 추출
 def resolveConsolidatedSourceAtomicIdsFromRuleSources(ruleSources: list[dict]) -> list[str]:
-    """
-    rule source 메타데이터(source_scope 보존)에서 source_scope=CONSOLIDATED 인
-    source atomic id 집합을 반환한다.
-    이 atomic 들은 회사별 ENTITY KPI_FACT 가 아니라 ESG_GROUP_ROLLUP_RESULT 의
-    연결 결과값으로 평가되어야 한다.
-    """
     atomicIds = set()
     for source in ruleSources or []:
         normalized = normalizeSource(source)
@@ -392,11 +403,8 @@ def resolveConsolidatedSourceAtomicIdsFromRuleSources(ruleSources: list[dict]) -
                 atomicIds.add(atomicId)
     return sorted(atomicIds)
 
+# 배치 스코프 규칙 소스에서 CONSOLIDATED scope 원자 ID 추출 (경량 조회, 트랜잭션 커서용)
 def resolveConsolidatedSourceAtomicIdsFromBatchTx(cur, batchId: int) -> list[str]:
-    """
-    batch scope의 consolidated rule source 메타데이터에서 source_scope=CONSOLIDATED 인
-    source atomic id 를 추출한다. (검증 없이 readiness 계산용 경량 조회)
-    """
     from src.repositories.calculationrepository import listActiveRulesByTargetAtomicIdsTx, listRuleSourcesTx
 
     targetAtomicIds = resolveConsolidatedTargetAtomicIdsFromScopes(listScopeTx(cur, batchId))
@@ -413,6 +421,7 @@ def resolveConsolidatedSourceAtomicIdsFromBatchTx(cur, batchId: int) -> list[str
     ruleSources = listRuleSourcesTx(cur, ruleCodes)
     return resolveConsolidatedSourceAtomicIdsFromRuleSources(ruleSources)
 
+# 배치 스코프 규칙 소스에서 CONSOLIDATED scope 원자 ID 추출
 def resolveConsolidatedSourceAtomicIdsFromBatch(batchId: int) -> list[str]:
     from src.utils.db import getConn
     conn = getConn()
@@ -422,24 +431,29 @@ def resolveConsolidatedSourceAtomicIdsFromBatch(batchId: int) -> list[str]:
     finally:
         conn.close()
 
+# 배치 스코프 전체 소스 원자 지표 ID 목록 조회 (트랜잭션 커서용)
 def resolveAllRuleSourceAtomicIdsTx(cur, batchId: int) -> list[str]:
     return resolveAllRuleSourceAtomicIdsFromScopes(listScopeTx(cur, batchId))
 
+# 배치 스코프 전체 소스 원자 지표 ID 목록 조회
 def resolveAllRuleSourceAtomicIds(batchId: int) -> list[str]:
     return resolveAllRuleSourceAtomicIdsFromScopes(listScope(batchId))
 
+# CONSOLIDATED scope 소스 제외 후 외부 ENTITY 소스 원자 ID 목록 조회 (트랜잭션 커서용)
 def resolveExternalEntitySourceAtomicIdsTx(cur, batchId: int) -> list[str]:
-    # source_scope=CONSOLIDATED source(예: 연결 기준값 E1-06__G0003)는 회사별 ENTITY
+    # source_scope=CONSOLIDATED 소스(예: 연결 기준값 E1-06__G0003)는 회사별 ENTITY
     # KPI_FACT 입력 대상이 아니므로 readiness/missing 계산에서 제외한다.
     entityCandidates = resolveExternalEntitySourceAtomicIdsFromScopes(listScopeTx(cur, batchId))
     consolidatedSet = set(resolveConsolidatedSourceAtomicIdsFromBatchTx(cur, batchId))
     return [atomicId for atomicId in entityCandidates if atomicId not in consolidatedSet]
 
+# CONSOLIDATED scope 소스 제외 후 외부 ENTITY 소스 원자 ID 목록 조회
 def resolveExternalEntitySourceAtomicIds(batchId: int) -> list[str]:
     entityCandidates = resolveExternalEntitySourceAtomicIdsFromScopes(listScope(batchId))
     consolidatedSet = set(resolveConsolidatedSourceAtomicIdsFromBatch(batchId))
     return [atomicId for atomicId in entityCandidates if atomicId not in consolidatedSet]
 
+# 지표별 외부 ENTITY 소스 원자 ID 목록 조회 (트랜잭션 커서용)
 def resolveExternalEntitySourceAtomicIdsByMetricTx(
     cur,
     batchId: int,

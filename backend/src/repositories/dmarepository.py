@@ -1,25 +1,7 @@
 """
-Domain: DMA Materiality
-Layer: utils/repository
-Responsibility:
-- LEGACY: DMA evidence / signal 저장, 집계, 랭킹, 쿼리 (기존 Pipeline 호환)
-- STEP 4: v1.3 Canonical Payload 구성·읽기·업데이트 보조 (Phase C DB wire 대기)
-Public functions (LEGACY):
-- saveSignals / saveDmaSignals
-- recalcStage / recalculateStageScore
-- recalcFinal / recalculateFinalScore
-- updateRanks / updateDmaRankings
-- listResults / getDmaResults
-- listTopMediaIssues / getTopIssuesByMediaScore
-- getMediaCoverage / getMediaCoverageFromSummary
-Public functions (STEP 4):
-- step4BuildTrace / step4WriteTrace / step4ReadTrace
-- step4UpdateTrace / appendFactorTrace / isLegacyPayload
-Do not:
-- do not mutate unrelated DB state
-- do not hardcode score numbers or rule-card values
-- do not call FastAPI router directly
-- do not modify auth/token/common code
+dmarepository.py
+레이어: Repository
+역할: DMA 중요성 분석 신호·점수·순위 저장 및 집계.
 """
 
 import copy
@@ -44,12 +26,8 @@ from src.utils.dmaaggregator import (
 )
 from src.utils.subissuemaster import subissueMaster
 
+# DMA 신호 목록 저장 — 증거·신호 INSERT 후 변경 서브이슈 Stage 집계 트리거
 def saveSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] = None, sourceTitle: str = ""):
-    """
-    DMASignal 목록을 ESG_DMA_SIGNAL_DETAIL 테이블에 저장합니다.
-    단일 DB 연결로 모든 evidence + signal을 처리해 연결 수를 최소화합니다.
-    저장 후 연관된 sub_issue_code에 대한 Stage Aggregation을 유발합니다.
-    """
     if not signals:
         return
 
@@ -133,6 +111,7 @@ def saveSignals(runId: int, signals: List[DMASignal], fileId: Optional[int] = No
     for subIssueCode, sourceStep in updatedSubIssues:
         recalcStage(runId, subIssueCode, sourceStep)
 
+# 발행일 문자열 정규화 — 다양한 날짜 형식을 YYYY-MM-DD HH:MM:SS로 변환
 def normalizePublishedAt(value: Optional[str]) -> Optional[str]:
     if not value:
         return None
@@ -146,6 +125,7 @@ def normalizePublishedAt(value: Optional[str]) -> Optional[str]:
             continue
     return None
 
+# DMA 증거 행 INSERT — source_url 컬럼 없으면 레거시 폴백
 def insertEvidence(
     runId: int,
     sourceStep: str,
@@ -208,10 +188,8 @@ def insertEvidence(
     finally:
         conn.close()
 
+# runId·이슈·스테이지 기준 신호 상세 행 조회 및 DMASignal 목록 반환
 def listSignals(runId: int, subIssueCode: str, sourceStep: str) -> List[DMASignal]:
-    """
-    특정 런의 특정 이슈, 특정 스테이지에 해당하는 모든 Signal Detail을 DB에서 가져와 DMASignal 객체 리스트로 반환합니다.
-    """
     sql = """
         SELECT scoring_payload_json 
         FROM ESG_DMA_SIGNAL_DETAIL 
@@ -228,11 +206,8 @@ def listSignals(runId: int, subIssueCode: str, sourceStep: str) -> List[DMASigna
                 print(f"Error parsing JSON payload for {subIssueCode}: {e}")
     return signals
 
+# 스테이지 점수 재계산 후 UPSERT — Final Score 트리거
 def recalcStage(runId: int, subIssueCode: str, sourceStep: str):
-    """
-    DB에 저장된 Signal들을 기반으로 Stage Score를 다시 계산하고 UPSERT합니다.
-    그 후 Final Score 산출을 트리거합니다.
-    """
     signals = listSignals(runId, subIssueCode, sourceStep)
     
     if not signals:
@@ -343,6 +318,7 @@ def recalcSurvey(runId: int, subIssueCode: str):
     
     upsertStage(runId, subIssueCode, "survey", finalSurveyScore, finalSurveyScore)
 
+# 스테이지별 점수 UPSERT — benchmark/media_external/survey 분기 처리
 def upsertStage(runId: int, subIssueCode: str, stage: str, impactScore: Optional[float], financialScore: Optional[float]):
     if stage == "benchmark":
         sql = """
@@ -379,12 +355,15 @@ def upsertStage(runId: int, subIssueCode: str, stage: str, impactScore: Optional
     except Exception as e:
         print(f"Error upserting stage summary for {subIssueCode}: {e}")
 
+# _safeFloatBase 래퍼 — 기본값 0.0
 def safeFloat(value, default=0.0):
     return _safeFloatBase(value, default=default)
 
+# _safeFloatBase 래퍼 — 기본값 None
 def safeFloatOrNone(value):
     return _safeFloatBase(value, default=None)
 
+# 최종 점수 재계산 및 UPSERT — 옵션으로 순위도 업데이트
 def recalcFinal(runId: int, subIssueCode: str, updateRankingsYn: bool = True):
     sql = """
         SELECT
@@ -415,6 +394,7 @@ def recalcFinal(runId: int, subIssueCode: str, updateRankingsYn: bool = True):
     if updateRankingsYn:
         updateRanks(runId)
 
+# 컨텍스트 수정자 -0.5~0.5 범위 클램프
 def clampContextModifier(value):
     parsed = safeFloat(value, 0.0)
     if parsed < -0.5:
@@ -423,6 +403,7 @@ def clampContextModifier(value):
         return 0.5
     return parsed
 
+# final_score 내림차순으로 전체 서브이슈 순위 재부여
 def updateRanks(runId: int):
     sql = """
         SELECT id
@@ -440,6 +421,7 @@ def updateRanks(runId: int):
     from src.utils.db import saveMany
     saveMany(updateSql, params)
 
+# 최종 점수 점수요약 테이블 UPSERT
 def upsertFinal(runId: int, score: FinalMaterialityScore):
     sql = """
         INSERT INTO ESG_DMA_SCORE_SUMMARY (
@@ -462,16 +444,8 @@ def upsertFinal(runId: int, score: FinalMaterialityScore):
     except Exception as e:
         print(f"Error upserting final DMA Summary {score.subIssueCode}: {e}")
 
-# ──────────────────────────────────────────────
-# Result API / Media API 조회 함수
-# ──────────────────────────────────────────────
-
+# runId 기준 전체 점수 요약 행 조회 — 순위 있는 행 우선 rank_no ASC 정렬
 def listResults(runId: int) -> list:
-    """
-    통합 결과 조회 API용.
-    ESG_DMA_SCORE_SUMMARY에서 runId 기준 전체 행을 rank_no ASC로 반환합니다.
-    final_score가 NULL인 행도 포함하되, rank_no가 있는 행이 먼저 나옵니다.
-    """
     sql = """
         SELECT
             sub_issue_code,
@@ -494,12 +468,8 @@ def listResults(runId: int) -> list:
     rows = findAll(sql, (runId,))
     return rows if rows else []
 
+# media_external 평균 점수 기준 상위 이슈 목록 조회 — limit 지원
 def listTopMediaIssues(runId: int, limit: int = 5) -> list:
-    """
-    Media API topIssues용.
-    media_external stage score 기준으로 정렬합니다 (final_score 아님).
-    media impact/financial 중 non-null 평균을 기준으로 내림차순 정렬.
-    """
     sql = """
         SELECT 
             sub_issue_code,

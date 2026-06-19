@@ -11,14 +11,17 @@ from src.utils.db import findAll, findOne
 BATCH_STATUS_PENDING = "pending"
 BATCH_STATUS_COMPLETED = "completed"
 
+# JSON 직렬화 기본 핸들러 — Decimal→문자열 변환
 def _jsonDefault(value: Any) -> Any:
     if isinstance(value, Decimal):
         return format(value, "f")
     raise TypeError(f"Object of type {value.__class__.__name__} is not JSON serializable")
 
+# 한국어 안전 JSON 직렬화
 def _jsonDumps(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, default=_jsonDefault)
 
+# 목적·범위 기준 활성 롤업 배치 단건 조회 — runId 또는 sourceCycleId 필터 지원
 def getActiveBatch(runId: Optional[int], sourceCycleId: Optional[int], rollupPurposeCode: str, metricScopeCode: str) -> dict:
     sql = """
         SELECT
@@ -40,6 +43,7 @@ def getActiveBatch(runId: Optional[int], sourceCycleId: Optional[int], rollupPur
     sql += " ORDER BY b.id DESC LIMIT 1 "
     return findOne(sql, tuple(params)) or {}
 
+# batchId 기준 롤업 배치 단건 조회
 def getBatch(batchId: int) -> dict:
     sql = """
         SELECT
@@ -50,6 +54,7 @@ def getBatch(batchId: int) -> dict:
     """
     return findOne(sql, (batchId,)) or {}
 
+# 소스 회사 기준 롤업 요청 목록 조회 — 전송 상태·목적·범위 필터 지원
 def listRequests(
     sourceCompanyId: int,
     rollupPurposeCode: Optional[str],
@@ -121,6 +126,7 @@ def listRequests(
     """.format(purposeFilter=purposeFilter, scopeFilter=scopeFilter, requestFilter=requestFilter, transferFilter=transferFilter)
     return findAll(sql, tuple(params)) or []
 
+# 배치·소스 회사 기준 소스 상태 단건 조회
 def getSource(batchId: int, sourceCompanyId: int) -> dict:
     sql = """
         SELECT
@@ -133,6 +139,7 @@ def getSource(batchId: int, sourceCompanyId: int) -> dict:
     """
     return findOne(sql, (batchId, sourceCompanyId)) or {}
 
+# 배치 기준 소스 상태 목록 조회
 def listSources(batchId: int) -> list[dict]:
     sql = """
         SELECT s.*
@@ -143,6 +150,7 @@ def listSources(batchId: int) -> list[dict]:
     """
     return findAll(sql, (batchId,)) or []
 
+# 배치 기준 소스 상태 상세 목록 조회 — 회사명 포함
 def listSourceDetails(batchId: int) -> list[dict]:
     sql = """
         SELECT
@@ -159,6 +167,7 @@ def listSourceDetails(batchId: int) -> list[dict]:
     """
     return findAll(sql, (batchId,)) or []
 
+# 회사 ID 기준 프로필 조회 — 없으면 code/name 기본값 반환
 def getCompanyProfile(companyId: int) -> dict:
     sql = """
         SELECT
@@ -177,6 +186,7 @@ def getCompanyProfile(companyId: int) -> dict:
         "companyName": str(companyId),
     }
 
+# 지표 목록에 맞는 활성 입력 사이클 단건 조회 — 사이클 유형 우선순위 적용
 def findActiveInputWorkspace(companyId: int, reportingYear: int, requestedMetricIds: list[str]) -> dict:
     metricIds = [
         str(metricId or "").strip()
@@ -218,9 +228,11 @@ def findActiveInputWorkspace(companyId: int, reportingYear: int, requestedMetric
     """
     return findOne(sql, (*metricIds, companyId, reportingYear, len(metricIds))) or {}
 
+# 배치 기준 소스 회사 ID 목록 조회
 def listSourceCompanyIds(batchId: int) -> list[int]:
     return [int(row["source_company_id"]) for row in listSources(batchId)]
 
+# 소스 회사·연도·목적·범위 기준 충돌 활성 소스 요청 목록 조회
 def listConflictingActiveSourceRequests(
     sourceCompanyIds: list[int],
     reportingYear: int,
@@ -271,12 +283,14 @@ def listConflictingActiveSourceRequests(
         ),
     ) or []
 
+# 롤업 배치 코드 생성 (prefix-연도-회사ID-타임스탬프)
 def buildBatchCode(companyId: int, reportingYear: int, rollupPurposeCode: str) -> str:
     from datetime import datetime, timezone
     ts = datetime.now(timezone.utc).strftime("%y%m%d%H%M")
     prefix = "RD" if rollupPurposeCode == "REPORT_DISCLOSURE" else "RB"
     return f"{prefix}-{reportingYear}-{companyId}-{ts}"
 
+# 롤업 배치 INSERT (트랜잭션 커서용)
 def saveBatchTx(
     cur,
     parentCompanyId: int,
@@ -320,6 +334,7 @@ def saveBatchTx(
     )
     return int(cur.lastrowid)
 
+# 소스 상태 일괄 upsert (트랜잭션 커서용)
 def saveSourcesTx(
     cur,
     batchId: int,
@@ -387,6 +402,7 @@ def saveSourcesTx(
             ),
         )
 
+# 소스 전송 완료 상태 업데이트 (트랜잭션 커서용)
 def updateSourceSentTx(cur, batchId: int, sourceCompanyId: int, requiredAtomicCount: int) -> None:
     cur.execute(
         """
@@ -406,6 +422,7 @@ def updateSourceSentTx(cur, batchId: int, sourceCompanyId: int, requiredAtomicCo
         (requiredAtomicCount, batchId, sourceCompanyId),
     )
 
+# 소스 상태 FOR UPDATE 행 잠금 조회 (트랜잭션 커서용)
 def lockSourceStatusTx(cur, batchId: int, sourceCompanyId: int) -> dict:
     cur.execute(
         """
@@ -421,6 +438,7 @@ def lockSourceStatusTx(cur, batchId: int, sourceCompanyId: int) -> dict:
     )
     return cur.fetchone() or {}
 
+# 소스 준비 상태 동기화 — 원자 지표 승인 수 재계산 후 상태 업데이트 (트랜잭션 커서용)
 def syncSourceReadinessTx(
     cur,
     batchId: int,
@@ -478,6 +496,7 @@ def syncSourceReadinessTx(
     )
     return readiness
 
+# 배치 전체 소스 수신 완료 상태 업데이트 (트랜잭션 커서용)
 def updateSourceStatusTx(cur, batchId: int, requiredAtomicCount: int) -> None:
     cur.execute(
         """
@@ -497,6 +516,7 @@ def updateSourceStatusTx(cur, batchId: int, requiredAtomicCount: int) -> None:
         (requiredAtomicCount, batchId),
     )
 
+# DMA 사전 점검 배치 완료 처리 및 run 재무 기준 상태 업데이트 (트랜잭션 커서용)
 def finalizeDmaPrecheckTx(cur, batchId: int, runId: int, actorUserId: Optional[int] = None) -> None:
     cur.execute(
         """
@@ -530,6 +550,7 @@ def finalizeDmaPrecheckTx(cur, batchId: int, runId: int, actorUserId: Optional[i
         (json.dumps(tracePayload), runId),
     )
 
+# 배치 상태 업데이트 (트랜잭션 커서용)
 def updateBatchStatusTx(cur, batchId: int, status: str) -> None:
     cur.execute(
         """
@@ -541,6 +562,7 @@ def updateBatchStatusTx(cur, batchId: int, status: str) -> None:
         (status, batchId)
     )
 
+# 보고서 공시 배치 완료 처리 (트랜잭션 커서용)
 def finalizeReportDisclosureTx(cur, batchId: int, actorUserId: Optional[int] = None) -> None:
     cur.execute(
         """
@@ -557,6 +579,7 @@ def finalizeReportDisclosureTx(cur, batchId: int, actorUserId: Optional[int] = N
         (BATCH_STATUS_COMPLETED, actorUserId, batchId),
     )
 
+# 배치 상태 및 소스별 전송·대기 집계 조회
 def getStatus(batchId: int) -> dict:
     sql = """
         SELECT
@@ -600,6 +623,7 @@ def getStatus(batchId: int) -> dict:
     """
     return findOne(sql, (batchId,)) or {}
 
+# 미전송 소스 목록 조회
 def listPendingSources(batchId: int) -> list[dict]:
     sql = """
         SELECT
@@ -614,6 +638,7 @@ def listPendingSources(batchId: int) -> list[dict]:
     """
     return findAll(sql, (batchId,)) or []
 
+# 모든 소스 전송 완료 여부 확인 — 미전송 회사 ID 목록 포함
 def checkTransferReady(batchId: int) -> dict:
     pendingSources = listPendingSources(batchId)
     return {
@@ -624,6 +649,7 @@ def checkTransferReady(batchId: int) -> dict:
         ],
     }
 
+# 롤업 결과 코드 생성 (batchId·atomicMetricId MD5 기반)
 def buildResultCode(batchId: int, groupAtomicMetricId: str) -> str:
     import hashlib
     base = f"{batchId}_{groupAtomicMetricId}"
@@ -634,12 +660,8 @@ def buildResultCode(batchId: int, groupAtomicMetricId: str) -> str:
 CALCULATION_TRACE_MAX_BYTES = 60000
 
 
+# DB 저장용 compact 계산 추적 정보 구성 — full trace 제외, 상태·연도·의존성 요약만 보존
 def compactCalculationTrace(result: dict) -> dict:
-    """
-    DB 저장용 compact trace를 만든다. full trace(currentPreAggregatedMap,
-    priorPreAggregatedMap, engineTrace 원문 등)는 TEXT 컬럼 한계를 넘으므로 저장하지 않고,
-    상태/연도/의존성 요약만 남긴다. (API response warning trace 는 별도로 full 유지)
-    """
     trace = result.get("calculationTrace") or {}
     dependencySummary = [
         {
@@ -683,6 +705,7 @@ def compactCalculationTrace(result: dict) -> dict:
     return compact
 
 
+# rollup 결과 upsert 파라미터 튜플 생성
 def resultParams(
     batch: dict,
     result: dict,
@@ -713,6 +736,7 @@ def resultParams(
     )
     return baseParams
 
+# 그룹 롤업 결과 upsert — 기존 행 UPDATE, 없으면 INSERT (트랜잭션 커서용)
 def upsertGroupRollupResultsTx(
     cur,
     batch: dict,
@@ -794,17 +818,13 @@ def upsertGroupRollupResultsTx(
 CONSOLIDATED_RESULT_READY_STATUSES = ("approved", "completed", "calculated")
 
 
+# 부모 회사 연결 롤업 결과 조회 — 동일 지표는 최신 배치 1건만 사용 (트랜잭션 커서용)
 def listConsolidatedRollupResultsByYearTx(
     cur,
     parentCompanyId: int,
     reportingYear: int,
     groupAtomicMetricIds: list[str],
 ) -> list[dict]:
-    """
-    ESG_GROUP_ROLLUP_RESULT 에서 parent company 의 연결 결과값을 연도별로 조회한다.
-    source_scope=CONSOLIDATED 인 source(예: 전년도 연결 기준값) 의 입력으로 사용된다.
-    동일 (parent, year, group_atomic) 에 여러 batch 결과가 있으면 최신(id DESC) 1건만 사용한다.
-    """
     cleaned = [
         str(atomicId or "").strip()
         for atomicId in groupAtomicMetricIds or []
@@ -846,19 +866,13 @@ CONSOLIDATED_BASELINE_SCOPE_TYPE = "CONSOLIDATED_BASELINE"
 CONSOLIDATED_BASELINE_SCOPE_TYPES = ("CONSOLIDATED", "CONSOLIDATED_BASELINE")
 
 
+# 연결 baseline Fact 목록 조회 — CONSOLIDATED scope, 동일 원자는 최신 1건 (트랜잭션 커서용)
 def listConsolidatedBaselineFactsTx(
     cur,
     parentCompanyId: int,
     reportingYear: int,
     atomicMetricIds: list[str],
 ) -> list[dict]:
-    """
-    ESG_KPI_FACT 에서 parent company 의 연결 baseline 입력값을 조회한다.
-    company_scope_type IN (CONSOLIDATED, CONSOLIDATED_BASELINE), approved, delete_yn=0.
-    PRIOR + CONSOLIDATED source 평가용 consolidatedFactMapsByYear seed 로 사용된다.
-    동일 (company, year, atomic) 에 여러 row 가 있으면 최신(id DESC) 1건만 사용한다.
-    반환 행은 buildConsolidatedFactMap 이 바로 사용할 수 있도록 group_atomic_metric_id 로 alias.
-    """
     cleaned = [
         str(atomicId or "").strip()
         for atomicId in atomicMetricIds or []
@@ -895,16 +909,13 @@ def listConsolidatedBaselineFactsTx(
     return cur.fetchall() or []
 
 
+# 연결 baseline Fact 상세 맵 조회 — atomicMetricId → 값/단위/소스 타입 매핑 (트랜잭션 커서용)
 def listConsolidatedBaselineDetailsTx(
     cur,
     parentCompanyId: int,
     reportingYear: int,
     atomicMetricIds: list[str],
 ) -> dict[str, dict]:
-    """
-    baseline-requirements API 용. 입력 atomic 별 현재 저장된 baseline 값 상세를
-    atomicMetricId -> {valueNumeric, valueText, unit, valueSourceType} 맵으로 반환한다.
-    """
     cleaned = [
         str(atomicId or "").strip()
         for atomicId in atomicMetricIds or []
@@ -954,6 +965,7 @@ def listConsolidatedBaselineDetailsTx(
     return details
 
 
+# 연결 baseline Fact upsert — 일반 ENTITY fact 충돌 시 'conflict_protected' 반환 (트랜잭션 커서용)
 def upsertConsolidatedBaselineFactTx(
     cur,
     *,
@@ -966,13 +978,6 @@ def upsertConsolidatedBaselineFactTx(
     unit: Optional[str],
     actorUserId: Optional[int],
 ) -> str:
-    """
-    prior-year 연결 baseline 을 ESG_KPI_FACT 에 upsert 한다.
-    - 기존 row 가 없으면 INSERT.
-    - 기존 row 가 PRIOR_YEAR_BASELINE_INPUT 이거나 company_scope_type 이 CONSOLIDATED% 면 UPDATE.
-    - 일반 운영 ENTITY fact 면 덮어쓰지 않고 'conflict_protected' 를 반환한다.
-    반환: 'inserted' | 'updated' | 'conflict_protected'
-    """
     atomicId = str(atomicMetricId or "").strip()
     if not atomicId:
         return "conflict_protected"

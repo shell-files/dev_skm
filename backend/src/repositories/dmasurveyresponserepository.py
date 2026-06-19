@@ -46,6 +46,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
 """
 
 
+# runId 기준 READY 상태 설문 폼 단건 조회 — 없으면 RuntimeError
 def getReadySurveyFormForRun(runId: int) -> dict:
     _validateRunId(runId)
     conn = getConn()
@@ -65,6 +66,7 @@ def getReadySurveyFormForRun(runId: int) -> dict:
         conn.close()
 
 
+# 폼·run 기준 설문 응답 전체 교체 — 기존 행 소프트 삭제 후 재삽입 (트랜잭션)
 def replaceSurveyResponsesForFormTx(
     *,
     runId: int,
@@ -76,7 +78,7 @@ def replaceSurveyResponsesForFormTx(
     if not isinstance(rows, list):
         raise ValueError("rows must be a list")
 
-    # Validate each row has required fields
+    # 필수 필드 유효성 검증
     required_fields = {
         "runId", "surveyFormId", "questionCode",
         "mappedAxis", "respondentGroup", "sourceResponseKey",
@@ -98,12 +100,12 @@ def replaceSurveyResponsesForFormTx(
     conn.autocommit = False
     deleted_count = 0
     try:
-        # Step 1: Physical delete all existing rows for this form+run (idempotent)
+        # 1단계: 폼·run 기준 기존 응답 행 소프트 삭제 (멱등)
         with conn.cursor() as cur:
             cur.execute(_DELETE_RESPONSES_SQL, (surveyFormId, runId))
             deleted_count = cur.rowcount if cur.rowcount is not None else 0
 
-        # Step 2: Bulk insert new rows
+        # 2단계: 새 응답 행 일괄 삽입
         if rows:
             params = [
                 (

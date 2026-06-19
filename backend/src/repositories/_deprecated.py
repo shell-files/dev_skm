@@ -15,6 +15,7 @@ from src.repositories.onboardingscoperepository import (
 # Repository → Service 순환 의존성 위반.
 # approval_service에 동일한 원본 함수가 존재하므로 이 wrapper들은 불필요.
 
+# submitMetricApproval 서비스로 위임하는 하위 호환 래퍼
 def submitG002Approval(companyId: int, reportingYear: int, reportBasisType=None, sourceMaterialityRunId=None, actorUserId=None) -> dict:
     from src.services.onboardings.approvalservice import submitMetricApproval
 
@@ -30,6 +31,7 @@ def submitG002Approval(companyId: int, reportingYear: int, reportBasisType=None,
     )
 
 
+# approveMetricApproval 서비스로 위임하는 하위 호환 래퍼
 def approveG002Approval(companyId: int, reportingYear: int, actorUserId: Optional[int], commentText: Optional[str] = None) -> dict:
     from src.services.onboardings.approvalservice import approveMetricApproval
 
@@ -43,6 +45,7 @@ def approveG002Approval(companyId: int, reportingYear: int, actorUserId: Optiona
     )
 
 
+# rejectMetricApproval 서비스로 위임하는 하위 호환 래퍼
 def rejectG002Approval(companyId: int, reportingYear: int, actorUserId: Optional[int], commentText: str) -> dict:
     from src.services.onboardings.approvalservice import rejectMetricApproval
 

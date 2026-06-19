@@ -28,10 +28,12 @@ INVITE_STATE_COMPLETED = "승인완료"
 INVITE_STATE_REVOKED = "승인취소"
 
 
+# 이메일 소문자·공백 정규화
 def normalizeEmail(email: str) -> str:
     return str(email or "").strip().lower()
 
 
+# 이메일 기준 기존 사용자 ID 조회 — 배정 가능 역할(EMPLOYEE/ESG/ADMIN) 필터
 def resolveExistingUser(companyId: int, normalizedEmail: str) -> Optional[int]:
     rows = findAll(
         f"""
@@ -59,6 +61,7 @@ def resolveExistingUser(companyId: int, normalizedEmail: str) -> Optional[int]:
     return None
 
 
+# 지표 목록 일괄 배정 — 기존 사용자면 직접 배정, 없으면 초대 생성
 def bulkAssignMetrics(
     *,
     companyId: int,
@@ -152,6 +155,7 @@ def bulkAssignMetrics(
     }
 
 
+# 공통 초대 레코드 INSERT — actorUserId 필수 (트랜잭션 커서용)
 def insertCommonInviteTx(
     cur,
     *,
@@ -178,6 +182,7 @@ def insertCommonInviteTx(
     return int(cur.lastrowid)
 
 
+# 초대 메일 이벤트 dict 구성
 def buildCommonInviteMailEvent(email: str, inviteUuid: str, companyName: str) -> dict:
     return {
         "type": 1,
@@ -187,6 +192,7 @@ def buildCommonInviteMailEvent(email: str, inviteUuid: str, companyName: str) ->
     }
 
 
+# 역할 코드 기준 role_id 조회 — 없으면 ValueError (트랜잭션 커서용)
 def resolveRoleIdTx(cur, roleCode: str) -> int:
     cur.execute(
         f"""
@@ -205,6 +211,7 @@ def resolveRoleIdTx(cur, roleCode: str) -> int:
     return int(row["id"])
 
 
+# 지표 배정 upsert (트랜잭션 커서용)
 def upsertAssignmentTx(
     cur,
     *,
@@ -256,6 +263,7 @@ def upsertAssignmentTx(
     )
 
 
+# 사이클 기준 지표 배정 목록 조회 — 마스킹된 이메일 포함
 def listAssignments(companyId: int, reportingYear: int, cycle: dict) -> list[dict]:
     cycleId = int(cycle["id"]) if cycle else None
     metricRows = listCycleMetricScope(cycleId, companyId) if cycleId is not None else []
@@ -283,6 +291,7 @@ def listAssignments(companyId: int, reportingYear: int, cycle: dict) -> list[dic
     return items
 
 
+# 사이클·기업 기준 배정 행 목록 조회 — 초대·사용자 이메일 포함
 def listAssignmentRows(cycleId: int, companyId: int) -> list[dict]:
     return findAll(
         f"""
@@ -313,6 +322,7 @@ def listAssignmentRows(cycleId: int, companyId: int) -> list[dict]:
     ) or []
 
 
+# 사이클·지표 기준 기존 초대 ID 목록 조회 (트랜잭션 커서용)
 def listAssignmentInviteIdsTx(cur, cycleId: int, companyId: int, metricIds: list[str]) -> list[int]:
     if not metricIds:
         return []
@@ -332,6 +342,7 @@ def listAssignmentInviteIdsTx(cur, cycleId: int, companyId: int, metricIds: list
     return [int(row["invite_id"]) for row in cur.fetchall() or []]
 
 
+# 지표 목록 일괄 배정 해제 — 고아 초대 자동 취소
 def bulkUnassignMetrics(companyId: int, reportingYear: int, cycle: dict, metricIds: list[str]) -> dict:
     cycleId = int(cycle["id"])
     conn = getConn()
@@ -391,6 +402,7 @@ def bulkUnassignMetrics(companyId: int, reportingYear: int, cycle: dict, metricI
     }
 
 
+# 배정 쓰기 가능 사이클 여부 검증 (트랜잭션 커서용)
 def requireWritableAssignmentCycleTx(cur, cycle: dict, companyId: int) -> None:
     scopeRepo.requireWritableCycleTx(
         cur,
@@ -400,6 +412,7 @@ def requireWritableAssignmentCycleTx(cur, cycle: dict, companyId: int) -> None:
     )
 
 
+# 활성 배정 없는 고아 초대 취소 — 취소 성공 여부 반환 (트랜잭션 커서용)
 def revokeOrphanInviteTx(cur, inviteId: int) -> bool:
     cur.execute(
         """
@@ -427,6 +440,7 @@ def revokeOrphanInviteTx(cur, inviteId: int) -> bool:
     return cur.rowcount > 0
 
 
+# 초대 ID 기준 배정된 지표 ID 목록 조회
 def listAssignedMetricIds(inviteId: int) -> list[str]:
     rows = findAll(
         """
@@ -442,6 +456,7 @@ def listAssignedMetricIds(inviteId: int) -> list[str]:
     return [row["metric_id"] for row in rows]
 
 
+# 사이클·기업 기준 지표 범위 목록 조회 — 표시 순서 정렬
 def listCycleMetricScope(cycleId: int, companyId: int) -> list[dict]:
     return findAll(
         """

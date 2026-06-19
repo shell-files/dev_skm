@@ -20,6 +20,7 @@ from src.utils.typeutils import (
 )
 
 
+# 지표 입력값 행 목록 조회 (온보딩·KPI·롤업 UNION)
 def listValueRows(
     companyId: int,
     reportingYear: int,
@@ -101,6 +102,7 @@ def listValueRows(
         
     return findAll(baseQuery, tuple(params)) or []
 
+# 사이클·기업·지표 기준 배정 ID 조회 — 없으면 None
 def resolveAssignmentId(cycleId: int, companyId: int, metricId: str) -> Optional[int]:
     row = findOne(
         """
@@ -117,6 +119,7 @@ def resolveAssignmentId(cycleId: int, companyId: int, metricId: str) -> Optional
     ) or {}
     return int(row["id"]) if row.get("id") is not None else None
 
+# 지표 입력값 upsert 저장 (트랜잭션 래퍼)
 def upsertMetricInputValues(
     *,
     cycleId: int,
@@ -150,6 +153,7 @@ def upsertMetricInputValues(
     finally:
         conn.close()
 
+# 다중 지표 그룹 입력값 일괄 upsert — 실패 시 전체 롤백
 def upsertMetricValueGroups(groups: list[dict]) -> int:
     if not groups:
         return 0
@@ -178,6 +182,7 @@ def upsertMetricValueGroups(groups: list[dict]) -> int:
     finally:
         conn.close()
 
+# 지표 입력값 upsert — 기존 행 UPDATE, 없으면 INSERT; 승인 Fact 무효화 포함 (트랜잭션 커서용)
 def upsertMetricInputValuesTx(
     cur,
     *,
@@ -275,6 +280,7 @@ def upsertMetricInputValuesTx(
         savedCount += 1
     return savedCount
 
+# 입력값 변경 시 연결 KPI Fact 소프트 삭제 무효화 (트랜잭션 커서용)
 def invalidateMetricKpiFactsTx(cur, companyId: int, reportingYear: int, metricId: str, atomicMetricId: str) -> None:
     cur.execute(
         """
@@ -300,9 +306,11 @@ def invalidateMetricKpiFactsTx(cur, companyId: int, reportingYear: int, metricId
     )
 
 
+# invalidateMetricKpiFactsTx G0-02 래퍼
 def invalidateG002KpiFactTx(cur, companyId: int, reportingYear: int, metricId: str, atomicMetricId: str) -> None:
     invalidateMetricKpiFactsTx(cur, companyId, reportingYear, metricId, atomicMetricId)
 
+# 지표 기준 온보딩 입력값 행 목록 조회 — 필수 원자 지표만 조회
 def listMetricInputs(companyId: int, reportingYear: int, metricId: str) -> list[dict]:
     requiredAtomicIds = listRequiredAtomicIds(metricId)
     if not requiredAtomicIds:
@@ -322,9 +330,11 @@ def listMetricInputs(companyId: int, reportingYear: int, metricId: str) -> list[
         (companyId, reportingYear, metricId, *requiredAtomicIds),
     ) or []
 
+# G0-02 지표 온보딩 입력값 목록 조회 래퍼
 def listG002Inputs(companyId: int, reportingYear: int) -> list[dict]:
     return listMetricInputs(companyId, reportingYear, METRIC_ID_G0_02)
 
+# 지표 기준 온보딩 연결 승인 KPI Fact 행 목록 조회
 def listMetricKpiFacts(companyId: int, reportingYear: int, metricId: str) -> list[dict]:
     requiredAtomicIds = listRequiredAtomicIds(metricId)
     if not requiredAtomicIds:
@@ -358,9 +368,11 @@ def listMetricKpiFacts(companyId: int, reportingYear: int, metricId: str) -> lis
         (companyId, reportingYear, metricId, *requiredAtomicIds),
     ) or []
 
+# G0-02 지표 KPI Fact 목록 조회 래퍼
 def listG002KpiFacts(companyId: int, reportingYear: int) -> list[dict]:
     return listMetricKpiFacts(companyId, reportingYear, METRIC_ID_G0_02)
 
+# 지표 ID 기준 한국어 지표명 조회 — 없으면 None
 def getMetricName(metricId: str) -> Optional[str]:
     row = findOne(
         """
@@ -376,6 +388,7 @@ def getMetricName(metricId: str) -> Optional[str]:
     ) or {}
     return row.get("metric_name_kr")
 
+# 지표 필수 온보딩 원자 지표 ID 목록 조회
 def listRequiredAtomicIds(metricId: str) -> list[str]:
     rows = findAll(
         """
@@ -391,6 +404,7 @@ def listRequiredAtomicIds(metricId: str) -> list[str]:
     ) or []
     return [row["atomic_metric_id"] for row in rows if row.get("atomic_metric_id")]
 
+# 필수 온보딩 원자 지표 ID 목록 조회 (트랜잭션 커서용)
 def listRequiredAtomicIdsTx(cur, metricId: str) -> list[str]:
     cur.execute(
         """
@@ -407,6 +421,7 @@ def listRequiredAtomicIdsTx(cur, metricId: str) -> list[str]:
     rows = cur.fetchall() or []
     return [row["atomic_metric_id"] for row in rows if row.get("atomic_metric_id")]
 
+# 결재 필요 원자 지표 ID 목록 조회 (DERIVED/ROLLUP_READONLY 제외)
 def listRequiredApprovalAtomicIds(metricId: str) -> list[str]:
     rows = findAll(
         """
@@ -423,6 +438,7 @@ def listRequiredApprovalAtomicIds(metricId: str) -> list[str]:
     ) or []
     return [row["atomic_metric_id"] for row in rows if row.get("atomic_metric_id")]
 
+# 결재 필요 원자 지표 ID 목록 조회 (트랜잭션 커서용)
 def listRequiredApprovalAtomicIdsTx(cur, metricId: str) -> list[str]:
     cur.execute(
         """
@@ -440,6 +456,7 @@ def listRequiredApprovalAtomicIdsTx(cur, metricId: str) -> list[str]:
     rows = cur.fetchall() or []
     return [row["atomic_metric_id"] for row in rows if row.get("atomic_metric_id")]
 
+# 지표 원자별 입력값 행 FOR UPDATE 잠금 조회 (트랜잭션 커서용)
 def selectInputRowsForUpdate(
     cur,
     companyId: int,
@@ -466,6 +483,7 @@ def selectInputRowsForUpdate(
     )
     return cur.fetchall() or []
 
+# 입력값 완전성·값 존재·허용 상태 유효성 검증 — 실패 시 ValueError
 def validateCompleteRows(rows: list[dict], requiredAtomicIds: list[str], allowedStatuses: set[str]) -> None:
     rowByAtomic = {row["atomic_metric_id"]: row for row in rows}
     missing = [atomicId for atomicId in requiredAtomicIds if atomicId not in rowByAtomic]
@@ -486,6 +504,7 @@ def validateCompleteRows(rows: list[dict], requiredAtomicIds: list[str], allowed
     if invalidStatuses:
         raise ValueError(f"Invalid input status: {', '.join(invalidStatuses)}")
 
+# 이미 승인 완료 여부 확인 — KPI Fact 승격까지 검증 (트랜잭션 커서용)
 def checkAlreadyApprovedTx(
     cur,
     rows: list[dict],
@@ -538,6 +557,7 @@ def checkAlreadyApprovedTx(
     row = cur.fetchone() or {}
     return int(row.get("approved_count") or 0) >= len(promotedAtomicIds)
 
+# 온보딩 입력값 → KPI Fact upsert (트랜잭션 커서용)
 def upsertKpiFact(cur, inputRow: dict, actorUserId: Optional[int]) -> None:
     cur.execute(
         """
@@ -585,6 +605,7 @@ def upsertKpiFact(cur, inputRow: dict, actorUserId: Optional[int]) -> None:
         ),
     )
 
+# 입력·Fact 기준 결재 상태 문자열 결정
 def resolveApprovalStatus(inputs: list[dict], facts: list[dict], requiredAtomicIds: Optional[list[str]] = None) -> str:
     requiredAtomicCount = len(requiredAtomicIds or [])
     if requiredAtomicCount and len(facts) >= requiredAtomicCount:
@@ -609,6 +630,7 @@ def resolveApprovalStatus(inputs: list[dict], facts: list[dict], requiredAtomicI
         return "DRAFT"
     return "NOT_STARTED"
 
+# 가장 최근 제출 시각 반환 — 이력 우선, 없으면 입력값 updated_at 사용
 def submittedAt(inputs: list[dict], latestHistory: dict):
     if str(latestHistory.get("action_status") or "").lower() == "submitted":
         return latestHistory.get("created_at")
@@ -619,6 +641,7 @@ def submittedAt(inputs: list[dict], latestHistory: dict):
     ]
     return max(submittedRows) if submittedRows else None
 
+# 가장 최근 승인 시각 반환 — 이력 우선, 없으면 입력·Fact approved_at 최댓값
 def approvedAt(inputs: list[dict], facts: list[dict], latestHistory: dict):
     if str(latestHistory.get("action_status") or "").lower() == "approved":
         return latestHistory.get("created_at")
@@ -626,11 +649,13 @@ def approvedAt(inputs: list[dict], facts: list[dict], latestHistory: dict):
     approvedValues.extend([row.get("approved_at") for row in facts if row.get("approved_at")])
     return max(approvedValues) if approvedValues else None
 
+# 입력 행에 값(숫자 또는 비어 있지 않은 텍스트) 존재 여부 확인
 def hasMetricValue(row: dict) -> bool:
     if row.get("value_numeric") is not None:
         return True
     return str(row.get("value_text") or "").strip() != ""
 
+# KPI Fact 승격 가능한 INPUT 역할 원자 행 목록 조회 (트랜잭션 커서용)
 def listPromotableInputAtomicRowsTx(cur, metricId: str) -> list[dict]:
     cur.execute(
         """
@@ -648,10 +673,12 @@ def listPromotableInputAtomicRowsTx(cur, metricId: str) -> list[dict]:
     return cur.fetchall() or []
 
 
+# KPI Fact 승격 가능한 원자 ID 목록 조회 (트랜잭션 커서용)
 def listPromotableInputAtomicIdsTx(cur, metricId: str) -> list[str]:
     return [row["atomic_metric_id"] for row in listPromotableInputAtomicRowsTx(cur, metricId) if row.get("atomic_metric_id")]
 
 
+# KPI Fact 승격 가능한 원자 ID 목록 조회
 def listPromotableInputAtomicIds(metricId: str) -> list[str]:
     rows = findAll(
         """
@@ -669,6 +696,7 @@ def listPromotableInputAtomicIds(metricId: str) -> list[str]:
     return [row["atomic_metric_id"] for row in rows if row.get("atomic_metric_id")]
 
 
+# 사이클·기업·지표 기준 배정 행 단건 조회 (트랜잭션 커서용)
 def resolveAssignment(cur, cycleId: int, companyId: int, metricId: str) -> dict:
     cur.execute(
         """

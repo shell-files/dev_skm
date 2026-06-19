@@ -101,6 +101,7 @@ WHERE id = ?
 """
 
 
+# JSON 문자열 또는 list 형식 Top20 스냅샷 파싱
 def _parseSnapshot(raw) -> list:
     if isinstance(raw, str):
         return json.loads(raw)
@@ -109,6 +110,7 @@ def _parseSnapshot(raw) -> list:
     return []
 
 
+# runId 기준 설문 run 컨텍스트(회사·연도) 조회
 def findSurveyRunContext(runId: int) -> dict:
     _validateRunId(runId)
     conn = getConn()
@@ -129,6 +131,7 @@ def findSurveyRunContext(runId: int) -> dict:
         conn.close()
 
 
+# runId 기준 설문 폼 단건 조회 — 없으면 None
 def getSurveyFormByRunId(runId: int) -> "dict | None":
     _validateRunId(runId)
     conn = getConn()
@@ -145,6 +148,7 @@ def getSurveyFormByRunId(runId: int) -> "dict | None":
         conn.close()
 
 
+# Top20 스냅샷 고정 또는 기존 폼 반환 — GENERATING 중이면 RuntimeError (트랜잭션)
 def getOrFreezeSurveyFormSnapshotTx(*, runId: int, templateVersion: str) -> dict:
     _validateRunId(runId)
     if not templateVersion or not templateVersion.strip():
@@ -171,7 +175,7 @@ def getOrFreezeSurveyFormSnapshotTx(*, runId: int, templateVersion: str) -> dict
                 raise RuntimeError(
                     f"Survey form is CLOSED and cannot be regenerated for runId={runId}"
                 )
-            # READY or RETRYABLE — return existing snapshot
+            # READY 또는 RETRYABLE — 기존 스냅샷 반환
             conn.commit()
             snapshot = _parseSnapshot(existing["top20_snapshot_json"])
             result = dict(existing)
@@ -262,6 +266,7 @@ def getOrFreezeSurveyFormSnapshotTx(*, runId: int, templateVersion: str) -> dict
         conn.close()
 
 
+# RETRYABLE 상태 설문 폼을 GENERATING으로 전환 (트랜잭션)
 def claimRetryableSurveyFormTx(formId: int) -> None:
     if isinstance(formId, bool) or not isinstance(formId, int):
         raise ValueError(f"formId must be a strict int, got {type(formId).__name__}")
@@ -292,6 +297,7 @@ def claimRetryableSurveyFormTx(formId: int) -> None:
         conn.close()
 
 
+# 설문 폼 READY 상태로 마킹 및 구글 폼 URL 저장 (트랜잭션)
 def markSurveyFormReadyTx(
     *,
     formId: int,
@@ -338,6 +344,7 @@ def markSurveyFormReadyTx(
         conn.close()
 
 
+# 설문 폼 RETRYABLE 상태로 마킹 — DB 실패 시 경고 출력 후 무시
 def markSurveyFormRetryableBestEffort(*, formId: int, errorMessage: str) -> None:
     truncated = str(errorMessage or "")[:1000]
     try:
@@ -362,6 +369,7 @@ def markSurveyFormRetryableBestEffort(*, formId: int, errorMessage: str) -> None
         print(f"[WARN] markSurveyFormRetryableBestEffort outer failure for formId={formId}: {outer}")
 
 
+# 설문 폼 DB 행 → API 응답 dict 변환
 def toSurveyFormResponse(row: dict) -> dict:
     snapshot_raw = row.get("top20_snapshot_json")
     if isinstance(snapshot_raw, str):

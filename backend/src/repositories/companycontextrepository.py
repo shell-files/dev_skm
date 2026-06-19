@@ -23,6 +23,7 @@ SYSTEM_MODIFIER_MIN = -0.5
 SYSTEM_MODIFIER_MAX = 0.5
 
 
+# runId 기준 materiality run 기업 컨텍스트 조회
 def getRun(runId: int) -> dict:
     sql = """
         SELECT
@@ -42,6 +43,7 @@ def getRun(runId: int) -> dict:
     return findOne(sql, (runId,)) or {}
 
 
+# 기업·연도 기준 G0 Fact 목록 조회 (온보딩/KPI/롤업 UNION)
 def listG0Facts(companyId: int, reportingYear: int) -> list[dict]:
     params = (companyId, reportingYear, companyId, reportingYear, companyId, reportingYear)
     sql = """
@@ -104,6 +106,7 @@ def listG0Facts(companyId: int, reportingYear: int) -> list[dict]:
     return findAll(sql, params) or []
 
 
+# run 기준 DMA 점수 요약 행 목록 조회
 def listScoreRows(runId: int) -> list[dict]:
     sql = """
         SELECT
@@ -132,6 +135,7 @@ def listScoreRows(runId: int) -> list[dict]:
     return findAll(sql, (runId,)) or []
 
 
+# 컨텍스트 프로필 소프트 삭제 후 신규 삽입
 def replaceProfile(
     runId: int,
     companyId: int,
@@ -180,6 +184,7 @@ def replaceProfile(
     return int(result[1]) if result and result[0] else None
 
 
+# 서브이슈별 컨텍스트 충격·재무 수정자 업데이트
 def updateModifiers(runId: int, modifiers: list[dict]) -> int:
     updated = 0
     for modifier in modifiers:
@@ -206,6 +211,7 @@ def updateModifiers(runId: int, modifiers: list[dict]) -> int:
     return updated
 
 
+# run 기준 최신 컨텍스트 프로필 단건 조회
 def getLatestProfile(runId: int) -> dict:
     sql = """
         SELECT
@@ -229,12 +235,14 @@ def getLatestProfile(runId: int) -> dict:
     return findOne(sql, (runId,)) or {}
 
 
+# Decimal 값 float 변환 — 다른 타입은 그대로 반환
 def decimalToFloat(value: Any) -> Any:
     if isinstance(value, Decimal):
         return float(value)
     return value
 
 
+# 수정자 값 -0.5~0.5 범위 클램프
 def clampModifier(value: Any) -> float:
     try:
         parsed = float(value)
@@ -247,20 +255,24 @@ def clampModifier(value: Any) -> float:
     return parsed
 
 
-# Compatibility wrappers for previous public names
+# 이전 공개 함수명 호환 래퍼
 
+# getRun 호환 래퍼
 def getMaterialityRunContext(runId: int) -> dict:
     return getRun(runId)
 
 
+# listG0Facts 호환 래퍼
 def getCompanyG0Facts(companyId: int, reportingYear: int) -> list[dict]:
     return listG0Facts(companyId, reportingYear)
 
 
+# listScoreRows 호환 래퍼
 def getDmaScoreSummaryRowsForContext(runId: int) -> list[dict]:
     return listScoreRows(runId)
 
 
+# replaceProfile 호환 래퍼
 def replaceCompanyContextProfile(
     runId: int,
     companyId: int,
@@ -283,14 +295,17 @@ def replaceCompanyContextProfile(
     )
 
 
+# updateModifiers 호환 래퍼
 def updateContextModifiers(runId: int, modifiers: list[dict]) -> int:
     return updateModifiers(runId, modifiers)
 
 
+# getLatestProfile 호환 래퍼
 def getLatestCompanyContextProfile(runId: int) -> dict:
     return getLatestProfile(runId)
 
 
+# clampModifier 호환 래퍼
 def clampSystemModifier(value: Any) -> float:
     return clampModifier(value)
 

@@ -20,6 +20,7 @@ APPROVAL_POLICY_ROLLUP_READONLY = scopeRepo.APPROVAL_POLICY_ROLLUP_READONLY
 APPROVAL_POLICY_NO_APPROVAL_REQUIRED = scopeRepo.APPROVAL_POLICY_NO_APPROVAL_REQUIRED
 METRIC_ID_G0_02 = scopeRepo.METRIC_ID_G0_02
 
+# 사이클 유형 기준 필수 결재 원자 지표 ID 목록 결정
 def resolveRequiredApprovalAtomicIds(
     *,
     cycleType: str,
@@ -39,6 +40,7 @@ def resolveRequiredApprovalAtomicIds(
 
     return inputRepo.listRequiredApprovalAtomicIds(metricId)
 
+# 기업·연도·지표 기준 최신 온보딩 결재 이력 단건 조회
 def getLatestHistory(companyId: int, reportingYear: int, metricId: str, cycleId: Optional[int] = None) -> dict:
     params = [companyId, reportingYear, metricId]
     cycleFilter = ""
@@ -61,6 +63,7 @@ def getLatestHistory(companyId: int, reportingYear: int, metricId: str, cycleId:
     ) or {}
 
 
+# 사이클 기준 결재 수신함 항목 목록 조회 — 상태·유형·배치 필터 지원
 def listCycleApprovalInboxRows(
     companyId: int,
     reportingYear: Optional[int] = None,
@@ -251,6 +254,7 @@ def listCycleApprovalInboxRows(
     return items
 
 
+# 입력 마스터 행이 KPI Fact 승격 가능한지 여부 판별
 def isPromotableInputMasterRow(row: dict) -> bool:
     atomicRole = str(row.get("atomic_data_role") or "").strip().upper()
     return (
@@ -259,6 +263,7 @@ def isPromotableInputMasterRow(row: dict) -> bool:
     )
 
 
+# 결재 액션 지원 가능 여부 및 비활성화 사유 반환
 def resolveActionSupport(scope: dict) -> tuple[bool, Optional[str]]:
     if inputRepo.truthy(scope.get("rollup_readonly_yn")):
         return False, "ROLLUP_READONLY scope cannot be manually approved."
@@ -272,6 +277,7 @@ def resolveActionSupport(scope: dict) -> tuple[bool, Optional[str]]:
     return True, None
 
 
+# 기업·연도·지표 기준 결재용 온보딩 입력 값 행 조회
 def listApprovalInputRows(companyId: int, reportingYear: int, metricIds: list[str]) -> list[dict]:
     if not metricIds:
         return []
@@ -299,6 +305,7 @@ def listApprovalInputRows(companyId: int, reportingYear: int, metricIds: list[st
     ) or []
 
 
+# 기업·연도·지표 기준 결재용 승인 Fact 행 조회
 def listApprovalFactRows(companyId: int, reportingYear: int, metricIds: list[str]) -> list[dict]:
     if not metricIds:
         return []
@@ -326,6 +333,7 @@ def listApprovalFactRows(companyId: int, reportingYear: int, metricIds: list[str
     ) or []
 
 
+# 사이클·지표 기준 결재 원자 지표별 상세 입력/Fact 행 조회
 def listApprovalAtomicDetailRows(
     companyId: int,
     reportingYear: int,
@@ -389,6 +397,7 @@ def listApprovalAtomicDetailRows(
     return items
 
 
+# 지표별 최신 결재 이력 행 목록 조회
 def listLatestApprovalHistories(
     companyId: int,
     reportingYear: int,
@@ -424,6 +433,7 @@ def listLatestApprovalHistories(
     ) or []
 
 
+# 결재 카운트 기반 사이클 결재 상태 문자열 결정
 def resolveCycleApprovalStatus(
     *,
     requiredAtomicCount: int,
@@ -453,6 +463,7 @@ def resolveCycleApprovalStatus(
     return "NOT_STARTED"
 
 
+# 기업·연도·상태·유형 기준 결재 요약 목록 조회
 def listApprovalSummaries(
     companyId: int,
     reportingYear: Optional[int] = None,
@@ -463,6 +474,7 @@ def listApprovalSummaries(
     return rows
 
 
+# 지표 단건 결재 요약 dict 구성 — 사이클·입력·Fact·이력 통합
 def buildApprovalSummary(
     companyId: int,
     reportingYear: int,
@@ -612,6 +624,7 @@ def buildApprovalSummary(
     }
 
 
+# 결재 이력 INSERT (트랜잭션 커서용)
 def insertHistory(
     cur,
     cycleId: int,

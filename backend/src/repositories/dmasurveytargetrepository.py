@@ -31,6 +31,7 @@ ON DUPLICATE KEY UPDATE
 """
 
 
+# run 기준 설문 참여 대상 그룹별 인원 조회 — 미등록 그룹은 0으로 기본값
 def getTargetsByRunId(runId: int) -> dict:
     conn = getConn()
     if conn is None:
@@ -47,6 +48,7 @@ def getTargetsByRunId(runId: int) -> dict:
         conn.close()
 
 
+# run 기준 설문 참여 대상 소프트 삭제 후 upsert (트랜잭션 커서용)
 def upsertTargetsTx(conn, runId: int, targets: dict) -> None:
     with conn.cursor() as cur:
         cur.execute(_SOFT_DELETE_TARGETS_SQL, (runId,))

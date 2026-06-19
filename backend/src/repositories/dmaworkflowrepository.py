@@ -83,6 +83,7 @@ WHERE esg_materiality_run_id = ?
 """
 
 
+# DMA 워크플로우 상태 upsert 인자 유효성 검증
 def _validateUpsertArgs(
     runId,
     workflowType: str,
@@ -126,6 +127,7 @@ def _validateUpsertArgs(
             )
 
 
+# DMA 워크플로우 상태 upsert 저장 — 단계·진행률·오류 정보 포함
 def upsertDmaWorkflowStatus(
     *,
     runId: int,
@@ -186,6 +188,7 @@ def upsertDmaWorkflowStatus(
             pass
 
 
+# DMA 워크플로우 상태 단건 조회 — 없으면 None
 def getDmaWorkflowStatus(
     *,
     runId: int,
@@ -215,6 +218,7 @@ def getDmaWorkflowStatus(
             pass
 
 
+# DMA 워크플로우 상태 조회 — 없으면 WAITING 기본값 반환
 def getDmaWorkflowStatusOrDefault(
     *,
     runId: int,

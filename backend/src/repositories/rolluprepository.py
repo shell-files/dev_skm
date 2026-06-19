@@ -27,7 +27,7 @@ TRANSFER_STATUS_RECEIVED = "received"
 TRANSFER_STATUS_SENT = "sent"
 TRANSFER_STATUS_NOT_SENT = "not_sent"
 
-# Explicit re-exports from new repositories
+# 신규 레포지토리에서 명시적 재내보내기
 from src.repositories.rollupscoperepository import (
     listEffectiveSourceCompanies,
     listBatchRules,
@@ -91,6 +91,7 @@ from src.repositories.rollupbatchrepository import (
     buildResultCode,
 )
 
+# materiality run ID 기준 실행 정보 단건 조회
 def getRun(runId: int) -> dict:
     sql = """
         SELECT
@@ -107,6 +108,7 @@ def getRun(runId: int) -> dict:
     """
     return findOne(sql, (runId,)) or {}
 
+# 롤업 스코프 테이블 소스 회사 컬럼명 조회
 def getScopeCompanyColumn() -> str:
     sql = """
         SELECT column_name
@@ -134,6 +136,7 @@ def getScopeCompanyColumn() -> str:
         return columnName
     return "source_company_id"
 
+# run 기준 롤업 스코프 자회사 목록 조회
 def listSubsidiaries(run: dict) -> list[dict]:
     companyColumn = getScopeCompanyColumn()
     companyId = int(run["company_id"])

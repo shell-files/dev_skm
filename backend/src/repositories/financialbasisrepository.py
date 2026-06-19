@@ -19,12 +19,14 @@ from typing import Any, Optional
 
 
 
+# DB findAll 지연 임포트 래퍼
 def findAll(sql: str, params=None):
     from src.utils.db import findAll as dbFindAll
 
     return dbFindAll(sql, params)
 
 
+# DB findOne 지연 임포트 래퍼
 def findOne(sql: str, params=None):
     from src.utils.db import findOne as dbFindOne
 
@@ -79,6 +81,7 @@ PRIORITY_CONFIG = {
 }
 
 
+# 우선순위별 G0-02 재무 기준 조회 — 완전한 기준 발견 시 즉시 반환
 def getBasis(
     companyId: int,
     reportingYear: int,
@@ -119,6 +122,7 @@ def getBasis(
     return emptyBasis
 
 
+# 연결/독립 기준 우선순위 목록 생성
 def buildPriority(preferConsolidated: bool) -> list[str]:
     if preferConsolidated:
         return [PRIORITY_GROUP_ROLLUP_G]
@@ -128,6 +132,7 @@ def buildPriority(preferConsolidated: bool) -> list[str]:
     ]
 
 
+# 우선순위 기반 G0-02 원자 지표 DB 행 조회
 def fetchRows(
     companyId: int,
     reportingYear: int,
@@ -203,6 +208,7 @@ def fetchRows(
     return []
 
 
+# DB 행 → 재무 기준 dict 구성 — 필드별 값 매핑 및 누락 필드 목록 생성
 def buildBasis(
     companyId: int,
     reportingYear: int,
@@ -275,11 +281,13 @@ def buildBasis(
     return basis
 
 
+# 재무 기준 모든 필드 값 존재 여부 확인
 def checkUsable(basis: dict) -> bool:
     presentFieldCount = len(_presentFields(basis))
     return presentFieldCount == len(FINANCIAL_BASIS_FIELDS)
 
 
+# G0-02 기준 준비 여부 및 미승인 원자 지표 목록 반환
 def checkBasisReady(
     companyId: int,
     reportingYear: int,
@@ -335,6 +343,7 @@ def checkBasisReady(
     }
 
 
+# 승인된 G0-02 원자 지표 목록 단건 조회 — 연결/독립 분기 처리
 def fetchApprovedBasisRow(
     companyId: int,
     reportingYear: int,
@@ -394,6 +403,7 @@ def fetchApprovedBasisRow(
     return findOne(sql, (companyId, reportingYear, *atomicIds, companyId, reportingYear, *atomicIds)) or {}
 
 
+# 빈 재무 기준 dict 구성 — 모든 필드 None으로 초기화
 def buildEmptyBasis(companyId: int, reportingYear: int) -> dict:
     basis = _baseFinancialBasis(
         companyId=companyId,
@@ -410,13 +420,15 @@ def buildEmptyBasis(companyId: int, reportingYear: int) -> dict:
     return basis
 
 
+# 재무 값·단위 정규화 래퍼 — 경고 무시하고 (값, 단위) 반환
 def normalizeValue(value: Any, unit: Optional[str]) -> tuple[Optional[float], str]:
     normalizedValue, normalizedUnit, _ = _normalizeFinancialValueWithWarning(value, unit)
     return normalizedValue, normalizedUnit
 
 
-# Compatibility wrappers for previous public names
+# 이전 공개 함수명 호환 래퍼
 
+# getBasis 호환 래퍼
 def getG0FinancialBasis(
     companyId: int,
     reportingYear: int,
@@ -426,10 +438,12 @@ def getG0FinancialBasis(
     return getBasis(companyId, reportingYear, preferConsolidated, requiredRollupBatchId)
 
 
+# buildPriority 호환 래퍼
 def buildFinancialBasisPriority(preferConsolidated: bool) -> list[str]:
     return buildPriority(preferConsolidated)
 
 
+# fetchRows 호환 래퍼
 def fetchFinancialBasisRows(
     companyId: int,
     reportingYear: int,
@@ -439,6 +453,7 @@ def fetchFinancialBasisRows(
     return fetchRows(companyId, reportingYear, priority, requiredRollupBatchId)
 
 
+# buildBasis 호환 래퍼
 def buildBasisFromRows(
     companyId: int,
     reportingYear: int,
@@ -448,18 +463,22 @@ def buildBasisFromRows(
     return buildBasis(companyId, reportingYear, rows, priority)
 
 
+# checkUsable 호환 래퍼
 def isUsableBasis(basis: dict) -> bool:
     return checkUsable(basis)
 
 
+# buildEmptyBasis 호환 래퍼
 def emptyFinancialBasis(companyId: int, reportingYear: int) -> dict:
     return buildEmptyBasis(companyId, reportingYear)
 
 
+# normalizeValue 호환 래퍼
 def normalizeFinancialValue(value: Any, unit: Optional[str]) -> tuple[Optional[float], str]:
     return normalizeValue(value, unit)
 
 
+# 재무 기준 dict 기본 구조 생성 헬퍼
 def _baseFinancialBasis(
     companyId: int,
     reportingYear: int,
@@ -487,6 +506,7 @@ def _baseFinancialBasis(
     return basis
 
 
+# 우선순위별 원자 지표 ID 목록 반환
 def _atomicIdsForPriority(priority: str) -> list[str]:
     atomicKind = PRIORITY_CONFIG[priority]["atomicKind"]
     return [
@@ -495,6 +515,7 @@ def _atomicIdsForPriority(priority: str) -> list[str]:
     ]
 
 
+# 재무 기준 dict에서 값 있는 필드 목록 반환
 def _presentFields(basis: dict) -> list[str]:
     return [
         fieldName
@@ -503,6 +524,7 @@ def _presentFields(basis: dict) -> list[str]:
     ]
 
 
+# datetime → ISO 문자열 변환 — None이면 None 반환
 def _formatDateTime(value: Any) -> Optional[str]:
     if value is None:
         return None
@@ -511,6 +533,7 @@ def _formatDateTime(value: Any) -> Optional[str]:
     return str(value)
 
 
+# 재무 값·단위 정규화 및 알 수 없는 단위 경고 반환
 def _normalizeFinancialValueWithWarning(
     value: Any,
     unit: Optional[str],
@@ -537,6 +560,7 @@ def _normalizeFinancialValueWithWarning(
     return _decimalToNumber(numericValue * multiplier), normalizedUnit, warning
 
 
+# 값 → Decimal 변환 — 파싱 실패 시 None
 def _toDecimal(value: Any) -> Optional[Decimal]:
     if value is None:
         return None
@@ -548,12 +572,14 @@ def _toDecimal(value: Any) -> Optional[Decimal]:
         return None
 
 
+# Decimal → 정수 가능하면 int, 아니면 float 반환
 def _decimalToNumber(value: Decimal) -> float:
     if value == value.to_integral_value():
         return int(value)
     return float(value)
 
 
+# 선택된 우선순위 이유 문자열 반환
 def _selectedReason(
     preferConsolidated: bool,
     selectedPriority: str,

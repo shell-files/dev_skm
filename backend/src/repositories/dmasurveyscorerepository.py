@@ -122,6 +122,7 @@ WHERE id = ?
 
 
 
+# None이면 None, 아니면 float 변환
 def _toFloat(val):
     if val is None:
         return None
@@ -131,6 +132,7 @@ def _toFloat(val):
         return None
 
 
+# runId 기준 READY 상태 설문 폼 단건 조회 (점수 계산용)
 def getReadySurveyFormForScore(runId: int) -> dict:
     _validateRunId(runId)
     conn = getConn()
@@ -150,6 +152,7 @@ def getReadySurveyFormForScore(runId: int) -> dict:
         conn.close()
 
 
+# run·폼 기준 활성 설문 응답 목록 조회 (점수 계산용)
 def listActiveSurveyResponsesForScore(*, runId: int, surveyFormId: int) -> list:
     _validateRunId(runId)
     _validateFormId(surveyFormId)
@@ -165,6 +168,7 @@ def listActiveSurveyResponsesForScore(*, runId: int, surveyFormId: int) -> list:
         conn.close()
 
 
+# 설문 점수 교체 및 최종 점수·순위 재계산 (트랜잭션)
 def replaceSurveyScoresAndRecalculateFinalTx(
     *,
     runId: int,
@@ -184,16 +188,16 @@ def replaceSurveyScoresAndRecalculateFinalTx(
     try:
         active_codes = [s["subIssueCode"] for s in surveyScores]
 
-        # Step 5: existing sub_issues with survey scores
+        # 5단계: 기존 설문 점수 보유 서브이슈 조회
         with conn.cursor(dictionary=True) as cur:
             cur.execute(_SELECT_EXISTING_SURVEY_CODES_SQL, (runId,))
             existing_rows = cur.fetchall()
         existing_codes = [r["sub_issue_code"] for r in existing_rows]
 
-        # Step 6: affected = union of existing + active
+        # 6단계: 영향 코드 = 기존 + 활성 합집합
         affected_codes = list(set(existing_codes) | set(active_codes))
 
-        # Step 7: stale survey score cleanup
+        # 7단계: 활성 외 기존 설문 점수 클리어
         with conn.cursor() as cur:
             if active_codes:
                 ph = ",".join(["?"] * len(active_codes))
@@ -209,7 +213,7 @@ def replaceSurveyScoresAndRecalculateFinalTx(
             else:
                 cur.execute(_CLEAR_STALE_SURVEY_ALL_SQL, (runId,))
 
-        # Step 8: survey scores upsert
+        # 8단계: 설문 점수 upsert
         if surveyScores:
             upsert_params = [
                 (runId, s["subIssueCode"], s.get("surveyImpactScore"), s.get("surveyFinancialScore"))
@@ -218,7 +222,7 @@ def replaceSurveyScoresAndRecalculateFinalTx(
             with conn.cursor() as cur:
                 cur.executemany(_UPSERT_SURVEY_SCORE_SQL, upsert_params)
 
-        # Steps 9-11: final score recalculation for affected sub_issues
+        # 9-11단계: 영향 받는 서브이슈 최종 점수 재계산
         final_recalculated = 0
         if affected_codes:
             ph = ",".join(["?"] * len(affected_codes))
@@ -255,11 +259,11 @@ def replaceSurveyScoresAndRecalculateFinalTx(
                     cur.executemany(_UPDATE_FINAL_SQL, update_params)
                 final_recalculated = len(update_params)
 
-        # Step 12: rank_no reset
+        # 12단계: rank_no 초기화
         with conn.cursor() as cur:
             cur.execute(_RESET_RANK_SQL, (runId,))
 
-        # Step 12 (cont): re-rank by final_score DESC, sub_issue_code ASC
+        # 12단계 (계속): final_score 내림차순 순위 재부여
         with conn.cursor(dictionary=True) as cur:
             cur.execute(_SELECT_RANKED_IDS_SQL, (runId,))
             ranked_rows = cur.fetchall()

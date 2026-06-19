@@ -37,6 +37,7 @@
 | 25 | `ManagerData.jsx/DataTab.jsx 분리 — managerDataUtils/dataTabUtils 추출 및 managerdata/ 폴더 정리 (#257)` |  완료 |
 | 26 | `FE 파일 주석 정리 — 섹션 레이블 제거 및 파일 상단 헤더 추가 (#257)` |  완료 |
 | 27 | `BE 파일 주석 정리 — 영문 주석 한국어 번역 및 파일 상단 역할 설명 추가 (#257)` |  완료 |
+| 28 | `[BE] Service 의존성 정리 — contextgraph os.getenv→settings, service.py lazy import 제거 (#257)` |  완료 |
 
 ---
 
@@ -47,7 +48,7 @@
 | **1** | **비대해진 파일 분리** | ** 완료** |
 | 2 | API → Service → Repository 계층 준수 |  완료 |
 | **3** | **Repository 분리 및 정리** | ** 완료** |
-| 4 | Service 의존성 정리 및 순환 참조 제거 |  대기 |
+| 4 | Service 의존성 정리 및 순환 참조 제거 |  완료 |
 | 5 | 중복 코드 제거 |  완료 (46→32개, 나머지는 의도적 패턴) |
 | **6** | **Utils 남용 방지** | ** 완료** |
 | 7 | Frontend 페이지 분리 + 주석 정리 |  완료 (reportSlice.js는 별도 검토) |
@@ -172,6 +173,28 @@ services/rollups/service.py
 | `statusForValueError` | 4개 API 파일 | 구현이 서로 달라 즉시 통합 불가 — Priority 1 분리 시 처리 |
 | `getLatestReportRunByMaterialityRun` | dmarepository + reportrepository | SELECT 컬럼 상이 — 호환 분석 필요 |
 | `safeFloat` | dmarepository (wrapper) | typeutils 위임 래퍼 — 의도적 유지 |
+
+---
+
+###  [우선순위 4] Service 의존성 정리 — 2026-06-19
+
+**목적:** 환경변수 직접 접근 제거 및 불필요한 lazy import 정리
+
+#### 변경 내용
+
+| 파일 | 변경 내용 |
+|------|-----------|
+| `utils/settings.py` | `company_context_llm_enabled/provider/model/timeout_sec` 필드 4개 추가 |
+| `services/materialities/contextgraph.py` | `os.getenv()` 4개 → `settings.*` 교체, `import os` 제거 |
+| `services/materialities/service.py` | `initializePostDmaDisclosureScope` lazy import → top-level import 승격, docstring 수정 |
+
+#### 분석 결과 — 수정 불필요 항목
+
+| 의존 관계 | 판단 |
+|-----------|------|
+| `screeningbuilder` → `medias.eventresolver` | medias ↔ materialities 양방향 의존. 이미 lazy import로 해결됨. 재구조화 시 별도 처리 |
+| `medias/newsservice.py` → `materialities.*` + `surveys.*` | 미디어 파이프라인 오케스트레이터 역할 — 크로스 도메인 조합이 설계 의도 |
+| `onboardings` → `calculations.service` | 승인 완료 시 계산 트리거 — 정당한 단방향 의존 |
 
 ---
 

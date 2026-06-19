@@ -47,6 +47,7 @@ from src.repositories.dmarepository import (
     replaceSelectedSubIssuesTx,
 )
 from src.services.materialities import materialitybuilder as _mb
+from src.services.reportworkflows.service import initializePostDmaDisclosureScope
 
 
 def getMaterialityResults(runId: int) -> MaterialityResultsResponseDto:
@@ -468,10 +469,6 @@ def getWorkflowStatus(runId: int, workflowType: str) -> dict:
 def _initPostDmaScopeAfterFinalize(runId: int, userId: Optional[int]) -> None:
     """선정 확정 후 온보딩 지표 scope를 자동 초기화한다.
 
-    reportworkflows 서비스의 idempotent scope 초기화 로직을 재사용한다.
-    (지연 import로 materialities ↔ reportworkflows 순환 참조 방지)
     동일 runId 재호출 시 기존 cycle/scope를 재사용하므로 중복 생성되지 않는다.
     """
-    from src.services.reportworkflows.service import initializePostDmaDisclosureScope
-
     initializePostDmaDisclosureScope(runId, userId)

@@ -93,6 +93,13 @@ class Settings(BaseSettings):
   # Ollama
   # --------------------------
   ollama_url: str
+  # --------------------------
+  # contextgraph.py (Company Context LLM)
+  # --------------------------
+  company_context_llm_enabled: bool = False
+  company_context_llm_provider: str = ""
+  company_context_llm_model: str = ""
+  company_context_llm_timeout_sec: float = 60.0
   
   model_config = SettingsConfigDict(
     env_file=".env",

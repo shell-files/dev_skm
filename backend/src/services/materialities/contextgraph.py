@@ -10,11 +10,11 @@ contextgraph.py
 from __future__ import annotations
 
 import json
-import os
 import re
 from typing import Callable, Optional, TypedDict
 
 from src.models.materialitycontext import CompanyContextFactDto, CompanyContextProfileDto
+from src.utils.settings import settings
 
 
 MIN_LLM_PROFILE_CONFIDENCE = 0.5
@@ -51,8 +51,8 @@ def buildCompanyContextProfileWithOptionalGraph(
         trace.append(_trace("fallbackIfLowConfidence", "SKIPPED", "COMPANY_CONTEXT_LLM_ENABLED is not true."))
         return fallbackProfile, trace
 
-    provider = os.getenv("COMPANY_CONTEXT_LLM_PROVIDER", "").strip().lower()
-    model = os.getenv("COMPANY_CONTEXT_LLM_MODEL", "").strip()
+    provider = settings.company_context_llm_provider.strip().lower()
+    model = settings.company_context_llm_model.strip()
     if provider != "ollama" or not model:
         trace.append(_trace("fallbackIfLowConfidence", "SKIPPED", "LLM provider/model is not configured."))
         return fallbackProfile, trace
@@ -65,7 +65,7 @@ def buildCompanyContextProfileWithOptionalGraph(
         return fallbackProfile, trace
 
     try:
-        timeout = float(os.getenv("COMPANY_CONTEXT_LLM_TIMEOUT_SEC", "60") or 60)
+        timeout = settings.company_context_llm_timeout_sec
         llm = ChatOllama(model=model, timeout=timeout)
 
         def loadG0Facts(state: CompanyContextGraphState) -> CompanyContextGraphState:
@@ -165,7 +165,7 @@ def buildCompanyContextProfileWithOptionalGraph(
 
 
 def _llmEnabled() -> bool:
-    return os.getenv("COMPANY_CONTEXT_LLM_ENABLED", "false").strip().lower() == "true"
+    return settings.company_context_llm_enabled
 
 
 def _normalizeFact(fact: CompanyContextFactDto) -> dict:

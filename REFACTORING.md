@@ -43,6 +43,7 @@
 | 31 | `공통 ResultStatCard·ModalWrapper 컴포넌트 추출 (#257)` |  완료 |
 | 32 | `공통 RankBadge·LoadingSpinner·DmaStageBlobs·ResultPanel 컴포넌트 추출 (#257)` |  완료 |
 | 33 | `dmarepository.py shadow trace 분리 (#257)` |  완료 |
+| 34 | `rollupbatchrepository.py 결과·기준값 rollupresultrepository로 분리 (#257)` |  완료 |
 
 ---
 

@@ -16,6 +16,7 @@
 
 import robot from "@assets/images/robot/robot_servey_t.png";
 import surveyIcon from "@assets/icons/steps/survey.png";
+import DmaStageBlobs from "@components/UI/DmaStageBlobs";
 import {
   GROUP_META, GROUP_KEYS, GROUP_SCORE_KEY,
   pctFromRate, displayRate, rateBarWidth, fmtScore,
@@ -206,20 +207,7 @@ const SurveyResultDashboard = ({
             style={{ '--dma-icon': `url(${surveyIcon})`, '--dma-accent': 'var(--survey-primary)' }}
           >
             <div id="particle-field" className="particle-field"></div>
-            <div className="dma-stage__blobs" aria-hidden="true">
-              <div className="dma-stage__blob dma-stage__blob--1" />
-              <div className="dma-stage__blob dma-stage__blob--2" />
-              <div className="dma-stage__blob dma-stage__blob--3" />
-              <div className="dma-stage__blob dma-stage__blob--4" />
-              <div className="dma-stage__blob dma-stage__blob--5" />
-              <div className="dma-stage__blob dma-stage__blob--6" />
-              <div className="dma-stage__blob dma-stage__blob--7" />
-              <div className="dma-stage__blob dma-stage__blob--8" />
-              <div className="dma-stage__blob dma-stage__blob--9" />
-              <div className="dma-stage__blob dma-stage__blob--10" />
-              <div className="dma-stage__blob dma-stage__blob--11" />
-              <div className="dma-stage__blob dma-stage__blob--12" />
-            </div>
+            <DmaStageBlobs />
             <div className="dma-stage__content">
               <div className="dma-stage__robot">
                 <img src={robot} alt="robot" className="dma-stage__img" />

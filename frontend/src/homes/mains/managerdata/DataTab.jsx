@@ -18,6 +18,7 @@ import TabButton from "@components/UI/TabButton";
 import BatchActionBar from "@components/UI/BatchActionBar";
 import ApprovalDetailModal from "../modal/ApprovalDetailModal";
 import ModalWrapper from "@components/UI/ModalWrapper";
+import LoadingSpinner from "@components/UI/LoadingSpinner";
 import "@styles/Manager.css";
 import "@styles/TabButton.css";
 
@@ -329,10 +330,7 @@ const DataTab = ({
           )}
 
           {isLoading ? (
-            <div className="loading-container">
-              <div className="spinner" />
-              <p>Loading approval inbox...</p>
-            </div>
+            <LoadingSpinner message="Loading approval inbox..." />
           ) : (
             <div
               className="ob-table-wrap"

@@ -17,6 +17,9 @@
 
 import robot from "@assets/images/robot/robot_media_t.png";
 import ResultStatCard from "@components/UI/ResultStatCard";
+import RankBadge from "@components/UI/RankBadge";
+import DmaStageBlobs from "@components/UI/DmaStageBlobs";
+import ResultPanel from "@components/UI/ResultPanel";
 import analyzingIcon from "@assets/icons/steps/analyzing.png";
 import { REFLECT_METHODS } from "./mediaData";
 
@@ -45,22 +48,7 @@ const MediaResultDashboard = ({
           style={{ '--dma-icon': `url(${analyzingIcon})`, '--dma-accent': 'var(--media-primary)' }}
         >
           <div id="particle-field" ref={particleRef}></div>
-          {!showResult && (
-            <div className="dma-stage__blobs" aria-hidden="true">
-              <div className="dma-stage__blob dma-stage__blob--1" />
-              <div className="dma-stage__blob dma-stage__blob--2" />
-              <div className="dma-stage__blob dma-stage__blob--3" />
-              <div className="dma-stage__blob dma-stage__blob--4" />
-              <div className="dma-stage__blob dma-stage__blob--5" />
-              <div className="dma-stage__blob dma-stage__blob--6" />
-              <div className="dma-stage__blob dma-stage__blob--7" />
-              <div className="dma-stage__blob dma-stage__blob--8" />
-              <div className="dma-stage__blob dma-stage__blob--9" />
-              <div className="dma-stage__blob dma-stage__blob--10" />
-              <div className="dma-stage__blob dma-stage__blob--11" />
-              <div className="dma-stage__blob dma-stage__blob--12" />
-            </div>
-          )}
+          {!showResult && <DmaStageBlobs />}
           {!showResult && (
             <div className="dma-stage__content">
               <div className="dma-stage__robot">
@@ -128,95 +116,65 @@ const MediaResultDashboard = ({
               </div>
 
               <div className="result-panels-row">
-                <div className="result-panel panel-accent-blue">
-                  <div className="panel-header-row">
-                    <span className="panel-title">
-                      <span className="panel-dot dot-blue" />
-                      Source 별 반영 현황
-                    </span>
-                    <span className="panel-badge-count">{(dashboardData?.sourceTable ?? []).length}건</span>
-                  </div>
-                  <div className="panel-body">
-                    <table className="issue-table">
-                      <thead>
-                        <tr>
-                          <th>Source</th><th>수집</th><th>반영</th><th>방식</th>
+                <ResultPanel title="Source 별 반영 현황" accent="blue" count={(dashboardData?.sourceTable ?? []).length}>
+                  <table className="issue-table">
+                    <thead>
+                      <tr>
+                        <th>Source</th><th>수집</th><th>반영</th><th>방식</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(dashboardData?.sourceTable ?? []).map((row, i) => (
+                        <tr key={i}>
+                          <td>{row.source}</td>
+                          <td>{row.count}</td>
+                          <td>{row.issues}</td>
+                          <td>{row.method}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {(dashboardData?.sourceTable ?? []).map((row, i) => (
-                          <tr key={i}>
-                            <td>{row.source}</td>
-                            <td>{row.count}</td>
-                            <td>{row.issues}</td>
-                            <td>{row.method}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="result-panel panel-accent-green">
-                  <div className="panel-header-row">
-                    <span className="panel-title">
-                      <span className="panel-dot dot-green" />
-                      미디어 TOP 이슈 점수
-                    </span>
-                    <span className="panel-badge-count">{(dashboardData?.topIssues ?? []).length}건</span>
-                  </div>
-                  <div className="panel-body">
-                    <table className="issue-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: "36px" }}>순위</th>
-                          <th>Sub Issue</th>
-                          <th>Impact</th>
-                          <th>Financial</th>
-                          <th>Source</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(dashboardData?.topIssues ?? []).map((item) => (
-                          <tr key={item.rank}>
-                            <td>
-                              <span className={`rank-badge${item.rank <= 3 ? ` rank-top${item.rank}` : ""}`}>
-                                {item.rank}
-                              </span>
-                            </td>
-                            <td>{item.name}</td>
-                            <td>{item.impact}</td>
-                            <td>{item.financial}</td>
-                            <td>{item.source}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="result-panel panel-accent-purple">
-                  <div className="panel-header-row">
-                    <span className="panel-title">
-                      <span className="panel-dot dot-purple" />
-                      반영 방식 안내
-                    </span>
-                  </div>
-                  <div className="panel-body">
-                    <ul className="reflect-list">
-                      {REFLECT_METHODS.map((item) => (
-                        <li key={item.key} className="reflect-item">
-                          <div className="reflect-icon">{item.icon}</div>
-                          <div>
-                            <div className="reflect-title">{item.title}</div>
-                            <p className="reflect-desc">{item.desc}</p>
-                          </div>
-                        </li>
                       ))}
-                    </ul>
-                    <div className="reflect-note">ⓘ 향후 MSCI·S&P·EcoVadis 등 외부 평가기관 자료 확장 가능</div>
-                  </div>
-                </div>
+                    </tbody>
+                  </table>
+                </ResultPanel>
+
+                <ResultPanel title="미디어 TOP 이슈 점수" accent="green" count={(dashboardData?.topIssues ?? []).length}>
+                  <table className="issue-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "36px" }}>순위</th>
+                        <th>Sub Issue</th>
+                        <th>Impact</th>
+                        <th>Financial</th>
+                        <th>Source</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(dashboardData?.topIssues ?? []).map((item) => (
+                        <tr key={item.rank}>
+                          <td><RankBadge rank={item.rank} /></td>
+                          <td>{item.name}</td>
+                          <td>{item.impact}</td>
+                          <td>{item.financial}</td>
+                          <td>{item.source}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </ResultPanel>
+
+                <ResultPanel title="반영 방식 안내" accent="purple">
+                  <ul className="reflect-list">
+                    {REFLECT_METHODS.map((item) => (
+                      <li key={item.key} className="reflect-item">
+                        <div className="reflect-icon">{item.icon}</div>
+                        <div>
+                          <div className="reflect-title">{item.title}</div>
+                          <p className="reflect-desc">{item.desc}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="reflect-note">ⓘ 향후 MSCI·S&P·EcoVadis 등 외부 평가기관 자료 확장 가능</div>
+                </ResultPanel>
               </div>
 
               <div className="result-next-row">

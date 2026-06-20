@@ -41,6 +41,7 @@
 | 29 | `공통 EmptyState 컴포넌트 추출 및 FE 파일 헤더 주석 추가 (#257)` |  완료 |
 | 30 | `BE/FE 함수 및 변수 설명 주석 추가 (#257)` |  완료 |
 | 31 | `공통 ResultStatCard·ModalWrapper 컴포넌트 추출 (#257)` |  완료 |
+| 32 | `공통 RankBadge·LoadingSpinner·DmaStageBlobs·ResultPanel 컴포넌트 추출 (#257)` |  완료 |
 
 ---
 
@@ -55,7 +56,7 @@
 | 5 | 중복 코드 제거 |  완료 (46→32개, 나머지는 의도적 패턴) |
 | **6** | **Utils 남용 방지** | ** 완료** |
 | 7 | Frontend 페이지 분리 + 주석 정리 |  완료 (reportSlice.js는 별도 검토) |
-| 8 | 공통 컴포넌트 재사용 |  완료 (EmptyState 추출) |
+| 8 | 공통 컴포넌트 재사용 |  완료 (EmptyState·ResultStatCard·ModalWrapper·RankBadge·LoadingSpinner·DmaStageBlobs·ResultPanel 추출) |
 | 9 | 컨벤션 준수 및 문서화 |  완료 (FE 전체 헤더 + BE 주석 완료) |
 
 ---

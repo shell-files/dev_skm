@@ -16,6 +16,7 @@
  *   onOpenUserManagement — 사용자 관리 모달 열기 핸들러
  */
 import React, { useState } from 'react';
+import LoadingSpinner from "@components/UI/LoadingSpinner";
 
 const UserTab = ({
   isLoading,
@@ -74,10 +75,7 @@ const UserTab = ({
 
       <div className="table-wrapper">
         {isLoading ? (
-          <div className="loading-container">
-            <div className="spinner"></div>
-            <p>사용자 데이터를 불러오는 중...</p>
-          </div>
+          <LoadingSpinner message="사용자 데이터를 불러오는 중..." />
         ) : pagedUsers.length === 0 ? (
           <div className="empty-container">
             <p>조회된 사용자가 없습니다.</p>

@@ -8,6 +8,7 @@ import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import "@styles/benchmarking.css";
 import "@styles/dma-robot-stage.css";
+import RankBadge from "@components/UI/RankBadge";
 import robot from "@assets/images/robot/robot_repoting_transparent.png";
 import benchIcon from "@assets/icons/steps/benchmarking.png";
 import {
@@ -730,11 +731,7 @@ const Benchmarking = () => {
                       <tbody>
                         {displayData.topIssues.map((item) => (
                           <tr key={item.rank}>
-                            <td>
-                              <span className={`rank-badge${item.rank <= 3 ? ` rank-top${item.rank}` : ""}`}>
-                                {item.rank}
-                              </span>
-                            </td>
+                            <td><RankBadge rank={item.rank} /></td>
                             <td>{item.name}</td>
                             <td>{item.impact}</td>
                             <td>{item.financial}</td>

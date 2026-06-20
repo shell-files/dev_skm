@@ -16,6 +16,9 @@
 
 import robot from "@assets/images/robot/robot_repoting_transparent.png";
 import ResultStatCard from "@components/UI/ResultStatCard";
+import RankBadge from "@components/UI/RankBadge";
+import DmaStageBlobs from "@components/UI/DmaStageBlobs";
+import ResultPanel from "@components/UI/ResultPanel";
 import benchIcon from "@assets/icons/steps/benchmarking.png";
 
 const BenchResultDashboard = ({
@@ -34,22 +37,7 @@ const BenchResultDashboard = ({
           style={{ '--dma-icon': `url(${benchIcon})`, '--dma-accent': '#6366f1' }}
         >
           <div id="particle-field" className="particle-field" ref={particleRef}></div>
-          {!showResult && (
-            <div className="dma-stage__blobs" aria-hidden="true">
-              <div className="dma-stage__blob dma-stage__blob--1" />
-              <div className="dma-stage__blob dma-stage__blob--2" />
-              <div className="dma-stage__blob dma-stage__blob--3" />
-              <div className="dma-stage__blob dma-stage__blob--4" />
-              <div className="dma-stage__blob dma-stage__blob--5" />
-              <div className="dma-stage__blob dma-stage__blob--6" />
-              <div className="dma-stage__blob dma-stage__blob--7" />
-              <div className="dma-stage__blob dma-stage__blob--8" />
-              <div className="dma-stage__blob dma-stage__blob--9" />
-              <div className="dma-stage__blob dma-stage__blob--10" />
-              <div className="dma-stage__blob dma-stage__blob--11" />
-              <div className="dma-stage__blob dma-stage__blob--12" />
-            </div>
-          )}
+          {!showResult && <DmaStageBlobs />}
 
           {!showResult ? (
             <div className="dma-stage__content">
@@ -117,96 +105,65 @@ const BenchResultDashboard = ({
               </div>
 
               <div className="result-panels-row">
-                <div className="result-panel panel-accent-green">
-                  <div className="panel-header-row">
-                    <span className="panel-title">
-                      <span className="panel-dot dot-green" />
-                      벤치마킹 Top 이슈 점수
-                    </span>
-                    <span className="panel-badge-count">{displayData.topIssues.length}건</span>
-                  </div>
-                  <div className="panel-body">
-                    <table className="issue-table">
-                      <thead>
-                        <tr>
-                          <th style={{ width: "36px" }}>순위</th>
-                          <th>Sub Issue</th>
-                          <th>Impact</th>
-                          <th>Financial</th>
+                <ResultPanel title="벤치마킹 Top 이슈 점수" accent="green" count={displayData.topIssues.length}>
+                  <table className="issue-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "36px" }}>순위</th>
+                        <th>Sub Issue</th>
+                        <th>Impact</th>
+                        <th>Financial</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayData.topIssues.map((item) => (
+                        <tr key={item.rank}>
+                          <td><RankBadge rank={item.rank} /></td>
+                          <td>{item.name}</td>
+                          <td>{item.impact}</td>
+                          <td>{item.financial}</td>
                         </tr>
-                      </thead>
-                      <tbody>
-                        {displayData.topIssues.map((item) => (
-                          <tr key={item.rank}>
-                            <td>
-                              <span className={`rank-badge${item.rank <= 3 ? ` rank-top${item.rank}` : ""}`}>
-                                {item.rank}
-                              </span>
-                            </td>
-                            <td>{item.name}</td>
-                            <td>{item.impact}</td>
-                            <td>{item.financial}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="result-panel panel-accent-blue">
-                  <div className="panel-header-row">
-                    <span className="panel-title">
-                      <span className="panel-dot dot-blue" />
-                      공통 선정 이슈
-                    </span>
-                    <span className="panel-badge-count">{displayData.commonIssues.length}건</span>
-                  </div>
-                  <div className="panel-body">
-                    <table className="issue-table">
-                      <thead>
-                        <tr>
-                          <th>Sub Issue</th>
-                          <th><span className="col-badge col-green">리더</span></th>
-                          <th><span className="col-badge col-blue">피어</span></th>
-                          <th><span className="col-badge col-orange">자사</span></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {displayData.commonIssues.map((item, index) => (
-                          <tr key={index}>
-                            <td>{item.name}</td>
-                            <td>{item.leader && <span className="chk chk-green">✓</span>}</td>
-                            <td>{item.peer && <span className="chk chk-blue">✓</span>}</td>
-                            <td>{item.own && <span className="chk chk-orange">✓</span>}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                <div className="result-panel panel-accent-orange">
-                  <div className="panel-header-row">
-                    <span className="panel-title">
-                      <span className="panel-dot dot-orange" />
-                      자사 Blind Spot
-                    </span>
-                    <span className="panel-badge-count">{displayData.blindSpots.length}건</span>
-                  </div>
-                  <div className="panel-body">
-                    <ul className="blind-spot-list">
-                      {displayData.blindSpots.map((item, index) => (
-                        <li key={index} className="blind-spot-item">
-                          <span className="blind-spot-num">{index + 1}</span>
-                          <div>
-                            <div className="blind-spot-title">{item.title}</div>
-                            <p className="blind-spot-desc">{item.desc}</p>
-                          </div>
-                        </li>
                       ))}
-                    </ul>
-                  </div>
-                </div>
+                    </tbody>
+                  </table>
+                </ResultPanel>
+
+                <ResultPanel title="공통 선정 이슈" accent="blue" count={displayData.commonIssues.length}>
+                  <table className="issue-table">
+                    <thead>
+                      <tr>
+                        <th>Sub Issue</th>
+                        <th><span className="col-badge col-green">리더</span></th>
+                        <th><span className="col-badge col-blue">피어</span></th>
+                        <th><span className="col-badge col-orange">자사</span></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayData.commonIssues.map((item, index) => (
+                        <tr key={index}>
+                          <td>{item.name}</td>
+                          <td>{item.leader && <span className="chk chk-green">✓</span>}</td>
+                          <td>{item.peer && <span className="chk chk-blue">✓</span>}</td>
+                          <td>{item.own && <span className="chk chk-orange">✓</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </ResultPanel>
+
+                <ResultPanel title="자사 Blind Spot" accent="orange" count={displayData.blindSpots.length}>
+                  <ul className="blind-spot-list">
+                    {displayData.blindSpots.map((item, index) => (
+                      <li key={index} className="blind-spot-item">
+                        <span className="blind-spot-num">{index + 1}</span>
+                        <div>
+                          <div className="blind-spot-title">{item.title}</div>
+                          <p className="blind-spot-desc">{item.desc}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </ResultPanel>
               </div>
 
               <div className="result-next-row">

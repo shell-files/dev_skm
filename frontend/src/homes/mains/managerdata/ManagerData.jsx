@@ -27,6 +27,7 @@ import { useAuth } from "@hooks/AuthContext";
 import ApprovalProjectSelectModal from "../modal/ApprovalProjectSelectModal";
 import PageHeader from "@components/UI/PageHeader";
 import EmptyState from "@components/UI/EmptyState";
+import ModalWrapper from "@components/UI/ModalWrapper";
 import {
   DEFAULT_REPORTING_YEAR,
   clearApprovalProject,
@@ -677,53 +678,34 @@ const ManagerData = () => {
         )}
 
         {isRejectModalOpen && (
-          <div className="modal-overlay">
-            <div className="modal-window">
-              <div className="modal-header">
-                <h3>항목 반려</h3>
-                <button
-                  type="button"
-                  className="close-x"
-                  onClick={() => setIsRejectModalOpen(false)}
-                >
-                  x
-                </button>
-              </div>
-              <div className="modal-body">
-                <textarea
-                  className="reject-textarea"
-                  placeholder="반려 사유를 입력하세요."
-                  value={rejectReason}
-                  onChange={(event) => setRejectReason(event.target.value)}
-                  style={{
-                    width: "100%",
-                    height: "120px",
-                    padding: "10px",
-                    border: "1px solid #ddd",
-                    borderRadius: "6px",
-                  }}
-                />
-              </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn-confirm"
-                  onClick={async () => {
-                    if (!rejectReason.trim()) {
-                      showDefaultAlert("알림", "반려 사유를 입력하세요.", "info");
-                      return;
-                    }
-                    const success = await handleAction(rejectTargetId, "REJECTED", rejectReason);
-                    if (success) {
-                      setIsRejectModalOpen(false);
-                    }
-                  }}
-                >
-                  반려 확인
-                </button>
-              </div>
-            </div>
-          </div>
+          <ModalWrapper
+            title="항목 반려"
+            onClose={() => setIsRejectModalOpen(false)}
+            footer={
+              <button
+                type="button"
+                className="btn-confirm"
+                onClick={async () => {
+                  if (!rejectReason.trim()) {
+                    showDefaultAlert("알림", "반려 사유를 입력하세요.", "info");
+                    return;
+                  }
+                  const success = await handleAction(rejectTargetId, "REJECTED", rejectReason);
+                  if (success) setIsRejectModalOpen(false);
+                }}
+              >
+                반려 확인
+              </button>
+            }
+          >
+            <textarea
+              className="reject-textarea"
+              placeholder="반려 사유를 입력하세요."
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+              style={{ width: "100%", height: "120px", padding: "10px", border: "1px solid #ddd", borderRadius: "6px" }}
+            />
+          </ModalWrapper>
         )}
 
         <ApprovalProjectSelectModal

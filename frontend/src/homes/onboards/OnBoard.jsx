@@ -36,6 +36,7 @@ import RollupSummaryPanel from "./RollupSummaryPanel";
 import RollupInboxPanel from "./RollupInboxPanel";
 import MetricAssignmentModal from "./modal/MetricAssignmentModal";
 import PageHeader from '@components/UI/PageHeader';
+import EmptyState from "@components/UI/EmptyState";
 import OnboardingStatCards from "./OnboardingStatCards";
 import OnboardingWorkflowCta from "./OnboardingWorkflowCta";
 import OnboardingMetricTable from "./OnboardingMetricTable";
@@ -1041,10 +1042,7 @@ const OnBoard = () => {
       {viewMode === "ROLLUP_RESPONSE" && !batchIdQuery ? (
         <RollupInboxPanel requests={requests} onRefresh={initializeOnboarding} />
       ) : viewMode === "ROLLUP_RESPONSE" && !rollupResponseBatchId ? (
-        <div className="ob1-empty-state">
-          <p className="ob1-empty-title">받은 요청함의 Batch 정보가 없습니다.</p>
-          <p className="ob1-empty-desc">요청함에서 다시 진입해 주세요.</p>
-        </div>
+        <EmptyState title="받은 요청함의 Batch 정보가 없습니다." desc="요청함에서 다시 진입해 주세요." />
       ) : (
         <div className="ob1-content-layout">
           <div className="ob1-sidebar-panel">

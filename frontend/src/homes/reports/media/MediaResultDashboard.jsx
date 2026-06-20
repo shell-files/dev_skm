@@ -16,6 +16,7 @@
  */
 
 import robot from "@assets/images/robot/robot_media_t.png";
+import ResultStatCard from "@components/UI/ResultStatCard";
 import analyzingIcon from "@assets/icons/steps/analyzing.png";
 import { REFLECT_METHODS } from "./mediaData";
 
@@ -97,67 +98,33 @@ const MediaResultDashboard = ({
               </div>
 
               <div className="result-stats-row">
-                <div className="result-stat-card stat-card-blue">
-                  <div className="stat-icon-wrap stat-icon-blue">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <line x1="16" y1="13" x2="8" y2="13" />
-                      <line x1="16" y1="17" x2="8" y2="17" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="stat-label">언론 기사</div>
-                    <div className="stat-value-row">
-                      <div className="stat-value">{dashboardData?.stats?.press?.count ?? "0건"}</div>
-                      <div className="stat-sub">{dashboardData?.stats?.press?.sub ?? ""}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="result-stat-card stat-card-purple">
-                  <div className="stat-icon-wrap stat-icon-purple">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="3" y1="22" x2="21" y2="22" />
-                      <line x1="6" y1="18" x2="6" y2="11" />
-                      <line x1="10" y1="18" x2="10" y2="11" />
-                      <line x1="14" y1="18" x2="14" y2="11" />
-                      <line x1="18" y1="18" x2="18" y2="11" />
-                      <polygon points="12 2 2 7 22 7" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="stat-label">전문기관 자료</div>
-                    <div className="stat-value-row">
-                      <div className="stat-value">{dashboardData?.stats?.expert?.count ?? "0건"}</div>
-                      <div className="stat-sub">{dashboardData?.stats?.expert?.sub ?? ""}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="result-stat-card stat-card-orange">
-                  <div className="stat-icon-wrap stat-icon-orange">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="stat-label">규제 프레임</div>
-                    <div className="stat-value-row">
-                      <div className="stat-value">{dashboardData?.stats?.regulation?.count ?? "0건"}</div>
-                      <div className="stat-sub">{dashboardData?.stats?.regulation?.sub ?? ""}</div>
-                    </div>
-                  </div>
-                </div>
-                <div className="result-stat-card stat-card-green">
-                  <div className="stat-icon-wrap stat-icon-green">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="stat-label">반영 이슈 총계</div>
-                    <div className="stat-value">{dashboardData?.stats?.total?.count ?? "0개"}</div>
-                  </div>
-                </div>
+                <ResultStatCard
+                  label="언론 기사"
+                  value={dashboardData?.stats?.press?.count ?? "0건"}
+                  sub={dashboardData?.stats?.press?.sub ?? ""}
+                  colorClass="stat-card-blue"
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>}
+                />
+                <ResultStatCard
+                  label="전문기관 자료"
+                  value={dashboardData?.stats?.expert?.count ?? "0건"}
+                  sub={dashboardData?.stats?.expert?.sub ?? ""}
+                  colorClass="stat-card-purple"
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="22" x2="21" y2="22" /><line x1="6" y1="18" x2="6" y2="11" /><line x1="10" y1="18" x2="10" y2="11" /><line x1="14" y1="18" x2="14" y2="11" /><line x1="18" y1="18" x2="18" y2="11" /><polygon points="12 2 2 7 22 7" /></svg>}
+                />
+                <ResultStatCard
+                  label="규제 프레임"
+                  value={dashboardData?.stats?.regulation?.count ?? "0건"}
+                  sub={dashboardData?.stats?.regulation?.sub ?? ""}
+                  colorClass="stat-card-orange"
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>}
+                />
+                <ResultStatCard
+                  label="반영 이슈 총계"
+                  value={dashboardData?.stats?.total?.count ?? "0개"}
+                  colorClass="stat-card-green"
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>}
+                />
               </div>
 
               <div className="result-panels-row">

@@ -10,15 +10,15 @@
 
 | # | 커밋 메시지 | 상태 |
 |---|------------|------|
-| 1 | `[BE] utils/*repository.py 파일 repositories/ 폴더로 계층 분리 (#257)` |  완료 |
-| 2 | `[BE] utils/rollupcalculator.py를 services/rollups/calculator.py로 이동 (#257)` |  완료 |
-| 3 | `[BE] 개발 컨벤션 및 리팩토링 계획 문서 추가 (#257)` |  완료 |
-| 4 | `[BE] API-Service-Repository 계층 위반 수정 (#257)` |  완료 |
-| 5 | `[BE] 중복 유틸 함수 typeutils로 통합 (#257)` |  완료 |
-| 6 | `[BE] README WBS 정리 및 scratch 파일 제거 (#257)` |  완료 |
-| 7 | `[BE] media 뉴스 분석 서비스 newsservice.py로 분리 및 중복 함수 통합 (#257)` |  완료 |
-| 8 | `[BE] rollups/service.py 분리 — rollupbuilder, rollupbaseline, rollupexceptions (#257)` |  완료 |
-| 9 | `[BE] onboardings/service.py 분리 — assignmentService, approvalHandler, approvalService (#257)` |  완료 |
+| 1 | `utils/*repository.py 파일 repositories/ 폴더로 계층 분리 (#257)` |  완료 |
+| 2 | `utils/rollupcalculator.py를 services/rollups/calculator.py로 이동 (#257)` |  완료 |
+| 3 | `개발 컨벤션 및 리팩토링 계획 문서 추가 (#257)` |  완료 |
+| 4 | `API-Service-Repository 계층 위반 수정 (#257)` |  완료 |
+| 5 | `중복 유틸 함수 typeutils로 통합 (#257)` |  완료 |
+| 6 | `README WBS 정리 및 scratch 파일 제거 (#257)` |  완료 |
+| 7 | `media 뉴스 분석 서비스 newsservice.py로 분리 및 중복 함수 통합 (#257)` |  완료 |
+| 8 | `rollups/service.py 분리 — rollupbuilder, rollupbaseline, rollupexceptions (#257)` |  완료 |
+| 9 | `onboardings/service.py 분리 — assignmentService, approvalHandler, approvalService (#257)` |  완료 |
 | 10 | `materialities/service.py 분리 — materialitybuilder로 빌더 함수 추출 (#257)` |  완료 |
 | 11 | `materialities/financialexposure.py 분리 — financialexposurecalc으로 계산 로직 추출 (#257)` |  완료 |
 | 12 | `surveys/importservice.py 분리 — importmeta, importparser로 추출 (#257)` |  완료 |
@@ -35,11 +35,12 @@
 | 23 | `BenchMarking.jsx 분리 — BenchResultDashboard/benchConfig 추출 및 bench/ 폴더 정리 (#257)` |  완료 |
 | 24 | `Survey.jsx 분리 — SurveyResultDashboard/surveyConstants 추출 및 survey/ 폴더 정리 (#257)` |  완료 |
 | 25 | `ManagerData.jsx/DataTab.jsx 분리 — managerDataUtils/dataTabUtils 추출 및 managerdata/ 폴더 정리 (#257)` |  완료 |
-| 26 | `FE 파일 주석 정리 — 섹션 레이블 제거 및 파일 상단 헤더 추가 (#257)` |  완료 |
-| 27 | `BE 파일 주석 정리 — 영문 주석 한국어 번역 및 파일 상단 역할 설명 추가 (#257)` |  완료 |
-| 28 | `[BE] Service 의존성 정리 — contextgraph os.getenv→settings, service.py lazy import 제거 (#257)` |  완료 |
-| 29 | `[FE] 공통 EmptyState 컴포넌트 추출 및 FE 파일 전체 헤더 주석 추가 (#257)` |  완료 |
+| 26 | `FE 파일 주석 정리 (#257)` |  완료 |
+| 27 | `BE 파일 주석 정리 (#257)` |  완료 |
+| 28 | `Service 의존성 정리 (#257)` |  완료 |
+| 29 | `공통 EmptyState 컴포넌트 추출 및 FE 파일 헤더 주석 추가 (#257)` |  완료 |
 | 30 | `BE/FE 함수 및 변수 설명 주석 추가 (#257)` |  완료 |
+| 31 | `공통 ResultStatCard·ModalWrapper 컴포넌트 추출 (#257)` |  완료 |
 
 ---
 

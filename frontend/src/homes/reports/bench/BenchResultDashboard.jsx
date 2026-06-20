@@ -15,6 +15,7 @@
  */
 
 import robot from "@assets/images/robot/robot_repoting_transparent.png";
+import ResultStatCard from "@components/UI/ResultStatCard";
 import benchIcon from "@assets/icons/steps/benchmarking.png";
 
 const BenchResultDashboard = ({
@@ -92,72 +93,27 @@ const BenchResultDashboard = ({
               </div>
 
               <div className="result-stats-row">
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <line x1="16" y1="13" x2="8" y2="13" />
-                      <line x1="16" y1="17" x2="8" y2="17" />
-                      <line x1="10" y1="9" x2="8" y2="9" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="stat-label">분석보고서</div>
-                    <div className="stat-value-row">
-                    <div className="stat-value">{displayData.stats.reports}개</div>
-                    <div className="stat-sub">
-                      리더 {displayData.stats.leaderCount} · 피어 {displayData.stats.peerCount} · 자사 {displayData.stats.ownCount}
-                    </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="8" y1="6" x2="21" y2="6" />
-                      <line x1="8" y1="12" x2="21" y2="12" />
-                      <line x1="8" y1="18" x2="21" y2="18" />
-                      <circle cx="3" cy="6" r="1" fill="#64748b" stroke="none" />
-                      <circle cx="3" cy="12" r="1" fill="#64748b" stroke="none" />
-                      <circle cx="3" cy="18" r="1" fill="#64748b" stroke="none" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="stat-label">식별 이슈</div>
-                    <div className="stat-value">{displayData.stats.identifiedIssues}개</div>
-                  </div>
-                </div>
-
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                      <circle cx="9" cy="7" r="4" />
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="stat-label">공통 이슈</div>
-                    <div className="stat-value">{displayData.stats.commonIssues}개</div>
-                  </div>
-                </div>
-
-                <div className="result-stat-card">
-                  <div className="stat-icon-wrap">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" />
-                      <circle cx="12" cy="12" r="6" />
-                      <circle cx="12" cy="12" r="2" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="stat-label">자사 Blind Spot</div>
-                    <div className="stat-value">{displayData.stats.blindSpots}개</div>
-                  </div>
-                </div>
+                <ResultStatCard
+                  label="분석보고서"
+                  value={`${displayData.stats.reports}개`}
+                  sub={`리더 ${displayData.stats.leaderCount} · 피어 ${displayData.stats.peerCount} · 자사 ${displayData.stats.ownCount}`}
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><line x1="10" y1="9" x2="8" y2="9" /></svg>}
+                />
+                <ResultStatCard
+                  label="식별 이슈"
+                  value={`${displayData.stats.identifiedIssues}개`}
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><circle cx="3" cy="6" r="1" fill="#64748b" stroke="none" /><circle cx="3" cy="12" r="1" fill="#64748b" stroke="none" /><circle cx="3" cy="18" r="1" fill="#64748b" stroke="none" /></svg>}
+                />
+                <ResultStatCard
+                  label="공통 이슈"
+                  value={`${displayData.stats.commonIssues}개`}
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>}
+                />
+                <ResultStatCard
+                  label="자사 Blind Spot"
+                  value={`${displayData.stats.blindSpots}개`}
+                  icon={<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>}
+                />
               </div>
 
               <div className="result-panels-row">

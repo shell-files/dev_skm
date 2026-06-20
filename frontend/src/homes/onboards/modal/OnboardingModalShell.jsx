@@ -19,6 +19,7 @@
  *   TextEditorModal — 서술형·구조화 조회 항목의 전체 화면 텍스트 편집기 모달
  */
 import React, { useEffect, useState } from 'react';
+import EmptyState from "@components/UI/EmptyState";
 import { createPortal } from 'react-dom';
 import '@styles/onboardingModal.css';
 import { getAtomicId, isEditableItem, resolveG0InputMode } from '../onboardingUtils';
@@ -365,10 +366,7 @@ export default function OnboardingModalShell({
     if (!subMetrics || subMetrics.length === 0) {
       return (
         <div className="ob-input-panel-section">
-          <div className="ob1-empty-state" style={{ padding: '32px' }}>
-            <p className="ob1-empty-title">입력 항목 없음</p>
-            <p className="ob1-empty-desc">이 지표에 등록된 입력 항목이 없습니다.</p>
-          </div>
+          <EmptyState title="입력 항목 없음" desc="이 지표에 등록된 입력 항목이 없습니다." />
         </div>
       );
     }

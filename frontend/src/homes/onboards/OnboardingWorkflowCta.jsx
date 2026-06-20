@@ -11,6 +11,7 @@
  *   onBasisModalOpen — 보고서 발행 기준 선택 모달 열기 핸들러
  *   onCtaClick — CTA 버튼 클릭 핸들러
  */
+import EmptyState from "@components/UI/EmptyState";
 const OnboardingWorkflowCta = ({
   loadingWorkflow,
   variant = "action",
@@ -24,14 +25,13 @@ const OnboardingWorkflowCta = ({
   if (variant === "noRun" || isNoRunWorkflow(workflow)) {
     return (
       <>
-        <div className="ob1-empty-state">
-          <p className="ob1-empty-title">보고서 발행 기준 선택이 필요합니다.</p>
-          <p className="ob1-empty-desc">
-            보고서 워크플로우를 생성해 주세요.
-          </p>
-          <button type="button" className="ob1-btn-cta" onClick={onBasisModalOpen}>
-            보고서 발행 기준 선택
-          </button>
+        <div>
+          <EmptyState title="보고서 발행 기준 선택이 필요합니다." desc="보고서 워크플로우를 생성해 주세요." />
+          <div style={{ textAlign: "center", marginTop: "12px" }}>
+            <button type="button" className="ob1-btn-cta" onClick={onBasisModalOpen}>
+              보고서 발행 기준 선택
+            </button>
+          </div>
         </div>
         <div className="ob1-cta-container">
           <button className="ob1-btn-cta" onClick={onCtaClick} disabled={loadingWorkflow}>

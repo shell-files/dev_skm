@@ -35,6 +35,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import TabButton from "@components/UI/TabButton";
 import BatchActionBar from "@components/UI/BatchActionBar";
 import ApprovalDetailModal from "./modal/ApprovalDetailModal";
+import ModalWrapper from "@components/UI/ModalWrapper";
 import "@styles/Manager.css";
 import "@styles/TabButton.css";
 
@@ -629,54 +630,33 @@ const DataTab = ({
       />
 
       {isBulkRejectModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-window">
-            <div className="modal-header">
-              <h3>Reject selected items</h3>
-              <button
-                type="button"
-                className="close-x"
-                aria-label="Close bulk reject modal"
-                onClick={() => setIsBulkRejectModalOpen(false)}
-              >
-                x
-              </button>
-            </div>
-            <div className="modal-body">
-              <p>Reject {selectedSupportedRows.length} selected items.</p>
-              <textarea
-                className="reject-textarea"
-                placeholder="Enter rejection reason."
-                value={bulkRejectReason}
-                onChange={(event) => setBulkRejectReason(event.target.value)}
-                style={{
-                  width: "100%",
-                  height: "120px",
-                  padding: "10px",
-                  border: "1px solid #ddd",
-                  borderRadius: "6px",
-                  marginTop: "10px",
-                }}
-              />
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn-confirm"
-                disabled={!bulkRejectReason.trim()}
-                title={!bulkRejectReason.trim() ? "Enter rejection reason." : ""}
-                onClick={async () => {
-                  const success = await handleBulkAction("REJECTED", bulkRejectReason.trim());
-                  if (success) {
-                    setIsBulkRejectModalOpen(false);
-                  }
-                }}
-              >
-                Confirm reject
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModalWrapper
+          title="Reject selected items"
+          onClose={() => setIsBulkRejectModalOpen(false)}
+          footer={
+            <button
+              type="button"
+              className="btn-confirm"
+              disabled={!bulkRejectReason.trim()}
+              title={!bulkRejectReason.trim() ? "Enter rejection reason." : ""}
+              onClick={async () => {
+                const success = await handleBulkAction("REJECTED", bulkRejectReason.trim());
+                if (success) setIsBulkRejectModalOpen(false);
+              }}
+            >
+              Confirm reject
+            </button>
+          }
+        >
+          <p>Reject {selectedSupportedRows.length} selected items.</p>
+          <textarea
+            className="reject-textarea"
+            placeholder="Enter rejection reason."
+            value={bulkRejectReason}
+            onChange={(event) => setBulkRejectReason(event.target.value)}
+            style={{ width: "100%", height: "120px", padding: "10px", border: "1px solid #ddd", borderRadius: "6px", marginTop: "10px" }}
+          />
+        </ModalWrapper>
       )}
 
     </section>

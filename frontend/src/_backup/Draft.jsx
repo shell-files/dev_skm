@@ -16,12 +16,37 @@ import { useSelector, useDispatch } from "react-redux";
 import { GET, POST, DELETE } from "@utils/Network";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
 
+import { subIssues } from "./srTemplates/registry";
 import TrendChart from "./srTemplates/core/TrendChart";
 import { buildMetricsFromEdits } from "./srTemplates/core/srHelpers";
 import { exportPdf, exportPptNative, exportPptImg } from "./srTemplates/core/draftExport";
-import { subIssues } from "./srTemplates/registry";
-import { PAGES, SR_FIELD_MAP } from "./draftData";
 import "@styles/sr-page.css";
+
+
+// ── 보고서 페이지 레지스트리 ───────────────────────────────
+// 클릭 이동(목차/이전·다음/subnav 탭)의 단일 소스. 페이지 추가 시 항목만 push.
+// metrics/narrativeText 는 렌더 시점에 주입(여기엔 정적 메타만 — 더미 수치 없음).
+// ── 레지스트리에서 평탄화한 페이지 목록 (클릭 이동/렌더/PDF의 단일 소스) ──
+// 각 페이지에 소속 서브이슈 메타(어댑터·편집필드·내보내기명)를 부착.
+const PAGES = subIssues.flatMap((si) =>
+  si.pages.map((p) => ({
+    ...p,
+    tocTitle: si.label,
+    subIssueId: si.id,
+    subIssueLabel: si.label,
+    exportName: si.exportName,
+    adapter: si.adapter,
+    metricFields: si.metricFields,
+  }))
+);
+
+// metric_id → 지표명/소속 서브이슈 (근거 추적 패널용). metricFields 에서 자동 구성.
+const SR_FIELD_MAP = {};
+subIssues.forEach((si) =>
+  (si.metricFields || []).forEach((f) => {
+    SR_FIELD_MAP[f.id] = { label: f.label, subIssueLabel: si.label };
+  })
+);
 
 const Draft = () => {
   const [currentPid, setCurrentPid] = useState(null);

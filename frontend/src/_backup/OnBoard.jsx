@@ -47,20 +47,6 @@ import {
   hasAtomicValue,
   isEditableItem,
   resolveG0InputMode,
-  normalizeViewerRole,
-  isAssignmentManagerRole,
-  isEmployeeRole,
-  isConsultantRole,
-  isNoRunWorkflow,
-  isPendingSubsidiaryRequest,
-  flattenOnboardingItems,
-  normalizeAssignmentStatus,
-  normalizeInviteStatus,
-  resolveOnboardingCycleType,
-  resolveRollupContext,
-  formatApiDetail,
-  mergeAssignmentIntoItems,
-  getProfileStatusFromItems,
 } from "./onboardingUtils";
 import {
   DEFAULT_REPORTING_YEAR,
@@ -83,6 +69,192 @@ import {
   fetchApprovalProjects,
   selectApprovalProject,
 } from "@stores/reportSlice";
+
+const normalizeViewerRole = (role) => String(role || "").trim().toUpperCase();
+
+const isAssignmentManagerRole = (role) => {
+  const normalized = normalizeViewerRole(role);
+  return [
+    "ADMIN",
+    "ESG",
+    "ESG_MANAGER",
+    "MANAGER",
+    "OWNER",
+    "관리자",
+    "ESG담당자",
+    "ESG 담당자",
+  ].includes(normalized);
+};
+
+const isEmployeeRole = (role) => {
+  const normalized = normalizeViewerRole(role);
+  return ["EMPLOYEE", "ASSIGNEE", "부서담당자", "부서 담당자"].includes(normalized);
+};
+
+const isConsultantRole = (role) => {
+  const normalized = normalizeViewerRole(role);
+  return ["CONSULTANT", "컨설턴트"].includes(normalized);
+};
+
+const isNoRunWorkflow = (workflow) => workflow?.workflowStep === "NO_RUN";
+
+const isPendingSubsidiaryRequest = (request = {}) => {
+  const requestStatus = String(request.requestStatus || "").trim().toUpperCase();
+  const transferStatus = String(request.transferStatus || "").trim().toUpperCase();
+
+  if (
+    transferStatus === "SENT" ||
+    transferStatus === "RECEIVED" ||
+    requestStatus === "RECEIVED"
+  ) {
+    return false;
+  }
+
+  return (
+    request.sendReadyYn === true ||
+    transferStatus === "NOT_SENT" ||
+    transferStatus === "PENDING" ||
+    requestStatus === "REQUESTED" ||
+    requestStatus === "PENDING"
+  );
+};
+
+const flattenOnboardingItems = (metrics = []) =>
+  metrics.flatMap((metric) =>
+    (metric.atomicItems || []).map((atomic) => ({
+      ...atomic,
+      metricId: atomic.metricId || metric.metricId,
+      metricName: atomic.metricName || metric.metricName,
+      issueDomain: metric.issueDomain,
+      subIssueId: metric.subIssueId,
+      subIssueCode: metric.subIssueCode,
+      subIssueName: metric.subIssueName,
+      scopeSourceType: metric.scopeSourceType,
+      approvalPolicyCode: metric.approvalPolicyCode,
+      approvalStatus: metric.approvalStatus,
+      assignment: metric.assignment,
+    }))
+  );
+
+const normalizeAssignmentStatus = (status) => String(status || "").trim().toUpperCase();
+
+const normalizeInviteStatus = (status) => {
+  const normalized = String(status || "").trim().toUpperCase();
+  if (normalized === "승인대기" || normalized === "PENDING") return "PENDING";
+  if (normalized === "승인완료" || normalized === "COMPLETED" || normalized === "ACCEPTED") return "COMPLETED";
+  if (normalized === "승인취소" || normalized === "REVOKED" || normalized === "CANCELLED") return "REVOKED";
+  return normalized;
+};
+
+const resolveOnboardingCycleType = (workflow, requestedCycleType, preferredCycleType) => {
+  // 1. URL query override (QA/debug 전용)
+  const requested = String(requestedCycleType || "").trim().toUpperCase();
+  if (requested === "POST_DMA_DISCLOSURE") return "POST_DMA_DISCLOSURE";
+  if (requested === "PRE_DMA_G0") return "PRE_DMA_G0";
+
+  // 2. navigation state hint (Result 등에서 navigate state로 전달)
+  const preferred = String(preferredCycleType || "").trim().toUpperCase();
+  if (preferred === "POST_DMA_DISCLOSURE") return "POST_DMA_DISCLOSURE";
+  if (preferred === "PRE_DMA_G0") return "PRE_DMA_G0";
+
+  // 3. workflow가 명시적으로 반환한 currentCycleType
+  const explicitCycle = String(
+    workflow?.currentCycleType ||
+    workflow?.cycleType ||
+    workflow?.onboardingCycleType ||
+    ""
+  ).trim().toUpperCase();
+  if (explicitCycle === "POST_DMA_DISCLOSURE") return "POST_DMA_DISCLOSURE";
+
+  // 4. nextAction 기반 판단 (POST_DMA 단계 nextAction이면 POST_DMA)
+  const nextAction = String(workflow?.nextAction || "").trim().toUpperCase();
+  if (
+    [
+      "POST_DMA_INPUT",
+      "POST_DMA_ASSIGNMENT",
+      "POST_DMA_DISCLOSURE",
+      "REPORT_DISCLOSURE_INPUT",
+      "REPORT_DISCLOSURE_ROLLUP",
+    ].includes(nextAction)
+  ) {
+    return "POST_DMA_DISCLOSURE";
+  }
+
+  // 5. 복합 상태 체크: TABLE 선정 + POST_DMA cycle + scope 존재
+  const selectionSource = String(workflow?.selectionSource || "").trim().toUpperCase();
+  const fallbackYn = workflow?.fallbackYn === true;
+  const selectedCount = Number(workflow?.selectedSubIssueCount || 0);
+  const postDmaCycleId = workflow?.postDmaCycleId;
+  const postDmaScopeMetricCount = Number(workflow?.postDmaScopeMetricCount || 0);
+
+  if (
+    selectionSource === "TABLE" &&
+    !fallbackYn &&
+    selectedCount >= 5 &&
+    postDmaCycleId &&
+    postDmaScopeMetricCount > 0
+  ) {
+    return "POST_DMA_DISCLOSURE";
+  }
+
+  return "PRE_DMA_G0";
+};
+
+const resolveRollupContext = (cycleType) => {
+  const normalized = String(cycleType || "").trim().toUpperCase();
+  if (normalized === "POST_DMA_DISCLOSURE") {
+    return {
+      rollupPurposeCode: "REPORT_DISCLOSURE",
+      metricScopeCode: "SELECTED_DISCLOSURE",
+    };
+  }
+  return {
+    rollupPurposeCode: "DMA_PRECHECK",
+    metricScopeCode: "G0_02_FINANCIAL_BASIS",
+  };
+};
+
+const formatApiDetail = (detail) => {
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => item?.msg || item?.message || JSON.stringify(item))
+      .join("\n");
+  }
+  if (detail && typeof detail === "object") {
+    return detail.message || JSON.stringify(detail);
+  }
+  return String(detail || "");
+};
+
+const mergeAssignmentIntoItems = (items = [], assignments = []) => {
+  const assignmentByMetric = new Map((assignments || []).map((item) => [item.metricId, item]));
+  return items.map((item) => {
+    const assignment = assignmentByMetric.get(item.metricId) || item.assignment || {};
+    const assignmentStatus = normalizeAssignmentStatus(assignment.assignmentStatus);
+    const inviteStatus = normalizeInviteStatus(assignment.inviteStatus);
+    const assigneeEmail = assignment.assigneeEmailMasked || item.assigneeEmail || null;
+
+    return {
+      ...item,
+      assignment,
+      assignmentStatus,
+      inviteStatus,
+      assigneeUserId: assignment.assigneeUserId ?? item.assigneeUserId,
+      assigneeEmail,
+      assigneeName: item.assigneeName || null,
+      submissionDueDate: assignment.dueDate || item.submissionDueDate || item.dueDate,
+    };
+  });
+};
+
+const getProfileStatusFromItems = (items = []) => {
+  const editableItems = items.filter((item) => isEditableItem(item));
+  if (editableItems.length === 0) return "NOT_STARTED";
+  const completedCount = editableItems.filter((item) => hasAtomicValue(item)).length;
+  if (completedCount === 0) return "NOT_STARTED";
+  if (completedCount < editableItems.length) return "IN_PROGRESS";
+  return "COMPLETED";
+};
 
 const OnBoard = () => {
   const navigate = useNavigate();

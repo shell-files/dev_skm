@@ -45,6 +45,8 @@
 | 33 | `dmarepository.py shadow trace 분리 (#257)` |  완료 |
 | 34 | `rollupbatchrepository.py 결과 분리 (#257)` |  완료 |
 | 35 | `onboardingscoperepository.py 롤업 워크스페이스 분리 (#257)` |  완료 |
+| 36 | `OnBoard.jsx 순수 함수 onboardingUtils로 이동 (#257)` |  완료 |
+| 37 | `Draft.jsx·OnboardingModalShell·RollupSummaryPanel 순수 함수 분리 (#257)` |  완료 |
 
 ---
 

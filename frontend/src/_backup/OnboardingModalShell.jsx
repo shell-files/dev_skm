@@ -22,7 +22,7 @@ import React, { useEffect, useState } from 'react';
 import EmptyState from "@components/UI/EmptyState";
 import { createPortal } from 'react-dom';
 import '@styles/onboardingModal.css';
-import { getAtomicId, isEditableItem, resolveG0InputMode, getStatusText, getStatusClass } from '../onboardingUtils';
+import { getAtomicId, isEditableItem, resolveG0InputMode } from '../onboardingUtils';
 import TextEditorModal from './TextEditorModal';
 export default function OnboardingModalShell({
   isOpen,
@@ -65,6 +65,36 @@ export default function OnboardingModalShell({
   }, [metricItem, subMetrics]);
 
   /* ─── Status helpers ─── */
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'DRAFT':
+      case 'IN_PROGRESS':
+        return '작성중';
+      case 'SUBMITTED':
+        return '검토요청';
+      case 'APPROVED':
+      case 'COMPLETED':
+        return '완료';
+      default:
+        return '미입력';
+    }
+  };
+
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'DRAFT':
+      case 'IN_PROGRESS':
+        return 'draft';
+      case 'SUBMITTED':
+        return 'submitted';
+      case 'APPROVED':
+      case 'COMPLETED':
+        return 'approved';
+      default:
+        return 'not-started';
+    }
+  };
+
   /* ─── Input handlers ─── */
   const handleInputChange = (atomicMetricId, value) => {
     if (readOnlyYn) return;

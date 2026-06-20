@@ -17,6 +17,7 @@ from src.models.model import ResponseModel
 # --------------------------
 
 def licenseFile(file):
+    """업로드된 라이선스 파일을 licenseFiles 디렉터리에 UUID 이름으로 저장하고 DB에 메타데이터를 기록한다."""
     UPLOAD_DIR = Path("licenseFiles")
     UPLOAD_DIR.mkdir(exist_ok=True)
     origin = file.filename
@@ -49,6 +50,7 @@ def licenseFile(file):
 # 공공데이터포털 API 호출 로직 (사업자 등록증 진위여부 확인)
 # --------------------------
 async def checkBusinessStatus(businessNumber: str):
+    """공공데이터포털 API로 사업자등록번호의 유효성과 사업 상태를 확인한다."""
     serviceKey = settings.service_key
     url = f"https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey={serviceKey}"
     payload = {

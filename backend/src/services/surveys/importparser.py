@@ -212,6 +212,7 @@ def parseResponseSheets(
     workbook: dict,
     meta: dict,
 ) -> tuple:
+    """워크북의 응답 시트를 읽어 grid·top5·텍스트 유형별로 파싱하고 응답 행 목록과 건너뛴 항목 목록을 반환한다."""
     all_rows: list = []
     all_skipped: list = []
 

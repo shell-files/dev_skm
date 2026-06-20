@@ -14,6 +14,7 @@ from src.services.surveys import importparser as _ip
 
 
 def previewSurveyResponses(runId: int) -> dict:
+    """Sheets 응답 데이터를 파싱해 미리보기 행(최대 20건)과 메타 정보를 반환한다. DB에 저장하지 않는다."""
     form = getReadySurveyFormForRun(runId)
     master_sheet_id = form["master_sheet_id"]
     survey_form_id = form["id"]
@@ -45,6 +46,7 @@ def previewSurveyResponses(runId: int) -> dict:
 
 
 def importSurveyResponsesForRun(runId: int) -> dict:
+    """Sheets 응답을 파싱해 DB에 UPSERT하고 그룹별 응답자 수와 처리 결과를 반환한다."""
     form = getReadySurveyFormForRun(runId)
     master_sheet_id = form["master_sheet_id"]
     survey_form_id = form["id"]

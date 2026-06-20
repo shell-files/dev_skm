@@ -10,6 +10,7 @@ _READONLY_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly"
 
 
 def getSheetsService():
+    """서비스 계정 자격증명으로 Google Sheets API v4 읽기 전용 서비스 객체를 생성하여 반환한다."""
     from googleapiclient.discovery import build
     from google.oauth2 import service_account
 

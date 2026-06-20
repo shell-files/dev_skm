@@ -175,12 +175,14 @@ def resolveHistoricalLookbackDepth(rules: list[dict], sources: list[dict]) -> in
     memo = {}
 
     def atomicDepth(atomicId: str, stack: set[str]) -> int:
+        """주어진 atomic 지표를 생산하는 rule의 위상 깊이를 반환한다."""
         producerCode = producerByAtomicId.get(atomicId)
         if not producerCode:
             return 0
         return ruleDepth(producerCode, stack)
 
     def ruleDepth(code: str, stack: set[str]) -> int:
+        """rule 코드 기준으로 YoY 여부를 고려해 재귀적으로 계산 그래프의 최대 깊이를 반환한다."""
         if code in memo:
             return memo[code]
         if code in stack:
@@ -217,6 +219,7 @@ def calculateConsolidatedRulesByYear(
     companyIds: list[int],
     consolidatedFactMapsByYear: Optional[dict[int, dict[str, dict]]] = None,
 ) -> tuple[list[dict], list[dict], bool]:
+    """연도별 entity fact 맵과 연결 seed 맵을 받아 모든 연결 rule을 위상 정렬 순서로 계산하고 결과·경고·성공 여부를 반환한다."""
     normalizedSources = normalizeSources(sources)
     groupedSources = groupSourcesByRule(normalizedSources)
     ruleByCode = {ruleCode(rule): rule for rule in rules or [] if ruleCode(rule)}
@@ -245,6 +248,7 @@ def calculateConsolidatedRulesByYear(
     activeRuleStack: set[tuple[int, str]] = set()
 
     def resolveConsolidatedSourceAtYear(atomicId: str, year: int) -> dict:
+        """연결 fact 맵에서 특정 연도의 atomic 지표값을 조회하고 상태와 trace를 포함한 결과를 반환한다."""
         factsForYear = consolidatedFactMapsByYear.get(int(year), {})
         fact = factsForYear.get(atomicId)
         value = getFactValue(fact) if fact else None
@@ -285,6 +289,7 @@ def calculateConsolidatedRulesByYear(
         sourceScope: Optional[str] = None,
         sourceTiming: Optional[str] = None,
     ) -> dict:
+        """scope·timing에 따라 연결값 또는 entity 집계값을 선택해 특정 연도의 atomic 지표를 평가한다."""
         memoKey = (int(year), atomicId)
         normalizedScope = str(sourceScope or "").strip().upper()
         normalizedTiming = str(sourceTiming or "").strip().lower()
@@ -341,6 +346,7 @@ def calculateConsolidatedRulesByYear(
         )
 
     def evaluateRuleAtYear(code: str, year: int) -> dict:
+        """메모이제이션과 순환 감지를 적용해 특정 연도의 calculation rule 결과를 계산하고 반환한다."""
         memoKey = (int(year), code)
         if memoKey in ruleMemo:
             return ruleMemo[memoKey]
@@ -476,6 +482,7 @@ def aggregateEntityFactsAtYear(
     entityFactMapsByYear: dict[int, dict[tuple[int, str], dict]],
     rule: Optional[dict],
 ) -> dict:
+    """지정 연도의 자회사별 entity fact를 집계하여 합산 또는 참조 복사 방식으로 pre-aggregated 값을 산출한다."""
     factsForYear = entityFactMapsByYear.get(int(year), {})
     companyValues = {}
     missingCompanyIds = []
@@ -523,6 +530,7 @@ def aggregateEntityFactsAtYear(
 
 
 def buildRuleResult(rule: Optional[dict], ruleSources: list[dict], status: str, year: int) -> dict:
+    """rule 메타데이터와 계산 status를 조합하여 결과 dict 골격을 생성한다."""
     return {
         "groupMetricId": (rule or {}).get("metric_id"),
         "groupAtomicMetricId": targetAtomicMetricId(rule or {}),
@@ -538,6 +546,7 @@ def buildRuleResult(rule: Optional[dict], ruleSources: list[dict], status: str, 
 
 
 def normalizeEngineFact(fact: dict) -> dict:
+    """camelCase fact dict를 snake_case 키(value_numeric, value_text, unit)로 변환하여 계산 엔진에 전달할 형태로 정규화한다."""
     return {
         "value_numeric": fact.get("valueNumeric") if fact.get("valueNumeric") is not None else fact.get("value_numeric"),
         "value_text": fact.get("valueText") if fact.get("valueText") is not None else fact.get("value_text"),
@@ -546,6 +555,7 @@ def normalizeEngineFact(fact: dict) -> dict:
 
 
 def sourceCompanyValues(sourceResult: dict) -> dict:
+    """sourceResult에서 companyId별 값 맵을 추출한다. trace에 없으면 group 집계값을 단일 항목으로 반환한다."""
     trace = sourceResult.get("trace") or {}
     if trace.get("sourceCompanyValues") is not None:
         return trace["sourceCompanyValues"]
@@ -554,6 +564,7 @@ def sourceCompanyValues(sourceResult: dict) -> dict:
 
 
 def traceSource(source: dict, sourceResult: dict, year: int, sourceTiming: str) -> dict:
+    """source 메타와 평가 결과를 합쳐 의존성 추적 dict를 반환한다."""
     trace = sourceResult.get("trace") or {}
     fact = sourceResult.get("fact") or {}
     return {
@@ -573,6 +584,7 @@ def traceSource(source: dict, sourceResult: dict, year: int, sourceTiming: str) 
 
 
 def isYoyFormula(rule: dict) -> bool:
+    """rule의 formula_type이 YoY 계산(DIFF/RATE) 유형인지 여부를 반환한다."""
     return str(rule.get("formula_type") or rule.get("formulaType") or "").upper() in {
         FORMULA_ROLLUP_YOY_DIFF,
         FORMULA_ROLLUP_YOY_RATE,
@@ -580,6 +592,7 @@ def isYoyFormula(rule: dict) -> bool:
 
 
 def splitYoySources(sources: list[dict]) -> tuple[list[dict], list[dict]]:
+    """YoY rule의 source 목록을 CURRENT/PRIOR 역할로 분리한다. PRIOR가 없으면 CURRENT를 그대로 사용한다."""
     currentSources = [source for source in sources if source["sourceRole"] == "CURRENT"]
     if not currentSources and sources:
         currentSources = [sources[0]]
@@ -590,6 +603,7 @@ def splitYoySources(sources: list[dict]) -> tuple[list[dict], list[dict]]:
 
 
 def getFactValue(fact: Optional[dict]) -> Any:
+    """fact dict에서 유효한 값을 camelCase/snake_case 키 순서로 우선 조회하여 반환한다."""
     if not fact:
         return None
     if fact.get("valueNumeric") is not None:

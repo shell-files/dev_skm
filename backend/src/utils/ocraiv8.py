@@ -111,6 +111,7 @@ def _getEmbeddingModel():
 
 # JSON 응답 정제용 함수 (LLM이 준 문자열을 파이썬에서 쓰기 좋게 딕셔너리로 바꿉니다)
 def clean(responseText: str) -> list:
+    """LLM이 반환한 JSON 문자열을 파싱해 파이썬 리스트로 변환한다. 이스케이프 문자 등 비정형 형식도 보정한다."""
     if not responseText:
         return []
     try:
@@ -231,7 +232,7 @@ def _exhaust_key(idx: int):
 # 8단계 텍스트 분석 엔진 메인 함수 (v8.2 Rule-based Scorer 적용)
 # ------------------------------------------------------------------
 async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> ResponseModel:
-
+    """DMA PDF 파일을 Gemini로 분석해 서브이슈별 영향·재무 증거를 추출하고 rule-based 점수를 산출해 반환한다."""
     # 62개 이슈 사전을 로드합니다.
     issue_dict_str, issue_dict_list = load_issue_dictionary()
 

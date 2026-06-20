@@ -14,6 +14,7 @@ from typing import Optional
 
 
 def resolveScope(userModel) -> Optional[int]:
+    """userModel에서 companyId를 직접 추출하거나 Redis UUID 조회로 현재 선택된 회사 ID를 반환한다."""
     if isinstance(userModel, dict):
         directCompanyId = userModel.get("companyId") or userModel.get("company_id")
         userUuid = userModel.get("uuid")
@@ -35,6 +36,7 @@ def resolveScope(userModel) -> Optional[int]:
 
 
 def checkScope(companyId: int, userModel) -> None:
+    """요청 companyId가 현재 사용자 스코프와 일치하지 않으면 PermissionError를 발생시킨다."""
     scopeCompanyId = resolveScope(userModel)
     if scopeCompanyId != int(companyId):
         raise PermissionError("Forbidden company scope")

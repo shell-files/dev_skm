@@ -354,6 +354,7 @@ def buildFactMap(facts: list[dict]) -> dict[str, dict]:
 
 
 def semanticSourceKey(source: dict) -> tuple[str, str, str, str]:
+    """source의 ruleCode·sourceAtomicMetricId·role·scope 네 필드를 조합한 의미 중복 판별용 키를 반환한다."""
     return (
         source["ruleCode"],
         source["sourceAtomicMetricId"],
@@ -394,6 +395,7 @@ def normalizeSources(sources: list[dict]) -> list[dict]:
 
 
 def normalizeSource(source: dict) -> dict:
+    """snake_case·camelCase 혼용 source dict를 camelCase 표준 필드로 정규화해 반환한다."""
     return {
         "ruleCode": str(source.get("calculation_rule_code") or source.get("ruleCode") or "").strip(),
         "sourceAtomicMetricId": str(source.get("source_atomic_metric_id") or source.get("sourceAtomicMetricId") or "").strip(),
@@ -404,6 +406,7 @@ def normalizeSource(source: dict) -> dict:
 
 
 def valuesForSources(sources: list[dict], factMap: dict[str, dict]) -> tuple[list[float], list[str]]:
+    """source 목록에서 factMap을 조회해 유효한 숫자 값 목록과 누락된 atomicMetricId 목록을 반환한다."""
     values = []
     missing = []
     for source in sources:
@@ -425,6 +428,7 @@ def calculated(
     unit: Optional[str] = None,
     trace: Optional[dict] = None,
 ) -> dict:
+    """base에 계산 결과값과 STATUS_CALCULATED 상태를 병합한 결과 dict를 반환한다."""
     return {
         **base,
         "valueNumeric": valueNumeric,
@@ -437,6 +441,7 @@ def calculated(
 
 
 def sourceNotReady(base: dict, missingAtomicMetricIds: list[str]) -> dict:
+    """누락된 source atomicMetricId 목록을 포함해 STATUS_SOURCE_NOT_READY 상태의 결과 dict를 반환한다."""
     return {
         **base,
         "valueNumeric": None,
@@ -448,6 +453,7 @@ def sourceNotReady(base: dict, missingAtomicMetricIds: list[str]) -> dict:
 
 
 def zeroDivision(base: dict, denominatorSources: list[dict]) -> dict:
+    """zeroDivisionPolicy에 따라 NOT_APPLICABLE 또는 ZERO_DIVISION 상태의 결과 dict를 반환한다."""
     policy = str(base.get("zeroDivisionPolicy") or "").strip().upper()
     status = STATUS_NOT_APPLICABLE if policy == ZERO_DIVISION_NOT_APPLICABLE else STATUS_ZERO_DIVISION
     return {
@@ -464,6 +470,7 @@ def zeroDivision(base: dict, denominatorSources: list[dict]) -> dict:
 
 
 def buildResultBase(rule: dict, formulaType: str) -> dict:
+    """rule 메타데이터로부터 계산 결과의 공통 기본 필드(ruleCode, unit, policy 등)를 구성해 반환한다."""
     return {
         "ruleCode": ruleCode(rule),
         "targetAtomicMetricId": targetAtomicMetricId(rule),
@@ -481,6 +488,7 @@ def buildResultBase(rule: dict, formulaType: str) -> dict:
 
 
 def normalizeYoyDirection(value: Optional[str]) -> str:
+    """YoY 방향 코드를 대문자로 정규화하고, 유효하지 않은 값은 CURRENT_MINUS_PRIOR로 기본값을 반환한다."""
     normalized = str(value or "").strip().upper()
     if normalized == YOY_DIRECTION_PRIOR_MINUS_CURRENT:
         return YOY_DIRECTION_PRIOR_MINUS_CURRENT
@@ -488,6 +496,7 @@ def normalizeYoyDirection(value: Optional[str]) -> str:
 
 
 def applyRounding(value: float, roundingPolicy: Optional[str]) -> float:
+    """roundingPolicy(2DP/0)에 따라 소수점 2자리 또는 정수로 반올림한 값을 반환한다."""
     policy = str(roundingPolicy or "").strip().upper()
     if policy == ROUNDING_2DP:
         return round(value, 2)
@@ -497,6 +506,7 @@ def applyRounding(value: float, roundingPolicy: Optional[str]) -> float:
 
 
 def toNumber(value: Any) -> Optional[float]:
+    """임의 타입 값을 float으로 변환하며, None이거나 변환 불가한 경우 None을 반환한다."""
     if value is None:
         return None
     if isinstance(value, Decimal):
@@ -508,18 +518,22 @@ def toNumber(value: Any) -> Optional[float]:
 
 
 def normalizeFormulaType(value: Any) -> str:
+    """formula type 값을 대문자 strip 문자열로 정규화해 반환한다."""
     return str(value or "").strip().upper()
 
 
 def ruleCode(rule: dict) -> str:
+    """rule dict에서 calculation_rule_code 또는 ruleCode를 추출해 strip된 문자열로 반환한다."""
     return str(rule.get("calculation_rule_code") or rule.get("ruleCode") or "").strip()
 
 
 def targetAtomicMetricId(rule: dict) -> str:
+    """rule dict에서 target_atomic_metric_id 또는 targetAtomicMetricId를 추출해 strip된 문자열로 반환한다."""
     return str(rule.get("target_atomic_metric_id") or rule.get("targetAtomicMetricId") or "").strip()
 
 
 def sortKey(rule: dict) -> tuple[int, str]:
+    """rule의 execution_order와 ruleCode를 조합해 위상 정렬용 정렬 키를 반환한다."""
     try:
         order = int(rule.get("execution_order") or rule.get("executionOrder") or 0)
     except (TypeError, ValueError):

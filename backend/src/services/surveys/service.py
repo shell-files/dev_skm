@@ -18,6 +18,7 @@ from src.services.surveys.formservice import (
 
 
 async def exportCsvProcess(sheet_id, token):
+    """Google Sheets에서 '응답' 시트를 병합해 CSV로 내보내고 파일 경로를 반환한다."""
     sheetsService = _getSheetsService()
     try:
         spreadsheet = sheetsService.spreadsheets().get(
@@ -76,4 +77,5 @@ async def exportCsvProcess(sheet_id, token):
 
 
 def getRawProcess():
+    """설문 템플릿 원본 데이터를 반환한다."""
     return loadSurveyTemplate()

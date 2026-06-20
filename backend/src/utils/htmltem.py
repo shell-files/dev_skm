@@ -11,6 +11,7 @@ from src.utils.settings import settings
 # html3: 임시 비밀번호 안내
 
 def html1(companyName, uuid):
+    """신규 담당자 가입 초대 이메일 HTML을 생성한다."""
     return f"""
       <!DOCTYPE html>
       <html lang="ko">
@@ -68,6 +69,7 @@ def html1(companyName, uuid):
     """
 
 def html2(type, companyName, uuid):
+    """컨설턴트 초대 이메일 HTML을 생성한다. type 2는 신규 가입, type 3은 기존 계정 안내 형식."""
     if type == 2:
         consultantHtml = f"""
           <div style="background-color:#ffffff; border:3px solid #03a94d; border-radius:8px; padding:20px;">
@@ -177,6 +179,7 @@ def html2(type, companyName, uuid):
 """
 
 def html3(tempPwd):
+    """임시 비밀번호 안내 이메일 HTML을 생성한다."""
     return f"""
   <!DOCTYPE html>
   <html lang="ko">
@@ -262,6 +265,7 @@ def html3(tempPwd):
   """
 
 def getHtml(data):
+    """이메일 type(1·2·3·4)에 따라 적합한 HTML 템플릿 함수를 선택해 (제목, HTML, 수신자) 튜플을 반환한다."""
     type = data.get("type")
     email = data.get("email")
     uuid = data.get("uuid")

@@ -43,6 +43,7 @@ def buildCompanyContextProfileWithOptionalGraph(
     facts: list[CompanyContextFactDto],
     deterministicBuilder: Callable[[int, dict, list[CompanyContextFactDto]], CompanyContextProfileDto],
 ) -> tuple[CompanyContextProfileDto, list[dict]]:
+    """LLM(Ollama) 사용 여부에 따라 LangGraph 파이프라인 또는 결정론적 빌더로 회사 컨텍스트 프로필을 생성하고 trace 로그와 함께 반환한다."""
     trace: list[dict] = []
     fallbackProfile = deterministicBuilder(runId, runContext, facts)
     fallbackProfile.profileSource = PROFILE_SOURCE_FALLBACK
@@ -69,10 +70,12 @@ def buildCompanyContextProfileWithOptionalGraph(
         llm = ChatOllama(model=model, timeout=timeout)
 
         def loadG0Facts(state: CompanyContextGraphState) -> CompanyContextGraphState:
+            """G0 fact 목록을 state에 로드하고 trace를 기록한다."""
             state.setdefault("trace", []).append(_trace("loadG0Facts", "OK", f"{len(facts)} facts loaded."))
             return state
 
         def normalizeG0Context(state: CompanyContextGraphState) -> CompanyContextGraphState:
+            """fact 목록을 정규화하고 증거 metricId·atomicMetricId 집합을 state에 저장한다."""
             normalizedFacts = [_normalizeFact(fact) for fact in facts]
             state["normalizedFacts"] = normalizedFacts
             state["evidenceMetricIds"] = sorted({item["metricId"] for item in normalizedFacts if item.get("metricId")})
@@ -81,6 +84,7 @@ def buildCompanyContextProfileWithOptionalGraph(
             return state
 
         def analyzeCompanyProfileByLLM(state: CompanyContextGraphState) -> CompanyContextGraphState:
+            """LLM에 프롬프트를 전송하고 JSON 응답을 파싱해 llmPayload로 state에 저장한다."""
             prompt = _buildPrompt(runContext, state.get("normalizedFacts", []))
             response = llm.invoke(prompt)
             content = getattr(response, "content", response)
@@ -89,6 +93,7 @@ def buildCompanyContextProfileWithOptionalGraph(
             return state
 
         def validateProfileSchema(state: CompanyContextGraphState) -> CompanyContextGraphState:
+            """llmPayload를 정제해 CompanyContextProfileDto로 변환하고 state에 저장한다."""
             payload = _sanitizePayload(state.get("llmPayload") or {})
             payload.update({
                 "runId": runId,
@@ -103,6 +108,7 @@ def buildCompanyContextProfileWithOptionalGraph(
             return state
 
         def verifyProfileAgainstEvidence(state: CompanyContextGraphState) -> CompanyContextGraphState:
+            """프로필의 증거 ID를 실제 fact와 교차 검증하고, 일치하는 증거가 없으면 신뢰도를 하향 조정한다."""
             profile = state["profile"]
             metricIds = set(state.get("evidenceMetricIds") or [])
             atomicIds = set(state.get("evidenceAtomicMetricIds") or [])
@@ -118,6 +124,7 @@ def buildCompanyContextProfileWithOptionalGraph(
             return state
 
         def fallbackIfLowConfidence(state: CompanyContextGraphState) -> CompanyContextGraphState:
+            """신뢰도가 임계값 미만이면 폴백 이유를 기록하고, 그렇지 않으면 LLM 프로필을 승인한다."""
             profile = state.get("profile")
             if not profile or float(profile.confidence or 0.0) < MIN_LLM_PROFILE_CONFIDENCE:
                 state["fallbackReason"] = "LOW_CONTEXT_CONFIDENCE"
@@ -127,6 +134,7 @@ def buildCompanyContextProfileWithOptionalGraph(
             return state
 
         def returnCompanyContextProfile(state: CompanyContextGraphState) -> CompanyContextGraphState:
+            """최종 프로필 반환 완료를 trace에 기록한다."""
             state.setdefault("trace", []).append(_trace("returnCompanyContextProfile", "OK", "CompanyContextProfile returned."))
             return state
 

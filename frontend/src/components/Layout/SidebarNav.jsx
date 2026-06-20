@@ -1,3 +1,8 @@
+/**
+ * SidebarNav.jsx
+ * 레이어: Component (Layout)
+ * 역할: 좌측 사이드바 내비게이션 — 메뉴 트리, 보고 기준 선택 모달, 권한별 메뉴 노출 포함.
+ */
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useAuth } from '@hooks/AuthContext.jsx';

@@ -1,5 +1,7 @@
 /**
- * AuthContext.jsx - 전역 인증 상태 관리 컨텍스트
+ * AuthContext.jsx
+ * 레이어: Hook
+ * 역할: 전역 인증 상태 관리 컨텍스트 — 로그인·로그아웃·사용자 정보 조회 및 인증 가드 제공.
  */
 
 import { createContext, useState, useContext, useEffect, Component } from "react";

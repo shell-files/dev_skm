@@ -21,6 +21,7 @@ from src.services.rollups.rollupbuilder import loadRepository, loadCalculator, g
 
 
 def resolveBaselineRequirementTuples(rollupCalculator, rules: list[dict], ruleSources: list[dict]) -> list[tuple]:
+    """YoY 공식 규칙 중 CONSOLIDATED 소스를 갖는 (ruleCode, rule, sourceAtomicId) 튜플 목록을 반환한다."""
     rulesByCode = {}
     for rule in rules or []:
         code = str(rule.get("calculation_rule_code") or "").strip()
@@ -54,6 +55,7 @@ def resolveBaselineRequirementTuples(rollupCalculator, rules: list[dict], ruleSo
 
 
 def getBaselineRequirements(batchId: int, userModel) -> RollupBaselineRequirementResponseDto:
+    """배치에 필요한 전년도 연결 기준값 요구사항 목록과 현재 입력 상태를 반환한다."""
     rollupRepository = loadRepository()
     rollupCalculator = loadCalculator()
 
@@ -118,6 +120,7 @@ def getBaselineRequirements(batchId: int, userModel) -> RollupBaselineRequiremen
 
 
 def saveBaselineValues(batchId: int, request: RollupBaselineValuesRequestDto, userModel) -> RollupBaselineSaveResponseDto:
+    """요청된 전년도 기준값을 검증해 CONSOLIDATED Fact로 UPSERT하고 저장 결과를 반환한다."""
     rollupRepository = loadRepository()
     rollupCalculator = loadCalculator()
 

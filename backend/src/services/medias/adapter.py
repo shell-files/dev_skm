@@ -10,6 +10,7 @@ from src.utils.typeutils import firstPresent, asFloat
 
 
 def buildEvidenceSpan(result: Mapping[str, Any]) -> List[EvidenceSpanV13]:
+    """분석 결과 딕셔너리에서 텍스트 증거를 EvidenceSpanV13 리스트로 변환한다. 증거가 없으면 빈 리스트를 반환한다."""
     chunk = firstPresent(result, ("chunk", "textSpan", "text_span", "evidence"))
     if not chunk:
         return []
@@ -49,6 +50,7 @@ def _sanitizeIssueSimilarityMatches(rawMatches) -> list:
 
 
 def step0NormalizeMediaFacts(analysisResults: list) -> list[ExtractedFactsV13]:
+    """뉴스 AI 분석 결과 목록을 ExtractedFactsV13 형식으로 정규화한다."""
     facts: list[ExtractedFactsV13] = []
     for result in analysisResults or []:
         if not isinstance(result, Mapping):

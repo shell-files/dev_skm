@@ -22,6 +22,7 @@ from fastapi.staticfiles import StaticFiles
 #     yield
 
 def run():
+    """FastAPI 앱을 구성하고 apis/ 폴더의 라우터를 자동 등록한 후 uvicorn으로 실행한다."""
     app = FastAPI(servers=[
         {"url": "/", "description": "API 기본 서버"}
     ])

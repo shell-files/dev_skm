@@ -30,6 +30,7 @@ class EsgEconomyCrawler(BaseNewsCrawler):
     maxPage = 30
 
     def crawl(self, dateFrom: Optional[date] = None) -> NewsCrawlerResult:
+        """ESG경제 뉴스를 페이지 순으로 크롤링하고, dateFrom 이전 기사를 만나면 수집을 중단한다."""
         result = NewsCrawlerResult(sourceKey=self.sourceKey, sourceLabel=self.sourceLabel)
         links = []
         stopCrawling = False

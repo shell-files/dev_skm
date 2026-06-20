@@ -122,6 +122,7 @@ def buildActionableInputMetricIds(
     requestedMetricIds: list[str],
     dependencyItems: list[RollupRequestMetricItemDto],
 ) -> list[str]:
+    """요청된 지표 ID와 미입력 원자 지표가 있는 의존 지표 ID를 합산해 실제 입력이 필요한 지표 ID 목록을 반환한다."""
     metricIds = {
         str(metricId or "").strip()
         for metricId in requestedMetricIds or []
@@ -134,6 +135,7 @@ def buildActionableInputMetricIds(
 
 
 def buildBatchMetricScope(batch: dict) -> dict:
+    """배치의 요청·확정·의존 지표 ID 목록을 구분해 반환한다."""
     rollupRepository = loadRepository()
     requestedMetricIds = resolveBatchRequestedMetricIds(batch)
     scopes = rollupRepository.listScope(int(batch["batchId"] if batch.get("batchId") is not None else batch["id"]))
@@ -155,6 +157,7 @@ def buildMetricReadinessItems(
     missingAtomicIds: list[str],
     metricIds: Optional[list[str]] = None,
 ) -> list[RollupRequestMetricItemDto]:
+    """배치 스코프 내 지표별 필요 원자 수, 승인 수, 미입력 원자 ID 목록을 포함한 준비 상태 아이템을 반환한다."""
     rollupRepository = loadRepository()
     scopes = rollupRepository.listScope(batchId)
     metricFilter = set(metricIds or [])
@@ -199,6 +202,7 @@ def buildMetricReadinessItems(
 
 
 def buildRequestItem(req: dict, sourceCompanyId: int) -> RollupRequestItemDto:
+    """요청 딕셔너리와 소스 회사 ID로 롤업 요청 단건 DTO를 구성한다. 실시간 준비 상태를 포함한다."""
     batchId = int(req["batchId"])
     rollupRepository = loadRepository()
     readiness = rollupRepository.buildSourceReadiness(batchId, [sourceCompanyId], int(req["reportingYear"]))
@@ -244,6 +248,7 @@ def resolveInputWorkspace(
     reportingYear: int,
     metricIds: list[str],
 ) -> RollupInputWorkspaceDto:
+    """소스 회사의 롤업 응답 워크스페이스(사이클)를 확인해 이용 가능 여부와 사이클 정보를 반환한다."""
     rollupRepository = loadRepository()
     workspace = rollupRepository.findActiveInputWorkspace(sourceCompanyId, reportingYear, metricIds)
     if not workspace:
@@ -261,6 +266,7 @@ def resolveInputWorkspace(
 
 
 def buildSourceSendStatus(source: dict) -> RollupSourceSendStatusDto:
+    """소스 전송 상태 행을 DTO로 변환한다."""
     return RollupSourceSendStatusDto(
         batchId=int(source["esg_rollup_batch_id"]),
         parentCompanyId=int(source["parent_company_id"]),
@@ -272,6 +278,7 @@ def buildSourceSendStatus(source: dict) -> RollupSourceSendStatusDto:
 
 
 def buildSummary(summary: dict) -> RollupBatchSummaryDto:
+    """배치 집계 딕셔너리를 DTO로 변환하고, 전체 전송 완료 여부(calculateReadyYn)를 파생해 포함한다."""
     requestedCount = int(summary.get("requestedCount") or 0)
     pendingCount = int(summary.get("pendingCount") or 0)
     return RollupBatchSummaryDto(
@@ -291,6 +298,7 @@ def buildSummary(summary: dict) -> RollupBatchSummaryDto:
 
 
 def buildBatchStatus(batch: dict, sourceCompanyIds: list[int]) -> RollupBatchStatusDto:
+    """배치 행과 소스 회사 ID 목록을 받아 배치 상태 DTO를 생성한다."""
     return RollupBatchStatusDto(
         batchId=int(batch["id"]),
         runId=int(batch.get("run_id") or 0) if batch.get("run_id") else None,

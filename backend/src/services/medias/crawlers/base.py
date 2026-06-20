@@ -33,6 +33,7 @@ class NewsArticle:
     rawDateText: Optional[str] = None
 
     def toPipelineDict(self) -> dict:
+        """크롤링 결과를 파이프라인 처리용 딕셔너리로 변환한다."""
         return {
             "source": self.sourceKey,
             "sourceType": "news",
@@ -67,6 +68,7 @@ class BaseNewsCrawler:
     sourceLabel: str
 
     def crawl(self, dateFrom: Optional[date] = None) -> NewsCrawlerResult:
+        """지정 날짜 이후 기사를 크롤링해 NewsCrawlerResult를 반환한다. 서브클래스에서 구현한다."""
         raise NotImplementedError
 
     def _dedupeItems(self, items: list[dict]) -> list[dict]:
@@ -103,6 +105,7 @@ def cleanText(value: str) -> str:
 
 
 def normalizeUrl(url: str) -> str:
+    """URL에서 fragment(#)를 제거하고 끝의 슬래시를 정규화한다."""
     url, _fragment = urldefrag((url or "").strip())
     return url.rstrip("/")
 

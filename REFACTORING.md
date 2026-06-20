@@ -39,6 +39,7 @@
 | 27 | `BE 파일 주석 정리 — 영문 주석 한국어 번역 및 파일 상단 역할 설명 추가 (#257)` |  완료 |
 | 28 | `[BE] Service 의존성 정리 — contextgraph os.getenv→settings, service.py lazy import 제거 (#257)` |  완료 |
 | 29 | `[FE] 공통 EmptyState 컴포넌트 추출 및 FE 파일 전체 헤더 주석 추가 (#257)` |  완료 |
+| 30 | `BE/FE 함수 및 변수 설명 주석 추가 (#257)` |  완료 |
 
 ---
 
@@ -335,11 +336,11 @@ services/rollups/service.py
 
 ###  [우선순위 9] 컨벤션 준수 및 문서화 — 2026-06-19
 
-**목적:** FE 미완료 파일 헤더 일괄 추가 + API 정의서 생성
+**목적:** FE 미완료 파일 헤더 일괄 추가 + BE/FE 함수·변수 설명 추가
 
 #### 변경 내용
 
-**FE 파일 헤더 추가 (41개)**
+**FE 파일 헤더 추가 (70개)**
 
 | 폴더 | 파일 수 |
 |------|---------|
@@ -353,6 +354,18 @@ services/rollups/service.py
 | `homes/reports/srTemplates/core/` | 4개 (SRChrome, TrendChart, draftExport, srHelpers) |
 | `homes/reports/srTemplates/subIssues/` | 5개 (climateTarget, ecoProduct, productSafety, supplyChain, talentDev) |
 | `homes/reports/srTemplates/` | 1개 (registry) |
+| `components/Layout/` | 3개 (HeaderNav, LoginBackground, SidebarNav) |
+| `components/UI/` | 4개 (PageHeader, ReportBasisSelectModal, ServiceTabs, SignupInputField) |
+| `hooks/` | 1개 (AuthContext — 형식 통일) |
+| `stores/` | 3개 (authSlice, reportSlice, index) |
+| `utils/` | 2개 (Network, Base64) |
+
+**BE 함수 docstring 추가**
+
+- `services/` 전체 공개 함수 — 한국어 한 줄 docstring 완비
+- `utils/` 전체 공개 함수 — 한국어 한 줄 docstring 완비
+- `repositories/` — 이름 명확한 CRUD 함수는 CONVENTIONS.md 원칙에 따라 생략
+- 대상 파일: surveys/, rollups/, medias/, materialities/, utils/ai, companyscope, dmascoring, calculationengine, calculator, fastset, htmltem, ocr, ocrai, ocraiv8, subissuemaster 등 30개+
 
 **docs/API.md 생성**
 

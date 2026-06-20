@@ -33,6 +33,7 @@ class ImpactOnCrawler(BaseNewsCrawler):
     maxPage = 3
 
     def crawl(self, dateFrom: Optional[date] = None) -> NewsCrawlerResult:
+        """Impacton ESG 전문 섹션을 페이지 순으로 크롤링하고, dateFrom 이전 기사를 만나면 수집을 중단한다."""
         result = NewsCrawlerResult(sourceKey=self.sourceKey, sourceLabel=self.sourceLabel)
         links = []
         stopCrawling = False

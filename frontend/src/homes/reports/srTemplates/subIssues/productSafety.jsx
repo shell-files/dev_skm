@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * productSafety.jsx
  * 레이어: Component (srTemplates/subIssues)
@@ -6,6 +7,8 @@
  * exports:
  *   productSafety (default) — id·label·adapter·metricFields·pages를 포함하는 서브이슈 매니페스트 객체
  */
+=======
+>>>>>>> origin/skm_test
 // srTemplates/subIssues/productSafety.jsx
 // 소비자 건강·제품안전 서브이슈
 import React from "react";

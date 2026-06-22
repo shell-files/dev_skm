@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """
 auth.py
 레이어: Model / Service
@@ -10,6 +11,8 @@ auth.py
   logoutProcess   — 로그아웃 처리 (쿠키·Redis 삭제)
   pwdCheckProcess — 비밀번호 재확인 처리
 """
+=======
+>>>>>>> origin/skm_test
 from src.models.model import UserModel, EmailModel, ResponseModel, LoginModel
 from src.utils.auth import delete_cookie, get_domain
 from src.utils.rediscl import getCompanyRedis, getTokenRedis, setTokenRedis
@@ -24,7 +27,13 @@ import json
 import string
 import random
 
+<<<<<<< HEAD
 
+=======
+# --------------------------
+# 로그인 로직 처리 함수
+# --------------------------
+>>>>>>> origin/skm_test
 def loginProcess(response: Response, request: Request, loginModel: LoginModel):
     """
     1. 임시 비밀번호 redis에서 조회 (비밀번호 찾기 후 로그인 시도하는 경우)
@@ -108,7 +117,11 @@ def loginProcess(response: Response, request: Request, loginModel: LoginModel):
         # 4. accessToken redis 저장
         # 로그인 직후 세션 유실
         # 원인: loginProcess()에서 setTokenRedis() 반환값을 검증하지 않아 Redis 저장 실패 시에도 성공 응답 반환
+<<<<<<< HEAD
         # 수정: setTokenRedis() 결과 확인 후 실패 시 에러 반환
+=======
+        # 수정: setTokenRedis() 결과 확인 후 실패 시 에러 반환 (backend 1줄 수정)
+>>>>>>> origin/skm_test
         redisResult = setTokenRedis(tokenUuid, accessToken)
         if not redisResult or not redisResult.get("status"):
             return ResponseModel(False, "세션 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.")
@@ -172,6 +185,13 @@ def checkUser(userModel: UserModel):
 
     return ResponseModel(True, "사용자 정보가 유효합니다.", {"user": userModel.email, "userName": userName, "companys": companyResult, "selectedCompany": selectedCompany})
 
+<<<<<<< HEAD
+=======
+# --------------------------
+# 비밀번호 찾기 로직 처리 함수
+# --------------------------
+
+>>>>>>> origin/skm_test
 
 def findPwdProcess(emailModel: EmailModel):
     """
@@ -222,6 +242,12 @@ def findPwdProcess(emailModel: EmailModel):
         return ResponseModel(False, f"오류 발생 : {e}")
 
 
+<<<<<<< HEAD
+=======
+# --------------------------
+# 로그아웃 로직 처리 함수
+# --------------------------
+>>>>>>> origin/skm_test
 def logoutProcess(response: Response, request: Request, userModel: UserModel):
     """
     1. db에서 refresh token delete_yn 1으로 변경
@@ -233,6 +259,12 @@ def logoutProcess(response: Response, request: Request, userModel: UserModel):
         return ResponseModel(False, "로그아웃 실패")
     except Exception as e:
         return ResponseModel(False, f"오류 발생 : {e}")
+<<<<<<< HEAD
+=======
+# --------------------------
+# 비밀번호 확인 로직 처리 함수
+# --------------------------
+>>>>>>> origin/skm_test
 
 
 def pwdCheckProcess(request: Request, pwdCheckModel):
@@ -271,8 +303,13 @@ def pwdCheckProcess(request: Request, pwdCheckModel):
 
         # 5. DB에서 해당 유저의 비밀번호 조회
         userSql = f"""SELECT aes_d(password, '{settings.maria_db_key}' ) as password
+<<<<<<< HEAD
                         FROM `with`.`USER`
                         WHERE id = ?
+=======
+                        FROM `with`.`USER` 
+                        WHERE id = ? 
+>>>>>>> origin/skm_test
                         AND delete_yn = 0"""
         userRecord = findAll(userSql, (userId,))
 
@@ -283,6 +320,10 @@ def pwdCheckProcess(request: Request, pwdCheckModel):
 
         # 6. 비밀번호 최종 대조
         if pwdCheckModel.password == dbPassword:
+<<<<<<< HEAD
+=======
+            # 성공 시, 최신 uuid를 데이터에 담아 반환
+>>>>>>> origin/skm_test
             return ResponseModel(True, "비밀번호 확인에 성공하였습니다.", {"uuid": activeUuid})
 
         return ResponseModel(False, "비밀번호가 일치하지 않습니다.")

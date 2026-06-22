@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * supplyChain.jsx
  * 레이어: Component (srTemplates/subIssues)
@@ -6,6 +7,8 @@
  * exports:
  *   supplyChain (default) — id·label·adapter·metricFields·pages를 포함하는 서브이슈 매니페스트 객체
  */
+=======
+>>>>>>> origin/skm_test
 // srTemplates/subIssues/supplyChain.jsx
 // 공급망 감사·시정조치 서브이슈
 import React from "react";

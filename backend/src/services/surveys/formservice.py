@@ -1,15 +1,22 @@
+<<<<<<< HEAD
 ﻿"""
 formservice.py
 레이어: Service (surveys)
 역할: 설문 폼 생성·배포·조회 서비스.
 """
+=======
+>>>>>>> origin/skm_test
 import copy
 import json
 
 import requests
 
 from src.utils.settings import settings
+<<<<<<< HEAD
 from src.repositories.dmasurveyformrepository import (
+=======
+from src.utils.dmasurveyformrepository import (
+>>>>>>> origin/skm_test
     SURVEY_FORM_WORKFLOW_TYPE,
     SURVEY_TEMPLATE_VERSION,
     claimRetryableSurveyFormTx,
@@ -20,7 +27,11 @@ from src.repositories.dmasurveyformrepository import (
     markSurveyFormRetryableBestEffort,
     toSurveyFormResponse,
 )
+<<<<<<< HEAD
 from src.repositories.dmaworkflowrepository import upsertDmaWorkflowStatus
+=======
+from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
+>>>>>>> origin/skm_test
 
 APPS_SCRIPT_URL = settings.APPS_SCRIPT_URL
 
@@ -236,13 +247,21 @@ def ensureSurveyFormForRun(runId: int) -> dict:
     if runId <= 0:
         raise ValueError(f"runId must be > 0, got {runId}")
 
+<<<<<<< HEAD
     # 2단계: 실행 컨텍스트 조회 (companyId / year 획득)
+=======
+    # Step 2: Verify run exists (also gets companyId/year for payload injection)
+>>>>>>> origin/skm_test
     runContext = findSurveyRunContext(runId)
 
     currentStage    = _STAGE_TOP20_FREEZE
     currentProgress = _PROGRESS_TOP20_FREEZE
 
+<<<<<<< HEAD
     # 3단계: 워크플로우 상태 갱신 (RUNNING / TOP20_FREEZE / 20%)
+=======
+    # Step 3: Workflow RUNNING / TOP20_FREEZE / 20 / startedYn
+>>>>>>> origin/skm_test
     _writeSurveyFormWorkflowStatus(
         runId=runId,
         overallStatus="RUNNING",
@@ -255,14 +274,22 @@ def ensureSurveyFormForRun(runId: int) -> dict:
     snapshot = None
 
     try:
+<<<<<<< HEAD
         # 4단계: 스냅샷 Freeze 트랜잭션
+=======
+        # Step 4: Snapshot Freeze TX
+>>>>>>> origin/skm_test
         freeze = getOrFreezeSurveyFormSnapshotTx(
             runId=runId, templateVersion=SURVEY_TEMPLATE_VERSION
         )
         formId   = freeze["id"]
         snapshot = freeze["snapshot"]
 
+<<<<<<< HEAD
         # 5단계: 이미 READY 상태 — 멱등 반환
+=======
+        # Step 5: Already READY — idempotent return
+>>>>>>> origin/skm_test
         if freeze.get("surveyStatus") == "READY" or freeze.get("survey_status") == "READY":
             _writeSurveyFormWorkflowStatus(
                 runId=runId,
@@ -276,11 +303,19 @@ def ensureSurveyFormForRun(runId: int) -> dict:
                 return toSurveyFormResponse(existing_row)
             return toSurveyFormResponse(freeze)
 
+<<<<<<< HEAD
         # 6단계: RETRYABLE 상태 — 스냅샷 재사용 claim
         if freeze.get("surveyStatus") == "RETRYABLE" or freeze.get("survey_status") == "RETRYABLE":
             claimRetryableSurveyFormTx(formId)
 
         # 8단계: PAYLOAD_BUILD / 45%
+=======
+        # Step 6: RETRYABLE — claim and reuse snapshot
+        if freeze.get("surveyStatus") == "RETRYABLE" or freeze.get("survey_status") == "RETRYABLE":
+            claimRetryableSurveyFormTx(formId)
+
+        # Step 8: PAYLOAD_BUILD / 45
+>>>>>>> origin/skm_test
         currentStage    = _STAGE_PAYLOAD_BUILD
         currentProgress = _PROGRESS_PAYLOAD_BUILD
         _writeSurveyFormWorkflowStatus(
@@ -290,7 +325,11 @@ def ensureSurveyFormForRun(runId: int) -> dict:
             progressPercent=currentProgress,
         )
 
+<<<<<<< HEAD
         # 9-10단계: 템플릿 로드 및 컨텍스트 주입
+=======
+        # Step 9-10: Load template, inject context
+>>>>>>> origin/skm_test
         template = loadSurveyTemplate()
         issues_for_template = [
             {
@@ -305,10 +344,17 @@ def ensureSurveyFormForRun(runId: int) -> dict:
         template["meta"]["year"]      = runContext["reportingYear"]
         template["meta"]["issues"]    = issues_for_template
 
+<<<<<<< HEAD
         # 11단계: 페이로드 빌드
         payload = buildSurveyPayload(template)
 
         # 12단계: FORM_CREATE / 70%
+=======
+        # Step 11: Build payload
+        payload = buildSurveyPayload(template)
+
+        # Step 12: FORM_CREATE / 70
+>>>>>>> origin/skm_test
         currentStage    = _STAGE_FORM_CREATE
         currentProgress = _PROGRESS_FORM_CREATE
         _writeSurveyFormWorkflowStatus(
@@ -318,13 +364,21 @@ def ensureSurveyFormForRun(runId: int) -> dict:
             progressPercent=currentProgress,
         )
 
+<<<<<<< HEAD
         # 13단계: Apps Script POST 요청
+=======
+        # Step 13: Apps Script POST
+>>>>>>> origin/skm_test
         try:
             response = requests.post(APPS_SCRIPT_URL, json=payload, timeout=600)
         except Exception as req_err:
             raise RuntimeError(f"Apps Script request failed: {req_err}") from req_err
 
+<<<<<<< HEAD
         # 14단계: 응답 파싱
+=======
+        # Step 14: Strict response parse
+>>>>>>> origin/skm_test
         try:
             data = response.json()
         except Exception:
@@ -349,7 +403,11 @@ def ensureSurveyFormForRun(runId: int) -> dict:
 
         employee_url, management_url, external_url = _extractSurveyUrls(forms)
 
+<<<<<<< HEAD
         # 15단계: URL_SAVE / 90%
+=======
+        # Step 15: URL_SAVE / 90
+>>>>>>> origin/skm_test
         currentStage    = _STAGE_URL_SAVE
         currentProgress = _PROGRESS_URL_SAVE
         _writeSurveyFormWorkflowStatus(
@@ -359,7 +417,11 @@ def ensureSurveyFormForRun(runId: int) -> dict:
             progressPercent=currentProgress,
         )
 
+<<<<<<< HEAD
         # 16단계: DB에 READY 상태 저장
+=======
+        # Step 16: Mark READY in DB
+>>>>>>> origin/skm_test
         markSurveyFormReadyTx(
             formId=formId,
             masterSheetId=str(master_sheet_id),
@@ -368,7 +430,11 @@ def ensureSurveyFormForRun(runId: int) -> dict:
             externalFormUrl=external_url,
         )
 
+<<<<<<< HEAD
         # 17단계: 워크플로우 COMPLETED / 100%
+=======
+        # Step 17: Workflow COMPLETED / 100
+>>>>>>> origin/skm_test
         _writeSurveyFormWorkflowStatus(
             runId=runId,
             overallStatus="COMPLETED",
@@ -377,7 +443,11 @@ def ensureSurveyFormForRun(runId: int) -> dict:
             completedYn=True,
         )
 
+<<<<<<< HEAD
         # 18단계: 저장된 행 반환
+=======
+        # Step 18: Return saved row
+>>>>>>> origin/skm_test
         saved_row = getSurveyFormByRunId(runId)
         if saved_row:
             return toSurveyFormResponse(saved_row)
@@ -418,7 +488,11 @@ def ensureSurveyFormForRun(runId: int) -> dict:
             except Exception as wf_err:
                 print(f"[WARN] workflow RETRYABLE write failed: {wf_err}")
         else:
+<<<<<<< HEAD
             # Freeze 이전 실패: FAILED
+=======
+            # Pre-freeze failure: FAILED
+>>>>>>> origin/skm_test
             _recordSurveyFormWorkflowFailureBestEffort(
                 runId=runId,
                 currentStage=currentStage,
@@ -432,6 +506,7 @@ def ensureSurveyFormForRun(runId: int) -> dict:
 
 async def createFormProcess(req, token) -> dict:
     return ensureSurveyFormForRun(req.runId)
+<<<<<<< HEAD
 
 
 def getSurveyFormDetail(runId: int) -> dict | None:
@@ -439,3 +514,5 @@ def getSurveyFormDetail(runId: int) -> dict | None:
     if row is None:
         return None
     return toSurveyFormResponse(row)
+=======
+>>>>>>> origin/skm_test

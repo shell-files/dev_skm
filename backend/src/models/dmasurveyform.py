@@ -1,8 +1,11 @@
+<<<<<<< HEAD
 """
 dmasurveyform.py
 레이어: Model
 역할: DMA 설문 폼 응답 DTO 정의.
 """
+=======
+>>>>>>> origin/skm_test
 from datetime import datetime
 from typing import Optional
 

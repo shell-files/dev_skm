@@ -93,6 +93,7 @@ class Settings(BaseSettings):
   # Ollama
   # --------------------------
   ollama_url: str
+<<<<<<< HEAD
   # --------------------------
   # contextgraph.py (Company Context LLM)
   # --------------------------
@@ -100,6 +101,8 @@ class Settings(BaseSettings):
   company_context_llm_provider: str = ""
   company_context_llm_model: str = ""
   company_context_llm_timeout_sec: float = 60.0
+=======
+>>>>>>> origin/skm_test
   
   model_config = SettingsConfigDict(
     env_file=".env",

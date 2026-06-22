@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * talentDev.jsx
  * 레이어: Component (srTemplates/subIssues)
@@ -6,6 +7,8 @@
  * exports:
  *   talentDev (default) — id·label·adapter·metricFields·pages를 포함하는 서브이슈 매니페스트 객체
  */
+=======
+>>>>>>> origin/skm_test
 // srTemplates/subIssues/talentDev.jsx
 // 교육훈련·역량개발 서브이슈
 import React from "react";

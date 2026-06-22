@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """
 company.py
 레이어: Model / Service
@@ -10,6 +11,14 @@ from src.models.model import UserModel, CompanyModel, ResponseModel
 from src.utils.rediscl import setCompanyRedis
 
 
+=======
+from src.models.model import UserModel, CompanyModel, ResponseModel
+from src.utils.rediscl import setCompanyRedis
+
+# --------------------------
+# 회사 선택 함수
+# --------------------------
+>>>>>>> origin/skm_test
 def companyProcess(companyModel: CompanyModel, userModel: UserModel):
     """
     1. redis에서 uuid 와 companyId 저장

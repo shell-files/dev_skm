@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * SRChrome.jsx
  * 레이어: Component (srTemplates/core)
@@ -21,6 +22,8 @@
  *   DEFAULT_NAV — 기본 상단 nav 항목 배열
  *   DEFAULT_SUBNAV — 기본 subnav 항목 배열
  */
+=======
+>>>>>>> origin/skm_test
 // ============================================================
 // SRChrome.jsx — SR 페이지 공통 프레임 (모든 sub-issue 재사용)
 // 상단 dark band / nav / sub nav / section header / footer 포함

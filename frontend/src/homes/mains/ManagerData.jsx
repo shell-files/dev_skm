@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * ManagerData.jsx
  * 레이어: Page (mains) — 구버전 파일
@@ -13,6 +14,8 @@
  *   DataTab — 승인 항목 테이블 및 액션 버튼
  *   ApprovalProjectSelectModal — 보고서 프로젝트 선택 모달
  */
+=======
+>>>>>>> origin/skm_test
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams, useLocation } from "react-router";
@@ -22,9 +25,12 @@ import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert"
 import { useAuth } from "@hooks/AuthContext";
 import ApprovalProjectSelectModal from "./modal/ApprovalProjectSelectModal";
 import PageHeader from "@components/UI/PageHeader";
+<<<<<<< HEAD
 import EmptyState from "@components/UI/EmptyState";
 import ModalWrapper from "@components/UI/ModalWrapper";
 import { formatStageLabel } from "@mains/managerdata/managerDataUtils";
+=======
+>>>>>>> origin/skm_test
 import {
   DEFAULT_REPORTING_YEAR,
   clearApprovalProject,
@@ -111,6 +117,17 @@ const runStatusLabel = (runStatus) => {
   return "진행 중";
 };
 
+<<<<<<< HEAD
+=======
+const formatStageLabel = (label) => {
+  if (!label) return "-";
+  const lower = String(label).toLowerCase();
+  if (lower.includes("g0") || lower.includes("pre_dma")) return "경영일반 입력";
+  if (lower.includes("all approvals") || lower.includes("completed")) return "데이터 승인 완료";
+  if (lower.includes("disclosure") || lower.includes("post_dma")) return "보고서 연결 공시 승인";
+  return label;
+};
+>>>>>>> origin/skm_test
 
 const ManagerData = () => {
   const dispatch = useDispatch();
@@ -707,7 +724,14 @@ const ManagerData = () => {
         {activeTab === "data" && (
           <div className="manager-data-tab-container">
             {!hasValidRollupApprovalContext ? (
+<<<<<<< HEAD
               <EmptyState title="데이터 요청 정보가 없습니다." desc="받은 요청함에서 다시 진입해 주세요." />
+=======
+              <div className="ob1-empty-state">
+                <p className="ob1-empty-title">데이터 요청 정보가 없습니다.</p>
+                <p className="ob1-empty-desc">받은 요청함에서 다시 진입해 주세요.</p>
+              </div>
+>>>>>>> origin/skm_test
             ) : (
               <DataTab
                 activeService={activeService}
@@ -740,6 +764,7 @@ const ManagerData = () => {
         )}
 
         {isRejectModalOpen && (
+<<<<<<< HEAD
           <ModalWrapper
             title="항목 반려"
             onClose={() => setIsRejectModalOpen(false)}
@@ -768,6 +793,55 @@ const ManagerData = () => {
               style={{ width: "100%", height: "120px", padding: "10px", border: "1px solid #ddd", borderRadius: "6px" }}
             />
           </ModalWrapper>
+=======
+          <div className="modal-overlay">
+            <div className="modal-window">
+              <div className="modal-header">
+                <h3>항목 반려</h3>
+                <button
+                  type="button"
+                  className="close-x"
+                  onClick={() => setIsRejectModalOpen(false)}
+                >
+                  x
+                </button>
+              </div>
+              <div className="modal-body">
+                <textarea
+                  className="reject-textarea"
+                  placeholder="반려 사유를 입력하세요."
+                  value={rejectReason}
+                  onChange={(event) => setRejectReason(event.target.value)}
+                  style={{
+                    width: "100%",
+                    height: "120px",
+                    padding: "10px",
+                    border: "1px solid #ddd",
+                    borderRadius: "6px",
+                  }}
+                />
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn-confirm"
+                  onClick={async () => {
+                    if (!rejectReason.trim()) {
+                      showDefaultAlert("알림", "반려 사유를 입력하세요.", "info");
+                      return;
+                    }
+                    const success = await handleAction(rejectTargetId, "REJECTED", rejectReason);
+                    if (success) {
+                      setIsRejectModalOpen(false);
+                    }
+                  }}
+                >
+                  반려 확인
+                </button>
+              </div>
+            </div>
+          </div>
+>>>>>>> origin/skm_test
         )}
 
         <ApprovalProjectSelectModal

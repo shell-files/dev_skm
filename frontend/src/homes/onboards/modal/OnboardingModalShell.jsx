@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * OnboardingModalShell.jsx
  * 레이어: Component (onboards/modal)
@@ -24,6 +25,22 @@ import { createPortal } from 'react-dom';
 import '@styles/onboardingModal.css';
 import { getAtomicId, isEditableItem, resolveG0InputMode, getStatusText, getStatusClass } from '../onboardingUtils';
 import TextEditorModal from './TextEditorModal';
+=======
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import '@styles/onboardingModal.css';
+import { getAtomicId, isEditableItem, resolveG0InputMode } from '../onboardingUtils';
+import TextEditorModal from './TextEditorModal';
+
+/**
+ * OnboardingModalShell
+ *
+ * G0 공통 입력 modal shell.
+ * - key: atomicMetricId (issueId fallback 제거)
+ * - inputMode / editableYn 기준으로 입력, lookup, read-only renderer를 분기
+ * - rollup/derived 값은 수기 입력하지 않음
+ */
+>>>>>>> origin/skm_test
 export default function OnboardingModalShell({
   isOpen,
   onClose,
@@ -65,6 +82,39 @@ export default function OnboardingModalShell({
   }, [metricItem, subMetrics]);
 
   /* ─── Status helpers ─── */
+<<<<<<< HEAD
+=======
+  const getStatusText = (status) => {
+    switch (status) {
+      case 'DRAFT':
+      case 'IN_PROGRESS':
+        return '작성중';
+      case 'SUBMITTED':
+        return '검토요청';
+      case 'APPROVED':
+      case 'COMPLETED':
+        return '완료';
+      default:
+        return '미입력';
+    }
+  };
+
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'DRAFT':
+      case 'IN_PROGRESS':
+        return 'draft';
+      case 'SUBMITTED':
+        return 'submitted';
+      case 'APPROVED':
+      case 'COMPLETED':
+        return 'approved';
+      default:
+        return 'not-started';
+    }
+  };
+
+>>>>>>> origin/skm_test
   /* ─── Input handlers ─── */
   const handleInputChange = (atomicMetricId, value) => {
     if (readOnlyYn) return;
@@ -336,7 +386,14 @@ export default function OnboardingModalShell({
     if (!subMetrics || subMetrics.length === 0) {
       return (
         <div className="ob-input-panel-section">
+<<<<<<< HEAD
           <EmptyState title="입력 항목 없음" desc="이 지표에 등록된 입력 항목이 없습니다." />
+=======
+          <div className="ob1-empty-state" style={{ padding: '32px' }}>
+            <p className="ob1-empty-title">입력 항목 없음</p>
+            <p className="ob1-empty-desc">이 지표에 등록된 입력 항목이 없습니다.</p>
+          </div>
+>>>>>>> origin/skm_test
         </div>
       );
     }

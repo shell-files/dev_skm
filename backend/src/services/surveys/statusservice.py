@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿"""
 statusservice.py
 레이어: Service (surveys)
@@ -6,6 +7,11 @@ statusservice.py
 from src.utils.db import getConn
 from src.repositories.dmasurveyformrepository import getSurveyFormByRunId
 from src.repositories.dmasurveytargetrepository import (
+=======
+from src.utils.db import getConn
+from src.utils.dmasurveyformrepository import getSurveyFormByRunId
+from src.utils.dmasurveytargetrepository import (
+>>>>>>> origin/skm_test
     SURVEY_TARGET_GROUPS,
     getTargetsByRunId,
     upsertTargetsTx,

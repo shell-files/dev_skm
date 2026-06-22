@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿"""
 scoringservice.py
 레이어: Service (surveys)
@@ -5,6 +6,10 @@ scoringservice.py
 """
 from src.utils.dmaaggregator import SURVEY_GROUP_WEIGHTS
 from src.repositories.dmasurveyscorerepository import (
+=======
+from src.utils.dmaaggregator import SURVEY_GROUP_WEIGHTS
+from src.utils.dmasurveyscorerepository import (
+>>>>>>> origin/skm_test
     getReadySurveyFormForScore,
     listActiveSurveyResponsesForScore,
     replaceSurveyScoresAndRecalculateFinalTx,

@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+<<<<<<< HEAD
 """
 htmltem.py
 레이어: Utils
 역할: 초대 이메일 HTML 템플릿 생성.
 """
+=======
+>>>>>>> origin/skm_test
 from src.utils.settings import settings
 
 # html1: 신규 담당자 가입 초대
@@ -11,7 +14,10 @@ from src.utils.settings import settings
 # html3: 임시 비밀번호 안내
 
 def html1(companyName, uuid):
+<<<<<<< HEAD
     """신규 담당자 가입 초대 이메일 HTML을 생성한다."""
+=======
+>>>>>>> origin/skm_test
     return f"""
       <!DOCTYPE html>
       <html lang="ko">
@@ -69,7 +75,10 @@ def html1(companyName, uuid):
     """
 
 def html2(type, companyName, uuid):
+<<<<<<< HEAD
     """컨설턴트 초대 이메일 HTML을 생성한다. type 2는 신규 가입, type 3은 기존 계정 안내 형식."""
+=======
+>>>>>>> origin/skm_test
     if type == 2:
         consultantHtml = f"""
           <div style="background-color:#ffffff; border:3px solid #03a94d; border-radius:8px; padding:20px;">
@@ -179,7 +188,10 @@ def html2(type, companyName, uuid):
 """
 
 def html3(tempPwd):
+<<<<<<< HEAD
     """임시 비밀번호 안내 이메일 HTML을 생성한다."""
+=======
+>>>>>>> origin/skm_test
     return f"""
   <!DOCTYPE html>
   <html lang="ko">
@@ -265,7 +277,10 @@ def html3(tempPwd):
   """
 
 def getHtml(data):
+<<<<<<< HEAD
     """이메일 type(1·2·3·4)에 따라 적합한 HTML 템플릿 함수를 선택해 (제목, HTML, 수신자) 튜플을 반환한다."""
+=======
+>>>>>>> origin/skm_test
     type = data.get("type")
     email = data.get("email")
     uuid = data.get("uuid")

@@ -6,6 +6,13 @@ db.py
 import mariadb
 from src.utils.settings import settings
 
+<<<<<<< HEAD
+=======
+# ------------------
+# DB 연결
+# ------------------
+
+>>>>>>> origin/skm_test
 conn_params = {
   "user": settings.maria_db_user,
   "password": settings.maria_db_password,
@@ -82,7 +89,14 @@ def save(sql:str, params=None):
     conn.close()
   return result
 
+<<<<<<< HEAD
 # params: [(v1, v2), (v3, v4), ...] 형태의 리스트
+=======
+# --------------------------
+# 여러 값 저장하기 (배치 INSERT/UPDATE)
+# params = [(v1, v2), (v3, v4), ...] 형태의 리스트
+# --------------------------
+>>>>>>> origin/skm_test
 def saveMany(sql:str, params=None):
   """DB에 여러 값 한번에 저장"""
   result = False
@@ -173,6 +187,13 @@ def getPageList(sql:str, parmas=None):
 # limit = 보여줄 개수, offset = 건너뛸 개수
 
 
+<<<<<<< HEAD
+=======
+
+# --------------------------
+# 여러 SQL 문을 하나의 트랜잭션으로 처리
+# --------------------------
+>>>>>>> origin/skm_test
 def executeTransaction(queries: list):
     """
     여러 SQL 문을 하나의 트랜잭션으로 처리 (All or Nothing)

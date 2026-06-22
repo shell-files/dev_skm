@@ -1,8 +1,11 @@
+<<<<<<< HEAD
 /**
  * CompanySelect.jsx
  * 레이어: Page
  * 역할: 로그인 후 접속할 회사를 검색·선택하고 세션에 반영하는 회사 선택 페이지
  */
+=======
+>>>>>>> origin/skm_test
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from '@hooks/AuthContext.jsx';

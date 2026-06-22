@@ -14,7 +14,13 @@ from src.models.media import (
     MediaNewsCrawlAnalyzeResponse,
 )
 from src.models.dmakcgsgrade import KcgsGradeSaveRequest, KcgsGradeSaveResponse
+<<<<<<< HEAD
 from src.services.medias.newsservice import (
+=======
+from src.services.medias.service import (
+    buildMediaAnalyzeResponse,
+    runMediaAnalysis,
+>>>>>>> origin/skm_test
     runMediaCrawlAndAnalyze,
     saveKcgsGradeInputs,
 )
@@ -25,6 +31,26 @@ router = APIRouter(tags=["media"])
 
 
 @router.post(
+<<<<<<< HEAD
+=======
+    "/news/analyze",
+    response_model=MediaAnalyzeResponse,
+    summary="언론 기사 수동 분석 및 저장",
+)
+async def analyze_media_news(request: MediaAnalyzeRequest, userModel=Depends(get_token)):
+    try:
+        scoredSignals = runMediaAnalysis(request.articles, request.runId, request.keywords, usePgPipeline=request.usePgPipeline)
+        return buildMediaAnalyzeResponse(
+            runId=request.runId,
+            articleCount=len(request.articles),
+            savedSignalCount=len(scoredSignals) if scoredSignals else 0,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post(
+>>>>>>> origin/skm_test
     "/news/crawl-and-analyze",
     response_model=MediaNewsCrawlAnalyzeResponse,
     summary="MVP 고정 언론사 크롤링 및 미디어 분석",

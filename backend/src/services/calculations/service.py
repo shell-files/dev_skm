@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿"""
 service.py
 레이어: Service (calculations)
@@ -6,13 +7,35 @@ service.py
 의존성 흐름:
   calculations.service → calculationrepository, calculationengine
   approval_service, onboardings.service → calculations.service (단방향)
+=======
+"""
+Calculation bounded context orchestration.
+
+Responsibilities:
+- Affected Entity Rule graph resolution
+- Stale calculated Fact invalidation
+- Engine execution
+- All-or-none derived Fact persistence
+- Input modification downstream invalidation
+
+Import graph:
+  calculations.service -> calculationrepository, calculationengine
+  approval_service -> calculations.service
+  onboardings.service -> calculations.service
+
+This module must NOT import from onboardings.service or approval_service.
+>>>>>>> origin/skm_test
 """
 from __future__ import annotations
 
 from typing import Optional
 
 from src.utils import calculationengine as calcEngine
+<<<<<<< HEAD
 from src.repositories import calculationrepository as calcRepo
+=======
+from src.utils import calculationrepository as calcRepo
+>>>>>>> origin/skm_test
 
 
 def calculateAffectedEntityFactsTx(

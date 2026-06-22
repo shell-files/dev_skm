@@ -1,8 +1,11 @@
+<<<<<<< HEAD
 /**
  * HeaderNav.jsx
  * 레이어: Component (Layout)
  * 역할: 상단 글로벌 내비게이션 바 — 연도 선택, 결재 프로젝트 선택, 사용자 메뉴 포함.
  */
+=======
+>>>>>>> origin/skm_test
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useAuth } from '@hooks/AuthContext.jsx';

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * MetricAssignmentModal.jsx
  * 레이어: Component (onboards/modal)
@@ -13,6 +14,8 @@
  *   onClose — 모달 닫기 핸들러
  *   onSubmitAssignment — 담당자 지정 제출 핸들러
  */
+=======
+>>>>>>> origin/skm_test
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import '@styles/onboardingModal.css';

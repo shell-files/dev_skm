@@ -1,4 +1,5 @@
 """
+<<<<<<< HEAD
 financialexposure.py
 레이어: Service (materialities)
 역할: DMA 재무 노출 평가 서비스 — 단독/연결 재무 기준 기반 IRO 재무 점수 산출.
@@ -16,6 +17,265 @@ from src.services.materialities import financialexposurecalc as _fc
 
 # [레거시] G0 재무 기준을 기존 DMASignal 재무 factor에 적용. v1.3 오케스트레이터 Phase B에서 사용 안 함.
 # 런타임 마이그레이션 전까지 수식 변경 금지.
+=======
+Domain: DMA Materiality
+Layer: service/workflow
+Responsibility:
+- Apply G0 financial basis to DMASignal.financialFactor
+- Build financial exposure trace
+- Guard financial IRO compatibility
+Public functions:
+- applyG0FinancialExposure
+- applyG0FinancialExposureForRun
+- applyExposure
+- applyRunExposure
+- buildFinancialExposureForSignal
+- buildFinancialExposureForSignalWithBasis
+- buildExposure
+- buildExposureWithBasis
+- calculateChannelScore
+- calcChannelScore
+- calcSourceBonus
+- calcConfidenceCap
+- canApplyFinancialExposure
+- checkIro
+- resolvePreferConsolidated
+- resolveDominant
+- resolveScope
+Do not:
+- do not mutate unrelated DB state
+- do not mutate DB
+- do not change scoring formula unless explicitly requested
+- do not change dmascoring.py formula
+- do not call FastAPI router directly
+- do not connect media/benchmark adapters in this file during this step
+- do not modify auth/token/common code
+"""
+
+from __future__ import annotations
+
+from copy import deepcopy
+from typing import Any, Optional
+
+from src.models.dmaengine import DMASignal, FinancialFactor
+from src.utils.companycontextrepository import getMaterialityRunContext
+from src.utils.financialbasisrepository import getBasis
+from src.utils.subissuemaster import getScoringAllowedIros
+
+# LEGACY ONLY:
+# Applies existing G0 financial basis to legacy DMASignal financial factors.
+# Not called by the new v1.3 Orchestrator foundation in Phase B.
+# Keep formula behavior unchanged until a later runtime migration explicitly rewires it.
+
+FINANCIAL_EXPOSURE_RULE_VERSION = "financial-exposure-rule-v1"
+
+FINANCIAL_CHANNELS = [
+    "revenueMagnitude",
+    "costMagnitude",
+    "capexMagnitude",
+    "assetLiabilityMagnitude",
+    "financingMagnitude",
+    "legalRegulatoryMagnitude",
+]
+
+CHANNEL_DENOMINATORS = {
+    "revenueMagnitude": {
+        "primary": "revenue",
+        "fallback": None,
+        "cap": None,
+    },
+    "costMagnitude": {
+        "primary": "operatingProfit",
+        "fallback": "revenue",
+        "cap": None,
+    },
+    "capexMagnitude": {
+        "primary": "capex",
+        "fallback": "revenue",
+        "cap": None,
+    },
+    "assetLiabilityMagnitude": {
+        "primary": None,
+        "fallback": "revenue",
+        "cap": 3,
+    },
+    "financingMagnitude": {
+        "primary": "revenue",
+        "fallback": "capex",
+        "cap": None,
+    },
+    "legalRegulatoryMagnitude": {
+        "primary": "operatingProfit",
+        "fallback": "revenue",
+        "cap": None,
+    },
+}
+
+DOMINANT_MAGNITUDE_PRIORITY = [
+    "legalRegulatoryMagnitude",
+    "capexMagnitude",
+    "costMagnitude",
+    "revenueMagnitude",
+    "financingMagnitude",
+    "assetLiabilityMagnitude",
+]
+
+FINANCIAL_EXPOSURE_RULES = {
+    "E_CLIMATE__CLIMATE_TARGETS_TRANSITION": {
+        "financialIroType": "opportunity",
+        "rationale": "Transition planning may require transition capex and can affect revenue resilience.",
+        "channels": [
+            {
+                "channel": "capexMagnitude",
+                "ratioPreset": 0.010,
+                "rationale": "Transition planning may require capex for decarbonization and process conversion.",
+            },
+            {
+                "channel": "revenueMagnitude",
+                "ratioPreset": 0.005,
+                "rationale": "Transition risk may affect customer demand and market access.",
+            },
+        ],
+    },
+    "E_CLIMATE__GHG_SCOPE12_EMISSIONS": {
+        "financialIroType": "risk",
+        "rationale": "Scope 1 and 2 emissions may create energy cost, carbon price, or compliance exposure.",
+        "channels": [
+            {
+                "channel": "costMagnitude",
+                "ratioPreset": 0.005,
+                "rationale": "GHG and energy exposure can increase operating cost.",
+            },
+            {
+                "channel": "legalRegulatoryMagnitude",
+                "ratioPreset": 0.003,
+                "rationale": "GHG regulation can create compliance and penalty exposure.",
+            },
+        ],
+    },
+    "E_PRODUCT_ENV__PRODUCT_ENV_PERFORMANCE": {
+        "financialIroType": "opportunity",
+        "rationale": "Low-carbon or eco product performance can affect product revenue and transition investment.",
+        "channels": [
+            {
+                "channel": "revenueMagnitude",
+                "ratioPreset": 0.010,
+                "rationale": "Low-carbon product strategy may create revenue opportunity.",
+            },
+            {
+                "channel": "capexMagnitude",
+                "ratioPreset": 0.005,
+                "rationale": "Product transition may require process or product capex.",
+            },
+        ],
+    },
+    "S_SUPPLY_CHAIN_SOCIAL__SUPPLIER_RISK_AUDIT_CAP": {
+        "financialIroType": "risk",
+        "rationale": "Supplier due diligence can create audit, remediation, and customer compliance cost exposure.",
+        "channels": [
+            {
+                "channel": "costMagnitude",
+                "ratioPreset": 0.005,
+                "rationale": "Supplier audit and remediation can increase operating cost.",
+            },
+            {
+                "channel": "financingMagnitude",
+                "ratioPreset": 0.003,
+                "rationale": "Supply-chain risk can affect customer/investor risk perception.",
+            },
+        ],
+    },
+    "S_SAFETY__OHS_MANAGEMENT": {
+        "financialIroType": "risk",
+        "rationale": "Occupational health and safety management can affect safety investment, incident cost, and legal exposure.",
+        "channels": [
+            {
+                "channel": "costMagnitude",
+                "ratioPreset": 0.003,
+                "rationale": "OHS programs and incident prevention can increase operating cost.",
+            },
+            {
+                "channel": "legalRegulatoryMagnitude",
+                "ratioPreset": 0.002,
+                "rationale": "Safety incidents can create legal or regulatory exposure.",
+            },
+        ],
+    },
+    "S_PRODUCT_RESP__PRODUCT_SAFETY_QUALITY": {
+        "financialIroType": "risk",
+        "rationale": "Product safety and quality can create recall, warranty, litigation, and compliance exposure.",
+        "channels": [
+            {
+                "channel": "legalRegulatoryMagnitude",
+                "ratioPreset": 0.005,
+                "rationale": "Product safety issues can create litigation, penalty, or regulatory cost.",
+            },
+            {
+                "channel": "costMagnitude",
+                "ratioPreset": 0.004,
+                "rationale": "Quality defects can create recall and warranty costs.",
+            },
+        ],
+    },
+    "G_BUSINESS_CONDUCT__LEGAL_COMPLIANCE_VIOLATIONS": {
+        "financialIroType": "risk",
+        "rationale": "Legal compliance violations can create penalties, remediation cost, and financing access impact.",
+        "channels": [
+            {
+                "channel": "legalRegulatoryMagnitude",
+                "ratioPreset": 0.003,
+                "rationale": "Compliance violations can create fine, litigation, and remediation exposure.",
+            },
+            {
+                "channel": "financingMagnitude",
+                "ratioPreset": 0.002,
+                "rationale": "Compliance failures can affect investor or lender perception.",
+            },
+        ],
+    },
+    "S_PRIVACY__DATA_BREACH_SECURITY_INCIDENTS": {
+        "financialIroType": "risk",
+        "rationale": "Data breach and security incidents can create fines, response cost, and business disruption.",
+        "channels": [
+            {
+                "channel": "legalRegulatoryMagnitude",
+                "ratioPreset": 0.004,
+                "rationale": "Data privacy incidents can create regulatory penalties and litigation.",
+            },
+            {
+                "channel": "costMagnitude",
+                "ratioPreset": 0.003,
+                "rationale": "Security incidents can create recovery and control remediation cost.",
+            },
+        ],
+    },
+    "E_CLIMATE__CLIMATE_RISK": {
+        "financialIroType": "risk",
+        "rationale": "Climate risk can affect assets, operations, financing, and transition exposure.",
+        "channels": [
+            {
+                "channel": "assetLiabilityMagnitude",
+                "ratioPreset": 0.050,
+                "rationale": "Asset/liability basis is unavailable in G0-02, so MVP caps this channel at 3.",
+            },
+        ],
+    },
+}
+
+
+def ratioToMagnitude(ratio: Optional[float]) -> int:
+    if ratio is None or ratio <= 0:
+        return 0
+    if ratio < 0.001:
+        return 1
+    if ratio < 0.005:
+        return 2
+    if ratio < 0.01:
+        return 3
+    if ratio < 0.03:
+        return 4
+    return 5
+>>>>>>> origin/skm_test
 
 
 def buildFinancialExposureForSignal(
@@ -24,7 +284,10 @@ def buildFinancialExposureForSignal(
     reportingYear: int,
     preferConsolidated: bool = True,
 ) -> tuple[DMASignal, dict]:
+<<<<<<< HEAD
     """회사 재무 기준을 조회해 단일 DMASignal에 재무 노출 factor를 적용한다."""
+=======
+>>>>>>> origin/skm_test
     basis = getBasis(companyId, reportingYear, preferConsolidated)
     return buildFinancialExposureForSignalWithBasis(signal, basis)
 
@@ -35,7 +298,10 @@ def applyG0FinancialExposure(
     reportingYear: int,
     preferConsolidated: bool = True,
 ) -> list[DMASignal]:
+<<<<<<< HEAD
     """동일한 재무 기준을 사용해 DMASignal 목록 전체에 재무 노출 factor를 일괄 적용한다."""
+=======
+>>>>>>> origin/skm_test
     basis = getBasis(companyId, reportingYear, preferConsolidated)
     updatedSignals = []
     for signal in signals:
@@ -48,7 +314,10 @@ def applyG0FinancialExposureForRun(
     signals: list[DMASignal],
     runId: int,
 ) -> list[DMASignal]:
+<<<<<<< HEAD
     """runId로 회사·연도·연결 여부를 자동 결정해 DMASignal 목록에 재무 노출 factor를 적용한다."""
+=======
+>>>>>>> origin/skm_test
     runContext = getMaterialityRunContext(runId)
     if not runContext:
         return [
@@ -61,7 +330,11 @@ def applyG0FinancialExposureForRun(
 
     companyId = int(runContext["company_id"])
     reportingYear = int(runContext["reporting_year"])
+<<<<<<< HEAD
     preferConsolidated, warnings = _fc.resolvePreferConsolidated(runContext)
+=======
+    preferConsolidated, warnings = resolvePreferConsolidated(runContext)
+>>>>>>> origin/skm_test
     basis = getBasis(companyId, reportingYear, preferConsolidated)
     if warnings:
         basis = deepcopy(basis)
@@ -78,7 +351,10 @@ def buildFinancialExposureForSignalWithBasis(
     signal: DMASignal,
     financialBasis: dict,
 ) -> tuple[DMASignal, dict]:
+<<<<<<< HEAD
     """미리 조회된 재무 기준 dict를 사용해 단일 DMASignal에 규칙 기반 재무 factor를 산출·적용한다."""
+=======
+>>>>>>> origin/skm_test
     trace = _baseTrace(signal, financialBasis)
     sourceType = _normalizedSourceType(signal)
     confidence = _safeFloat(getattr(signal, "confidenceScore", None), 1.0)
@@ -89,7 +365,11 @@ def buildFinancialExposureForSignalWithBasis(
         trace["warnings"].append("SURVEY_EXCLUDED: survey financial exposure is excluded in MVP.")
         return _attachTrace(signal, trace), {"financialExposureTrace": trace}
 
+<<<<<<< HEAD
     if existingIroType and not _fc.canApplyFinancialExposure(signal.subIssueCode, existingIroType):
+=======
+    if existingIroType and not canApplyFinancialExposure(signal.subIssueCode, existingIroType):
+>>>>>>> origin/skm_test
         trace["warnings"].append(
             f"IRO_NOT_ALLOWED: existing financialFactor '{existingIroType}' is not allowed for {signal.subIssueCode}."
         )
@@ -99,12 +379,20 @@ def buildFinancialExposureForSignalWithBasis(
         trace["warnings"].append("No G0-02 financial basis found; financial factor kept as adapter fallback.")
         return _attachTrace(signal, trace), {"financialExposureTrace": trace}
 
+<<<<<<< HEAD
     rule = _fc.FINANCIAL_EXPOSURE_RULES.get(signal.subIssueCode)
+=======
+    rule = FINANCIAL_EXPOSURE_RULES.get(signal.subIssueCode)
+>>>>>>> origin/skm_test
     if not rule:
         trace["warnings"].append(f"No financial exposure rule found for subIssueCode={signal.subIssueCode}.")
         return _attachTrace(signal, trace), {"financialExposureTrace": trace}
 
+<<<<<<< HEAD
     if not _fc.canApplyFinancialExposure(signal.subIssueCode, rule["financialIroType"]):
+=======
+    if not canApplyFinancialExposure(signal.subIssueCode, rule["financialIroType"]):
+>>>>>>> origin/skm_test
         trace["subIssueRule"] = {
             "subIssueCode": signal.subIssueCode,
             "financialIroType": rule["financialIroType"],
@@ -125,7 +413,11 @@ def buildFinancialExposureForSignalWithBasis(
     newMagnitudes = {}
     for channelRule in rule.get("channels", []):
         channel = channelRule.get("channel")
+<<<<<<< HEAD
         channelScore = _fc.calculateChannelScore(
+=======
+        channelScore = calculateChannelScore(
+>>>>>>> origin/skm_test
             channel=channel,
             ratioPreset=_safeFloat(channelRule.get("ratioPreset"), 0.0),
             rationale=channelRule.get("rationale", ""),
@@ -147,7 +439,11 @@ def buildFinancialExposureForSignalWithBasis(
             trace["warnings"].append(channelScore["confidenceWarning"])
 
     trace["channelScores"] = channelScores
+<<<<<<< HEAD
     dominantType, dominantValue = _fc.dominantMagnitude(newMagnitudes)
+=======
+    dominantType, dominantValue = dominantMagnitude(newMagnitudes)
+>>>>>>> origin/skm_test
     trace["dominantMagnitudeType"] = dominantType
     trace["dominantMagnitudeValue"] = dominantValue
 
@@ -172,6 +468,7 @@ def buildFinancialExposureForSignalWithBasis(
     return updatedSignal, {"financialExposureTrace": trace}
 
 
+<<<<<<< HEAD
 def buildEnhancedFinancialFactor(
     existingFactor: Optional[FinancialFactor],
     rule: dict,
@@ -182,6 +479,139 @@ def buildEnhancedFinancialFactor(
     """기존 factor에 채널별 새 magnitude를 병합해 업데이트된 FinancialFactor를 생성한다."""
     baseValues = _factorMagnitudeSnapshot(existingFactor)
     for channel in _fc.FINANCIAL_CHANNELS:
+=======
+def calculateChannelScore(
+    channel: str,
+    ratioPreset: float,
+    rationale: str,
+    financialBasis: dict,
+    sourceType: str,
+    confidence: float,
+) -> dict:
+    denominatorField, denominatorValue = selectDenominator(channel, financialBasis)
+    estimatedExposure = None
+    ratio = None
+    warning = None
+
+    if denominatorValue and denominatorValue > 0:
+        ratio = ratioPreset
+        estimatedExposure = denominatorValue * ratioPreset
+    else:
+        warning = f"No usable denominator for {channel}; magnitude set to 0."
+
+    magnitude = ratioToMagnitude(ratio)
+    sourceBonus = sourceTypeMagnitudeBonus(channel, magnitude, sourceType, confidence)
+    magnitudeAfterSource = min(5, magnitude + sourceBonus)
+
+    channelCap = CHANNEL_DENOMINATORS.get(channel, {}).get("cap")
+    channelCapAppliedYn = False
+    if channelCap is not None and magnitudeAfterSource > channelCap:
+        magnitudeAfterSource = channelCap
+        channelCapAppliedYn = True
+
+    confidenceCap = confidenceMagnitudeCap(confidence)
+    confidenceCapAppliedYn = False
+    if confidenceCap is not None and magnitudeAfterSource > confidenceCap:
+        magnitudeAfterSource = confidenceCap
+        confidenceCapAppliedYn = True
+
+    result = {
+        "denominatorField": denominatorField,
+        "denominatorValue": denominatorValue,
+        "ratioPreset": ratioPreset,
+        "estimatedExposure": estimatedExposure,
+        "ratio": ratio,
+        "magnitudeBeforeAdjustment": magnitude,
+        "magnitudeAfterAdjustment": magnitudeAfterSource,
+        "sourceTypeMagnitudeBonus": sourceBonus,
+        "confidenceCapAppliedYn": confidenceCapAppliedYn,
+        "channelCapAppliedYn": channelCapAppliedYn,
+        "rationale": rationale,
+    }
+    if warning:
+        result["warning"] = warning
+    if confidence < 0.4:
+        result["confidenceWarning"] = "LOW_CONFIDENCE_CAP_2"
+    elif confidence < 0.7:
+        result["confidenceWarning"] = "MEDIUM_CONFIDENCE_CAP_4"
+    return result
+
+
+def canApplyFinancialExposure(subIssueCode: str, financialIroType: str) -> bool:
+    expectedIro = _financialIroToAllowedAxis(financialIroType)
+    if not expectedIro:
+        return False
+    return expectedIro in getScoringAllowedIros(subIssueCode)
+
+
+def resolvePreferConsolidated(runContext: dict) -> tuple[bool, list[str]]:
+    scope = str(runContext.get("company_scope_type") or "").upper()
+    if scope in {"PARENT", "GROUP", "HOLDING", "CONSOLIDATED"}:
+        return True, []
+    if scope in {"SUBSIDIARY", "ENTITY", "STANDALONE", "COMPANY"}:
+        return False, []
+    return True, [
+        "UNKNOWN_COMPANY_SCOPE: preferConsolidated defaulted to True for MVP.",
+    ]
+
+
+def selectDenominator(channel: str, financialBasis: dict) -> tuple[Optional[str], Optional[float]]:
+    config = CHANNEL_DENOMINATORS.get(channel) or {}
+    for fieldName in (config.get("primary"), config.get("fallback")):
+        if not fieldName:
+            continue
+        value = _safeFloat(financialBasis.get(fieldName), None)
+        if value is not None and value > 0:
+            return fieldName, value
+    return None, None
+
+
+def sourceTypeMagnitudeBonus(
+    channel: str,
+    magnitude: int,
+    sourceType: str,
+    confidence: float,
+) -> int:
+    if magnitude <= 0:
+        return 0
+    if sourceType == "regulation" and channel == "legalRegulatoryMagnitude":
+        return 1
+    if sourceType == "agency" and confidence >= 0.75:
+        return 1
+    return 0
+
+
+def confidenceMagnitudeCap(confidence: float) -> Optional[int]:
+    if confidence < 0.4:
+        return 2
+    if confidence < 0.7:
+        return 4
+    return None
+
+
+def dominantMagnitude(magnitudes: dict[str, Optional[int]]) -> tuple[Optional[str], Optional[int]]:
+    bestType = None
+    bestValue = None
+    for channel in DOMINANT_MAGNITUDE_PRIORITY:
+        value = magnitudes.get(channel)
+        if value is None:
+            continue
+        if bestValue is None or value > bestValue:
+            bestType = channel
+            bestValue = value
+    return bestType, bestValue
+
+
+def buildEnhancedFinancialFactor(
+    existingFactor: Optional[FinancialFactor],
+    rule: dict,
+    newMagnitudes: dict[str, int],
+    sourceType: str,
+    confidence: float,
+) -> FinancialFactor:
+    baseValues = _factorMagnitudeSnapshot(existingFactor)
+    for channel in FINANCIAL_CHANNELS:
+>>>>>>> origin/skm_test
         if channel in newMagnitudes:
             baseValues[channel] = newMagnitudes[channel]
 
@@ -225,7 +655,11 @@ def _baseTrace(signal: DMASignal, financialBasis: dict) -> dict:
     basisTrace = financialBasis.get("trace") or {}
     runContextWarnings = list(basisTrace.get("runContextWarnings") or [])
     return {
+<<<<<<< HEAD
         "ruleVersion": _fc.FINANCIAL_EXPOSURE_RULE_VERSION,
+=======
+        "ruleVersion": FINANCIAL_EXPOSURE_RULE_VERSION,
+>>>>>>> origin/skm_test
         "basisType": financialBasis.get("basisType"),
         "basisSource": financialBasis.get("basisSource"),
         "selectedPriority": basisTrace.get("selectedPriority"),
@@ -284,7 +718,11 @@ def _copySignal(
 
 def _factorMagnitudeSnapshot(factor: Optional[FinancialFactor]) -> dict:
     if factor is None:
+<<<<<<< HEAD
         return {channel: None for channel in _fc.FINANCIAL_CHANNELS}
+=======
+        return {channel: None for channel in FINANCIAL_CHANNELS}
+>>>>>>> origin/skm_test
     return {
         "revenueMagnitude": factor.revenueMagnitude,
         "costMagnitude": factor.costMagnitude,
@@ -296,7 +734,11 @@ def _factorMagnitudeSnapshot(factor: Optional[FinancialFactor]) -> dict:
 
 
 def _getFactorChannelValue(factor: Optional[FinancialFactor], channel: str) -> Optional[int]:
+<<<<<<< HEAD
     if factor is None or channel not in _fc.FINANCIAL_CHANNELS:
+=======
+    if factor is None or channel not in FINANCIAL_CHANNELS:
+>>>>>>> origin/skm_test
         return None
     return getattr(factor, channel, None)
 
@@ -329,20 +771,49 @@ def _normalizedSourceType(signal: DMASignal) -> str:
     return "news"
 
 
+<<<<<<< HEAD
+=======
+def _financialIroToAllowedAxis(financialIroType: str) -> Optional[str]:
+    normalized = str(financialIroType or "").lower()
+    if normalized in {"risk", "financial_risk"}:
+        return "financial_risk"
+    if normalized in {"opportunity", "financial_opportunity"}:
+        return "financial_opportunity"
+    return None
+
+
+>>>>>>> origin/skm_test
 def _appendTraceWarning(signal: DMASignal, warning: str) -> DMASignal:
     scoringPayload = deepcopy(getattr(signal, "scoringPayloadJson", None) or {})
     trace = scoringPayload.get("financialExposureTrace") or {}
     warnings = list(trace.get("warnings") or [])
     warnings.append(warning)
     trace["warnings"] = warnings
+<<<<<<< HEAD
     trace.setdefault("ruleVersion", _fc.FINANCIAL_EXPOSURE_RULE_VERSION)
+=======
+    trace.setdefault("ruleVersion", FINANCIAL_EXPOSURE_RULE_VERSION)
+>>>>>>> origin/skm_test
     scoringPayload["financialExposureTrace"] = trace
     if hasattr(signal, "model_copy"):
         return signal.model_copy(update={"scoringPayloadJson": scoringPayload})
     return signal.copy(update={"scoringPayloadJson": scoringPayload})
 
 
+<<<<<<< HEAD
 # 호환성 별칭
+=======
+def _safeFloat(value: Any, default: Optional[float] = None) -> Optional[float]:
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+# Compatibility aliases / short naming wrappers
+>>>>>>> origin/skm_test
 
 def applyExposure(
     signals: list[DMASignal],
@@ -350,12 +821,22 @@ def applyExposure(
     reportingYear: int,
     preferConsolidated: bool = True,
 ) -> list[DMASignal]:
+<<<<<<< HEAD
     """applyG0FinancialExposure의 호환성 별칭."""
     return applyG0FinancialExposure(signals, companyId, reportingYear, preferConsolidated)
 
 
 def applyRunExposure(signals: list[DMASignal], runId: int) -> list[DMASignal]:
     """applyG0FinancialExposureForRun의 호환성 별칭."""
+=======
+    return applyG0FinancialExposure(signals, companyId, reportingYear, preferConsolidated)
+
+
+def applyRunExposure(
+    signals: list[DMASignal],
+    runId: int,
+) -> list[DMASignal]:
+>>>>>>> origin/skm_test
     return applyG0FinancialExposureForRun(signals, runId)
 
 
@@ -365,12 +846,22 @@ def buildExposure(
     reportingYear: int,
     preferConsolidated: bool = True,
 ) -> tuple[DMASignal, dict]:
+<<<<<<< HEAD
     """buildFinancialExposureForSignal의 호환성 별칭."""
     return buildFinancialExposureForSignal(signal, companyId, reportingYear, preferConsolidated)
 
 
 def buildExposureWithBasis(signal: DMASignal, financialBasis: dict) -> tuple[DMASignal, dict]:
     """buildFinancialExposureForSignalWithBasis의 호환성 별칭."""
+=======
+    return buildFinancialExposureForSignal(signal, companyId, reportingYear, preferConsolidated)
+
+
+def buildExposureWithBasis(
+    signal: DMASignal,
+    financialBasis: dict,
+) -> tuple[DMASignal, dict]:
+>>>>>>> origin/skm_test
     return buildFinancialExposureForSignalWithBasis(signal, financialBasis)
 
 
@@ -382,6 +873,7 @@ def calcChannelScore(
     sourceType: str,
     confidence: float,
 ) -> dict:
+<<<<<<< HEAD
     """calculateChannelScore의 호환성 별칭."""
     return _fc.calculateChannelScore(channel, ratioPreset, rationale, financialBasis, sourceType, confidence)
 
@@ -409,6 +901,36 @@ def checkIro(subIssueCode: str, financialIroType: str) -> bool:
 def resolveScope(runContext: dict) -> tuple[bool, list]:
     """resolvePreferConsolidated의 호환성 별칭."""
     return _fc.resolvePreferConsolidated(runContext)
+=======
+    return calculateChannelScore(channel, ratioPreset, rationale, financialBasis, sourceType, confidence)
+
+
+def calcSourceBonus(
+    channel: str,
+    magnitude: int,
+    sourceType: str,
+    confidence: float,
+) -> int:
+    return sourceTypeMagnitudeBonus(channel, magnitude, sourceType, confidence)
+
+
+def calcConfidenceCap(confidence: float) -> Optional[int]:
+    return confidenceMagnitudeCap(confidence)
+
+
+def resolveDominant(
+    magnitudes: dict[str, Optional[int]],
+) -> tuple[Optional[str], Optional[int]]:
+    return dominantMagnitude(magnitudes)
+
+
+def checkIro(subIssueCode: str, financialIroType: str) -> bool:
+    return canApplyFinancialExposure(subIssueCode, financialIroType)
+
+
+def resolveScope(runContext: dict) -> tuple[bool, list[str]]:
+    return resolvePreferConsolidated(runContext)
+>>>>>>> origin/skm_test
 
 
 __all__ = [

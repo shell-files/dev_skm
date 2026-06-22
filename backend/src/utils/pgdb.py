@@ -1,7 +1,12 @@
 """
+<<<<<<< HEAD
 pgdb.py
 레이어: Utils
 역할: PostgreSQL 연결 유틸리티 (psycopg v3) — MariaDB db.py와 동일한 패턴으로 구성.
+=======
+PostgreSQL 연결 유틸리티 (psycopg v3)
+MariaDB db.py와 동일한 패턴으로 구성.
+>>>>>>> origin/skm_test
 """
 
 import psycopg

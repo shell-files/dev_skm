@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * registry.js
  * 레이어: Utils (srTemplates)
@@ -8,6 +9,8 @@
  *   getSubIssue — id로 서브이슈 모듈 조회
  *   allPages — 전체 서브이슈의 페이지를 평탄화한 배열 (서브이슈 정보 부착)
  */
+=======
+>>>>>>> origin/skm_test
 // srTemplates/registry.js
 // ── 서브이슈 레지스트리 ──
 // 모든 서브이슈 모듈을 여기서 모은다. 새 서브이슈 추가 = import 한 줄 + 배열에 추가.

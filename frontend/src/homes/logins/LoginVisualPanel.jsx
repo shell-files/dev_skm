@@ -1,8 +1,11 @@
+<<<<<<< HEAD
 /**
  * LoginVisualPanel.jsx
  * 레이어: Component
  * 역할: 로그인 카드 좌측의 ESG 플랫폼 소개 비주얼 패널 (배경 이미지·칩 목록·데이터 플로우 요소 포함)
  */
+=======
+>>>>>>> origin/skm_test
 import "@styles/loginBackground.css";
 
 import gateBg1 from "@assets/images/backgrounds/GateBg1.png";

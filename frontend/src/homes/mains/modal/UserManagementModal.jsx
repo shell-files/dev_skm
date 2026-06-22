@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * UserManagementModal.jsx
  * 레이어: Component (mains/modal)
@@ -12,6 +13,11 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { showDefaultAlert } from '@components/UI/ServiceAlert';
 import ModalWrapper from "@components/UI/ModalWrapper";
+=======
+import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
+import { showDefaultAlert } from '@components/UI/ServiceAlert';
+>>>>>>> origin/skm_test
 
 const getRoleLabel = (role) => {
   const map = {
@@ -52,6 +58,7 @@ export default function UserManagementModal({ isOpen, onClose, userItem }) {
   };
 
   return createPortal(
+<<<<<<< HEAD
     <ModalWrapper
       title={`${userItem.name} 사용자 관리`}
       onClose={onClose}
@@ -63,6 +70,16 @@ export default function UserManagementModal({ isOpen, onClose, userItem }) {
       }
     >
         <div style={{ padding: '24px' }}>
+=======
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-window" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px', maxHeight: '90vh', overflow: 'auto' }}>
+        <div className="modal-header">
+          <h3>{userItem.name} 사용자 관리</h3>
+          <button className="close-x" onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '20px', cursor: 'pointer' }}>×</button>
+        </div>
+
+        <div className="modal-body" style={{ padding: '24px' }}>
+>>>>>>> origin/skm_test
           {/* User Info */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             <InfoRow label="사용자명" value={userItem.name} />
@@ -171,7 +188,15 @@ export default function UserManagementModal({ isOpen, onClose, userItem }) {
           </div>
         </div>
 
+<<<<<<< HEAD
     </ModalWrapper>,
+=======
+        <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end' }}>
+          <button className="btn-confirm" onClick={onClose}>닫기</button>
+        </div>
+      </div>
+    </div>,
+>>>>>>> origin/skm_test
     document.body
   );
 }

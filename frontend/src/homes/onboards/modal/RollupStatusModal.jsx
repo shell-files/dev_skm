@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * RollupStatusModal.jsx
  * 레이어: Component (onboards/modal)
@@ -16,6 +17,8 @@
  * 의존 컴포넌트:
  *   RollupSummaryPanel — 자회사 데이터 취합 현황 패널
  */
+=======
+>>>>>>> origin/skm_test
 import React from 'react';
 import { createPortal } from 'react-dom';
 import RollupSummaryPanel from '../RollupSummaryPanel';

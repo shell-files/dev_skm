@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * RollupInboxPanel.jsx
  * 레이어: Component (onboards)
@@ -7,6 +8,8 @@
  *   requests — 수신된 롤업 요청 배열 (batchId, parentCompanyName, transferStatus 등 포함)
  *   onRefresh — 목록 새로고침 핸들러
  */
+=======
+>>>>>>> origin/skm_test
 import React from "react";
 import { useNavigate } from "react-router";
 import { useDispatch } from "react-redux";

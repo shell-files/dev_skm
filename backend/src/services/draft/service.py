@@ -1,8 +1,11 @@
+<<<<<<< HEAD
 ﻿"""
 service.py
 레이어: Service (draft)
 역할: ESG 보고서 초안 섹션 KPI 데이터 조회 및 저장 서비스.
 """
+=======
+>>>>>>> origin/skm_test
 import ast
 import json as json_mod
 import operator
@@ -10,7 +13,11 @@ import re
 from datetime import datetime, timedelta
 
 from src.models.draft import DraftSaveRequestDto
+<<<<<<< HEAD
 from src.repositories.draftrepository import (
+=======
+from src.utils.draftrepository import (
+>>>>>>> origin/skm_test
     getKpiMetricRows,
     getRollupMetricRows,
     getAiSectionRow,
@@ -36,7 +43,10 @@ def _nowKst() -> str:
 
 
 def fetchDraftMetrics(companyId: int, year: int, token) -> dict:
+<<<<<<< HEAD
     """개별 KPI와 롤업 지표를 중복 없이 합쳐 초안 지표 목록을 반환한다."""
+=======
+>>>>>>> origin/skm_test
     rows = getKpiMetricRows(companyId, year)
     existingIds = {r["metricId"] for r in rows}
     for r in getRollupMetricRows(companyId, year):
@@ -46,7 +56,10 @@ def fetchDraftMetrics(companyId: int, year: int, token) -> dict:
 
 
 def fetchDraftSection(companyId: int, year: int, subIssueId: str, token) -> dict:
+<<<<<<< HEAD
     """서브이슈별 AI 생성 보고서 섹션 텍스트와 참조 지표 ID 목록을 반환한다."""
+=======
+>>>>>>> origin/skm_test
     row = getAiSectionRow(companyId, year, subIssueId)
     if not row:
         return {"success": True, "data": None}
@@ -56,7 +69,10 @@ def fetchDraftSection(companyId: int, year: int, subIssueId: str, token) -> dict
 
 
 def saveDraft(req: DraftSaveRequestDto, token) -> dict:
+<<<<<<< HEAD
     """페이지별 지표 값과 서술 텍스트를 초안 DB에 저장한다."""
+=======
+>>>>>>> origin/skm_test
     now = _nowKst()
 
     if req.metrics:
@@ -86,7 +102,10 @@ def saveDraft(req: DraftSaveRequestDto, token) -> dict:
 
 
 def loadDraft(companyId: int, year: int, token) -> dict:
+<<<<<<< HEAD
     """저장된 초안 지표와 서술 텍스트를 페이지 키 기준으로 조합해 반환한다."""
+=======
+>>>>>>> origin/skm_test
     metricRows = getDraftMetricRows(companyId, year)
     narrativeRows = getDraftNarrativeRows(companyId, year)
 
@@ -114,7 +133,10 @@ def loadDraft(companyId: int, year: int, token) -> dict:
 
 
 def resetDraft(companyId: int, year: int, token) -> dict:
+<<<<<<< HEAD
     """저장된 초안 데이터를 전부 삭제해 초기화한다."""
+=======
+>>>>>>> origin/skm_test
     deleteDraftRows(companyId, year)
     return {"success": True}
 

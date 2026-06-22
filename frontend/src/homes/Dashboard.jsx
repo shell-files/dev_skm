@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * Dashboard.jsx
  * 레이어: Page
@@ -6,6 +7,8 @@
  * 의존 컴포넌트:
  *   ApprovalProjectSelectModal — 페이지 이동 전 프로젝트 선택 모달
  */
+=======
+>>>>>>> origin/skm_test
 import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router";

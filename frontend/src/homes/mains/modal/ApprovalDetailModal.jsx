@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * ApprovalDetailModal.jsx
  * 레이어: Component (mains/modal)
@@ -18,6 +19,8 @@
  *   onApprove — 최종 승인 핸들러
  *   onReject — 반려 핸들러 (commentText 필수)
  */
+=======
+>>>>>>> origin/skm_test
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """
 adapter.py
 레이어: Service (medias)
@@ -11,6 +12,31 @@ from src.utils.typeutils import firstPresent, asFloat
 
 def buildEvidenceSpan(result: Mapping[str, Any]) -> List[EvidenceSpanV13]:
     """분석 결과 딕셔너리에서 텍스트 증거를 EvidenceSpanV13 리스트로 변환한다. 증거가 없으면 빈 리스트를 반환한다."""
+=======
+from typing import Any, List, Mapping, Optional, Sequence
+
+from src.models.dmaengine import DMASignal, EvidenceSpanV13, ExtractedFactsV13
+
+
+def firstPresent(row: Mapping[str, Any], keys: Sequence[str], default: Any = None) -> Any:
+    for key in keys:
+        value = row.get(key)
+        if value is not None:
+            return value
+    return default
+
+
+def asFloat(value: Any) -> Optional[float]:
+    if value is None or value == "":
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def buildEvidenceSpan(result: Mapping[str, Any]) -> List[EvidenceSpanV13]:
+>>>>>>> origin/skm_test
     chunk = firstPresent(result, ("chunk", "textSpan", "text_span", "evidence"))
     if not chunk:
         return []
@@ -50,7 +76,10 @@ def _sanitizeIssueSimilarityMatches(rawMatches) -> list:
 
 
 def step0NormalizeMediaFacts(analysisResults: list) -> list[ExtractedFactsV13]:
+<<<<<<< HEAD
     """뉴스 AI 분석 결과 목록을 ExtractedFactsV13 형식으로 정규화한다."""
+=======
+>>>>>>> origin/skm_test
     facts: list[ExtractedFactsV13] = []
     for result in analysisResults or []:
         if not isinstance(result, Mapping):
@@ -99,8 +128,14 @@ def step0NormalizeMediaFacts(analysisResults: list) -> list[ExtractedFactsV13]:
     return facts
 
 
+<<<<<<< HEAD
 # [레거시] 기존 미디어 → DMASignal 변환 경로. v1.3 오케스트레이터에서 사용 안 함.
 # Phase C 런타임 마이그레이션 완료 후 삭제 예정.
+=======
+# LEGACY ONLY:
+# Existing media -> DMASignal conversion path. Not called by the new v1.3 Orchestrator.
+# Delete after Phase C Runtime Migration confirms import count is 0.
+>>>>>>> origin/skm_test
 def convertMediaToDmaSignals(analysisResults: list) -> list[DMASignal]:
     """
     미디어/언론 분석 결과를 DMASignal 객체 리스트로 변환합니다.

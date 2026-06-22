@@ -1,8 +1,11 @@
+<<<<<<< HEAD
 """
 ai.py
 레이어: Utils
 역할: AI ESG 보고서 생성 — LangChain + Ollama + pgvector 기반 RAG 파이프라인.
 """
+=======
+>>>>>>> origin/skm_test
 import re
 import json
 import psycopg
@@ -79,7 +82,10 @@ def validateReport(text):
     return text.strip()
 
 def getValue(data):
+<<<<<<< HEAD
     """데이터 딕셔너리에서 "value" 키 값을 반환한다. 데이터가 없으면 None을 반환한다."""
+=======
+>>>>>>> origin/skm_test
     if not data:
         return None
     return data.get("value")
@@ -89,7 +95,10 @@ def getValue(data):
 # ==================================================
 
 def createReportRun(materialityRunId, companyId, reportingYear, llmModel, promptVersion):
+<<<<<<< HEAD
     """ESG_REPORT_AI_RUN 테이블에 보고서 생성 실행 레코드를 삽입하고 run_id와 생성 시각을 반환한다."""
+=======
+>>>>>>> origin/skm_test
     run_created_at = datetime.now() + timedelta(hours=9)
 
     sql = """
@@ -116,7 +125,11 @@ def createReportRun(materialityRunId, companyId, reportingYear, llmModel, prompt
     return success, run_id, run_created_at
 
 def saveSection(runId, sectionNo, subIssueId, template, filledText, reportText):
+<<<<<<< HEAD
     """ESG_REPORT_AI_SECTION 테이블에 섹션 보고서 데이터를 삽입하고 section_id를 반환한다."""
+=======
+
+>>>>>>> origin/skm_test
     sql = """
         INSERT INTO ESG_REPORT_AI_SECTION (
         ai_run_id,
@@ -142,7 +155,11 @@ def saveSection(runId, sectionNo, subIssueId, template, filledText, reportText):
 
     
 def saveMetricTrace(sectionId, usedMetrics, factData):
+<<<<<<< HEAD
     """섹션에서 사용된 metric 수치를 ESG_REPORT_AI_METRIC_TRACE 테이블에 일괄 저장한다."""
+=======
+
+>>>>>>> origin/skm_test
     sql = """
         INSERT INTO ESG_REPORT_AI_METRIC_TRACE (
             section_id,
@@ -186,7 +203,10 @@ def saveMetricTrace(sectionId, usedMetrics, factData):
 # KPI 조회
 # ==================================================
 def normalizeValue(num, text):
+<<<<<<< HEAD
     """text 값을 우선하고 없으면 num 값을 문자열로 반환한다. 둘 다 없으면 None을 반환한다."""
+=======
+>>>>>>> origin/skm_test
     if text is not None and str(text).strip() != "":
         return str(text)
     if num is not None and str(num).strip() != "":
@@ -195,7 +215,11 @@ def normalizeValue(num, text):
 
     
 def getFactData(companyId, reportingYear):
+<<<<<<< HEAD
     """회사 ID와 보고연도에 해당하는 ESG KPI fact를 조회하고, 자회사 롤업값을 fallback으로 병합하여 반환한다."""
+=======
+
+>>>>>>> origin/skm_test
     sql = f"""
         SELECT f.atomic_metric_id,
                f.value_numeric,
@@ -264,7 +288,11 @@ def getFactData(companyId, reportingYear):
 # ==================================================
 
 def formatUnit(value, unit):
+<<<<<<< HEAD
     """값과 단위를 조합하여 보고서 표시용 포맷 문자열로 변환한다. 값이 없으면 "[데이터 미집계]"를 반환한다."""
+=======
+    
+>>>>>>> origin/skm_test
     if not value:
         return "[데이터 미집계]"
 
@@ -306,7 +334,11 @@ def formatUnit(value, unit):
 # ==================================================
 
 def replaceTemplate(template, factData):
+<<<<<<< HEAD
     """템플릿 문자열의 {키} 플레이스홀더를 factData 값으로 치환하고, 사용된 metric 목록을 함께 반환한다."""
+=======
+
+>>>>>>> origin/skm_test
     usedMetrics = set()
 
     def replaceToken(match):
@@ -334,7 +366,10 @@ def replaceTemplate(template, factData):
 # ==================================================
 
 def searchSrKnowledgeHybrid(issueName, subIssueId):
+<<<<<<< HEAD
     """이슈명과 서브이슈 ID로 벡터 임베딩을 생성하여 pgvector DB에서 유사 SR 지식을 하이브리드 검색한다."""
+=======
+>>>>>>> origin/skm_test
     queryText = f"{issueName} {subIssueId}"
     queryVector = (
         sbertModel
@@ -378,7 +413,11 @@ def searchSrKnowledgeHybrid(issueName, subIssueId):
 # ==================================================
 
 def compressSrContext(rows):
+<<<<<<< HEAD
     """SR 검색 결과를 LLM 프롬프트에 삽입할 압축된 스타일 인사이트 문자열로 변환한다."""
+=======
+
+>>>>>>> origin/skm_test
     if not rows:
         return "참고 없음"
 
@@ -418,7 +457,11 @@ def generateIssueReport(
         factData,
         usedMetrics
     ):
+<<<<<<< HEAD
     """LLM(Ollama)으로 ESG 보고서 문단을 생성하고 SECTION·METRIC_TRACE 테이블에 저장한 뒤 보고서 텍스트를 반환한다."""
+=======
+
+>>>>>>> origin/skm_test
     systemInstruction = """
         당신은 전문 ESG 보고서 작성 컨설턴트입니다.
 

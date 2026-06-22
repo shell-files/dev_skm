@@ -1,8 +1,39 @@
 """
+<<<<<<< HEAD
 dmaaggregator.py
 레이어: Utils
 역할: DMA 중대성 점수 집계 — 미디어·벤치마크·설문 단계 점수 집계 및 최종 중대성 점수 산출.
   v1 Freeze: DB/API canonical score = 0~5, NULL 제외 재가중 평균 적용.
+=======
+Domain: DMA Materiality
+Layer: utils/aggregation
+Responsibility:
+- Aggregate media/benchmark/survey stage scores
+- Calculate final materiality score from stage scores
+- Apply additive context modifier only at final aggregation
+- Preserve None-as-unobserved behavior
+Public functions:
+- aggregateMedia
+- aggregateMediaSignals
+- aggregateBenchmark
+- aggregateBenchmarkSignals
+- aggregateSurvey
+- aggregateSurveyScores
+- calcWeightedAvg
+- weightedAvgAvailable
+- calcFinal
+- calculateFinalMateriality
+Do not:
+- do not mutate unrelated DB state
+- do not change scoring formula unless explicitly requested
+- do not change final/stage weights in this step
+- do not treat unobserved score as zero
+- do not call DB directly unless already existing behavior
+- do not call FastAPI router directly
+- do not modify auth/token/common code
+
+DMA Aggregator v1 (Freeze)
+>>>>>>> origin/skm_test
 
 주요 함수:
   aggregateMedia / aggregateMediaSignals         — 미디어 시그널 집계
@@ -266,7 +297,10 @@ def aggregateBenchmarkSignals(
     baselineImpactScore: float,
     baselineFinancialScore: float,
 ) -> StageScore:
+<<<<<<< HEAD
     """aggregateBenchmark의 이전 공개 이름 호환 래퍼."""
+=======
+>>>>>>> origin/skm_test
     return aggregateBenchmark(
         leaderRatio,
         peerRatio,
@@ -284,17 +318,26 @@ def aggregateSurveyScores(
     executiveScore: Optional[float],
     externalScore: Optional[float],
 ) -> Optional[float]:
+<<<<<<< HEAD
     """aggregateSurvey의 이전 공개 이름 호환 래퍼."""
+=======
+>>>>>>> origin/skm_test
     return aggregateSurvey(employeeScore, executiveScore, externalScore)
 
 
 def aggregateMediaSignals(signals: List[DMASignal]) -> StageScore:
+<<<<<<< HEAD
     """aggregateMedia의 이전 공개 이름 호환 래퍼."""
+=======
+>>>>>>> origin/skm_test
     return aggregateMedia(signals)
 
 
 def weightedAvgAvailable(items: List[Tuple[Optional[float], float]]) -> Optional[float]:
+<<<<<<< HEAD
     """calcWeightedAvg의 이전 공개 이름 호환 래퍼."""
+=======
+>>>>>>> origin/skm_test
     return calcWeightedAvg(items)
 
 
@@ -306,7 +349,10 @@ def calculateFinalMateriality(
     contextImpactModifier: float = 0.0,
     contextFinancialModifier: float = 0.0,
 ) -> FinalMaterialityScore:
+<<<<<<< HEAD
     """calcFinal의 이전 공개 이름 호환 래퍼."""
+=======
+>>>>>>> origin/skm_test
     return calcFinal(
         subIssueCode,
         surveyImpact,

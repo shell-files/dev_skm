@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * ApprovalProjectSelectModal.jsx
  * 레이어: Component (mains/modal)
@@ -10,6 +11,8 @@
  *   onSelectProject — 프로젝트 선택 핸들러
  *   onClose — 모달 닫기 핸들러
  */
+=======
+>>>>>>> origin/skm_test
 import React from "react";
 import { createPortal } from "react-dom";
 

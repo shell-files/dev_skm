@@ -1,4 +1,5 @@
 """
+<<<<<<< HEAD
 pg_pipeline.py
 레이어: Service (medias)
 역할: PostgreSQL esg_chunks 기반 미디어 분석 파이프라인 — processMediaPipeline()과 동일한 출력 형식.
@@ -6,6 +7,21 @@ pg_pipeline.py
 
 필드 매핑 (esg_chunks):
   best_sub_issue_id → bestSubIssueId, best_similarity_score → bestSimilarityScore (null → 0.5)
+=======
+PG Pipeline — PostgreSQL esg_chunks 기반 미디어 분석 파이프라인.
+
+processMediaPipeline() 과 동일한 출력 형식을 반환합니다.
+크롤링·임베딩·SentenceTransformer 없이 PostgreSQL에 이미 적재된 데이터를 사용합니다.
+
+필드 매핑:
+  esg_chunks.best_sub_issue_id  → bestSubIssueId  (없으면 sub_issue_id 사용)
+  esg_chunks.sub_issue_name     → bestSubIssueNameKr
+  esg_chunks.best_similarity_score → bestSimilarityScore  (null → DEFAULT 0.5)
+  esg_chunks.source             → source
+  esg_chunks.title              → title
+  esg_chunks.chunk              → chunk
+  esg_chunks.created_at         → publishedAt
+>>>>>>> origin/skm_test
 """
 
 from src.utils.pgdb import pgFindAll

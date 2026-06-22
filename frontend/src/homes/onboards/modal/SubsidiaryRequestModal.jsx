@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /**
  * SubsidiaryRequestModal.jsx
  * 레이어: Component (onboards/modal)
@@ -14,6 +15,8 @@
  *   metricScopeCode — 지표 범위 코드
  *   onRequested — 요청 완료 후 콜백 (생성된 batchId 전달)
  */
+=======
+>>>>>>> origin/skm_test
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";

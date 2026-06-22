@@ -1,3 +1,19 @@
+/**
+ * SubsidiaryRequestModal.jsx
+ * 레이어: Component (onboards/modal)
+ * 역할: 자회사 목록을 조회하고 선택하여 데이터 수집 롤업 배치를 생성·요청하는 모달
+ *
+ * Props:
+ *   isOpen — 모달 표시 여부
+ *   onClose — 모달 닫기 핸들러
+ *   runId — 현재 워크플로우 runId
+ *   reportingYear — 보고연도
+ *   sourceCycleId — POST_DMA_DISCLOSURE용 소스 cycleId
+ *   expectedPostDmaCycleId — 워크플로우에서 기대하는 POST_DMA cycleId (불일치 검증용)
+ *   rollupPurposeCode — 롤업 목적 코드 (DMA_PRECHECK / REPORT_DISCLOSURE)
+ *   metricScopeCode — 지표 범위 코드
+ *   onRequested — 요청 완료 후 콜백 (생성된 batchId 전달)
+ */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";

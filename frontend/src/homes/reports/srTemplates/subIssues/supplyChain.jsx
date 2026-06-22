@@ -1,3 +1,11 @@
+/**
+ * supplyChain.jsx
+ * 레이어: Component (srTemplates/subIssues)
+ * 역할: 공급망 감사·시정조치 서브이슈의 SR 페이지 컴포넌트, adapter, metricFields, 서브이슈 매니페스트를 포함한 모듈 — 감사 수행률·고위험 공급업체 수·CAP 완료율 표와 실사 프로세스 플로우를 렌더링
+ *
+ * exports:
+ *   supplyChain (default) — id·label·adapter·metricFields·pages를 포함하는 서브이슈 매니페스트 객체
+ */
 // srTemplates/subIssues/supplyChain.jsx
 // 공급망 감사·시정조치 서브이슈
 import React from "react";

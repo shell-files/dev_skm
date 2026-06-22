@@ -1,3 +1,15 @@
+/**
+ * TextEditorModal.jsx
+ * 레이어: Component (onboards/modal)
+ * 역할: 서술형(MANUAL_TEXTAREA) 및 구조화 조회(STRUCTURED_LOOKUP) 항목의 장문 텍스트를 전체 화면 textarea에서 작성·저장하는 모달
+ *
+ * Props:
+ *   isOpen — 모달 표시 여부
+ *   onClose — 모달 닫기 핸들러
+ *   initialValue — 편집 초기값 문자열
+ *   title — 모달 제목 (입력 항목명)
+ *   onSave — 저장 완료 시 최종 텍스트를 전달하는 콜백
+ */
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import '@styles/onboardingModal.css';

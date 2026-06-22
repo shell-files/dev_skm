@@ -1,3 +1,11 @@
+"""
+ai.py
+레이어: API Router
+역할: AI ESG 보고서 자동 생성 엔드포인트.
+
+엔드포인트:
+  POST /  — ESG 보고서 자동 생성
+"""
 from fastapi import APIRouter, Depends
 
 from src.utils.auth import get_token

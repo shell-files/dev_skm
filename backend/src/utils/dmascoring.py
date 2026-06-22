@@ -1,16 +1,11 @@
 """
-Domain: DMA Materiality
-Layer: utils/scoring + screening + selection
-Responsibility:
-- LEGACY: 기존 DMA Pipeline 점수 계산 (서비스 호환용)
-- STEP 1: Canonical Impact / Financial IRO 점수 계산
-- STEP 2: Pre-Survey Screening 신호 계산
-- STEP 3: Materiality 후보 선정 / 정렬 / 거버넌스
-Do not:
-- do not mutate DB state
-- do not eval / exec config strings
-- do not connect to DB / Redis / Kafka
-- do not hardcode weights, thresholds, rule-card values (SSOT: runtime JSON)
+dmascoring.py
+레이어: Utils
+역할: DMA 점수 계산 유틸리티.
+  LEGACY: 기존 DMA Pipeline 점수 계산 (서비스 호환)
+  STEP 1: Canonical Impact / Financial IRO 점수 계산
+  STEP 2: Pre-Survey Screening 신호 계산
+  STEP 3: Materiality 후보 선정 / 정렬 / 거버넌스
 """
 
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
@@ -36,10 +31,12 @@ SCORE_UI_MULTIPLIER = 2
 
 
 def clamp(value: float, min_val: float, max_val: float) -> float:
+    """값을 [min_val, max_val] 범위로 클리핑한다."""
     return max(min_val, min(value, max_val))
 
 
 def mapUrgency(timeHorizon: str) -> float:
+    """time_horizon 문자열을 urgency 점수(short=5.0, mid=3.0, long=1.0)로 변환한다."""
     if timeHorizon == "short": return 5.0
     if timeHorizon == "mid": return 3.0
     if timeHorizon == "long": return 1.0
@@ -47,6 +44,10 @@ def mapUrgency(timeHorizon: str) -> float:
 
 
 def calcImpact(factor: ImpactFactor, sourceType: str = "news", subIssueCode: str = "") -> float:
+    """
+    [LEGACY] ImpactFactor로 impact 점수(0~5)를 계산한다.
+    impactDirection에 따라 negative/positive 가중치 공식을 달리 적용한다.
+    """
     urgency = mapUrgency(factor.timeHorizon)
     likelihood = factor.likelihood if factor.likelihood is not None else 0.0
     irremediability = factor.irremediability if factor.irremediability is not None else 0.0
@@ -60,6 +61,10 @@ def calcImpact(factor: ImpactFactor, sourceType: str = "news", subIssueCode: str
 
 
 def calcFinancial(factor: FinancialFactor, sourceType: str = "news", subIssueCode: str = "") -> float:
+    """
+    [LEGACY] FinancialFactor로 financial 점수(0~5)를 계산한다.
+    복수 magnitude 채널 중 최대값을 baseMag로 사용하며 risk/opportunity 가중치를 달리 적용한다.
+    """
     magnitudes = [
         factor.revenueMagnitude, factor.costMagnitude, factor.capexMagnitude,
         factor.assetLiabilityMagnitude, factor.financingMagnitude, factor.legalRegulatoryMagnitude,
@@ -76,6 +81,7 @@ def calcFinancial(factor: FinancialFactor, sourceType: str = "news", subIssueCod
 
 
 def scoreSignals(signals: list) -> list:
+    """[LEGACY] 시그널 목록 각 항목의 impactFactor/financialFactor를 점수화하여 in-place 갱신한다."""
     for sig in signals:
         if sig.impactFactor:
             sig.impactScore05 = calcImpact(sig.impactFactor, sig.sourceType, sig.subIssueCode)
@@ -85,18 +91,22 @@ def scoreSignals(signals: list) -> list:
 
 
 def timeHorizonToUrgency(timeHorizon: str) -> float:
+    """[LEGACY] time_horizon 문자열을 urgency 점수로 변환한다 (mapUrgency 래퍼)."""
     return mapUrgency(timeHorizon)
 
 
 def calculateImpactScore(factor: ImpactFactor, sourceType: str = "news", subIssueCode: str = "") -> float:
+    """[LEGACY] ImpactFactor로 impact 점수를 계산한다 (calcImpact 래퍼)."""
     return calcImpact(factor, sourceType, subIssueCode)
 
 
 def calculateFinancialScore(factor: FinancialFactor, sourceType: str = "news", subIssueCode: str = "") -> float:
+    """[LEGACY] FinancialFactor로 financial 점수를 계산한다 (calcFinancial 래퍼)."""
     return calcFinancial(factor, sourceType, subIssueCode)
 
 
 def scoreDmaSignals(signals: list) -> list:
+    """[LEGACY] DMA 시그널 목록을 점수화한다 (scoreSignals 래퍼)."""
     return scoreSignals(signals)
 
 
@@ -119,6 +129,7 @@ _FINANCIAL_MAGNITUDE_TIEBREAK = (
 
 
 def clampScore(value: float, lo: float, hi: float) -> float:
+    """값을 [lo, hi] 범위로 클리핑한다 (canonical IRO score 0~5 보정용)."""
     return max(lo, min(value, hi))
 
 
@@ -130,6 +141,7 @@ def getUrgencyScore(
     urgencyPolicy: Mapping[str, Any],
     explicitNoUrgency: bool = False,
 ):
+    """time_horizon과 urgency policy를 받아 urgency 점수를 반환한다. 관측 불가 시 UNOBSERVED sentinel을 반환한다."""
     if explicitNoUrgency:
         return float(urgencyPolicy["explicitNoUrgency"])
     if timeHorizon in ("short", "mid", "long"):
@@ -141,6 +153,7 @@ def getUrgencyScore(
 # Input: ratio (None이면 UNOBSERVED 반환, 0 이하면 명시적 0), policy bands.
 # Output: None(UNOBSERVED) | 0.0(명시적 노출 없음) | 1~5(band 점수).
 def getRatioScore(ratio: Optional[float], bands: Sequence[Mapping[str, Any]]) -> Optional[int]:
+    """재무 노출 비율을 policy band에 매핑해 magnitude 점수(0~5)로 변환한다."""
     if ratio is None:
         # 근거 없음 — 명시적 노출 없음(0)과 구별한다.
         return None
@@ -163,6 +176,7 @@ def getRatioScore(ratio: Optional[float], bands: Sequence[Mapping[str, Any]]) ->
 # Input: 채널별 magnitude dict (None은 미관측).
 # Output: (value, channelName) 또는 (None, None) if 모두 미관측.
 def getDominantMagnitude(channels: Mapping[str, Optional[float]]) -> Tuple[Optional[float], Optional[str]]:
+    """채널별 magnitude 중 최대값을 rulebook tiebreak 우선순위로 선택해 (값, 채널명)으로 반환한다."""
     observed = {k: float(v) for k, v in channels.items() if v is not None}
     if not observed:
         return None, None
@@ -180,6 +194,7 @@ def getDominantMagnitude(channels: Mapping[str, Optional[float]]) -> Tuple[Optio
 # Input: AI가 추출한 fact dict, policy.
 # Output: {"valid": bool, "violations": [...], "acceptedFacts": {...}}
 def validateAiFacts(facts: Mapping[str, Any], policy: Mapping[str, Any]) -> Dict[str, Any]:
+    """AI 추출 fact를 policy 기준으로 검증하고 위반 목록과 수락된 fact를 반환한다."""
     allowed = set(policy["allowedFactFields"])
     forbidden = set(policy["forbiddenFields"])
     tristateFields = set(policy["triStateFields"])
@@ -288,6 +303,7 @@ def step1CalcImpact(
     timeHorizon: Optional[str] = None,
     explicitNoUrgency: bool = False,
 ) -> AxisScoreTraceV13:
+    """Impact 방향(negative/positive)에 따라 scale·likelihood 등 인자를 재가중 집계해 Canonical Impact 점수를 계산한다."""
     if impactDirection not in ("negative", "positive"):
         raise ValueError(f"Unknown impactDirection: {impactDirection!r}")
     axisPolicy = policy["impact"][impactDirection]
@@ -317,6 +333,7 @@ def step1CalcFinancial(
     timeHorizon: Optional[str] = None,
     explicitNoUrgency: bool = False,
 ) -> AxisScoreTraceV13:
+    """financialIroType(risk/opportunity)에 따라 magnitude·likelihood를 재가중 집계해 Canonical Financial 점수를 계산한다."""
     if financialIroType not in ("risk", "opportunity"):
         raise ValueError(f"Unknown financialIroType: {financialIroType!r}")
     axisPolicy = policy["financial"][financialIroType]
@@ -341,6 +358,7 @@ def step1CalcAxes(
     impact: Optional[Mapping[str, Any]] = None,
     financial: Optional[Mapping[str, Any]] = None,
 ) -> Dict[str, Optional[AxisScoreTraceV13]]:
+    """impact·financial 두 축을 한 번에 계산하여 {"impact": ..., "financial": ...} 형태로 반환한다."""
     result: Dict[str, Optional[AxisScoreTraceV13]] = {"impact": None, "financial": None}
     if impact is not None:
         result["impact"] = step1CalcImpact(policy=policy, **impact)
@@ -353,6 +371,7 @@ def step1CalcAxes(
 # Input: 복수 소스의 axis 점수 목록 (None은 UNOBSERVED 소스).
 # Output: MAX 점수 또는 None (전체 미관측).
 def step1AggSubIssue(scores: Sequence[Optional[float]]) -> Optional[float]:
+    """복수 소스의 axis 점수를 MAX로 집계하며, 전체 미관측이면 None을 반환한다."""
     observed = [float(s) for s in scores if s is not None]
     if not observed:
         return None
@@ -382,6 +401,7 @@ def _sigVal(raw: Any) -> Optional[float]:
 # Input: observation in {NONE, COMMON_ISSUE, BLIND_SPOT}, screening policy.
 # Output: ScreeningTraceV13 (scorePurpose=PRESURVEY_SCREENING).
 def step2CalcBenchmark(observation: str, policy: Mapping[str, Any]) -> ScreeningTraceV13:
+    """benchmark observation(NONE/COMMON_ISSUE/BLIND_SPOT)을 policy에 매핑해 스크리닝 신호를 반환한다."""
     bench = policy["benchmark"]
     if observation not in bench or observation == "aggregation":
         raise ValueError(f"Unknown benchmark observation: {observation!r}")
@@ -397,6 +417,7 @@ def step2CalcBenchmark(observation: str, policy: Mapping[str, Any]) -> Screening
 # Input: regime in {CSRD, CBAM, DPP}, applicability, screening policy.
 # Output: ScreeningTraceV13. UNKNOWN applicability → 두 축 모두 None(UNOBSERVED).
 def step2CalcRegulation(regime: str, applicability: str, policy: Mapping[str, Any]) -> ScreeningTraceV13:
+    """규제 regime과 applicability를 rule-card에 조회해 impact·financial 스크리닝 신호를 반환한다."""
     regulation = policy["regulation"]
     if regime not in regulation:
         raise ValueError(f"Unknown regulation regime: {regime!r}")
@@ -424,6 +445,7 @@ def step2ResolveKcgsTrend(
     latestGrade: str,
     policy: Mapping[str, Any],
 ) -> dict:
+    """이전·최신 KCGS 등급을 비교해 등급 변화 추세(upgrade/flat/downgrade)를 분류하고 반환한다."""
     kcgs = policy["kcgs"]
     gradeOrder = list(kcgs["gradeOrderBestToWorst"])
     if previousGrade not in gradeOrder:
@@ -451,6 +473,11 @@ def step2ResolveKcgsTrend(
 
 
 def step2CalcKcgs(grade: str, trend: str, policy: Mapping[str, Any]) -> dict:
+    """
+    KCGS 등급(grade)과 추세(trend)를 조합하여 pillarSignal을 계산한다.
+    pillarSignal = min(pillarSignalMax, gradeRisk + trendModifier).
+    trendModifier가 UNOBSERVED이면 pillarSignal을 None(UNOBSERVED)으로 반환한다.
+    """
     kcgs = policy["kcgs"]
     gradeRiskMap = kcgs["gradeRisk"]
     trendMap = kcgs["trendModifier"]
@@ -473,6 +500,7 @@ def step2CalcKcgs(grade: str, trend: str, policy: Mapping[str, Any]) -> dict:
 # Input: pillarSignal (None이면 None 반환), screening policy.
 # Output: min(maxSubIssueBoost, pillarSignal * boostMultiplier) 또는 None.
 def step2CalcKcgsBoost(pillarSignal: Optional[float], policy: Mapping[str, Any]) -> Optional[float]:
+    """KCGS pillarSignal에 boostMultiplier를 곱하고 maxSubIssueBoost로 상한을 적용한 boost 값을 반환한다."""
     if pillarSignal is None:
         return None
     kcgs = policy["kcgs"]
@@ -484,6 +512,7 @@ def step2CalcKcgsBoost(pillarSignal: Optional[float], policy: Mapping[str, Any])
 # Input: screening policy.
 # Output: ScreeningTraceV13 with STATUS_CAPABILITY_PENDING.
 def step2GetKisState(policy: Mapping[str, Any]) -> ScreeningTraceV13:
+    """KIS 재무 회복력 채널의 현재 Capability 상태를 STATUS_CAPABILITY_PENDING으로 반환한다."""
     kis = policy["kis"]
     return ScreeningTraceV13(
         channel="kis_financial_resilience", scorePurpose=ScorePurposeV13.PRESURVEY_SCREENING,
@@ -501,6 +530,7 @@ def step2GetKisState(policy: Mapping[str, Any]) -> ScreeningTraceV13:
 # Input: ScreeningTraceV13 목록, screening policy.
 # Output: 축별 MAX 신호를 담은 단일 ScreeningTraceV13.
 def step2CalcExternalMax(signals: Sequence[ScreeningTraceV13], policy: Mapping[str, Any]) -> ScreeningTraceV13:
+    """복수의 외부 스크리닝 신호를 축별로 MAX 집계해 단일 ScreeningTraceV13으로 반환한다."""
     impacts: List[float] = [s.impactSignal for s in signals if s.impactSignal is not None]
     financials: List[float] = [s.financialSignal for s in signals if s.financialSignal is not None]
     impactMax = max(impacts) if impacts else None
@@ -519,6 +549,7 @@ def step2CalcExternalMax(signals: Sequence[ScreeningTraceV13], policy: Mapping[s
 
 
 def weightedAvg(values: Sequence[Tuple[Optional[float], float]]) -> Optional[float]:
+    """None을 제외한 관측치의 가중 평균을 계산한다. 관측치가 없으면 None을 반환한다."""
     observed = [(float(value), float(weight)) for value, weight in values if value is not None]
     weightSum = sum(weight for _, weight in observed)
     if not observed or weightSum <= 0:
@@ -527,6 +558,7 @@ def weightedAvg(values: Sequence[Tuple[Optional[float], float]]) -> Optional[flo
 
 
 def groupRowsByAxis(normalizedRows: Sequence[Mapping[str, Any]]) -> Dict[str, Dict[str, List[Optional[float]]]]:
+    """정규화된 설문 행을 축(impact/financial)과 응답자 그룹(employee/management/external)으로 분류한다."""
     grouped: Dict[str, Dict[str, List[Optional[float]]]] = {
         "impact": {"employee": [], "management": [], "external": []},
         "financial": {"employee": [], "management": [], "external": []},
@@ -545,6 +577,7 @@ def groupRowsByAxis(normalizedRows: Sequence[Mapping[str, Any]]) -> Dict[str, Di
 # Input: normalized survey rows from surveys.adapter.step0NormalizeSurveyRows and survey_policy.json.
 # Output: overlay values and observed counts separated by axis.
 def step2CalcSurveyOverlay(normalizedRows: Sequence[Mapping[str, Any]], surveyPolicy: Mapping[str, Any]) -> Dict[str, Any]:
+    """정규화된 설문 행을 응답자 그룹별로 가중 평균해 impact·financial overlay 신호를 계산한다."""
     grouped = groupRowsByAxis(normalizedRows)
     groupWeight = surveyPolicy["groupWeight"]
     nullPolicy = surveyPolicy["nullPolicy"]
@@ -609,11 +642,13 @@ class SelectionGovernanceError(ValueError):
 
 
 def getMaxAxis(impact: Optional[float], financial: Optional[float]) -> float:
+    """impact/financial 두 축 중 최대값을 반환한다. 둘 다 None이면 0.0을 반환한다."""
     candidates = [v for v in (impact, financial) if v is not None]
     return max(candidates) if candidates else 0.0
 
 
 def getMinAxis(impact: Optional[float], financial: Optional[float], missingVal: float = 0.0) -> float:
+    """정렬 보조용으로 impact·financial 두 축의 최솟값을 반환하며, 하나라도 미관측이면 missingVal을 반환한다."""
     # 정렬에서만 사용하는 보조값이다. 실제 Canonical Score를 0으로 저장하지 않는다.
     observed = [v for v in (impact, financial) if v is not None]
     return min(observed) if len(observed) == 2 else missingVal
@@ -649,6 +684,7 @@ def step3BuildCandidates(
     items: Sequence[Mapping[str, Any]],
     policy: Mapping[str, Any],
 ) -> List[Dict[str, Any]]:
+    """candidateThreshold 이상의 impact 또는 financial 점수를 가진 sub-issue를 정규화해 후보 목록으로 반환한다."""
     threshold = float(policy["candidateThreshold"])
     missingVal = float(policy["ranking"]["missingAxisSortValue"])
     candidates: List[Dict[str, Any]] = []
@@ -669,6 +705,7 @@ def step3RankIssues(
     candidates: Sequence[Mapping[str, Any]],
     policy: Mapping[str, Any],
 ) -> List[Dict[str, Any]]:
+    """후보 목록을 MAX↓·sortMinAxis↓·surveyRate↓·code↑ 4단 기준으로 정렬해 반환한다."""
     missingVal = float(policy["ranking"]["missingAxisSortValue"])
     normalized = [c if "sortMinAxis" in c else _normalizeItem(c, missingVal) for c in candidates]
     return sorted(
@@ -681,6 +718,7 @@ def step3RankIssues(
 # Input: 정렬된 candidate 목록, n.
 # Output: 상위 n개 dict 목록.
 def step3PickTop(sortedCandidates: Sequence[Mapping[str, Any]], n: int) -> List[Dict[str, Any]]:
+    """이미 정렬된 후보 목록에서 상위 n개를 슬라이싱해 반환한다."""
     if n < 0:
         raise ValueError("n must be >= 0")
     return [dict(c) for c in sortedCandidates[:n]]
@@ -693,6 +731,7 @@ def step3RunSelection(
     items: Sequence[Mapping[str, Any]],
     policy: Mapping[str, Any],
 ) -> Dict[str, Any]:
+    """후보 구성→정렬→Top10/Top5 선정 전체 패스를 실행하고 각 단계 결과를 dict로 반환한다."""
     candidates = step3BuildCandidates(items, policy)
     ordered = step3RankIssues(candidates, policy)
     top10 = step3PickTop(ordered, int(policy["recommendedTop10"]))
@@ -707,6 +746,7 @@ def step3ApplyDecision(
     action: Mapping[str, Any],
     policy: Mapping[str, Any],
 ) -> Dict[str, Any]:
+    """수동 거버넌스 결정(ADD/EXCLUDE)을 검증하고 score override 시도 시 SelectionGovernanceError를 발생시킨다."""
     gate = policy["governanceGate"]
     overrideAllowed = bool(gate["manualScoreOverrideAllowedYn"])
     offending = sorted(set(action.keys()) & _SCORE_OVERRIDE_KEYS)

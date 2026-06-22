@@ -1,3 +1,8 @@
+"""
+service.py
+레이어: Service (ai)
+역할: AI ESG 보고서 생성 서비스 — LangChain + RAG 기반 섹션별 초안 생성.
+"""
 from src.models.model import ResponseModel
 
 from src.utils.ai import (
@@ -14,6 +19,7 @@ from src.utils.ai import (
 
 
 def generateReportProcess(req, token):
+    """KPI Fact와 SR 지식 베이스를 결합해 섹션별 ESG 보고서 초안을 생성하고 DB에 저장한다."""
     factData = getFactData(req.companyId, req.year)
     
     reportOutput = []

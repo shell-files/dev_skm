@@ -1,3 +1,20 @@
+"""
+materiality.py
+레이어: API Router
+역할: DMA 중대성 평가 결과 조회·확정·컨텍스트·워크플로우 엔드포인트.
+
+엔드포인트:
+  GET  /results/{runId}                              — DMA 통합 결과 조회
+  POST /results/{runId}/selected-sub-issues/finalize — DMA 최종 Top 5 선정 이슈 확정 저장
+  GET  /results/{runId}/onboarding-progress          — 이슈별 온보딩 입력 진행 현황
+  GET  /benchmark/{runId}                            — 벤치마킹 단계 결과 조회
+  GET  /media/{runId}                                — 미디어 단계 결과 조회
+  GET  /survey/{runId}                               — 설문 단계 결과 조회
+  GET  /selection-process/{runId}                    — 후보군에서 최종 선정 과정 조회
+  POST /context/{runId}/apply                        — 기업 컨텍스트 수정자 적용
+  GET  /context/{runId}                              — 최신 기업 컨텍스트 프로필 및 수정자 조회
+  GET  /workflow-status/{runId}/{workflowType}        — DMA 워크플로우 진행 상태 조회
+"""
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.models.materiality import (
@@ -22,6 +39,7 @@ from src.services.materialities.service import (
     getOnboardingProgress,
     getSelectionProcess,
     getSurveyResult,
+    getWorkflowStatus,
 )
 from src.utils.auth import get_token
 from src.utils.dmaworkflowrepository import getDmaWorkflowStatusOrDefault
@@ -101,7 +119,7 @@ async def get_selection_process(runId: int, userModel=Depends(get_token)):
 @router.post(
     "/context/{runId}/apply",
     response_model=CompanyContextModifierResponseDto,
-    summary="Apply company context modifiers",
+    summary="기업 컨텍스트 수정자 적용",
 )
 async def apply_company_context_modifiers(runId: int, userModel=Depends(get_token)):
     try:
@@ -113,7 +131,7 @@ async def apply_company_context_modifiers(runId: int, userModel=Depends(get_toke
 @router.get(
     "/context/{runId}",
     response_model=CompanyContextProfileResponseDto,
-    summary="Get latest company context profile and modifiers",
+    summary="최신 기업 컨텍스트 프로필 및 수정자 조회",
 )
 async def get_company_context_profile(runId: int, userModel=Depends(get_token)):
     try:
@@ -129,7 +147,7 @@ async def get_company_context_profile(runId: int, userModel=Depends(get_token)):
 )
 async def get_dma_workflow_status(runId: int, workflowType: str, userModel=Depends(get_token)):
     try:
-        return getDmaWorkflowStatusOrDefault(runId=runId, workflowType=workflowType)
+        return getWorkflowStatus(runId=runId, workflowType=workflowType)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

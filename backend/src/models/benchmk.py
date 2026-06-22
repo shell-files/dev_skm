@@ -1,3 +1,8 @@
+"""
+benchmk.py
+레이어: Model
+역할: 벤치마크 SR 파일 업로드 및 조회 요청 DTO 정의.
+"""
 from pydantic import BaseModel, Field, ConfigDict
 from fastapi import UploadFile
 from typing import List, Literal, Optional

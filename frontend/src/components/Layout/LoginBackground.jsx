@@ -1,3 +1,8 @@
+/**
+ * LoginBackground.jsx
+ * 레이어: Component (Layout)
+ * 역할: 로그인 화면의 배경 이미지를 슬라이드 전환으로 표시하는 시각 패널.
+ */
 import { useEffect, useState } from "react";
 import "@styles/loginBackground.css";
 

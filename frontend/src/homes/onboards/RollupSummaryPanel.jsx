@@ -1,3 +1,21 @@
+/**
+ * RollupSummaryPanel.jsx
+ * 레이어: Component (onboards)
+ * 역할: 자회사 데이터 취합(롤업) 현황을 단계별 스테퍼·요청 관리 모달과 함께 표시하고, 데이터 취합 실행·전년도 기준값 입력 등을 처리하는 패널
+ *
+ * Props:
+ *   batchId — 활성 롤업 배치 ID
+ *   sourceCycleId — POST_DMA_DISCLOSURE 사이클의 소스 cycleId
+ *   rollupPurposeCode — 롤업 목적 코드 (DMA_PRECHECK / REPORT_DISCLOSURE)
+ *   metricScopeCode — 지표 범위 코드
+ *   workflow — 현재 워크플로우 객체 (nextAction 포함)
+ *   onCtaClick — 자회사 데이터 요청 버튼 클릭 핸들러
+ *   onCalculated — 데이터 취합 완료 후 콜백
+ *   onSendSource — 데이터 전송 모달 열기 핸들러
+ *
+ * 의존 컴포넌트:
+ *   RollupSummaryPanel (자기 자신) — 인라인 요청 관리 모달 렌더링 포함
+ */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
@@ -10,42 +28,9 @@ import {
   saveRollupBaselineValues,
 } from "@stores/reportSlice";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
+import { purposeLabel, readinessLabel, transferLabel, approvalLabel, numberOrZero } from "./rollupUtils";
 import "@styles/onboarding1.css";
 import "@styles/onboardingModal.css";
-
-const purposeLabel = (code) => {
-  const value = String(code || "").toUpperCase();
-  if (value === "REPORT_DISCLOSURE") return "보고서 연결 공시";
-  if (value === "DMA_PRECHECK") return "이중중대성평가 사전 계산";
-  return value || "-";
-};
-
-const readinessLabel = (status) => {
-  const value = String(status || "").toUpperCase();
-  if (value === "READY") return "전송 가능";
-  if (value === "PARTIAL") return "입력 진행중";
-  if (value === "NOT_STARTED") return "미입력";
-  return status || "-";
-};
-
-const transferLabel = (status) => {
-  const value = String(status || "").toLowerCase();
-  if (value === "received") return "수신 완료";
-  if (value === "sent") return "전송 완료";
-  if (value === "not_sent") return "미전송";
-  return status || "-";
-};
-
-const approvalLabel = (status) => {
-  const value = String(status || "").toLowerCase();
-  if (value === "approved") return "승인 완료";
-  if (value === "reviewed") return "검토 완료";
-  if (value === "rejected") return "반려";
-  if (value === "pending" || value === "submitted") return "승인 대기";
-  return status || "-";
-};
-
-const numberOrZero = (value) => Number(value || 0);
 
 const RollupSummaryPanel = ({
   batchId,

@@ -1,8 +1,14 @@
+"""
+dmaengine.py
+레이어: Model
+역할: DMA 엔진 v8.2 및 v1.3 Pydantic 스키마 정의.
+  - v8.2: DMAContextProfile, ImpactAssessment, FinancialAssessment, DMASignal 등 레거시 타입
+  - v1.3: TriState, ExtractedFactsV13, ScoringPayloadV13 등 신규 캐노니컬 타입 (레거시와 병렬 공존)
+"""
 from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Any, List, Optional, Literal, Dict
 
-# --- v8.2 DMA Pydantic Schemas ---
 
 class DMAContextProfile(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -160,19 +166,6 @@ class FinalMaterialityScore(BaseModel):
     finalScore: Optional[float] = Field(None, alias="final_score")
     coverage: dict
 
-
-# =====================================================================================
-# DMA v1.3 MVP Slim Canonical Engine — DTO / Enum (PARALLEL ADDITION)
-# =====================================================================================
-# These types are added IN PARALLEL to the legacy v8.2 schemas above. Nothing above is
-# modified or removed. The v1.3 canonical path is opt-in and not wired into any service,
-# API, or DB in Phase A.
-#
-# Hard rules enforced by these types:
-#  - AI emits FACTS ONLY. Score fields are forbidden in ExtractedFactsV13 (extra="forbid").
-#  - Missing required factor -> axis UNOBSERVED (never 0 substitution).
-#  - Screening signal != canonical impact/financial score != final DMA rank.
-# =====================================================================================
 
 
 class TriState(str, Enum):

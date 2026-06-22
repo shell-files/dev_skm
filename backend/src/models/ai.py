@@ -1,3 +1,8 @@
+"""
+ai.py
+레이어: Model
+역할: AI ESG 보고서 생성 요청 DTO 정의.
+"""
 from pydantic import BaseModel
 
 

@@ -1,3 +1,8 @@
+"""
+esgeconomy.py
+레이어: Service (medias/crawlers)
+역할: ESG Economy 뉴스 크롤러.
+"""
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -25,6 +30,7 @@ class EsgEconomyCrawler(BaseNewsCrawler):
     maxPage = 30
 
     def crawl(self, dateFrom: Optional[date] = None) -> NewsCrawlerResult:
+        """ESG경제 뉴스를 페이지 순으로 크롤링하고, dateFrom 이전 기사를 만나면 수집을 중단한다."""
         result = NewsCrawlerResult(sourceKey=self.sourceKey, sourceLabel=self.sourceLabel)
         links = []
         stopCrawling = False
@@ -115,13 +121,3 @@ class EsgEconomyCrawler(BaseNewsCrawler):
             if not any(keyword in paragraph for keyword in excludeKeywords)
         ]
 
-    def _dedupeItems(self, items: list[dict]) -> list[dict]:
-        seen = set()
-        deduped = []
-        for item in items:
-            url = normalizeUrl(item.get("url", ""))
-            if not url or url in seen:
-                continue
-            seen.add(url)
-            deduped.append({**item, "url": url})
-        return deduped

@@ -1,3 +1,21 @@
+"""
+survey.py
+레이어: API Router
+역할: 설문 생성·조회·응답 Import·점수 계산·현황 관리 엔드포인트.
+
+엔드포인트:
+  POST /                              — 구글 설문 생성
+  GET  /raw                           — 설문 템플릿 조회
+  GET  /form/{runId}                  — 설문 폼 상태 조회
+  POST /form/{runId}/retry            — 설문 폼 재시도
+  GET  /form/{runId}/responses/preview   — 응답 Import Preview (DB 저장 없음)
+  POST /form/{runId}/responses/import    — 응답 Import (ESG_DMA_SURVEY_RESPONSE UPSERT)
+  GET  /form/{runId}/scores/preview      — 점수 계산 Preview (DB 저장 없음)
+  POST /form/{runId}/scores/recalculate  — 점수 계산 및 Final Score 재계산
+  GET  /form/{runId}/response-status     — 응답 현황 조회
+  PUT  /form/{runId}/response-targets    — 목표 응답자 수 저장
+  GET  /{sheet_id}                    — 설문 결과 CSV 추출
+"""
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.utils.auth import get_token
@@ -8,7 +26,7 @@ from src.models.dmasurveyscore import SurveyScorePreviewDto, SurveyScoreRecalcul
 from src.models.dmasurveyresponsestatus import SurveyResponseStatusDto, SurveyResponseTargetsRequestDto
 
 from src.services.surveys.service import exportCsvProcess, getRawProcess
-from src.services.surveys.formservice import createFormProcess, ensureSurveyFormForRun
+from src.services.surveys.formservice import createFormProcess, ensureSurveyFormForRun, getSurveyFormDetail
 from src.services.surveys.importservice import (
     importSurveyResponsesForRun,
     previewSurveyResponses,
@@ -18,7 +36,6 @@ from src.services.surveys.scoringservice import (
     recalculateSurveyScoresForRun,
 )
 from src.services.surveys.statusservice import getSurveyResponseStatus, saveSurveyResponseTargets
-from src.utils.dmasurveyformrepository import getSurveyFormByRunId, toSurveyFormResponse
 
 router = APIRouter()
 
@@ -47,14 +64,14 @@ def getRaw():
 )
 async def get_survey_form(runId: int, token=Depends(get_token)):
     try:
-        row = getSurveyFormByRunId(runId)
+        result = getSurveyFormDetail(runId)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    if row is None:
+    if result is None:
         raise HTTPException(status_code=404, detail=f"Survey form not found for runId={runId}")
-    return toSurveyFormResponse(row)
+    return result
 
 
 @router.post(

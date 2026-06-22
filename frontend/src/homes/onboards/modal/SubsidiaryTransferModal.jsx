@@ -1,3 +1,16 @@
+/**
+ * SubsidiaryTransferModal.jsx
+ * 레이어: Component (onboards/modal)
+ * 역할: 자회사가 승인 완료된 데이터를 지주사로 전송하기 전 요청 정보와 전송 대상 지표를 확인하고 전송을 실행하는 모달
+ *
+ * Props:
+ *   isOpen — 모달 표시 여부
+ *   onClose — 모달 닫기 핸들러
+ *   onTransferred — 전송 완료 후 콜백
+ *
+ * 주요 상태:
+ *   activeRequest — Redux에서 읽은 현재 선택된 롤업 요청 상세 (batchId, sendReadyYn, items 등)
+ */
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";

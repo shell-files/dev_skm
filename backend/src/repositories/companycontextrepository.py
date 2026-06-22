@@ -1,4 +1,17 @@
 """
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+companycontextrepository.py
+레이어: Repository
+역할: G0 Fact 조회 및 기업 컨텍스트 프로필·수정자 저장 — DMA 점수 요약 컨텍스트 수정자 업데이트.
+
+주요 함수:
+  getRun / getMaterialityRunContext               — 실행 컨텍스트 조회
+  listG0Facts / getCompanyG0Facts                 — G0 Fact 목록 조회
+  listScoreRows / getDmaScoreSummaryRowsForContext — 점수 행 조회
+  replaceProfile / replaceCompanyContextProfile   — 컨텍스트 프로필 저장
+  updateModifiers / updateContextModifiers        — 수정자 업데이트
+  getLatestProfile / getLatestCompanyContextProfile — 최신 프로필 조회
+=======
 Domain: DMA Materiality
 Layer: utils/repository
 Responsibility:
@@ -28,6 +41,7 @@ Do not:
 - do not change score formula
 - do not call FastAPI router directly
 - do not modify auth/token/common code
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 """
 
 import json
@@ -41,6 +55,10 @@ SYSTEM_MODIFIER_MIN = -0.5
 SYSTEM_MODIFIER_MAX = 0.5
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# runId 기준 materiality run 기업 컨텍스트 조회
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def getRun(runId: int) -> dict:
     sql = """
         SELECT
@@ -60,6 +78,10 @@ def getRun(runId: int) -> dict:
     return findOne(sql, (runId,)) or {}
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# 기업·연도 기준 G0 Fact 목록 조회 (온보딩/KPI/롤업 UNION)
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def listG0Facts(companyId: int, reportingYear: int) -> list[dict]:
     params = (companyId, reportingYear, companyId, reportingYear, companyId, reportingYear)
     sql = """
@@ -122,6 +144,10 @@ def listG0Facts(companyId: int, reportingYear: int) -> list[dict]:
     return findAll(sql, params) or []
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# run 기준 DMA 점수 요약 행 목록 조회
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def listScoreRows(runId: int) -> list[dict]:
     sql = """
         SELECT
@@ -150,6 +176,10 @@ def listScoreRows(runId: int) -> list[dict]:
     return findAll(sql, (runId,)) or []
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# 컨텍스트 프로필 소프트 삭제 후 신규 삽입
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def replaceProfile(
     runId: int,
     companyId: int,
@@ -198,6 +228,10 @@ def replaceProfile(
     return int(result[1]) if result and result[0] else None
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# 서브이슈별 컨텍스트 충격·재무 수정자 업데이트
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def updateModifiers(runId: int, modifiers: list[dict]) -> int:
     updated = 0
     for modifier in modifiers:
@@ -224,6 +258,10 @@ def updateModifiers(runId: int, modifiers: list[dict]) -> int:
     return updated
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# run 기준 최신 컨텍스트 프로필 단건 조회
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def getLatestProfile(runId: int) -> dict:
     sql = """
         SELECT
@@ -247,12 +285,17 @@ def getLatestProfile(runId: int) -> dict:
     return findOne(sql, (runId,)) or {}
 
 
+# Decimal 값 float 변환 — 다른 타입은 그대로 반환
 def decimalToFloat(value: Any) -> Any:
     if isinstance(value, Decimal):
         return float(value)
     return value
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# 수정자 값 -0.5~0.5 범위 클램프
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def clampModifier(value: Any) -> float:
     try:
         parsed = float(value)
@@ -265,20 +308,38 @@ def clampModifier(value: Any) -> float:
     return parsed
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# 이전 공개 함수명 호환 래퍼
+
+# getRun 호환 래퍼
+=======
 # Compatibility wrappers for previous public names
 
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def getMaterialityRunContext(runId: int) -> dict:
     return getRun(runId)
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# listG0Facts 호환 래퍼
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def getCompanyG0Facts(companyId: int, reportingYear: int) -> list[dict]:
     return listG0Facts(companyId, reportingYear)
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# listScoreRows 호환 래퍼
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def getDmaScoreSummaryRowsForContext(runId: int) -> list[dict]:
     return listScoreRows(runId)
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# replaceProfile 호환 래퍼
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def replaceCompanyContextProfile(
     runId: int,
     companyId: int,
@@ -301,14 +362,26 @@ def replaceCompanyContextProfile(
     )
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# updateModifiers 호환 래퍼
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def updateContextModifiers(runId: int, modifiers: list[dict]) -> int:
     return updateModifiers(runId, modifiers)
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# getLatestProfile 호환 래퍼
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def getLatestCompanyContextProfile(runId: int) -> dict:
     return getLatestProfile(runId)
 
 
+<<<<<<< HEAD:backend/src/repositories/companycontextrepository.py
+# clampModifier 호환 래퍼
+=======
+>>>>>>> origin/skm_test:backend/src/utils/companycontextrepository.py
 def clampSystemModifier(value: Any) -> float:
     return clampModifier(value)
 

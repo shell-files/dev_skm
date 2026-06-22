@@ -1,3 +1,8 @@
+"""
+impacton.py
+레이어: Service (medias/crawlers)
+역할: Impact ON 뉴스 크롤러.
+"""
 from __future__ import annotations
 
 from datetime import date
@@ -28,6 +33,7 @@ class ImpactOnCrawler(BaseNewsCrawler):
     maxPage = 3
 
     def crawl(self, dateFrom: Optional[date] = None) -> NewsCrawlerResult:
+        """Impacton ESG 전문 섹션을 페이지 순으로 크롤링하고, dateFrom 이전 기사를 만나면 수집을 중단한다."""
         result = NewsCrawlerResult(sourceKey=self.sourceKey, sourceLabel=self.sourceLabel)
         links = []
         stopCrawling = False
@@ -113,13 +119,3 @@ class ImpactOnCrawler(BaseNewsCrawler):
             if "<임팩트온>은 지난주 지속가능경영" not in paragraph
         ]
 
-    def _dedupeItems(self, items: list[dict]) -> list[dict]:
-        seen = set()
-        deduped = []
-        for item in items:
-            url = normalizeUrl(item.get("url", ""))
-            if not url or url in seen:
-                continue
-            seen.add(url)
-            deduped.append({**item, "url": url})
-        return deduped

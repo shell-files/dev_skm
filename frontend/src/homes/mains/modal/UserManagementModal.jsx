@@ -1,6 +1,17 @@
+/**
+ * UserManagementModal.jsx
+ * 레이어: Component (mains/modal)
+ * 역할: 개별 사용자의 기본 정보·역할·담당 데이터 현황을 조회하고 권한 변경·연결 해제 등 관리 액션을 제공하는 모달
+ *
+ * Props:
+ *   isOpen — 모달 표시 여부
+ *   onClose — 모달 닫기 핸들러
+ *   userItem — 관리할 사용자 객체 (name, email, company, role, assignmentScopes 등)
+ */
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { showDefaultAlert } from '@components/UI/ServiceAlert';
+import ModalWrapper from "@components/UI/ModalWrapper";
 
 const getRoleLabel = (role) => {
   const map = {
@@ -41,14 +52,17 @@ export default function UserManagementModal({ isOpen, onClose, userItem }) {
   };
 
   return createPortal(
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-window" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '640px', maxHeight: '90vh', overflow: 'auto' }}>
-        <div className="modal-header">
-          <h3>{userItem.name} 사용자 관리</h3>
-          <button className="close-x" onClick={onClose} style={{ border: 'none', background: 'none', fontSize: '20px', cursor: 'pointer' }}>×</button>
+    <ModalWrapper
+      title={`${userItem.name} 사용자 관리`}
+      onClose={onClose}
+      maxWidth="640px"
+      footer={
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end' }}>
+          <button className="btn-confirm" onClick={onClose}>닫기</button>
         </div>
-
-        <div className="modal-body" style={{ padding: '24px' }}>
+      }
+    >
+        <div style={{ padding: '24px' }}>
           {/* User Info */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
             <InfoRow label="사용자명" value={userItem.name} />
@@ -157,11 +171,7 @@ export default function UserManagementModal({ isOpen, onClose, userItem }) {
           </div>
         </div>
 
-        <div className="modal-footer" style={{ padding: '16px 24px', borderTop: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end' }}>
-          <button className="btn-confirm" onClick={onClose}>닫기</button>
-        </div>
-      </div>
-    </div>,
+    </ModalWrapper>,
     document.body
   );
 }

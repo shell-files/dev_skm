@@ -1,3 +1,8 @@
+"""
+dmakcgsgrade.py
+레이어: Model
+역할: KCGS 등급 저장 요청 DTO 정의.
+"""
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field

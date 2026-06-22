@@ -1,3 +1,8 @@
+"""
+materiality.py
+레이어: Model
+역할: DMA 중대성 평가 결과·벤치마크·미디어·설문·선정과정 응답 DTO 정의.
+"""
 from pydantic import BaseModel
 from typing import List, Optional, Literal
 

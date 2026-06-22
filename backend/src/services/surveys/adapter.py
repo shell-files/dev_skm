@@ -1,19 +1,18 @@
+"""
+adapter.py
+레이어: Service (surveys)
+역할: 설문 응답 데이터 어댑터 — 외부 데이터 포맷을 내부 DTO로 변환.
+"""
 from typing import Any, Mapping, Optional
 
+from src.utils.typeutils import firstPresent
 
 VALID_RESPONDENT_GROUPS = {"employee", "management", "external"}
 VALID_AXES = {"impact", "financial"}
 
 
-def firstPresent(row: Mapping[str, Any], keys: tuple[str, ...], default: Any = None) -> Any:
-    for key in keys:
-        value = row.get(key)
-        if value is not None:
-            return value
-    return default
-
-
 def normalizeScore(value: Any) -> Optional[float]:
+    """숫자로 변환 가능한 값은 float으로, 그 외는 None으로 반환한다."""
     if value is None or value == "":
         return None
     try:
@@ -23,6 +22,7 @@ def normalizeScore(value: Any) -> Optional[float]:
 
 
 def normalizeBool(value: Any) -> bool:
+    """문자열 '1'·'true'·'y'·'priority' 등을 True로 정규화한다."""
     if isinstance(value, bool):
         return value
     if value is None:
@@ -31,20 +31,19 @@ def normalizeBool(value: Any) -> bool:
 
 
 def resolveQuestionMeta(rawRowsKey: Any, questionMap: Mapping[str, Mapping[str, Any]]) -> Mapping[str, Any]:
+    """questionKey로 메타 딕셔너리를 조회하고, 없으면 빈 딕셔너리를 반환한다."""
     if rawRowsKey is None:
         return {}
     return questionMap.get(str(rawRowsKey), {})
 
 
-# STEP 0 internal helper. Decides why a survey row is excluded.
-# Input: mapped row interpretation.
-# Output: skipReason or None.
 def getSkipReason(
     *,
     subIssueCode: Any,
     mappedAxis: str,
     respondentGroup: str,
 ) -> Optional[str]:
+    """필수 필드 누락 또는 허용되지 않은 값이 있으면 skip 사유 코드를 반환하고, 정상이면 None을 반환한다."""
     if not subIssueCode:
         return "SUB_ISSUE_CODE_MISSING"
     if not mappedAxis:
@@ -58,10 +57,8 @@ def getSkipReason(
     return None
 
 
-# STEP 0. Normalizes survey source rows into overlay input rows.
-# Input: external response rows and question map.
-# Output: normalizedRows and skippedRows. Invalid rows are never silently dropped.
 def step0NormalizeSurveyRows(rawRows: list, questionMap: Mapping[str, Mapping[str, Any]]) -> dict:
+    """원시 설문 행을 내부 DTO 포맷으로 정규화하고, 필수 필드 누락 행은 skippedRows로 분리해 반환한다."""
     normalized: list[dict] = []
     skipped: list[dict] = []
     for rowIndex, row in enumerate(rawRows or []):

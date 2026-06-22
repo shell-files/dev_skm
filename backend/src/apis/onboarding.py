@@ -1,3 +1,14 @@
+"""
+onboarding.py
+레이어: API Router
+역할: 온보딩 지표 목록 조회 및 입력값 저장 엔드포인트.
+
+엔드포인트:
+  GET   /           — 사이클 범위별 온보딩 지표 목록 조회
+  GET   /metrics    — 사이클 범위별 온보딩 지표 목록 조회 (alias)
+  PATCH /{metricId} — 온보딩 지표 입력값 저장
+  PATCH /metrics/{metricId} — 온보딩 지표 입력값 저장 (alias)
+"""
 from __future__ import annotations
 
 from typing import Optional
@@ -20,13 +31,13 @@ router = APIRouter()
 @router.get(
     "",
     response_model=OnboardingMetricsResponseDto,
-    summary="List onboarding metrics by cycle scope",
+    summary="사이클 범위별 온보딩 지표 목록 조회",
 )
 @router.get(
     "/metrics",
     response_model=OnboardingMetricsResponseDto,
     include_in_schema=False,
-    summary="List onboarding metrics by cycle scope",
+    summary="사이클 범위별 온보딩 지표 목록 조회",
 )
 async def list_onboarding_metrics(
     companyId: int = Query(...),
@@ -57,13 +68,13 @@ async def list_onboarding_metrics(
 @router.patch(
     "/{metricId}",
     response_model=OnboardingMetricValuesResponseDto,
-    summary="Save onboarding metric input values",
+    summary="온보딩 지표 입력값 저장",
 )
 @router.patch(
     "/metrics/{metricId}",
     response_model=OnboardingMetricValuesResponseDto,
     include_in_schema=False,
-    summary="Save onboarding metric input values",
+    summary="온보딩 지표 입력값 저장",
 )
 async def patch_onboarding_metric_values(
     metricId: str,

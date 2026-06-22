@@ -1,3 +1,11 @@
+<<<<<<< HEAD
+"""
+ocr.py
+레이어: Utils
+역할: Google Cloud Vision OCR — 이미지에서 텍스트 추출.
+"""
+=======
+>>>>>>> origin/skm_test
 import os
 import io
 import re
@@ -11,6 +19,10 @@ from src.models.model import ResponseModel
 # --------------------------
 
 def ocr(data):
+<<<<<<< HEAD
+    """Google Cloud Vision OCR로 이미지 파일에서 텍스트를 추출해 ResponseModel로 반환한다."""
+=======
+>>>>>>> origin/skm_test
     keyPath = settings.ocr_key_path
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = keyPath
     client = vision.ImageAnnotatorClient()
@@ -48,6 +60,10 @@ def ocr(data):
 # --------------------------
 
 def licenseInfo(text):
+<<<<<<< HEAD
+    """OCR 텍스트에서 사업자등록번호·상호·성명 등 사업자등록증 핵심 항목을 정규표현식으로 추출해 딕셔너리로 반환한다."""
+=======
+>>>>>>> origin/skm_test
     # 1. 입력이 딕셔너리 형태인 경우 'text' 키의 값을 사용, 그렇지 않으면 입력 자체를 텍스트로 간주
     if isinstance(text, dict):
         text = text.get("text", "") 

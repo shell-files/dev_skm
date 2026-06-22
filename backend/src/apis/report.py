@@ -1,3 +1,14 @@
+"""
+report.py
+레이어: API Router
+역할: 보고서 초안 조회·수정·추적 및 다운로드 엔드포인트.
+
+엔드포인트:
+  GET    /drafts/{runId}                                    — 보고서 초안 조회
+  PATCH  /drafts/{draftId}                                  — 보고서 문단 수정 저장
+  GET    /drafts/{runId}/paragraphs/{paragraphId}/trace     — 문단별 데이터 추적 조회
+  POST   /drafts/{runId}/download                           — 보고서 다운로드 생성
+"""
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.models.report import (

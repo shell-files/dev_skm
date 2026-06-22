@@ -1,4 +1,9 @@
-﻿from pydantic_settings import BaseSettings, SettingsConfigDict
+﻿"""
+settings.py
+레이어: Utils
+역할: 환경 변수 로딩 — .env 기반 앱 설정 관리.
+"""
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
   host_ip: str
@@ -88,6 +93,16 @@ class Settings(BaseSettings):
   # Ollama
   # --------------------------
   ollama_url: str
+<<<<<<< HEAD
+  # --------------------------
+  # contextgraph.py (Company Context LLM)
+  # --------------------------
+  company_context_llm_enabled: bool = False
+  company_context_llm_provider: str = ""
+  company_context_llm_model: str = ""
+  company_context_llm_timeout_sec: float = 60.0
+=======
+>>>>>>> origin/skm_test
   
   model_config = SettingsConfigDict(
     env_file=".env",

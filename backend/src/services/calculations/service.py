@@ -1,26 +1,18 @@
 """
-Calculation bounded context orchestration.
+service.py
+레이어: Service (calculations)
+역할: KPI 계산 컨텍스트 오케스트레이션 — 영향 받은 엔티티 규칙 그래프 해소 및 Fact 도출·저장.
 
-Responsibilities:
-- Affected Entity Rule graph resolution
-- Stale calculated Fact invalidation
-- Engine execution
-- All-or-none derived Fact persistence
-- Input modification downstream invalidation
-
-Import graph:
-  calculations.service -> calculationrepository, calculationengine
-  approval_service -> calculations.service
-  onboardings.service -> calculations.service
-
-This module must NOT import from onboardings.service or approval_service.
+의존성 흐름:
+  calculations.service → calculationrepository, calculationengine
+  approval_service, onboardings.service → calculations.service (단방향)
 """
 from __future__ import annotations
 
 from typing import Optional
 
 from src.utils import calculationengine as calcEngine
-from src.utils import calculationrepository as calcRepo
+from src.repositories import calculationrepository as calcRepo
 
 
 def calculateAffectedEntityFactsTx(

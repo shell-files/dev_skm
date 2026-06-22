@@ -1,3 +1,28 @@
+/**
+ * srHelpers.jsx
+ * 레이어: Utils (srTemplates/core)
+ * 역할: SR 템플릿 전용 metric 접근·포맷·narrative 조합 공통 유틸 — MetricsMap 구성, 본문 렌더·편집 컴포넌트 제공
+ *
+ * exports:
+ *   buildMetricsMap — metricRows 배열을 MetricsMap 객체로 변환 (KRW → 억 원 자동 변환)
+ *   buildMetricsFromEdits — adapter + 편집값 + DB rows를 병합하여 MetricsMap 반환
+ *   dv — MetricsMap에서 displayValue 안전 접근
+ *   mt — 렌더/placeholder 모드에 따라 metric 텍스트 반환
+ *   num — MetricsMap에서 숫자 값(계산·차트용) 추출
+ *   fmtInt — 숫자를 천단위 구분 정수 문자열로 포맷
+ *   buildNarrative — 템플릿 {id} 토큰을 metric 값으로 치환
+ *   resolveNarrative — AI 생성 본문 우선, 없으면 buildNarrative로 조합
+ *   reductionFromBase — 기준연도 대비 감축률(%) 계산
+ *   highlightFigures — AI 문단 내 수치를 굵게 강조 처리
+ *   renderPlaceholder — 템플릿 토큰을 코드 칩으로 렌더 (시안용)
+ *   renderEditableNarrative — 편집 모드용 토큰 강조 span 렌더
+ *   splitNarrative — 템플릿을 텍스트/토큰 노드로 분해
+ *   NarrativeStatic — 보기·PDF용 정적 본문 컴포넌트
+ *   EditableNarrative — contentEditable 기반 편집용 본문 컴포넌트
+ *   Narrative — 모드(render/edit)에 따라 NarrativeStatic 또는 EditableNarrative를 분기하는 본문 컴포넌트
+ *   NARRATIVE_TEMPLATE_CLIMATE — 기후목표·전환계획 기본 narrative 템플릿
+ *   CLIMATE_HIGHLIGHT_IDS — 기후 섹션 본문 강조 대상 metric_id 목록
+ */
 // ============================================================
 // srHelpers.jsx — metric 접근/포맷/narrative 조합 공통 유틸 (순수 JS)
 // 의존성: react 만 사용 (차트 라이브러리 없음)
@@ -307,4 +332,20 @@ export function Narrative({
     return <EditableNarrative template={tpl} metrics={metrics} onChange={onNarrativeChange} />;
   }
   return <NarrativeStatic template={tpl} metrics={metrics} metricIds={metricIds} />;
+}
+
+export function buildMetricsFromEdits(adapter, editMetrics, rows) {
+  const map = { ...adapter(rows) };
+  Object.entries(editMetrics || {}).forEach(([id, raw]) => {
+    const t = (raw ?? "").trim();
+    if (!t) return;
+    const n = parseFloat(t.replace(/[^0-9.\-]/g, ""));
+    map[id] = {
+      ...(map[id] || {}),
+      displayValue: t,
+      value: Number.isNaN(n) ? t : n,
+      status: "DRAFT",
+    };
+  });
+  return map;
 }

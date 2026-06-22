@@ -1,3 +1,8 @@
+"""
+dmasurveyresponseimport.py
+레이어: Model
+역할: DMA 설문 응답 데이터 가져오기 결과·미리보기 DTO 정의.
+"""
 from typing import Optional
 from pydantic import BaseModel, ConfigDict
 

@@ -1,6 +1,11 @@
+"""
+statusservice.py
+레이어: Service (surveys)
+역할: 설문 현황 서비스 — 그룹별 참여 현황·제출 상태 조회.
+"""
 from src.utils.db import getConn
-from src.utils.dmasurveyformrepository import getSurveyFormByRunId
-from src.utils.dmasurveytargetrepository import (
+from src.repositories.dmasurveyformrepository import getSurveyFormByRunId
+from src.repositories.dmasurveytargetrepository import (
     SURVEY_TARGET_GROUPS,
     getTargetsByRunId,
     upsertTargetsTx,

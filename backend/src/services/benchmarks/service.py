@@ -1,3 +1,8 @@
+﻿"""
+service.py
+레이어: Service (benchmarks)
+역할: 벤치마크 SR 파일 처리 서비스 — 파일 업로드·OCR·DMA 시그널 저장.
+"""
 import uuid
 import shutil
 from pathlib import Path
@@ -7,7 +12,7 @@ from src.models.model import ResponseModel, UserModel
 from src.models.benchmk import FileModel, FileFindModel
 from src.utils.ocraiv8 import gemini
 from src.utils import dmaruleregistry
-from src.utils.dmarepository import (
+from src.repositories.dmarepository import (
     saveSignals,
     step4ReplaceBenchmarkShadowTracesTx,
     resetBenchmarkData,
@@ -15,13 +20,11 @@ from src.utils.dmarepository import (
     updateRanks,
 )
 from src.utils.db import save, findAll
-from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
+from src.repositories.dmaworkflowrepository import upsertDmaWorkflowStatus
 from src.utils.dmascoring import scoreSignals
 from src.services.benchmarks.adapter import convertToDmaSignals, step0NormalizeBenchmarkFacts
-from src.services.materialities.orchestrator import (
-    step0BuildFactTrace,
-    step2BuildBenchmarkScreeningPayloads,
-)
+from src.services.materialities.orchestrator import step0BuildFactTrace
+from src.services.materialities.screeningbuilder import step2BuildBenchmarkScreeningPayloads
 from src.utils.subissuemaster import subissueMaster
 from src.models.dmaengine import DMASignal
 
@@ -162,6 +165,7 @@ def _applyBenchmarkBoost(signals: list) -> list:
 
 
 def normalizeSourceType(value: str) -> str:
+    """다양한 표현의 sourceType 입력을 내부 표준 키(leader_sr, peer_sr 등)로 정규화한다."""
     if not value:
         raise ValueError("sourceType is required. Provide sourceType or TE_SR_FILE.type.")
 
@@ -196,6 +200,7 @@ def normalizeSourceType(value: str) -> str:
 
 
 def uploadSr(fileModel: FileModel, userModel: UserModel):
+    """SR PDF 파일을 검증해 서버에 저장하고 DB에 파일 메타데이터를 기록한다."""
     files = fileModel.file
     if len(files) == 0:
         return ResponseModel(False, "업로드된 파일이 없습니다.")
@@ -234,6 +239,7 @@ def uploadSr(fileModel: FileModel, userModel: UserModel):
 
 
 async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
+    """업로드된 SR PDF를 Gemini OCR로 분석해 DMASignal을 저장하고 v1.3 Shadow Trace를 교체한다."""
     runId = fileFindModel.esgMaterialityRunId
 
     # PG 모드 제외 — 파일 업로드 모드만 사용

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """
 onboardingAssignment.py
 레이어: API Router
@@ -11,8 +10,6 @@ onboardingAssignment.py
   PATCH /{metricId}      — 온보딩 지표 단건 배정
   POST /bulk-unassign    — 온보딩 지표 일괄 배정 취소
 """
-=======
->>>>>>> origin/skm_test
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 
@@ -26,11 +23,7 @@ from src.models.onboarding import (
     OnboardingAssignmentListResponseDto,
     OnboardingAssignmentPatchRequestDto,
 )
-<<<<<<< HEAD
 from src.services.onboardings.assignmentservice import (
-=======
-from src.services.onboardings.service import (
->>>>>>> origin/skm_test
     PreDmaG0CycleNotReadyError,
     bulkAssign,
     bulkUnassign,
@@ -75,20 +68,12 @@ def statusForValueError(error: ValueError) -> int:
 @router.post(
     "/bulk-assign",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
-<<<<<<< HEAD
     summary="온보딩 지표 일괄 배정",
-=======
-    summary="Bulk assign onboarding metrics",
->>>>>>> origin/skm_test
 )
 @onboardingAssignmentRouter.post(
     "/bulk-assign",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
-<<<<<<< HEAD
     summary="온보딩 지표 일괄 배정",
-=======
-    summary="Bulk assign onboarding metrics",
->>>>>>> origin/skm_test
 )
 async def bulkAssignRoute(
     request: OnboardingAssignmentBulkAssignRequestDto,
@@ -109,20 +94,12 @@ async def bulkAssignRoute(
 @router.get(
     "",
     response_model=OnboardingAssignmentListResponseDto,
-<<<<<<< HEAD
     summary="온보딩 지표 배정 목록 조회",
-=======
-    summary="List onboarding metric assignments",
->>>>>>> origin/skm_test
 )
 @onboardingAssignmentRouter.get(
     "",
     response_model=OnboardingAssignmentListResponseDto,
-<<<<<<< HEAD
     summary="온보딩 지표 배정 목록 조회",
-=======
-    summary="List onboarding metric assignments",
->>>>>>> origin/skm_test
 )
 async def listAssignmentItemsRoute(
     companyId: int = Query(...),
@@ -144,20 +121,12 @@ async def listAssignmentItemsRoute(
 @router.get(
     "/{metricId}",
     response_model=OnboardingAssignmentDetailResponseDto,
-<<<<<<< HEAD
     summary="온보딩 지표 배정 단건 조회",
-=======
-    summary="Get one onboarding metric assignment",
->>>>>>> origin/skm_test
 )
 @onboardingAssignmentRouter.get(
     "/{metricId}",
     response_model=OnboardingAssignmentDetailResponseDto,
-<<<<<<< HEAD
     summary="온보딩 지표 배정 단건 조회",
-=======
-    summary="Get one onboarding metric assignment",
->>>>>>> origin/skm_test
 )
 async def getAssignmentItemRoute(
     metricId: str,
@@ -180,20 +149,12 @@ async def getAssignmentItemRoute(
 @router.patch(
     "/{metricId}",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
-<<<<<<< HEAD
     summary="온보딩 지표 단건 배정",
-=======
-    summary="Assign one onboarding metric",
->>>>>>> origin/skm_test
 )
 @onboardingAssignmentRouter.patch(
     "/{metricId}",
     response_model=OnboardingAssignmentBulkAssignResponseDto,
-<<<<<<< HEAD
     summary="온보딩 지표 단건 배정",
-=======
-    summary="Assign one onboarding metric",
->>>>>>> origin/skm_test
 )
 async def patchAssignmentRoute(
     metricId: str,
@@ -215,20 +176,12 @@ async def patchAssignmentRoute(
 @router.post(
     "/bulk-unassign",
     response_model=OnboardingAssignmentBulkUnassignResponseDto,
-<<<<<<< HEAD
     summary="온보딩 지표 일괄 배정 취소",
-=======
-    summary="Bulk unassign onboarding metrics",
->>>>>>> origin/skm_test
 )
 @onboardingAssignmentRouter.post(
     "/bulk-unassign",
     response_model=OnboardingAssignmentBulkUnassignResponseDto,
-<<<<<<< HEAD
     summary="온보딩 지표 일괄 배정 취소",
-=======
-    summary="Bulk unassign onboarding metrics",
->>>>>>> origin/skm_test
 )
 async def bulkUnassignRoute(
     request: OnboardingAssignmentBulkUnassignRequestDto,

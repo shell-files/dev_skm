@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * SubsidiaryTransferModal.jsx
  * 레이어: Component (onboards/modal)
@@ -12,8 +11,6 @@
  * 주요 상태:
  *   activeRequest — Redux에서 읽은 현재 선택된 롤업 요청 상세 (batchId, sendReadyYn, items 등)
  */
-=======
->>>>>>> origin/skm_test
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { useDispatch, useSelector } from "react-redux";

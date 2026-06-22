@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * RollupSummaryPanel.jsx
  * 레이어: Component (onboards)
@@ -17,8 +16,6 @@
  * 의존 컴포넌트:
  *   RollupSummaryPanel (자기 자신) — 인라인 요청 관리 모달 렌더링 포함
  */
-=======
->>>>>>> origin/skm_test
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
@@ -31,50 +28,10 @@ import {
   saveRollupBaselineValues,
 } from "@stores/reportSlice";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
-<<<<<<< HEAD
 import { purposeLabel, readinessLabel, transferLabel, approvalLabel, numberOrZero } from "./rollupUtils";
 import "@styles/onboarding1.css";
 import "@styles/onboardingModal.css";
 
-=======
-import "@styles/onboarding1.css";
-import "@styles/onboardingModal.css";
-
-const purposeLabel = (code) => {
-  const value = String(code || "").toUpperCase();
-  if (value === "REPORT_DISCLOSURE") return "보고서 연결 공시";
-  if (value === "DMA_PRECHECK") return "이중중대성평가 사전 계산";
-  return value || "-";
-};
-
-const readinessLabel = (status) => {
-  const value = String(status || "").toUpperCase();
-  if (value === "READY") return "전송 가능";
-  if (value === "PARTIAL") return "입력 진행중";
-  if (value === "NOT_STARTED") return "미입력";
-  return status || "-";
-};
-
-const transferLabel = (status) => {
-  const value = String(status || "").toLowerCase();
-  if (value === "received") return "수신 완료";
-  if (value === "sent") return "전송 완료";
-  if (value === "not_sent") return "미전송";
-  return status || "-";
-};
-
-const approvalLabel = (status) => {
-  const value = String(status || "").toLowerCase();
-  if (value === "approved") return "승인 완료";
-  if (value === "reviewed") return "검토 완료";
-  if (value === "rejected") return "반려";
-  if (value === "pending" || value === "submitted") return "승인 대기";
-  return status || "-";
-};
-
-const numberOrZero = (value) => Number(value || 0);
-
->>>>>>> origin/skm_test
 const RollupSummaryPanel = ({
   batchId,
   sourceCycleId,

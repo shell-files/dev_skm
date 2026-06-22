@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """
 benchmk.py
 레이어: API Router
@@ -8,8 +7,6 @@ benchmk.py
   POST /  — SR PDF 파일 정보 DB 저장
   PUT  /  — SR PDF 파일 AI 분석 실행 및 결과 조회
 """
-=======
->>>>>>> origin/skm_test
 from fastapi import APIRouter, Form, Depends, HTTPException
 from typing import List, Annotated
 from src.services.benchmarks.service import uploadSr, findSr

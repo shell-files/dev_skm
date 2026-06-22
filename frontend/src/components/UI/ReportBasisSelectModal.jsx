@@ -1,11 +1,8 @@
-<<<<<<< HEAD
 /**
  * ReportBasisSelectModal.jsx
  * 레이어: Component (UI)
  * 역할: 보고 기준(사이클)을 선택하는 모달 — 회사·연도·사이클 목록을 불러와 Redux에 저장.
  */
-=======
->>>>>>> origin/skm_test
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";

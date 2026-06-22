@@ -1,11 +1,8 @@
-<<<<<<< HEAD
 """
 draft.py
 레이어: Model
 역할: ESG 보고서 초안 저장 요청 DTO 정의.
 """
-=======
->>>>>>> origin/skm_test
 from pydantic import BaseModel
 from typing import Dict
 

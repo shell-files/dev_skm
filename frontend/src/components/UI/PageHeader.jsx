@@ -1,11 +1,8 @@
-<<<<<<< HEAD
 /**
  * PageHeader.jsx
  * 레이어: Component (UI)
  * 역할: 페이지 상단 타이틀과 아이콘을 표시하는 공통 헤더 컴포넌트.
  */
-=======
->>>>>>> origin/skm_test
 import React from "react";
 import "@styles/PageHeader.css";
 

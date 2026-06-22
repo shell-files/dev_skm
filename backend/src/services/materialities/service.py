@@ -14,10 +14,6 @@ from src.models.materiality import (
     EvidenceSampleDto,
     FinalizeSelectedSubIssueItemDto,
     FinalizeSelectedSubIssuesResponseDto,
-<<<<<<< HEAD
-=======
-    MaterialityResultItemDto,
->>>>>>> origin/skm_test
     MaterialityResultsResponseDto,
     MediaStageResponseDto,
     MediaSummaryDto,
@@ -32,13 +28,8 @@ from src.models.materiality import (
     SurveyTopIssueDto,
 )
 from src.utils.db import findAll, findOne
-<<<<<<< HEAD
 from src.repositories.dmaworkflowrepository import getDmaWorkflowStatusOrDefault as _getDmaWorkflowStatusOrDefault
 from src.repositories.dmarepository import (
-=======
-from src.utils.dmaaggregator import getCoverageStatus
-from src.utils.dmarepository import (
->>>>>>> origin/skm_test
     countObservedSubIssues,
     listResults,
     listEvidenceCounts,
@@ -49,10 +40,6 @@ from src.utils.dmarepository import (
     countMissingMetrics,
     countRequiredMetrics,
     listFinalTopSubIssues,
-<<<<<<< HEAD
-=======
-    listSelectedSubIssues,
->>>>>>> origin/skm_test
     listSignalCounts,
     listSurveyCounts,
     listSurveyScores,
@@ -64,25 +51,15 @@ from src.services.reportworkflows.service import initializePostDmaDisclosureScop
 
 
 def getMaterialityResults(runId: int) -> MaterialityResultsResponseDto:
-<<<<<<< HEAD
     """중대성 평가 전체 결과(이슈 목록·매트릭스·Top 이슈·다음 단계)를 조합해 반환한다."""
     rows = listResults(runId)
     selectedContext = _mb.resolveSelectedContext(runId, rows)
-=======
-    rows = listResults(runId)
-    selectedContext = _resolveSelectedContext(runId, rows)
->>>>>>> origin/skm_test
     selectedCodes = selectedContext["selectedCodes"]
 
     items = [_mb.buildResultItem(row, selectedCodes) for row in rows]
     scoredItems = [item for item in items if item.finalScore05 is not None]
-<<<<<<< HEAD
     matrixItems = [_mb.buildMatrixItem(item) for item in scoredItems]
     topItems = _mb.buildTopIssues(items, selectedCodes)
-=======
-    matrixItems = [_buildMatrixItem(item) for item in scoredItems]
-    topItems = _buildTopIssues(items, selectedCodes)
->>>>>>> origin/skm_test
     highPriorityCount = sum(1 for item in matrixItems if item.quadrant == "HIGH_IMPACT_HIGH_FINANCIAL")
     selectionReasons = _mb.buildSelectionReasons(selectedContext, items)
 
@@ -128,18 +105,11 @@ def getMaterialityResults(runId: int) -> MaterialityResultsResponseDto:
 
 
 def getBenchmarkResult(runId: int) -> BenchmarkResponseDto:
-<<<<<<< HEAD
     """벤치마크 단계 증거 현황·관측 이슈·Top 이슈를 집계해 반환한다."""
     evidenceCounts = listEvidenceCounts(runId, "benchmark")
     observationRows = listSignalCounts(runId, "benchmark")
     observations = _mb.buildObservationMap(observationRows)
     sourceCounts = _mb.buildEvidenceSourceCounts(evidenceCounts)
-=======
-    evidenceCounts = listEvidenceCounts(runId, "benchmark")
-    observationRows = listSignalCounts(runId, "benchmark")
-    observations = _buildObservationMap(observationRows)
-    sourceCounts = _buildEvidenceSourceCounts(evidenceCounts)
->>>>>>> origin/skm_test
 
     leaderReportCount = sourceCounts.get("leader_sr", {}).get("reportCount", 0)
     peerReportCount = sourceCounts.get("peer_sr", {}).get("reportCount", 0)
@@ -150,13 +120,8 @@ def getBenchmarkResult(runId: int) -> BenchmarkResponseDto:
 
     commonIssues = []
     blindSpotIssues = []
-<<<<<<< HEAD
     for code in sorted(observations.keys(), key=_mb.subIssueSortKey):
         issue = _mb.buildBenchmarkObservationIssue(code, observations[code])
-=======
-    for code in sorted(observations.keys(), key=_subIssueSortKey):
-        issue = _buildBenchmarkObservationIssue(code, observations[code])
->>>>>>> origin/skm_test
         if issue.leaderObserved or issue.peerObserved:
             commonIssues.append(issue)
         if (issue.leaderObserved or issue.peerObserved) and not issue.ownObserved:
@@ -165,11 +130,7 @@ def getBenchmarkResult(runId: int) -> BenchmarkResponseDto:
             blindSpotIssues.append(issue)
 
     topIssues = []
-<<<<<<< HEAD
     for index, row in enumerate(listTopStageIssues(runId, "benchmark", limit=_mb.SELECTED_TOP_N), start=1):
-=======
-    for index, row in enumerate(listTopStageIssues(runId, "benchmark", limit=SELECTED_TOP_N), start=1):
->>>>>>> origin/skm_test
         code = row.get("sub_issue_code", "")
         obs = observations.get(code, {})
         topIssues.append(
@@ -213,18 +174,11 @@ def getBenchmarkResult(runId: int) -> BenchmarkResponseDto:
 
 
 def getMediaResult(runId: int) -> MediaStageResponseDto:
-<<<<<<< HEAD
     """미디어·규제·전문기관 출처별 관측 결과와 Top 이슈를 집계해 반환한다."""
     evidenceCounts = listEvidenceCounts(runId, "media_external")
     observationRows = listSignalCounts(runId, "media_external")
     observations = _mb.buildObservationMap(observationRows)
     sourceCounts = _mb.buildEvidenceSourceCounts(evidenceCounts)
-=======
-    evidenceCounts = listEvidenceCounts(runId, "media_external")
-    observationRows = listSignalCounts(runId, "media_external")
-    observations = _buildObservationMap(observationRows)
-    sourceCounts = _buildEvidenceSourceCounts(evidenceCounts)
->>>>>>> origin/skm_test
 
     sourceBreakdown = []
     for sourceType in _mb.MEDIA_SOURCE_TYPES:
@@ -240,11 +194,7 @@ def getMediaResult(runId: int) -> MediaStageResponseDto:
         )
 
     topIssues = []
-<<<<<<< HEAD
     for index, row in enumerate(listTopStageIssues(runId, "media_external", limit=_mb.SELECTED_TOP_N), start=1):
-=======
-    for index, row in enumerate(listTopStageIssues(runId, "media_external", limit=SELECTED_TOP_N), start=1):
->>>>>>> origin/skm_test
         code = row.get("sub_issue_code", "")
         obs = observations.get(code, {})
         sourceTypes = [sourceType for sourceType in _mb.MEDIA_SOURCE_TYPES if _mb.isObserved(obs, sourceType)]
@@ -291,10 +241,7 @@ def getMediaResult(runId: int) -> MediaStageResponseDto:
 
 
 def getSurveyResult(runId: int) -> SurveyResponseDto:
-<<<<<<< HEAD
     """설문 응답자 그룹별 현황과 이슈별 impact/financial 점수를 집계해 반환한다."""
-=======
->>>>>>> origin/skm_test
     groupRows = listSurveyCounts(runId)
     groupCounts = {}
     for row in groupRows:
@@ -318,13 +265,8 @@ def getSurveyResult(runId: int) -> SurveyResponseDto:
             )
         )
 
-<<<<<<< HEAD
     topIssueRows = listTopStageIssues(runId, "survey", limit=_mb.SELECTED_TOP_N)
     groupScoreMap = _mb.buildSurveyGroupScoreMap(listSurveyScores(runId))
-=======
-    topIssueRows = listTopStageIssues(runId, "survey", limit=SELECTED_TOP_N)
-    groupScoreMap = _buildSurveyGroupScoreMap(listSurveyScores(runId))
->>>>>>> origin/skm_test
     topIssues = []
     for index, row in enumerate(topIssueRows, start=1):
         code = row.get("sub_issue_code", "")
@@ -335,7 +277,6 @@ def getSurveyResult(runId: int) -> SurveyResponseDto:
                 surveyImpactScore05=_safeFloat(row.get("impact_score")),
                 surveyImpactScore10=_mb.toScore10(row.get("impact_score")),
                 surveyFinancialScore05=_safeFloat(row.get("financial_score")),
-<<<<<<< HEAD
                 surveyFinancialScore10=_mb.toScore10(row.get("financial_score")),
                 employeeImpactScore05=_safeFloat(scores.get("employee", {}).get("impact")),
                 employeeImpactScore10=_mb.toScore10(scores.get("employee", {}).get("impact")),
@@ -349,21 +290,6 @@ def getSurveyResult(runId: int) -> SurveyResponseDto:
                 externalImpactScore10=_mb.toScore10(scores.get("external", {}).get("impact")),
                 externalFinancialScore05=_safeFloat(scores.get("external", {}).get("financial")),
                 externalFinancialScore10=_mb.toScore10(scores.get("external", {}).get("financial")),
-=======
-                surveyFinancialScore10=_toScore10(row.get("financial_score")),
-                employeeImpactScore05=_safeFloat(scores.get("employee", {}).get("impact")),
-                employeeImpactScore10=_toScore10(scores.get("employee", {}).get("impact")),
-                employeeFinancialScore05=_safeFloat(scores.get("employee", {}).get("financial")),
-                employeeFinancialScore10=_toScore10(scores.get("employee", {}).get("financial")),
-                managementImpactScore05=_safeFloat(scores.get("management", {}).get("impact")),
-                managementImpactScore10=_toScore10(scores.get("management", {}).get("impact")),
-                managementFinancialScore05=_safeFloat(scores.get("management", {}).get("financial")),
-                managementFinancialScore10=_toScore10(scores.get("management", {}).get("financial")),
-                externalImpactScore05=_safeFloat(scores.get("external", {}).get("impact")),
-                externalImpactScore10=_toScore10(scores.get("external", {}).get("impact")),
-                externalFinancialScore05=_safeFloat(scores.get("external", {}).get("financial")),
-                externalFinancialScore10=_toScore10(scores.get("external", {}).get("financial")),
->>>>>>> origin/skm_test
             )
         )
 
@@ -401,19 +327,12 @@ def getSurveyResult(runId: int) -> SurveyResponseDto:
 
 
 def getSelectionProcess(runId: int, userModel) -> SelectionProcessResponseDto:
-<<<<<<< HEAD
     """이슈 선정 과정(선정·미선정 이슈, 선정 규칙, 근거)을 상세히 반환한다."""
     from src.utils.subissuemaster import subissueMaster
     rows = listResults(runId)
     selectedContext = _mb.resolveSelectedContext(runId, rows)
     items = [_mb.buildResultItem(row, selectedContext["selectedCodes"]) for row in rows]
     selectedIssues = _mb.buildSelectionReasons(selectedContext, items)
-=======
-    rows = listResults(runId)
-    selectedContext = _resolveSelectedContext(runId, rows)
-    items = [_buildResultItem(row, selectedContext["selectedCodes"]) for row in rows]
-    selectedIssues = _buildSelectionReasons(selectedContext, items)
->>>>>>> origin/skm_test
     selectedCodeSet = set(selectedContext["selectedCodes"])
 
     excludedIssues = []
@@ -451,136 +370,13 @@ def getSelectionProcess(runId: int, userModel) -> SelectionProcessResponseDto:
 
 
 def getOnboardingProgress(runId: int) -> dict:
-<<<<<<< HEAD
     """선정된 서브이슈별 필수 지표 입력 완료율을 조회해 반환한다."""
-=======
->>>>>>> origin/skm_test
     run = findOne(
         "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? AND delete_yn = 0",
         (runId,),
     )
     if not run:
         raise ValueError(f"Materiality run not found: {runId}")
-<<<<<<< HEAD
-=======
-
-    rows = findAll(
-        """
-        SELECT
-            sub.sub_issue_code,
-            COALESCE(sub_master.sub_issue_name_kr, '기타') AS sub_issue_name,
-            COUNT(DISTINCT master.atomic_metric_id)        AS total_count,
-            COUNT(DISTINCT CASE
-                WHEN fact.atomic_metric_id   IS NOT NULL
-                  OR rollup.group_atomic_metric_id IS NOT NULL
-                THEN master.atomic_metric_id
-            END)                                           AS done_count
-        FROM ESG_MATERIALITY_SELECTED_SUB_ISSUE sub
-        LEFT JOIN ESG_SUB_ISSUE_MASTER sub_master
-            ON sub.sub_issue_code = sub_master.sub_issue_code
-        LEFT JOIN ESG_ATOMIC_METRIC_MASTER master
-            ON sub.sub_issue_code = master.sub_issue_code
-        LEFT JOIN ESG_KPI_FACT fact
-            ON master.atomic_metric_id = fact.atomic_metric_id
-        LEFT JOIN ESG_GROUP_ROLLUP_RESULT rollup
-            ON master.atomic_metric_id = rollup.group_atomic_metric_id
-        WHERE sub.esg_materiality_run_id = ?
-        GROUP BY sub.sub_issue_code, sub_master.sub_issue_name_kr
-        ORDER BY sub.selected_rank_no ASC
-        """,
-        (runId,),
-    )
-
-    items = [
-        {
-            "subIssueCode": r["sub_issue_code"],
-            "subIssueName": r["sub_issue_name"],
-            "totalCount": int(r["total_count"] or 0),
-            "doneCount": int(r["done_count"] or 0),
-        }
-        for r in (rows or [])
-    ]
-    return {"runId": runId, "items": items}
-
-
-def finalizeSelectedSubIssues(runId: int, userModel) -> FinalizeSelectedSubIssuesResponseDto:
-    run = findOne(
-        "SELECT id FROM ESG_MATERIALITY_RUN WHERE id = ? AND delete_yn = 0",
-        (runId,),
-    )
-    if not run:
-        raise ValueError(f"Materiality run not found: {runId}")
-
-    topRows = listFinalTopSubIssues(runId, limit=5)
-    if len(topRows) < 5:
-        raise ValueError(f"Top 5 candidates not sufficient: found {len(topRows)}")
-
-    userId = getattr(userModel, "id", None) or getattr(userModel, "user_id", None)
-
-    rowsToInsert = [
-        {
-            "sub_issue_code": row["sub_issue_code"],
-            "selected_rank_no": idx + 1,
-            "selection_type": "rank_based",
-            "selection_reason": "최종 DMA 점수 기준 Top 5 자동 선정",
-        }
-        for idx, row in enumerate(topRows[:5])
-    ]
-
-    replaceSelectedSubIssuesTx(runId, rowsToInsert, userId=userId)
-
-    # 선정 확정 직후 온보딩 지표 scope 자동 초기화 (idempotent).
-    # 사용자가 별도 버튼을 누르는 것이 아니라, Top 5 확정의 후속 단계로 시스템이 자동 처리한다.
-    _initPostDmaScopeAfterFinalize(runId, userId)
-
-    selectedIssues = [
-        FinalizeSelectedSubIssueItemDto(
-            subIssueCode=row["sub_issue_code"],
-            selectedRankNo=idx + 1,
-            rankNo=_safeInt(row.get("rank_no")),
-            finalScore05=_safeFloat(row.get("final_score")),
-            selectionType="rank_based",
-            selectionReason="최종 DMA 점수 기준 Top 5 자동 선정",
-        )
-        for idx, row in enumerate(topRows[:5])
-    ]
-
-    return FinalizeSelectedSubIssuesResponseDto(
-        runId=runId,
-        selectedCount=len(selectedIssues),
-        selectionSource="TABLE",
-        fallbackYn=False,
-        selectedIssues=selectedIssues,
-    )
-
-
-def _initPostDmaScopeAfterFinalize(runId: int, userId: Optional[int]) -> None:
-    """선정 확정 후 온보딩 지표 scope를 자동 초기화한다.
-
-    reportworkflows 서비스의 idempotent scope 초기화 로직을 재사용한다.
-    (지연 import로 materialities ↔ reportworkflows 순환 참조 방지)
-    동일 runId 재호출 시 기존 cycle/scope를 재사용하므로 중복 생성되지 않는다.
-    """
-    from src.services.reportworkflows.service import initializePostDmaDisclosureScope
-
-    initializePostDmaDisclosureScope(runId, userId)
-
-
-def _buildResultItem(row: dict, selectedCodes: list[str]) -> MaterialityResultItemDto:
-    code = row.get("sub_issue_code", "")
-    benchImp = _safeFloat(row.get("benchmark_impact_score"))
-    benchFin = _safeFloat(row.get("benchmark_financial_score"))
-    mediaImp = _safeFloat(row.get("media_external_impact_score"))
-    mediaFin = _safeFloat(row.get("media_external_financial_score"))
-    surveyImp = _safeFloat(row.get("survey_impact_score"))
-    surveyFin = _safeFloat(row.get("survey_financial_score"))
-    finalImp = _safeFloat(row.get("final_impact_score"))
-    finalFin = _safeFloat(row.get("final_financial_score"))
-    finalScore = _safeFloat(row.get("final_score"))
-    rankNo = _safeInt(row.get("rank_no"))
-    finalImp10 = _toScore10(finalImp)
-    finalFin10 = _toScore10(finalFin)
->>>>>>> origin/skm_test
 
     rows = findAll(
         """
@@ -678,189 +474,9 @@ def getWorkflowStatus(runId: int, workflowType: str) -> dict:
     return _getDmaWorkflowStatusOrDefault(runId=runId, workflowType=workflowType)
 
 
-<<<<<<< HEAD
 def _initPostDmaScopeAfterFinalize(runId: int, userId: Optional[int]) -> None:
     """선정 확정 후 온보딩 지표 scope를 자동 초기화한다.
 
     동일 runId 재호출 시 기존 cycle/scope를 재사용하므로 중복 생성되지 않는다.
     """
     initializePostDmaDisclosureScope(runId, userId)
-=======
-def _resolveSelectedContext(runId: int, rows: list[dict]) -> dict:
-    selectedRows = listSelectedSubIssues(runId)
-    if selectedRows:
-        selectedCodes = [row["sub_issue_code"] for row in selectedRows if row.get("sub_issue_code")][:SELECTED_TOP_N]
-        return {
-            "selectionSource": "TABLE",
-            "fallbackYn": False,
-            "selectedCodes": selectedCodes,
-            "selectedRows": selectedRows,
-        }
-
-    rankedRows = [row for row in rows if row.get("rank_no") is not None and row.get("final_score") is not None]
-    selectedCodes = [row["sub_issue_code"] for row in rankedRows[:SELECTED_TOP_N] if row.get("sub_issue_code")]
-    return {
-        "selectionSource": "RANK_FALLBACK",
-        "fallbackYn": True,
-        "selectedCodes": selectedCodes,
-        "selectedRows": [],
-    }
-
-
-def _buildSelectionReasons(selectedContext: dict, items: list[MaterialityResultItemDto]) -> list[SelectionReasonDto]:
-    byCode = {item.subIssueCode: item for item in items}
-    selectedRowsByCode = {row.get("sub_issue_code"): row for row in selectedContext.get("selectedRows", [])}
-    reasons = []
-    for code in selectedContext["selectedCodes"]:
-        item = byCode.get(code)
-        if not item:
-            base = _subIssueBase(code, selectedYn=True)
-            rankNo = None
-            displayName = base["displaySubIssueName"]
-        else:
-            rankNo = item.rankNo
-            displayName = item.displaySubIssueName
-        tableRow = selectedRowsByCode.get(code, {})
-        reasons.append(
-            SelectionReasonDto(
-                subIssueCode=code,
-                displaySubIssueName=displayName,
-                rankNo=rankNo,
-                selectedYn=True,
-                selectionType=tableRow.get("selection_type") or "rank_based",
-                selectionReason=tableRow.get("selection_reason") or "최종 점수 상위 이슈로 MVP 기본 선정되었습니다.",
-                selectionSource=selectedContext["selectionSource"],
-                fallbackYn=selectedContext["fallbackYn"],
-            )
-        )
-    return reasons
-
-
-def _buildObservationMap(rows: list[dict]) -> dict:
-    observations = {}
-    for row in rows:
-        code = row.get("sub_issue_code")
-        sourceType = row.get("source_type")
-        if not code or not sourceType:
-            continue
-        observations.setdefault(code, {})
-        observations[code][sourceType] = {
-            "signalCount": int(row.get("signal_count") or 0),
-            "evidenceCount": int(row.get("evidence_count") or 0),
-        }
-    return observations
-
-
-def _buildEvidenceSourceCounts(rows: list[dict]) -> dict:
-    result = {}
-    for row in rows:
-        sourceType = row.get("source_type")
-        if not sourceType:
-            continue
-        result[sourceType] = {
-            "evidenceCount": int(row.get("evidence_count") or 0),
-            "reportCount": int(row.get("report_count") or 0),
-        }
-    return result
-
-
-def _buildBenchmarkObservationIssue(code: str, obs: dict) -> BenchmarkObservationIssueDto:
-    return BenchmarkObservationIssueDto(
-        **_subIssueBase(code),
-        leaderObserved=_isObserved(obs, "leader_sr"),
-        peerObserved=_isObserved(obs, "peer_sr"),
-        ownObserved=_isObserved(obs, "own_sr"),
-        leaderEvidenceCount=int(obs.get("leader_sr", {}).get("evidenceCount", 0)),
-        peerEvidenceCount=int(obs.get("peer_sr", {}).get("evidenceCount", 0)),
-        ownEvidenceCount=int(obs.get("own_sr", {}).get("evidenceCount", 0)),
-    )
-
-
-def _buildSurveyGroupScoreMap(rows: list[dict]) -> dict:
-    result = {}
-    for row in rows:
-        code = row.get("sub_issue_code")
-        group = row.get("respondent_group")
-        mappedAxis = row.get("mapped_axis")
-        if not code or not group or not mappedAxis:
-            continue
-        result.setdefault(code, {})
-        result[code].setdefault(group, {})
-        result[code][group][mappedAxis] = row.get("avg_score")
-    return result
-
-
-def _subIssueBase(
-    code: str,
-    rankNo: Optional[int] = None,
-    selectedYn: bool = False,
-    quadrant: Optional[str] = None,
-) -> dict:
-    meta = getSubIssueMeta(code)
-    return {
-        "subIssueCode": code,
-        "displaySubIssueName": meta.get("subIssueNameKr") or code,
-        "domain": meta.get("domain"),
-        "issueGroup": meta.get("issueGroupNameKr") or meta.get("issueGroup"),
-        "issueGroupCode": meta.get("issueGroup"),
-        "rankNo": rankNo,
-        "selectedYn": selectedYn,
-        "quadrant": quadrant,
-    }
-
-
-def _subIssueSortKey(code: str):
-    meta = getSubIssueMeta(code)
-    return (meta.get("domain", ""), meta.get("issueGroup", ""), meta.get("subIssueSort", 999), code)
-
-
-def _isObserved(obs: dict, sourceType: str) -> bool:
-    return int(obs.get(sourceType, {}).get("signalCount", 0)) > 0
-
-
-def _quadrant(impactScore10: Optional[float], financialScore10: Optional[float]) -> str:
-    if impactScore10 is None or financialScore10 is None:
-        return "NO_DATA"
-    impactHigh = impactScore10 >= HIGH_PRIORITY_THRESHOLD_10
-    financialHigh = financialScore10 >= HIGH_PRIORITY_THRESHOLD_10
-    if impactHigh and financialHigh:
-        return "HIGH_IMPACT_HIGH_FINANCIAL"
-    if impactHigh:
-        return "HIGH_IMPACT_LOW_FINANCIAL"
-    if financialHigh:
-        return "LOW_IMPACT_HIGH_FINANCIAL"
-    return "LOW_IMPACT_LOW_FINANCIAL"
-
-
-def _safeFloat(value) -> Optional[float]:
-    if value is None:
-        return None
-    if isinstance(value, Decimal):
-        return float(value)
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _safeInt(value) -> Optional[int]:
-    if value is None:
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _toScore10(score05) -> Optional[float]:
-    value = _safeFloat(score05)
-    if value is None:
-        return None
-    return round(value * 2, 2)
-
-
-def _rate(value: int, total: int) -> Optional[float]:
-    if total <= 0:
-        return None
-    return round((value / total) * 100, 1)
->>>>>>> origin/skm_test

@@ -1,11 +1,8 @@
-<<<<<<< HEAD
 """
 dmasurveyresponsestatus.py
 레이어: Model
 역할: DMA 설문 응답 현황(그룹별 참여율) DTO 정의.
 """
-=======
->>>>>>> origin/skm_test
 from typing import Optional, Dict
 from pydantic import BaseModel, ConfigDict
 

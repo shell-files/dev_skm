@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * ecoProduct.jsx
  * 레이어: Component (srTemplates/subIssues)
@@ -7,8 +6,6 @@
  * exports:
  *   ecoProduct (default) — id·label·adapter·metricFields·pages를 포함하는 서브이슈 매니페스트 객체
  */
-=======
->>>>>>> origin/skm_test
 // srTemplates/subIssues/ecoProduct.jsx
 // 저탄소·친환경 제품 서브이슈
 import React from "react";

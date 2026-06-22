@@ -16,7 +16,6 @@ import '@styles/App.css'
 import "@styles/mains.css";
 import NotFound from '@errors/NotFound.jsx';
 import Onboarding from '@onboards/OnBoard.jsx';
-<<<<<<< HEAD
 import Benchmarking from '@reports/bench/BenchMarking.jsx';
 import Media from '@reports/media/Media.jsx';
 import Survey from '@reports/survey/Survey.jsx';
@@ -25,16 +24,6 @@ import Draft from '@reports/Draft.jsx';
 import Mypage from '@mains/Mypage.jsx';
 import Manager from '@mains/Manager.jsx';
 import ManagerData from '@mains/managerdata/ManagerData.jsx';
-=======
-import Benchmarking from '@reports/Benchmarking.jsx';
-import Media from '@reports/Media.jsx';
-import Survey from '@reports/Survey.jsx';
-import Result from '@reports/Result.jsx';
-import Draft from '@reports/Draft.jsx';
-import Mypage from '@mains/Mypage.jsx';
-import Manager from '@mains/Manager.jsx';
-import ManagerData from '@mains/ManagerData.jsx';
->>>>>>> origin/skm_test
 import Dashboard from './Dashboard.jsx';
 import Headernav from '@components/Layout/HeaderNav.jsx'
 import Sidebarnav from '@components/Layout/SidebarNav.jsx'

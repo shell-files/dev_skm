@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """
 reportWorkflow.py
 레이어: API Router
@@ -12,8 +11,6 @@ reportWorkflow.py
   POST /{runId}/post-dma-scope/initialize — 선정된 Sub-Issue 기반 POST_DMA_DISCLOSURE 온보딩 범위 초기화
   GET  /{runId}/g0-status               — 보고서 워크플로우 G0 준비 상태 조회
 """
-=======
->>>>>>> origin/skm_test
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from src.models.reportworkflow import (
@@ -42,11 +39,7 @@ _actionRouter = APIRouter()
 @_actionRouter.get(
     "/current",
     response_model=ReportWorkflowResponseDto,
-<<<<<<< HEAD
     summary="현재 보고서 워크플로우 상태 조회",
-=======
-    summary="Get current report workflow status",
->>>>>>> origin/skm_test
 )
 async def getCurrentRoute(
     companyId: int = Query(...),
@@ -55,11 +48,6 @@ async def getCurrentRoute(
 ):
     try:
         checkScope(companyId, userModel)
-<<<<<<< HEAD
-
-=======
-        
->>>>>>> origin/skm_test
         return getCurrent(companyId, reportingYear)
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e))
@@ -72,11 +60,7 @@ async def getCurrentRoute(
 @_actionRouter.post(
     "/start",
     response_model=ReportWorkflowResponseDto,
-<<<<<<< HEAD
     summary="보고서 워크플로우 기준 선택 시작",
-=======
-    summary="Start report workflow basis selection",
->>>>>>> origin/skm_test
 )
 async def startWorkflowRoute(
     request: ReportWorkflowStartRequestDto,
@@ -96,11 +80,7 @@ async def startWorkflowRoute(
 @_actionRouter.get(
     "/projects",
     response_model=ReportWorkflowProjectListResponseDto,
-<<<<<<< HEAD
     summary="연도별 보고서 워크플로우 프로젝트 목록 조회",
-=======
-    summary="List yearly report workflow projects",
->>>>>>> origin/skm_test
 )
 async def listProjectsRoute(
     companyId: int = Query(...),
@@ -120,11 +100,7 @@ async def listProjectsRoute(
 @_actionRouter.post(
     "/{runId}/resume",
     response_model=ReportWorkflowResponseDto,
-<<<<<<< HEAD
     summary="기존 보고서 워크플로우 재개 및 레거시 G0 사이클 복구",
-=======
-    summary="Resume existing report workflow and repair legacy G0 cycle",
->>>>>>> origin/skm_test
 )
 async def resumeWorkflowRoute(runId: int, userModel=Depends(get_token)):
     try:
@@ -146,11 +122,7 @@ async def resumeWorkflowRoute(runId: int, userModel=Depends(get_token)):
 @_actionRouter.post(
     "/{runId}/post-dma-scope/initialize",
     response_model=ReportWorkflowPostDmaScopeResponseDto,
-<<<<<<< HEAD
     summary="선정된 Sub-Issue 기반 POST_DMA_DISCLOSURE 온보딩 범위 초기화",
-=======
-    summary="Initialize POST_DMA_DISCLOSURE onboarding scope from selected sub-issues",
->>>>>>> origin/skm_test
 )
 async def initializePostDmaScopeRoute(runId: int, userModel=Depends(get_token)):
     try:
@@ -172,11 +144,7 @@ async def initializePostDmaScopeRoute(runId: int, userModel=Depends(get_token)):
 @_actionRouter.get(
     "/{runId}/g0-status",
     response_model=ReportWorkflowResponseDto,
-<<<<<<< HEAD
     summary="보고서 워크플로우 G0 준비 상태 조회",
-=======
-    summary="Get G0 readiness for report workflow",
->>>>>>> origin/skm_test
 )
 async def getG0StatusRoute(runId: int, userModel=Depends(get_token)):
     try:

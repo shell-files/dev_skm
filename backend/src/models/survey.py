@@ -1,11 +1,8 @@
-<<<<<<< HEAD
 """
 survey.py
 레이어: Model
 역할: 설문 생성 요청 및 응답 DTO 정의.
 """
-=======
->>>>>>> origin/skm_test
 from pydantic import BaseModel
 
 

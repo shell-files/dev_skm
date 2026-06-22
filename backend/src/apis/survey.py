@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """
 survey.py
 레이어: API Router
@@ -17,8 +16,6 @@ survey.py
   PUT  /form/{runId}/response-targets    — 목표 응답자 수 저장
   GET  /{sheet_id}                    — 설문 결과 CSV 추출
 """
-=======
->>>>>>> origin/skm_test
 from fastapi import APIRouter, Depends, HTTPException
 
 from src.utils.auth import get_token
@@ -29,11 +26,7 @@ from src.models.dmasurveyscore import SurveyScorePreviewDto, SurveyScoreRecalcul
 from src.models.dmasurveyresponsestatus import SurveyResponseStatusDto, SurveyResponseTargetsRequestDto
 
 from src.services.surveys.service import exportCsvProcess, getRawProcess
-<<<<<<< HEAD
 from src.services.surveys.formservice import createFormProcess, ensureSurveyFormForRun, getSurveyFormDetail
-=======
-from src.services.surveys.formservice import createFormProcess, ensureSurveyFormForRun
->>>>>>> origin/skm_test
 from src.services.surveys.importservice import (
     importSurveyResponsesForRun,
     previewSurveyResponses,
@@ -43,10 +36,6 @@ from src.services.surveys.scoringservice import (
     recalculateSurveyScoresForRun,
 )
 from src.services.surveys.statusservice import getSurveyResponseStatus, saveSurveyResponseTargets
-<<<<<<< HEAD
-=======
-from src.utils.dmasurveyformrepository import getSurveyFormByRunId, toSurveyFormResponse
->>>>>>> origin/skm_test
 
 router = APIRouter()
 
@@ -75,24 +64,14 @@ def getRaw():
 )
 async def get_survey_form(runId: int, token=Depends(get_token)):
     try:
-<<<<<<< HEAD
         result = getSurveyFormDetail(runId)
-=======
-        row = getSurveyFormByRunId(runId)
->>>>>>> origin/skm_test
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-<<<<<<< HEAD
     if result is None:
         raise HTTPException(status_code=404, detail=f"Survey form not found for runId={runId}")
     return result
-=======
-    if row is None:
-        raise HTTPException(status_code=404, detail=f"Survey form not found for runId={runId}")
-    return toSurveyFormResponse(row)
->>>>>>> origin/skm_test
 
 
 @router.post(

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * DataTab.jsx
  * 레이어: Component (mains) — 구버전 파일
@@ -32,17 +31,12 @@
  * 의존 컴포넌트:
  *   ApprovalDetailModal — 지표 승인 상세 조회·승인·반려 모달
  */
-=======
->>>>>>> origin/skm_test
 import React, { useEffect, useMemo, useState } from "react";
 import TabButton from "@components/UI/TabButton";
 import BatchActionBar from "@components/UI/BatchActionBar";
 import ApprovalDetailModal from "./modal/ApprovalDetailModal";
-<<<<<<< HEAD
 import ModalWrapper from "@components/UI/ModalWrapper";
 import LoadingSpinner from "@components/UI/LoadingSpinner";
-=======
->>>>>>> origin/skm_test
 import "@styles/Manager.css";
 import "@styles/TabButton.css";
 
@@ -414,14 +408,7 @@ const DataTab = ({
           )}
 
           {isLoading ? (
-<<<<<<< HEAD
             <LoadingSpinner message="Loading approval inbox..." />
-=======
-            <div className="loading-container">
-              <div className="spinner" />
-              <p>Loading approval inbox...</p>
-            </div>
->>>>>>> origin/skm_test
           ) : (
             <div
               className="ob-table-wrap"
@@ -641,7 +628,6 @@ const DataTab = ({
       />
 
       {isBulkRejectModalOpen && (
-<<<<<<< HEAD
         <ModalWrapper
           title="Reject selected items"
           onClose={() => setIsBulkRejectModalOpen(false)}
@@ -669,56 +655,6 @@ const DataTab = ({
             style={{ width: "100%", height: "120px", padding: "10px", border: "1px solid #ddd", borderRadius: "6px", marginTop: "10px" }}
           />
         </ModalWrapper>
-=======
-        <div className="modal-overlay">
-          <div className="modal-window">
-            <div className="modal-header">
-              <h3>Reject selected items</h3>
-              <button
-                type="button"
-                className="close-x"
-                aria-label="Close bulk reject modal"
-                onClick={() => setIsBulkRejectModalOpen(false)}
-              >
-                x
-              </button>
-            </div>
-            <div className="modal-body">
-              <p>Reject {selectedSupportedRows.length} selected items.</p>
-              <textarea
-                className="reject-textarea"
-                placeholder="Enter rejection reason."
-                value={bulkRejectReason}
-                onChange={(event) => setBulkRejectReason(event.target.value)}
-                style={{
-                  width: "100%",
-                  height: "120px",
-                  padding: "10px",
-                  border: "1px solid #ddd",
-                  borderRadius: "6px",
-                  marginTop: "10px",
-                }}
-              />
-            </div>
-            <div className="modal-footer">
-              <button
-                type="button"
-                className="btn-confirm"
-                disabled={!bulkRejectReason.trim()}
-                title={!bulkRejectReason.trim() ? "Enter rejection reason." : ""}
-                onClick={async () => {
-                  const success = await handleBulkAction("REJECTED", bulkRejectReason.trim());
-                  if (success) {
-                    setIsBulkRejectModalOpen(false);
-                  }
-                }}
-              >
-                Confirm reject
-              </button>
-            </div>
-          </div>
-        </div>
->>>>>>> origin/skm_test
       )}
 
     </section>

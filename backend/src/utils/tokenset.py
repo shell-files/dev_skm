@@ -86,37 +86,19 @@ def generateRefreshAccessWithUuid(userClaims: UserModel):
     # JWE로 암호화하여 반환
     return encryptToJwe(payload)
 
-<<<<<<< HEAD
 def createUserTokens(userClaims: UserModel):
     """ 로그인 시 호출: JWE 액세스/리프레시 토큰 및 UUID 생성"""
     # UUID 생성
-=======
-# --------------------------
-# 로그인 시 호출: JWE 액세스/리프레시 토큰 및 UUID 생성
-# --------------------------
-def createUserTokens(userClaims: UserModel):
-    """ 로그인 시 호출: JWE 액세스/리프레시 토큰 및 UUID 생성"""
-    # UUID 생성 
->>>>>>> origin/skm_test
     tokenUuid = str(uuid.uuid4().hex)
 
     userClaims.uuid = tokenUuid
 
-<<<<<<< HEAD
     # 액세스 토큰
     accessToken = generateAccessWithUuid(userClaims)
 
     # 리프레시 토큰
     refreshToken = generateRefreshAccessWithUuid(userClaims)
 
-=======
-    # 액세스 토큰 
-    accessToken = generateAccessWithUuid(userClaims)
-    
-    # 리프레시 토큰
-    refreshToken = generateRefreshAccessWithUuid(userClaims)
-    
->>>>>>> origin/skm_test
     return accessToken, refreshToken, tokenUuid
 
 def refreshAccessToken(refreshToken: str):
@@ -143,12 +125,6 @@ def refreshAccessToken(refreshToken: str):
     return newAccessToken, newUuid, userClaims.id
 
 
-<<<<<<< HEAD
-=======
-# --------------------------
-# inviteMember 토큰과 UUID 생성 함수 (공통 모듈)
-# --------------------------
->>>>>>> origin/skm_test
 def generateInviteTokenWithUuid(issueGroup:List[str], companyName: str, email:str, roleId: int, projectId: int, inviteId: int, companyId: int):
     """ inviteMember 토큰과 UUID 생성 함수 (공통 모듈)"""
     tokenUuid = str(uuid.uuid4().hex)
@@ -164,21 +140,11 @@ def generateInviteTokenWithUuid(issueGroup:List[str], companyName: str, email:st
         "companyId": companyId,
         "iat": int(now.timestamp()),
         "exp": int((now + timedelta(days=settings.invite_token_expire_days)).timestamp())
-<<<<<<< HEAD
-=======
-        
->>>>>>> origin/skm_test
     }
     # JWE로 암호화하여 반환
     inviteToken = encryptToJwe(payload)
     return inviteToken, tokenUuid
 
-<<<<<<< HEAD
-=======
-# --------------------------
-# inviteConsultant 토큰과 UUID 생성 함수 (공통 모듈)
-# --------------------------
->>>>>>> origin/skm_test
 def generateConsultantInviteToken(companyName: str, email:str, roleId: int, inviteId: int, companyId: int):
     """ inviteConsultant 토큰과 UUID 생성 함수 (공통 모듈)"""
     tokenUuid = str(uuid.uuid4().hex)
@@ -197,8 +163,4 @@ def generateConsultantInviteToken(companyName: str, email:str, roleId: int, invi
     }
 
     inviteToken = encryptToJwe(payload)  # <- 여기 99%
-<<<<<<< HEAD
     return inviteToken, tokenUuid
-=======
-    return inviteToken, tokenUuid
->>>>>>> origin/skm_test

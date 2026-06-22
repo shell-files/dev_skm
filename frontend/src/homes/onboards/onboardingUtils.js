@@ -1,11 +1,8 @@
-<<<<<<< HEAD
 /**
  * onboardingUtils.js
  * 레이어: Utils (onboards)
  * 역할: 온보딩 지표 입력 모드 판별·상태 계산·통계 집계·역할 판별·항목 병합 등 순수 유틸리티 함수 모음
  */
-=======
->>>>>>> origin/skm_test
 export const STRUCTURED_LOOKUP_IDS = new Set(["G0-05__QL0002", "G0-06__QL0001"]);
 export const EDITABLE_INPUT_MODES = new Set([
   "MANUAL_NUMBER",
@@ -145,7 +142,6 @@ export const getStatusInfo = (status) => {
   if (status === "IN_PROGRESS") return { label: "진행중", cls: "not-started" };
   return { label: "미시작", cls: "not-started" };
 };
-<<<<<<< HEAD
 
 export const getStatusText = (status) => {
   if (status === "DRAFT" || status === "IN_PROGRESS") return "작성중";
@@ -308,5 +304,3 @@ export const getProfileStatusFromItems = (items = []) => {
   if (completedCount < editableItems.length) return "IN_PROGRESS";
   return "COMPLETED";
 };
-=======
->>>>>>> origin/skm_test

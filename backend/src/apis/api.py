@@ -1,11 +1,8 @@
-<<<<<<< HEAD
 """
 api.py
 레이어: API Router
 역할: 서브라우터 통합 — onboardingAssignment, onboardingApproval, reportWorkflow, rollup 라우터를 include_in_schema=False로 통합.
 """
-=======
->>>>>>> origin/skm_test
 from fastapi import APIRouter
 
 from src.apis.onboardingAssignment import onboardingAssignmentRouter

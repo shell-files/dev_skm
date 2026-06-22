@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * UserTab.jsx
  * 레이어: Component (mains)
@@ -18,9 +17,6 @@
  */
 import React, { useState } from 'react';
 import LoadingSpinner from "@components/UI/LoadingSpinner";
-=======
-import React, { useState } from 'react';
->>>>>>> origin/skm_test
 
 const UserTab = ({
   isLoading,

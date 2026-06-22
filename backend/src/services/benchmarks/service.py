@@ -12,11 +12,7 @@ from src.models.model import ResponseModel, UserModel
 from src.models.benchmk import FileModel, FileFindModel
 from src.utils.ocraiv8 import gemini
 from src.utils import dmaruleregistry
-<<<<<<< HEAD
 from src.repositories.dmarepository import (
-=======
-from src.utils.dmarepository import (
->>>>>>> origin/skm_test
     saveSignals,
     step4ReplaceBenchmarkShadowTracesTx,
     resetBenchmarkData,
@@ -24,21 +20,11 @@ from src.utils.dmarepository import (
     updateRanks,
 )
 from src.utils.db import save, findAll
-<<<<<<< HEAD
 from src.repositories.dmaworkflowrepository import upsertDmaWorkflowStatus
 from src.utils.dmascoring import scoreSignals
 from src.services.benchmarks.adapter import convertToDmaSignals, step0NormalizeBenchmarkFacts
 from src.services.materialities.orchestrator import step0BuildFactTrace
 from src.services.materialities.screeningbuilder import step2BuildBenchmarkScreeningPayloads
-=======
-from src.utils.dmaworkflowrepository import upsertDmaWorkflowStatus
-from src.utils.dmascoring import scoreSignals
-from src.services.benchmarks.adapter import convertToDmaSignals, step0NormalizeBenchmarkFacts
-from src.services.materialities.orchestrator import (
-    step0BuildFactTrace,
-    step2BuildBenchmarkScreeningPayloads,
-)
->>>>>>> origin/skm_test
 from src.utils.subissuemaster import subissueMaster
 from src.models.dmaengine import DMASignal
 
@@ -253,10 +239,7 @@ def uploadSr(fileModel: FileModel, userModel: UserModel):
 
 
 async def findSr(fileFindModel: FileFindModel, userModel: UserModel):
-<<<<<<< HEAD
     """업로드된 SR PDF를 Gemini OCR로 분석해 DMASignal을 저장하고 v1.3 Shadow Trace를 교체한다."""
-=======
->>>>>>> origin/skm_test
     runId = fileFindModel.esgMaterialityRunId
 
     # PG 모드 제외 — 파일 업로드 모드만 사용

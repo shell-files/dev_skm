@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * climateTarget.jsx
  * 레이어: Component (srTemplates/subIssues)
@@ -7,8 +6,6 @@
  * exports:
  *   climateTarget (default) — id·label·adapter·metricFields·pages를 포함하는 서브이슈 매니페스트 객체
  */
-=======
->>>>>>> origin/skm_test
 // srTemplates/subIssues/climateTarget.jsx
 // 기후목표·전환계획 서브이슈 단일 파일
 // (통합: index.js + adapter.js + metricFields.js + pages/ClimateTargetPageA.jsx)

@@ -1,11 +1,8 @@
-<<<<<<< HEAD
 /**
  * reportSlice.js
  * 레이어: Store
  * 역할: 보고서 Redux 슬라이스 — 보고 연도·결재 프로젝트·사이클·materiality run ID 상태 관리 및 API Thunk.
  */
-=======
->>>>>>> origin/skm_test
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { GET, POST, POST_FORM, PUT, PATCH } from "@utils/Network";
 

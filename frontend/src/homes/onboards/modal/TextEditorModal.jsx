@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * TextEditorModal.jsx
  * 레이어: Component (onboards/modal)
@@ -11,8 +10,6 @@
  *   title — 모달 제목 (입력 항목명)
  *   onSave — 저장 완료 시 최종 텍스트를 전달하는 콜백
  */
-=======
->>>>>>> origin/skm_test
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import '@styles/onboardingModal.css';

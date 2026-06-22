@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 """
 draft.py
 레이어: API Router
@@ -12,8 +11,6 @@ draft.py
   DELETE /reset         — 보고서 초안 편집값 전체 삭제
   GET    /metric-trend  — 지표 연도별 추이 조회
 """
-=======
->>>>>>> origin/skm_test
 from fastapi import APIRouter, Depends
 
 from src.utils.auth import get_token

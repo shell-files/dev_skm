@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /**
  * srHelpers.jsx
  * 레이어: Utils (srTemplates/core)
@@ -24,8 +23,6 @@
  *   NARRATIVE_TEMPLATE_CLIMATE — 기후목표·전환계획 기본 narrative 템플릿
  *   CLIMATE_HIGHLIGHT_IDS — 기후 섹션 본문 강조 대상 metric_id 목록
  */
-=======
->>>>>>> origin/skm_test
 // ============================================================
 // srHelpers.jsx — metric 접근/포맷/narrative 조합 공통 유틸 (순수 JS)
 // 의존성: react 만 사용 (차트 라이브러리 없음)
@@ -335,7 +332,6 @@ export function Narrative({
     return <EditableNarrative template={tpl} metrics={metrics} onChange={onNarrativeChange} />;
   }
   return <NarrativeStatic template={tpl} metrics={metrics} metricIds={metricIds} />;
-<<<<<<< HEAD
 }
 
 export function buildMetricsFromEdits(adapter, editMetrics, rows) {
@@ -352,6 +348,4 @@ export function buildMetricsFromEdits(adapter, editMetrics, rows) {
     };
   });
   return map;
-=======
->>>>>>> origin/skm_test
 }

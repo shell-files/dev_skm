@@ -131,11 +131,7 @@ async def apply_company_context_modifiers(runId: int, userModel=Depends(get_toke
 @router.get(
     "/context/{runId}",
     response_model=CompanyContextProfileResponseDto,
-<<<<<<< HEAD
     summary="최신 기업 컨텍스트 프로필 및 수정자 조회",
-=======
-    summary="Get latest company context profile and modifiers",
->>>>>>> origin/skm_test
 )
 async def get_company_context_profile(runId: int, userModel=Depends(get_token)):
     try:
@@ -151,11 +147,7 @@ async def get_company_context_profile(runId: int, userModel=Depends(get_token)):
 )
 async def get_dma_workflow_status(runId: int, workflowType: str, userModel=Depends(get_token)):
     try:
-<<<<<<< HEAD
         return getWorkflowStatus(runId=runId, workflowType=workflowType)
-=======
-        return getDmaWorkflowStatusOrDefault(runId=runId, workflowType=workflowType)
->>>>>>> origin/skm_test
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

@@ -1,3 +1,21 @@
+<<<<<<< HEAD
+/**
+ * MetricAssignmentModal.jsx
+ * 레이어: Component (onboards/modal)
+ * 역할: 온보딩 지표에 담당자를 지정(단건·일괄)하고 초대 메일 발송을 요청하는 모달
+ *
+ * Props:
+ *   isOpen — 모달 표시 여부
+ *   mode — "single" (단건 지정) 또는 "bulk" (일괄 지정)
+ *   selectedMetricIds — 지정 대상 metricId 배열
+ *   currentAssignment — 현재 담당자 정보 (이름·이메일·제출기한 초기값)
+ *   isSubmitting — 제출 처리 중 여부
+ *   previewResult — 지정 결과 미리보기 (mailType 포함)
+ *   onClose — 모달 닫기 핸들러
+ *   onSubmitAssignment — 담당자 지정 제출 핸들러
+ */
+=======
+>>>>>>> origin/skm_test
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import '@styles/onboardingModal.css';

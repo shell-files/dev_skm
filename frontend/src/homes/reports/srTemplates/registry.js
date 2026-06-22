@@ -1,3 +1,16 @@
+<<<<<<< HEAD
+/**
+ * registry.js
+ * 레이어: Utils (srTemplates)
+ * 역할: SR 보고서에 사용되는 모든 서브이슈 모듈을 한 곳에서 관리하는 레지스트리 — 새 서브이슈 추가 시 이 파일에만 등록하면 됨
+ *
+ * exports:
+ *   subIssues — 전체 서브이슈 모듈 배열 (Draft, draftExport 등에서 참조)
+ *   getSubIssue — id로 서브이슈 모듈 조회
+ *   allPages — 전체 서브이슈의 페이지를 평탄화한 배열 (서브이슈 정보 부착)
+ */
+=======
+>>>>>>> origin/skm_test
 // srTemplates/registry.js
 // ── 서브이슈 레지스트리 ──
 // 모든 서브이슈 모듈을 여기서 모은다. 새 서브이슈 추가 = import 한 줄 + 배열에 추가.

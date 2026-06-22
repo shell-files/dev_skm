@@ -1,3 +1,19 @@
+<<<<<<< HEAD
+"""
+draft.py
+레이어: API Router
+역할: 보고서 초안 조회·저장·삭제 및 지표 추이 엔드포인트.
+
+엔드포인트:
+  GET    /metrics       — 보고서 초안 지표 조회
+  GET    /section       — AI 생성 서브이슈 본문 조회
+  POST   /save          — 보고서 초안 편집값 저장
+  GET    /load          — 보고서 초안 편집값 불러오기
+  DELETE /reset         — 보고서 초안 편집값 전체 삭제
+  GET    /metric-trend  — 지표 연도별 추이 조회
+"""
+=======
+>>>>>>> origin/skm_test
 from fastapi import APIRouter, Depends
 
 from src.utils.auth import get_token

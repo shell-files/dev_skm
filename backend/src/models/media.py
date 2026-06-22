@@ -1,3 +1,8 @@
+"""
+media.py
+레이어: Model
+역할: 미디어 뉴스 분석·크롤링 요청 및 응답 DTO 정의.
+"""
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field

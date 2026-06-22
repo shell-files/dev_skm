@@ -1,3 +1,8 @@
+/**
+ * ServiceTabs.jsx
+ * 레이어: Component (UI)
+ * 역할: 공시·ESG경영·ESG전략 서비스 탭을 표시하고 선택 탭 변경 이벤트를 상위에 전달.
+ */
 import React from 'react';
 import '@styles/ServiceTabs.css';
 

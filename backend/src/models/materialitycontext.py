@@ -1,3 +1,8 @@
+"""
+materialitycontext.py
+레이어: Model
+역할: 기업 컨텍스트 프로필·수정자 응답 DTO 정의.
+"""
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field

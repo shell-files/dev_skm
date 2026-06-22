@@ -1,4 +1,10 @@
 """
+<<<<<<< HEAD
+context.py
+레이어: Service (materialities)
+역할: 기업 컨텍스트 프로필·수정자 저장 서비스.
+"""
+=======
 Domain: DMA Materiality
 Layer: service/workflow
 Responsibility:
@@ -29,6 +35,7 @@ Do not:
 - do not modify auth/token/common code
 """
 
+>>>>>>> origin/skm_test
 from __future__ import annotations
 
 import json
@@ -39,9 +46,41 @@ from src.models.materialitycontext import (
     CompanyContextModifierResponseDto,
     CompanyContextProfileResponseDto,
     CompanyContextProfileDto,
-    ContextRuleHitDto,
     SubIssueContextModifierDto,
 )
+<<<<<<< HEAD
+from src.services.materialities.contextbuilder import (
+    MIN_PROFILE_CONFIDENCE_FOR_MODIFIER,
+    MODIFIER_RULE_VERSION,
+    MVP_MODIFIER_MAX,
+    MVP_MODIFIER_MIN,
+    SYSTEM_MODIFIER_MAX,
+    SYSTEM_MODIFIER_MIN,
+    MAX_RANK_MOVEMENT,
+    TOP5_ENTRY_RAW_RANK_LIMIT,
+    applyRankGuards,
+    buildProfile,
+    calcModifier,
+    checkObservedStage,
+    _floatOrNone,
+    _profileConfidence,
+)
+from src.services.materialities.contextgraph import buildCompanyContextProfileWithOptionalGraph
+from src.repositories.companycontextrepository import (
+    getLatestProfile,
+    getRun,
+    listG0Facts,
+    listScoreRows,
+    replaceProfile,
+    updateModifiers,
+)
+from src.repositories.dmarepository import recalcFinal, updateRanks
+from src.utils.subissuemaster import subissueMaster
+
+
+def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
+    """G0 Fact 기반 컨텍스트 프로필을 빌드하고 서브이슈별 modifier를 계산해 DB에 적용한다."""
+=======
 from src.services.materialities.contextgraph import buildCompanyContextProfileWithOptionalGraph
 from src.utils.companycontextrepository import (
     getLatestProfile,
@@ -69,6 +108,7 @@ MODIFIER_RULE_VERSION = "company-context-modifier-v1"
 
 
 def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
+>>>>>>> origin/skm_test
     runContext = getRun(runId)
     if not runContext:
         return CompanyContextModifierResponseDto(
@@ -163,6 +203,10 @@ def applyModifiers(runId: int) -> CompanyContextModifierResponseDto:
 
 
 def getProfile(runId: int) -> CompanyContextProfileResponseDto:
+<<<<<<< HEAD
+    """저장된 최신 컨텍스트 프로필과 modifier 목록을 조회해 반환한다."""
+=======
+>>>>>>> origin/skm_test
     row = getLatestProfile(runId)
     if not row:
         return CompanyContextProfileResponseDto(
@@ -208,11 +252,31 @@ def getProfile(runId: int) -> CompanyContextProfileResponseDto:
     )
 
 
+<<<<<<< HEAD
+# 이전 공개 이름과의 호환성 래퍼
+
+def applyCompanyContextModifiers(runId: int, userModel) -> CompanyContextModifierResponseDto:
+    """applyModifiers의 이전 공개 이름 호환 래퍼."""
+    return applyModifiers(runId)
+
+
+def getCompanyContextProfile(runId: int, userModel) -> CompanyContextProfileResponseDto:
+    """getProfile의 이전 공개 이름 호환 래퍼."""
+    return getProfile(runId)
+
+
+def buildCompanyContextProfile(
+=======
 def buildProfile(
+>>>>>>> origin/skm_test
     runId: int,
     runContext: dict,
     facts: list[CompanyContextFactDto],
 ) -> CompanyContextProfileDto:
+<<<<<<< HEAD
+    """buildProfile의 이전 공개 이름 호환 래퍼."""
+    return buildProfile(runId, runContext, facts)
+=======
     combinedText = _combinedText(runContext, facts)
     evidenceMetricIds = _unique([fact.metricId for fact in facts if fact.metricId])
     evidenceAtomicMetricIds = _unique([fact.atomicMetricId for fact in facts if fact.atomicMetricId])
@@ -291,6 +355,7 @@ def buildProfile(
         evidenceText=[fact.valueText[:300] for fact in facts if fact.valueText][:5],
         facts=facts,
     )
+>>>>>>> origin/skm_test
 
 
 def calcModifier(
@@ -298,6 +363,10 @@ def calcModifier(
     row: dict,
     profileConfidence: Optional[float] = None,
 ) -> SubIssueContextModifierDto:
+<<<<<<< HEAD
+    """calcModifier의 이전 공개 이름 호환 래퍼."""
+    return calcModifier(profile, row, profileConfidence)
+=======
     subIssueCode = row.get("sub_issue_code")
     rules: list[ContextRuleHitDto] = []
     confidence = _profileConfidence(profile) if profileConfidence is None else profileConfidence
@@ -356,11 +425,21 @@ def checkObservedStage(row: dict) -> bool:
         row.get("survey_impact_score") is not None,
         row.get("survey_financial_score") is not None,
     ])
+>>>>>>> origin/skm_test
 
 
 def applyRankGuards(
     modifiers: list[SubIssueContextModifierDto],
 ) -> list[SubIssueContextModifierDto]:
+<<<<<<< HEAD
+    """applyRankGuards의 이전 공개 이름 호환 래퍼."""
+    return applyRankGuards(modifiers)
+
+
+def hasObservedStage(row: dict) -> bool:
+    """checkObservedStage의 이전 공개 이름 호환 래퍼."""
+    return checkObservedStage(row)
+=======
     _assignRawRanks(modifiers)
     _assignAdjustedRanks(modifiers)
 
@@ -481,6 +560,7 @@ def _withScorePreview(
         guardReason=guardReason,
         appliedRules=rules,
     )
+>>>>>>> origin/skm_test
 
 
 def _buildModifierPayload(modifiers: list[SubIssueContextModifierDto]) -> dict:
@@ -503,62 +583,6 @@ def _buildModifierPayload(modifiers: list[SubIssueContextModifierDto]) -> dict:
     }
 
 
-def _assignRawRanks(items: list[SubIssueContextModifierDto]) -> None:
-    ranked = sorted(
-        [item for item in items if item.rawFinalScore is not None],
-        key=lambda item: (-float(item.rawFinalScore), item.subIssueCode),
-    )
-    for rank, item in enumerate(ranked, start=1):
-        item.rawRank = rank
-
-
-def _assignAdjustedRanks(items: list[SubIssueContextModifierDto]) -> None:
-    ranked = sorted(
-        [item for item in items if item.adjustedFinalScore is not None],
-        key=lambda item: (-float(item.adjustedFinalScore), item.subIssueCode),
-    )
-    adjustedByCode = {item.subIssueCode: rank for rank, item in enumerate(ranked, start=1)}
-    for item in items:
-        item.adjustedRank = adjustedByCode.get(item.subIssueCode)
-        if item.rawRank is None or item.adjustedRank is None:
-            item.rankDelta = None
-            item.rankChangedYn = False
-            continue
-        item.rankDelta = item.rawRank - item.adjustedRank
-        item.rankChangedYn = item.rankDelta != 0
-
-
-def _rankGuardViolation(item: SubIssueContextModifierDto) -> Optional[str]:
-    if item.rawRank is None or item.adjustedRank is None:
-        return None
-    if item.adjustedRank <= 5 and item.rawRank > TOP5_ENTRY_RAW_RANK_LIMIT:
-        return "TOP5_RAW_RANK_LIMIT"
-    if item.rankDelta is not None and abs(item.rankDelta) > MAX_RANK_MOVEMENT:
-        return "RANK_MOVEMENT_LIMIT"
-    return None
-
-
-def _zeroModifier(item: SubIssueContextModifierDto, reason: str) -> None:
-    item.impactModifier = 0.0
-    item.financialModifier = 0.0
-    item.contextModifier = 0.0
-    item.finalImpactScoreAfterModifier = item.rawFinalImpactScore
-    item.finalFinancialScoreAfterModifier = item.rawFinalFinancialScore
-    item.finalScoreAfterModifier = item.rawFinalScore
-    item.adjustedFinalScore = item.rawFinalScore
-    item.appliedRules = []
-    item.guardAppliedYn = True
-    item.guardReason = reason
-
-
-def _hasNonZeroModifier(item: SubIssueContextModifierDto) -> bool:
-    return abs(item.impactModifier) > 0.00001 or abs(item.financialModifier) > 0.00001
-
-
-def _combinedModifier(impactModifier: float, financialModifier: float) -> float:
-    return round((float(impactModifier) + float(financialModifier)) / 2.0, 4)
-
-
 def _toFactDtos(rows: list[dict]) -> list[CompanyContextFactDto]:
     facts = []
     for row in rows:
@@ -577,6 +601,13 @@ def _toFactDtos(rows: list[dict]) -> list[CompanyContextFactDto]:
     return facts
 
 
+<<<<<<< HEAD
+def _parseJsonDict(value) -> dict:
+    if not value:
+        return {}
+    if isinstance(value, dict):
+        return value
+=======
 def _rule(ruleId: str, subIssueCode: str, impact: float, financial: float, reason: str) -> ContextRuleHitDto:
     return ContextRuleHitDto(
         ruleId=ruleId,
@@ -676,12 +707,15 @@ def _profileConfidenceFromValues(values: list[str]) -> float:
 def _floatOrNone(value) -> Optional[float]:
     if value is None:
         return None
+>>>>>>> origin/skm_test
     try:
-        return float(value)
-    except (TypeError, ValueError):
-        return None
+        return json.loads(value)
+    except Exception:
+        return {}
 
 
+<<<<<<< HEAD
+=======
 def _roundOrNone(value) -> Optional[float]:
     if value is None:
         return None
@@ -699,6 +733,7 @@ def _parseJsonDict(value) -> dict:
         return {}
 
 
+>>>>>>> origin/skm_test
 __all__ = [
     "applyModifiers",
     "applyCompanyContextModifiers",

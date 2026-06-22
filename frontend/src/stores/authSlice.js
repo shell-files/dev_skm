@@ -1,3 +1,11 @@
+<<<<<<< HEAD
+/**
+ * authSlice.js
+ * 레이어: Store
+ * 역할: 인증 Redux 슬라이스 — 로그인·로그아웃·사용자 정보 조회·갱신 Thunk와 auth 상태 관리.
+ */
+=======
+>>>>>>> origin/skm_test
 import { createSlice, createAsyncThunk, isPending, isRejected } from '@reduxjs/toolkit';
 import { GET, POST, PUT, PATCH, DELETE } from "@utils/Network";
 import { encodeJson, safeJsonParse } from "@utils/Base64";

@@ -1,3 +1,26 @@
+<<<<<<< HEAD
+/**
+ * ApprovalDetailModal.jsx
+ * 레이어: Component (mains/modal)
+ * 역할: 승인 항목의 atomic 입력 상세·증빙 자료·검토 의견을 확인하고 최종 승인·검토 완료·반려 액션을 실행하는 모달
+ *
+ * Props:
+ *   isOpen — 모달 표시 여부
+ *   onClose — 모달 닫기 핸들러
+ *   metricItem — 조회할 지표 항목 (metricId, metricName, atomicItems 등)
+ *   viewerRole — 현재 사용자 역할 (CONSULTANT 여부로 버튼 분기)
+ *   hasConsultant — 컨설턴트 검토 단계 포함 여부
+ *   readOnlyYn — 읽기 전용 여부
+ *   modalActionMode — "approve" 모드일 때 승인 전용 UI 표시
+ *   loading — 상세 로딩 여부
+ *   error — 상세 조회 오류
+ *   actionLoading — 승인·반려 처리 로딩 여부
+ *   onReview — 검토 완료 핸들러
+ *   onApprove — 최종 승인 핸들러
+ *   onReject — 반려 핸들러 (commentText 필수)
+ */
+=======
+>>>>>>> origin/skm_test
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 

@@ -1,4 +1,8 @@
-# ESG 온톨로지 사전 (v4.3)
+"""
+subissuemaster.py
+레이어: Utils
+역할: ESG 서브이슈 마스터 데이터 — 온톨로지 사전 v4.3.
+"""
 
 subissueMaster = {
     "E_CLIMATE__CLIMATE_GOVERNANCE_INVENTORY": {
@@ -3023,16 +3027,20 @@ subissueMaster = {
 }
 
 def getSubissueCount():
+    """등록된 서브이슈 마스터 항목 수를 반환한다."""
     return len(subissueMaster)
 
 def getSubIssueMeta(subIssueCode: str) -> dict:
+    """서브이슈 코드로 마스터 메타 딕셔너리를 반환한다. 없으면 빈 딕셔너리를 반환한다."""
     return subissueMaster.get(subIssueCode, {})
 
 def getSubIssueDisplayName(subIssueCode: str) -> str:
+    """서브이슈 코드의 한국어 표시명을 반환한다. 마스터에 없으면 코드 자체를 반환한다."""
     meta = subissueMaster.get(subIssueCode)
     return meta["subIssueNameKr"] if meta else subIssueCode
 
 def isAllowedIro(subIssueCode: str, iroType: str) -> bool:
+    """해당 서브이슈에 대해 iroType(impact/financial)이 허용된 IRO 유형인지 확인한다."""
     meta = subissueMaster.get(subIssueCode)
     if not meta: return False
     allowed = meta.get("scoring_axis_allowed", "")

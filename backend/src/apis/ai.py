@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+"""
+ai.py
+레이어: API Router
+역할: AI ESG 보고서 자동 생성 엔드포인트.
+
+엔드포인트:
+  POST /  — ESG 보고서 자동 생성
+"""
+=======
+>>>>>>> origin/skm_test
 from fastapi import APIRouter, Depends
 
 from src.utils.auth import get_token
@@ -21,4 +32,8 @@ async def generateReport(req: AiReportRequestDto, token=Depends(get_token)):
     end = time.time()
     print(f"[TOTAL TIME] {end - start:.3f}s")
 
+<<<<<<< HEAD
     return result
+=======
+    return result
+>>>>>>> origin/skm_test

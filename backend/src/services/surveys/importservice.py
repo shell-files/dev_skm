@@ -1,3 +1,22 @@
+<<<<<<< HEAD
+"""
+importservice.py
+레이어: Service (surveys)
+역할: 설문 응답 데이터 가져오기 서비스 — Sheets 데이터 파싱·검증·저장.
+"""
+from __future__ import annotations
+
+from src.repositories.dmasurveyresponserepository import (
+    getReadySurveyFormForRun,
+    replaceSurveyResponsesForFormTx,
+)
+from src.services.surveys import importmeta as _im
+from src.services.surveys import importparser as _ip
+
+
+def previewSurveyResponses(runId: int) -> dict:
+    """Sheets 응답 데이터를 파싱해 미리보기 행(최대 20건)과 메타 정보를 반환한다. DB에 저장하지 않는다."""
+=======
 import re
 from typing import Optional
 
@@ -676,14 +695,22 @@ def _parseResponseSheets(
 # =============================================================================
 
 def previewSurveyResponses(runId: int) -> dict:
+>>>>>>> origin/skm_test
     form = getReadySurveyFormForRun(runId)
     master_sheet_id = form["master_sheet_id"]
     survey_form_id = form["id"]
 
+<<<<<<< HEAD
+    workbook = _im._loadWorkbookValues(master_sheet_id)
+    meta = _im._parseMetaSheets(workbook)
+
+    rows, skipped = _ip.parseResponseSheets(
+=======
     workbook = _loadWorkbookValues(master_sheet_id)
     meta = _parseMetaSheets(workbook)
 
     rows, skipped = _parseResponseSheets(
+>>>>>>> origin/skm_test
         run_id=runId,
         survey_form_id=survey_form_id,
         master_sheet_id=master_sheet_id,
@@ -707,14 +734,25 @@ def previewSurveyResponses(runId: int) -> dict:
 
 
 def importSurveyResponsesForRun(runId: int) -> dict:
+<<<<<<< HEAD
+    """Sheets 응답을 파싱해 DB에 UPSERT하고 그룹별 응답자 수와 처리 결과를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     form = getReadySurveyFormForRun(runId)
     master_sheet_id = form["master_sheet_id"]
     survey_form_id = form["id"]
 
+<<<<<<< HEAD
+    workbook = _im._loadWorkbookValues(master_sheet_id)
+    meta = _im._parseMetaSheets(workbook)
+
+    rows, skipped = _ip.parseResponseSheets(
+=======
     workbook = _loadWorkbookValues(master_sheet_id)
     meta = _parseMetaSheets(workbook)
 
     rows, skipped = _parseResponseSheets(
+>>>>>>> origin/skm_test
         run_id=runId,
         survey_form_id=survey_form_id,
         master_sheet_id=master_sheet_id,
@@ -728,7 +766,10 @@ def importSurveyResponsesForRun(runId: int) -> dict:
         rows=rows,
     )
 
+<<<<<<< HEAD
+=======
     # Count unique respondents (unique source_response_key) per group
+>>>>>>> origin/skm_test
     respondent_sets: dict = {}
     for row in rows:
         group = row["respondentGroup"]

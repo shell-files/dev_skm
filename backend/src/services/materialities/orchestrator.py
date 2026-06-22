@@ -1,3 +1,21 @@
+<<<<<<< HEAD
+﻿"""
+orchestrator.py
+레이어: Service (materialities)
+역할: DMA 중대성 평가 오케스트레이터 — 미디어·벤치마크·설문 파이프라인 통합 실행.
+"""
+from __future__ import annotations
+
+from typing import Any, Mapping, Optional, Sequence
+
+from src.models.dmaengine import (
+    ExtractedFactsV13,
+    ScorePurposeV13,
+    ScreeningTraceV13,
+)
+from src.utils import dmaruleregistry, dmascoring
+from src.repositories.dmarepository import step4BuildTrace
+=======
 """
 Domain: DMA Materiality (v1.3 MVP)
 Layer: service/orchestrator
@@ -49,6 +67,7 @@ KCGS_PILLAR_GRADE_FIELDS = (
     ("S", "socialGrade"),
     ("G", "governanceGrade"),
 )
+>>>>>>> origin/skm_test
 
 
 def step0BuildFactTrace(
@@ -56,9 +75,15 @@ def step0BuildFactTrace(
     extractedFact: ExtractedFactsV13 | Mapping[str, Any],
     sourceChannel: str,
 ) -> dict:
+<<<<<<< HEAD
+    # 0단계: Fact-only DTO를 v1.3 Trace Payload로 감싼다.
+    # 입력: ExtractedFactsV13 1건과 sourceChannel
+    # 출력: 점수/Screening 없는 ScoringPayloadV13 dict
+=======
     # STEP 0. Fact-only DTO를 v1.3 Trace Payload로 감싼다.
     # Input: ExtractedFactsV13 1건과 sourceChannel.
     # Output: 점수/Screening 없는 ScoringPayloadV13 dict.
+>>>>>>> origin/skm_test
     fact = extractedFact if isinstance(extractedFact, ExtractedFactsV13) else ExtractedFactsV13(**dict(extractedFact))
     return step4BuildTrace(
         scorePurpose=ScorePurposeV13.PRESURVEY_SCREENING,
@@ -68,6 +93,8 @@ def step0BuildFactTrace(
     )
 
 
+<<<<<<< HEAD
+=======
 def step2ResolveBenchmarkObservation(row: Mapping[str, Any]) -> str:
     if not (row.get("sub_issue_code") or row.get("subIssueCode")):
         raise ValueError("sub_issue_code is required for benchmark observation resolution")
@@ -83,6 +110,7 @@ def step2ResolveBenchmarkObservation(row: Mapping[str, Any]) -> str:
     return "NONE"
 
 
+>>>>>>> origin/skm_test
 def step1RunCanonical(
     *,
     subIssueCode: Optional[str] = None,
@@ -161,8 +189,13 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
         latestGrade = str(payload.get("latestGrade") or payload["grade"])
         state = dmascoring.step2CalcKcgs(latestGrade, str(payload["trend"]), screeningPolicy)
         subIssueBoost = dmascoring.step2CalcKcgsBoost(state["pillarSignal"], screeningPolicy)
+<<<<<<< HEAD
+        # KCGS pillar movement은 E/S/G 도메인 레벨 media_external 신호로 대칭 처리.
+        # external MAX에 포함되지만 Top20에서 중복 추가하지 않음.
+=======
         # KCGS pillar movement is a symmetric E/S/G domain-level media_external signal.
         # It participates in external MAX but is not added again at Top20.
+>>>>>>> origin/skm_test
         trace = ScreeningTraceV13(
             channel="kcgs_pillar_domain_signal",
             scorePurpose=ScorePurposeV13.PRESURVEY_SCREENING,
@@ -234,6 +267,8 @@ def step2RunScreening(channel: str, payload: Mapping[str, Any]) -> dict:
     raise ValueError(f"Unknown screening channel: {channel!r}")
 
 
+<<<<<<< HEAD
+=======
 def step2BuildBenchmarkScreeningPayloads(
     factPayloads: Sequence[Mapping[str, Any]],
     universeSubIssueCodes: Sequence[str],
@@ -717,6 +752,7 @@ def step1BuildMediaNewsCanonicalPayloads(
     return payloads
 
 
+>>>>>>> origin/skm_test
 def step3RunSelection(items: Sequence[Mapping[str, Any]]) -> dict:
     policy = dmaruleregistry.getPolicy("selection_policy")
     return dmascoring.step3RunSelection(items, policy)
@@ -724,6 +760,9 @@ def step3RunSelection(items: Sequence[Mapping[str, Any]]) -> dict:
 
 __all__ = [
     "step0BuildFactTrace",
+<<<<<<< HEAD
+    "step1RunCanonical",
+=======
     "step1BuildMediaNewsCanonicalPayloads",
     "step1RunCanonical",
     "step2ResolveBenchmarkObservation",
@@ -731,6 +770,7 @@ __all__ = [
     "step2BuildKcgsPillarBoostPayloads",
     "step2BuildMediaExternalMaxPayloads",
     "step2BuildRegulationScreeningPayloads",
+>>>>>>> origin/skm_test
     "step2RunScreening",
     "step3RunSelection",
 ]

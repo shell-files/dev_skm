@@ -1,3 +1,11 @@
+<<<<<<< HEAD
+/**
+ * Survey.jsx
+ * 레이어: Page
+ * 역할: 임직원·경영진·외부이해관계자 대상 ESG 설문 URL 관리, 응답 동기화, 집계 반영 및 설문 결과 대시보드를 제공하는 이해관계자 설문 페이지
+ */
+=======
+>>>>>>> origin/skm_test
 import { useEffect, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
 import { useSelector, useDispatch } from "react-redux";
@@ -436,7 +444,11 @@ const Survey = () => {
 
   /* ── Render ────────────────────────────────────── */
   return (
+<<<<<<< HEAD
+    <div id="survey-page" className="survey-container">
+=======
     <div className="survey-container">
+>>>>>>> origin/skm_test
       {/* Stepper */}
       <header className="survey-header">
         <div className="survey-stepper-row">

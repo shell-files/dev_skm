@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+/**
+ * talentDev.jsx
+ * 레이어: Component (srTemplates/subIssues)
+ * 역할: 교육훈련·역량개발 서브이슈의 SR 페이지 컴포넌트, adapter, metricFields, 서브이슈 매니페스트를 포함한 모듈 — 임직원 수·1인당 교육시간·핵심직무 달성률 도넛 게이지와 교육 프로그램 카드를 렌더링
+ *
+ * exports:
+ *   talentDev (default) — id·label·adapter·metricFields·pages를 포함하는 서브이슈 매니페스트 객체
+ */
+=======
+>>>>>>> origin/skm_test
 // srTemplates/subIssues/talentDev.jsx
 // 교육훈련·역량개발 서브이슈
 import React from "react";

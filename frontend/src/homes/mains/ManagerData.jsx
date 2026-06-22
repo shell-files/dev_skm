@@ -1,3 +1,21 @@
+<<<<<<< HEAD
+/**
+ * ManagerData.jsx
+ * 레이어: Page (mains) — 구버전 파일
+ * 역할: ESG 통합 관리 페이지의 데이터 승인 전담 컨테이너 — 보고서 프로젝트·승인 사이클 선택, 승인·반려·검토 일괄 처리, KPI 카드 표시를 담당
+ *
+ * 주요 상태:
+ *   approvalCycleType — 현재 승인 범위 (PRE_DMA_G0 / POST_DMA_DISCLOSURE / ROLLUP_RESPONSE)
+ *   selectedIds — 일괄 처리를 위해 선택된 metricId 배열
+ *   isApprovalProjectModalOpen — 보고서 프로젝트 선택 모달 표시 여부
+ *   isRejectModalOpen — 단건 반려 사유 입력 모달 표시 여부
+ *
+ * 의존 컴포넌트:
+ *   DataTab — 승인 항목 테이블 및 액션 버튼
+ *   ApprovalProjectSelectModal — 보고서 프로젝트 선택 모달
+ */
+=======
+>>>>>>> origin/skm_test
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useSearchParams, useLocation } from "react-router";
@@ -7,6 +25,12 @@ import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert"
 import { useAuth } from "@hooks/AuthContext";
 import ApprovalProjectSelectModal from "./modal/ApprovalProjectSelectModal";
 import PageHeader from "@components/UI/PageHeader";
+<<<<<<< HEAD
+import EmptyState from "@components/UI/EmptyState";
+import ModalWrapper from "@components/UI/ModalWrapper";
+import { formatStageLabel } from "@mains/managerdata/managerDataUtils";
+=======
+>>>>>>> origin/skm_test
 import {
   DEFAULT_REPORTING_YEAR,
   clearApprovalProject,
@@ -93,6 +117,8 @@ const runStatusLabel = (runStatus) => {
   return "진행 중";
 };
 
+<<<<<<< HEAD
+=======
 const formatStageLabel = (label) => {
   if (!label) return "-";
   const lower = String(label).toLowerCase();
@@ -101,6 +127,7 @@ const formatStageLabel = (label) => {
   if (lower.includes("disclosure") || lower.includes("post_dma")) return "보고서 연결 공시 승인";
   return label;
 };
+>>>>>>> origin/skm_test
 
 const ManagerData = () => {
   const dispatch = useDispatch();
@@ -697,10 +724,14 @@ const ManagerData = () => {
         {activeTab === "data" && (
           <div className="manager-data-tab-container">
             {!hasValidRollupApprovalContext ? (
+<<<<<<< HEAD
+              <EmptyState title="데이터 요청 정보가 없습니다." desc="받은 요청함에서 다시 진입해 주세요." />
+=======
               <div className="ob1-empty-state">
                 <p className="ob1-empty-title">데이터 요청 정보가 없습니다.</p>
                 <p className="ob1-empty-desc">받은 요청함에서 다시 진입해 주세요.</p>
               </div>
+>>>>>>> origin/skm_test
             ) : (
               <DataTab
                 activeService={activeService}
@@ -733,6 +764,36 @@ const ManagerData = () => {
         )}
 
         {isRejectModalOpen && (
+<<<<<<< HEAD
+          <ModalWrapper
+            title="항목 반려"
+            onClose={() => setIsRejectModalOpen(false)}
+            footer={
+              <button
+                type="button"
+                className="btn-confirm"
+                onClick={async () => {
+                  if (!rejectReason.trim()) {
+                    showDefaultAlert("알림", "반려 사유를 입력하세요.", "info");
+                    return;
+                  }
+                  const success = await handleAction(rejectTargetId, "REJECTED", rejectReason);
+                  if (success) setIsRejectModalOpen(false);
+                }}
+              >
+                반려 확인
+              </button>
+            }
+          >
+            <textarea
+              className="reject-textarea"
+              placeholder="반려 사유를 입력하세요."
+              value={rejectReason}
+              onChange={(event) => setRejectReason(event.target.value)}
+              style={{ width: "100%", height: "120px", padding: "10px", border: "1px solid #ddd", borderRadius: "6px" }}
+            />
+          </ModalWrapper>
+=======
           <div className="modal-overlay">
             <div className="modal-window">
               <div className="modal-header">
@@ -780,6 +841,7 @@ const ManagerData = () => {
               </div>
             </div>
           </div>
+>>>>>>> origin/skm_test
         )}
 
         <ApprovalProjectSelectModal

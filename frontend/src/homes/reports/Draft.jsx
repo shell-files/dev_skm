@@ -1,13 +1,39 @@
+<<<<<<< HEAD
+/**
+ * Draft.jsx
+ * 레이어: Page
+ * 역할: SR 템플릿 기반 ESG 보고서 초안을 페이지 단위로 미리보기·편집하고, PDF/PPT 내보내기 및 데이터 추적 패널을 제공하는 보고서 초안 작성 페이지
+ *
+ * 의존 컴포넌트:
+ *   TrendChart — 지표 연도별 추이 SVG 차트
+ *   subIssues (registry) — 서브이슈별 SR 페이지 컴포넌트 레지스트리
+ *   buildMetricsFromEdits (srHelpers) — 편집값과 DB 지표를 병합해 MetricsMap 반환
+ *   exportPdf, exportPptNative (draftExport) — PDF·PPT 내보내기 유틸
+ */
+import { useEffect, useRef, useState, Fragment } from "react";
+import { useNavigate } from "react-router";
+import "@styles/draft.css";
+=======
 import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
 import "@styles/draft.css";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import pptxgen from "pptxgenjs";
+>>>>>>> origin/skm_test
 import { useSelector, useDispatch } from "react-redux";
 import { GET, POST, DELETE } from "@utils/Network";
 import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
 
+<<<<<<< HEAD
+import TrendChart from "./srTemplates/core/TrendChart";
+import { buildMetricsFromEdits } from "./srTemplates/core/srHelpers";
+import { exportPdf, exportPptNative, exportPptImg } from "./srTemplates/core/draftExport";
+import { subIssues } from "./srTemplates/registry";
+import { PAGES, SR_FIELD_MAP } from "./draftData";
+import "@styles/sr-page.css";
+
+=======
 // ── SR 템플릿 통합 (서브이슈 레지스트리 소비) ──
 // 새 서브이슈는 srTemplates/subIssues/<name>/ 폴더 + registry.js 한 줄로 추가됨.
 // (데모용 index.jsx / demo.html / metricsExample.js 는 import 하지 않음)
@@ -95,6 +121,7 @@ function buildMetricsFromEdits(adapter, editMetrics, rows) {
   return map;
 }
 
+>>>>>>> origin/skm_test
 const Draft = () => {
   const [currentPid, setCurrentPid] = useState(null);
   const [metricOpen, setMetricOpen] = useState(false);
@@ -404,6 +431,13 @@ const Draft = () => {
 
   const handleExport = async (type) => {
     setExportMenuOpen(false);
+<<<<<<< HEAD
+    if (type === "PDF") return exportPdf(setPdfMode);
+    if (type === "PPT_NATIVE") return exportPptNative(setPdfMode);
+    if (type === "PPT") return exportPptImg(setPdfMode);
+  };
+
+=======
 
     if (type === "PDF") {
       // 1) 모든 서브이슈의 페이지를 화면 밖에 렌더(캡처용) → React 리렌더/레이아웃 대기
@@ -767,6 +801,7 @@ const Draft = () => {
       return;
     }
   };
+>>>>>>> origin/skm_test
 
 
   // 문단 선택 핸들러
@@ -820,7 +855,11 @@ const Draft = () => {
     : null;
 
   return (
+<<<<<<< HEAD
+    <div id="draft-page" className="draft-container">
+=======
     <div className="draft-container">
+>>>>>>> origin/skm_test
       <header className="draft-header">
 
         <div className="draft-stepper-row">
@@ -980,7 +1019,11 @@ const Draft = () => {
                 <div className="panel-inner">
                   <div className="panel-hd">
                     <span className="panel-hd-title">데이터 추적</span>
+<<<<<<< HEAD
+                    <button className="panel-close-btn" onClick={() => { setTrackId(null); }}>✕</button>
+=======
                     <button className="panel-close-btn" onClick={() => { setPanelMetricIds([]); setTrackId(null); }}>✕</button>
+>>>>>>> origin/skm_test
                   </div>
 
                   {/* 지표 선택 — 이 섹션에서 사용된 모든 metric_id */}

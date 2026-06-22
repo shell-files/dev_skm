@@ -1,3 +1,16 @@
+<<<<<<< HEAD
+"""
+invite.py
+레이어: API Router
+역할: 초대 링크 처리 엔드포인트 — 초대 링크 접속, 데이터 추출, 회원가입.
+
+엔드포인트:
+  GET  /{inviteId}  — 초대 링크 접속 및 회원가입 폼 렌더링
+  POST /{inviteId}  — 초대 토큰에서 이메일·회사명 추출
+  PUT  /{inviteId}  — 초대 링크로 회원가입 처리
+"""
+=======
+>>>>>>> origin/skm_test
 from fastapi import APIRouter
 
 from src.models.model import ResponseModel, inviteSignUpUserInfo
@@ -18,9 +31,15 @@ def startup_event():
             description="초대 링크 접속 시 회원가입 폼을 렌더링하는 API입니다.")
 def invite(inviteId: str):
   return inviteProcess(inviteId)
+<<<<<<< HEAD
+
+
+@router.post("/{inviteId}",
+=======
   
 
 @router.post("/{inviteId}", 
+>>>>>>> origin/skm_test
              summary="초대 링크 data 처리",
              description="초대 링크 접속 시 토큰에서 이메일과 회사명 추출하여 반환하는 API입니다.")
 def invite(inviteId: str):

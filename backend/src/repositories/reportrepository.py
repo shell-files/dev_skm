@@ -1,6 +1,12 @@
+"""
+reportrepository.py
+레이어: Repository
+역할: ESG 보고서 실행 정보 조회.
+"""
 from src.utils.db import findAll, findOne
 
 
+# materiality run ID 기준 최신 보고서 실행 정보 단건 조회
 def getLatestReportRunByMaterialityRun(runId: int) -> dict:
     sql = """
         SELECT id, company_id, reporting_year, report_status, source_materiality_run_id
@@ -13,6 +19,7 @@ def getLatestReportRunByMaterialityRun(runId: int) -> dict:
     return findOne(sql, (runId,)) or {}
 
 
+# 보고서 실행 ID 기준 초안 섹션 행 목록 조회
 def getReportDraftRows(reportRunId: int) -> list:
     sql = """
         SELECT
@@ -34,6 +41,7 @@ def getReportDraftRows(reportRunId: int) -> list:
     return findAll(sql, (reportRunId,)) or []
 
 
+# 초안 ID 목록 기준 참조 정보 조회
 def getReferencesForDraftIds(draftIds: list[int]) -> list:
     if not draftIds:
         return []
@@ -54,6 +62,7 @@ def getReferencesForDraftIds(draftIds: list[int]) -> list:
     return findAll(sql, tuple(draftIds)) or []
 
 
+# 단락 ID 기준 참조 정보 목록 조회
 def getReferencesForParagraph(paragraphId: int) -> list:
     sql = """
         SELECT
@@ -71,6 +80,7 @@ def getReferencesForParagraph(paragraphId: int) -> list:
     return findAll(sql, (paragraphId,)) or []
 
 
+# 초안 ID 기준 섹션 초안 단건 조회
 def getDraftById(draftId: int) -> dict:
     sql = """
         SELECT id, report_run_id, section_code, sub_issue_code, generated_text, qa_status, approval_status, updated_at
@@ -81,6 +91,7 @@ def getDraftById(draftId: int) -> dict:
     return findOne(sql, (draftId,)) or {}
 
 
+# 원자 지표 ID 기준 마스터 메타데이터 목록 조회
 def getAtomicMetricRows(atomicMetricIds: list[str]) -> list:
     if not atomicMetricIds:
         return []
@@ -102,6 +113,7 @@ def getAtomicMetricRows(atomicMetricIds: list[str]) -> list:
     return findAll(sql, tuple(atomicMetricIds)) or []
 
 
+# Fact ID 기준 KPI Fact 단건 조회
 def getKpiFactById(factId: int) -> dict:
     sql = """
         SELECT
@@ -121,6 +133,7 @@ def getKpiFactById(factId: int) -> dict:
     return findOne(sql, (factId,)) or {}
 
 
+# 회사·원자 지표 기준 KPI Fact 연도별 목록 조회
 def getKpiFactsByCompanyAtomic(companyId: int, atomicMetricId: str) -> list:
     sql = """
         SELECT
@@ -138,6 +151,7 @@ def getKpiFactsByCompanyAtomic(companyId: int, atomicMetricId: str) -> list:
     return findAll(sql, (companyId, atomicMetricId)) or []
 
 
+# 롤업 결과 ID 기준 단건 조회
 def getRollupResultById(rollupResultId: int) -> dict:
     sql = """
         SELECT
@@ -161,6 +175,7 @@ def getRollupResultById(rollupResultId: int) -> dict:
     return findOne(sql, (rollupResultId,)) or {}
 
 
+# 부모 회사·원자 지표 기준 롤업 결과 연도별 목록 조회
 def getRollupResultsByParentAtomic(parentCompanyId: int, atomicMetricId: str) -> list:
     sql = """
         SELECT
@@ -178,6 +193,7 @@ def getRollupResultsByParentAtomic(parentCompanyId: int, atomicMetricId: str) ->
     return findAll(sql, (parentCompanyId, atomicMetricId)) or []
 
 
+# 원자 지표 기준 계산 규칙 단건 조회
 def getCalculationRuleByAtomicMetric(atomicMetricId: str) -> dict:
     sql = """
         SELECT calculation_rule_code, calculation_formula_label

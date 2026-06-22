@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+/**
+ * Dashboard.jsx
+ * 레이어: Page
+ * 역할: 로그인 후 메인 화면으로, 프로젝트 진행 현황·모듈 카드·4단계 가이드를 표시하고 각 기능 페이지로 이동시키는 홈 대시보드
+ *
+ * 의존 컴포넌트:
+ *   ApprovalProjectSelectModal — 페이지 이동 전 프로젝트 선택 모달
+ */
+=======
+>>>>>>> origin/skm_test
 import { useState, useEffect, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router";

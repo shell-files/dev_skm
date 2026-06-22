@@ -1,3 +1,8 @@
+"""
+pipeline.py
+레이어: Service (medias)
+역할: 미디어 분석 파이프라인 — 크롤링·임베딩·유사도 계산·DMA 시그널 저장.
+"""
 import numpy as np
 import re
 from sentence_transformers import SentenceTransformer
@@ -6,6 +11,7 @@ from src.utils.subissuemaster import subissueMaster, getSubIssueDisplayName
 # 모델을 전역에서 한 번만 로드하도록 지연 초기화 패턴 사용
 _model = None
 def get_model():
+    """SentenceTransformer 모델을 지연 초기화하여 반환한다. 이미 로드된 경우 캐시를 재사용한다."""
     global _model
     if _model is None:
         _model = SentenceTransformer("snunlp/KR-SBERT-V40K-klueNLI-augSTS")
@@ -14,6 +20,7 @@ def get_model():
 # 마스터 벡터 캐싱
 _subissueVectors = None
 def get_subissue_vectors():
+    """서브이슈 임베딩 벡터 목록을 캐시해 반환한다. 최초 호출 시 전체 마스터를 인코딩한다."""
     global _subissueVectors
     if _subissueVectors is not None:
         return _subissueVectors
@@ -22,7 +29,7 @@ def get_subissue_vectors():
     prototypes = []
     
     for subId, info in subissueMaster.items():
-        # User Instruction 5: sentence 필드 사용 (subIssueSentence 대신)
+        # 지침 5: sentence 필드 사용 (subIssueSentence 대신)
         anchorSentence = info.get("sentence", "")
         keywordsKr = " ".join(info.get("keywordKr", []))
         keywordsEn = " ".join(info.get("keywordForeignEn", []))
@@ -51,6 +58,7 @@ def get_subissue_vectors():
     return _subissueVectors
 
 def splitChunk(text: str) -> list[str]:
+    """텍스트를 줄바꿈 기준으로 분할해 20자 이상인 단락만 반환한다."""
     # 간단한 단락 분할. 실제로는 토큰 길이 기반 분할 등을 적용할 수 있습니다.
     chunks = []
     for paragraph in text.split("\n"):
@@ -60,6 +68,7 @@ def splitChunk(text: str) -> list[str]:
     return chunks
 
 def cosineSimilarity(a, b):
+    """두 벡터의 코사인 유사도를 계산한다. 영벡터가 입력되면 0.0을 반환한다."""
     a = np.asarray(a, dtype=np.float32)
     b = np.asarray(b, dtype=np.float32)
     aNorm = np.linalg.norm(a)
@@ -69,6 +78,7 @@ def cosineSimilarity(a, b):
     return float(np.dot(a, b) / (aNorm * bNorm))
 
 def findTopMatches(chunkEmbedding, subissueVectors, topK=3):
+    """청크 임베딩과 서브이슈 벡터 간 코사인 유사도를 계산해 상위 topK개를 내림차순으로 반환한다."""
     scores = []
     for sub in subissueVectors:
         score = cosineSimilarity(chunkEmbedding, sub["embedding"])
@@ -81,6 +91,7 @@ def findTopMatches(chunkEmbedding, subissueVectors, topK=3):
     return scores[:topK]
 
 def mapSubissues(text: str) -> list[str]:
+    """텍스트에서 서브이슈 키워드를 검색하고 일치한 서브이슈 ID 목록을 반환한다."""
     matchedIds = []
     lowerText = text.lower() 
     

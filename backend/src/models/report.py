@@ -1,3 +1,8 @@
+"""
+report.py
+레이어: Model
+역할: ESG 보고서 초안 섹션·단락·다운로드 관련 응답 DTO 정의.
+"""
 from pydantic import BaseModel
 from typing import List, Literal, Optional
 

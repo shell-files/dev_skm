@@ -1,3 +1,24 @@
+<<<<<<< HEAD
+/**
+ * RollupSummaryPanel.jsx
+ * 레이어: Component (onboards)
+ * 역할: 자회사 데이터 취합(롤업) 현황을 단계별 스테퍼·요청 관리 모달과 함께 표시하고, 데이터 취합 실행·전년도 기준값 입력 등을 처리하는 패널
+ *
+ * Props:
+ *   batchId — 활성 롤업 배치 ID
+ *   sourceCycleId — POST_DMA_DISCLOSURE 사이클의 소스 cycleId
+ *   rollupPurposeCode — 롤업 목적 코드 (DMA_PRECHECK / REPORT_DISCLOSURE)
+ *   metricScopeCode — 지표 범위 코드
+ *   workflow — 현재 워크플로우 객체 (nextAction 포함)
+ *   onCtaClick — 자회사 데이터 요청 버튼 클릭 핸들러
+ *   onCalculated — 데이터 취합 완료 후 콜백
+ *   onSendSource — 데이터 전송 모달 열기 핸들러
+ *
+ * 의존 컴포넌트:
+ *   RollupSummaryPanel (자기 자신) — 인라인 요청 관리 모달 렌더링 포함
+ */
+=======
+>>>>>>> origin/skm_test
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router";
@@ -10,6 +31,12 @@ import {
   saveRollupBaselineValues,
 } from "@stores/reportSlice";
 import { showDefaultAlert } from "@components/UI/ServiceAlert";
+<<<<<<< HEAD
+import { purposeLabel, readinessLabel, transferLabel, approvalLabel, numberOrZero } from "./rollupUtils";
+import "@styles/onboarding1.css";
+import "@styles/onboardingModal.css";
+
+=======
 import "@styles/onboarding1.css";
 import "@styles/onboardingModal.css";
 
@@ -47,6 +74,7 @@ const approvalLabel = (status) => {
 
 const numberOrZero = (value) => Number(value || 0);
 
+>>>>>>> origin/skm_test
 const RollupSummaryPanel = ({
   batchId,
   sourceCycleId,

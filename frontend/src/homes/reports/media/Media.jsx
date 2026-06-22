@@ -1,10 +1,28 @@
+/**
+ * Media.jsx
+ * 미디어 분석 페이지 — DMA 2단계.
+ * 언론기사/전문기관/규제 데이터 수집 설정 후 AI 분석 실행, 결과 대시보드 표시.
+ *
+ * 주요 상태:
+ *   activeTab         — 현재 선택된 입력 탭 (press/regulation/institution)
+ *   kisData/kcgsData  — KIS/KCGS 평가 데이터 모달 입력값
+ *   isAnalyzing       — 분석 진행 중 여부
+ *   dashboardData     — mapMediaResultToDashboard 변환 결과
+ *
+ * 주요 핸들러:
+ *   runAnalysis           — 분석 실행 → MEDIA workflow polling → 결과 fetch
+ *   mapMediaResultToDashboard — API DTO → MediaResultDashboard 표시 데이터 변환
+ *
+ * 의존:
+ *   mediaData.jsx          — STEPS, REFLECT_METHODS, REGULATION_SOURCES, INSTITUTION_OPTIONS
+ *   MediaResultDashboard   — 결과 슬라이드업 패널
+ */
+
 import { useEffect, useRef, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import "@styles/media.css";
 import "@styles/dma-robot-stage.css";
-import robot from "@assets/images/robot/robot_media_t.png";
-import analyzingIcon from "@assets/icons/steps/analyzing.png";
 import { showDefaultAlert, showConfirmAlert } from "@components/UI/ServiceAlert";
 import { useAuth } from "@hooks/AuthContext";
 import {
@@ -14,16 +32,10 @@ import {
   fetchDmaWorkflowStatus,
   selectCanRunDmaStage,
   selectDmaGateReason,
+  saveKcgsGrades,
 } from "@stores/reportSlice";
-
-// 정적 데이터 정의 (컴포넌트 외부에 두어 불필요한 재렌더링 방지)
-const STEPS = [
-  { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
-  { id: 2, title: "미디어 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><polyline points="5,13 8,10 11,12 14,8 19,6" /></svg>, path: "/media" },
-  { id: 3, title: "이해관계자 설문", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" /><line x1="13" y1="11" x2="16" y2="11" /><line x1="13" y1="16" x2="16" y2="16" /></svg>, path: "/survey" },
-  { id: 4, title: "전체 결과", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="20" x2="21" y2="20" /><line x1="3" y1="4" x2="3" y2="20" /><rect x="5" y="13" width="3" height="7" /><rect x="10" y="10" width="3" height="10" /><rect x="15" y="8" width="3" height="12" /><circle cx="19" cy="4" r="3" /><polyline points="17.5,4 18.5,5 21,2.5" /></svg>, path: "/result" },
-  { id: 5, title: "보고서 초안", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>, path: "/draft" },
-];
+import { STEPS, REGULATION_SOURCES, INSTITUTION_OPTIONS, TabIcons } from "./mediaData";
+import MediaResultDashboard from "./MediaResultDashboard";
 
 const mapMediaResultToDashboard = (crawlDto, mediaDto) => {
   const summary = mediaDto?.summary || {};
@@ -78,89 +90,6 @@ const mapMediaStageToStatus = (progressPercent, overallStatus) => {
   };
 };
 
-const REFLECT_METHODS = [
-  {
-    key: "press",
-    title: "언론 기사",
-    desc: "현대모비스/자동차부품 키워드 기반 기사 수집",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-        <line x1="16" y1="13" x2="8" y2="13" />
-        <line x1="16" y1="17" x2="8" y2="17" />
-      </svg>
-    )
-  },
-  {
-    key: "expert",
-    title: "전문기관",
-    desc: "KCGS 등급 추세·기업지배구조보고서·KIS 자동차산업 평가방법론",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="3" y1="22" x2="21" y2="22" />
-        <line x1="6" y1="18" x2="6" y2="11" />
-        <line x1="10" y1="18" x2="10" y2="11" />
-        <line x1="14" y1="18" x2="14" y2="11" />
-        <line x1="18" y1="18" x2="18" y2="11" />
-        <polygon points="12 2 2 7 22 7" />
-      </svg>
-    )
-  },
-  {
-    key: "regulation",
-    title: "규제",
-    desc: "CSDDD·CBAM·CSRD·ESRS 기반 고정 점수 룰",
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-      </svg>
-    )
-  }
-];
-
-// 규제 기관 Source 정의: CBAM / CSRD / DPP만 사용한다. CSRS/ESRD는 사용 금지.
-const REGULATION_SOURCES = [
-  { key: "CBAM", label: "CBAM", desc: "EU 탄소국경조정제도" },
-  { key: "CSRD", label: "CSRD", desc: "EU 기업 지속가능성 공시지침\nESRS 기준 포함" },
-  { key: "DPP", label: "DPP", desc: "EU 디지털 제품 여권" },
-];
-
-// 전문기관 설정: 현재 Rule Logic이 존재하는 KCGS와 KIS만 선택 가능하다. Sustainalytics/MSCI 제거.
-const INSTITUTION_OPTIONS = [
-  { key: "kcgs", label: "한국ESG기준원", desc: "KCGS ESG 등급 추이\nPre-Survey Boost" },
-  { key: "kis", label: "한국신용평가", desc: "자동차산업 평가방법론\nFinancial Resilience Screening" },
-];
-
-// ── Tab Icon SVG Components ──
-const TabIcons = {
-  press: (color) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-      <polyline points="14 2 14 8 20 8" />
-      <line x1="16" y1="13" x2="8" y2="13" />
-      <line x1="16" y1="17" x2="8" y2="17" />
-    </svg>
-  ),
-  regulation: (color) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="2" y1="12" x2="22" y2="12" />
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  ),
-  institution: (color) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="3" y1="22" x2="21" y2="22" />
-      <line x1="6" y1="18" x2="6" y2="11" />
-      <line x1="10" y1="18" x2="10" y2="11" />
-      <line x1="14" y1="18" x2="14" y2="11" />
-      <line x1="18" y1="18" x2="18" y2="11" />
-      <polygon points="12 2 2 7 22 7" />
-    </svg>
-  ),
-};
-
 const Media = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
@@ -179,7 +108,6 @@ const Media = () => {
 
   const activeIndex = 1;
 
-  // --- 상태 관리 (States) ---
   const [activeSourceTab, setActiveSourceTab] = useState("press");
   const [dashboardOpen, setDashboardOpen] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -193,7 +121,6 @@ const Media = () => {
   const [selectedReg, setSelectedReg] = useState([]);
   const [selectedInstitutions, setSelectedInstitutions] = useState([]);
 
-  // KIS Modal State
   const [isKisModalOpen, setIsKisModalOpen] = useState(false);
   const [kisData, setKisData] = useState({
     company: "A_GROUP",
@@ -227,7 +154,6 @@ const Media = () => {
     }
   };
 
-  // KCGS Modal State
   const [isKcgsModalOpen, setIsKcgsModalOpen] = useState(false);
   const [kcgsData, setKcgsData] = useState({
     company: "A_GROUP",
@@ -254,10 +180,32 @@ const Media = () => {
     }));
   };
 
-  const handleKcgsSubmit = () => {
-    setIsKcgsModalOpen(false);
-    if (!selectedInstitutions.includes("kcgs")) {
-      setSelectedInstitutions(prev => [...prev, "kcgs"]);
+  const handleKcgsSubmit = async () => {
+    if (!companyId) {
+      showDefaultAlert("저장 불가", "회사 정보를 찾을 수 없습니다. 다시 로그인해주세요.", "warning");
+      return;
+    }
+    // 모달 grades(year/total/e/s/g) → 백엔드 DTO(ratingYear/overallGrade/...) 로 매핑
+    const grades = kcgsData.grades.map((g) => ({
+      ratingYear: Number(g.year),
+      overallGrade: g.total,
+      environmentGrade: g.e,
+      socialGrade: g.s,
+      governanceGrade: g.g,
+    }));
+    try {
+      await dispatch(saveKcgsGrades({ companyId, grades })).unwrap();
+      setIsKcgsModalOpen(false);
+      if (!selectedInstitutions.includes("kcgs")) {
+        setSelectedInstitutions((prev) => [...prev, "kcgs"]);
+      }
+      showDefaultAlert(
+        "저장 완료",
+        "KCGS 등급이 저장되었습니다. 미디어 분석 실행 시 점수에 반영됩니다.",
+        "success"
+      );
+    } catch (err) {
+      showDefaultAlert("저장 실패", err?.message || "KCGS 등급 저장에 실패했습니다.", "error");
     }
   };
 
@@ -565,7 +513,6 @@ const Media = () => {
         </header>
 
         <main className="media-main-content">
-          {/* 전체 콘텐츠를 감싸고, 중앙 정렬 & 최대 너비 부여 */}
           <div className="media-input-card">
             <div className="media-page-header">
               <div className="media-page-icon">
@@ -616,7 +563,6 @@ const Media = () => {
             </div>
 
             <div className="media-compact-workspace">
-              {/* 좌측 패널 */}
               <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
                 <div className="media-compact-tabs">
                   {[
@@ -640,7 +586,6 @@ const Media = () => {
                   })}
                 </div>
 
-                {/* 언론 채널 폼 */}
                 {activeSourceTab === "press" && (
                   <div className="media-compact-card">
                     <div className="media-press-layout">
@@ -686,7 +631,6 @@ const Media = () => {
                   </div>
                 )}
 
-                {/* 규제 기관 폼 */}
                 {activeSourceTab === "regulation" && (
                   <div className="media-compact-card">
                     <div className="form-group">
@@ -722,7 +666,6 @@ const Media = () => {
                   </div>
                 )}
 
-                {/* 전문 평가기관 폼 */}
                 {activeSourceTab === "institution" && (
                   <div className="media-compact-card">
                     <div className="form-group">
@@ -758,7 +701,6 @@ const Media = () => {
                   </div>
                 )}
 
-                {/* 체크리스트 및 CTA 버튼 */}
                 <div className="media-checklist-wrapper" style={{ marginTop: "auto", marginBottom: "0" }}>
                   <div className="media-checklist-title">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e293b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" /></svg>
@@ -783,7 +725,6 @@ const Media = () => {
                         </div>
                       ))}
                     </div>
-                    {/* CTA 버튼 (체크리스트 바로 우측) */}
                     <div className="media-cta-wrapper" style={{ margin: 0, display: "flex", flexDirection: "column", alignItems: "stretch", justifyContent: "center", gap: "6px" }}>
                       <button
                         className="Bench-btn"
@@ -804,7 +745,6 @@ const Media = () => {
                 </div>
               </div>
 
-              {/* 우측 패널 */}
               <div className="media-summary-col">
                 <div className="media-summary-card">
                   <div className="media-summary-title">
@@ -888,252 +828,18 @@ const Media = () => {
           </div>
         </main>
 
-        {/* ── 기존 Bottom Result Dashboard (유지) ── */}
-        <div className={`media-result-dashboard ${dashboardOpen ? "open" : ""} ${showResult ? "result-expanded" : ""}`}>
-          <div className="dashboard-handle" onClick={() => setDashboardOpen(!dashboardOpen)}>
-            <div className={`handle-pill ${showResult ? "complete" : ""}`}>
-              {isAnalyzing ? "AI 파이프라인 수집 가동 중..." : showResult ? "분석 완료 - 결과 요약 확인 (클릭)" : "실시간 분석 대기 중"}
-            </div>
-          </div>
-          {(dashboardOpen || isAnalyzing || showResult) && (
-            <div
-              className={`robot-view-container dma-stage ${isAnalyzing ? "dma-stage--running" : ""} ${showResult ? "showing-result" : ""}`}
-              style={{ '--dma-icon': `url(${analyzingIcon})`, '--dma-accent': 'var(--media-primary)' }}
-            >
-              <div id="particle-field" ref={particleRef}></div>
-              {!showResult && (
-                <div className="dma-stage__blobs" aria-hidden="true">
-                  <div className="dma-stage__blob dma-stage__blob--1" />
-                  <div className="dma-stage__blob dma-stage__blob--2" />
-                  <div className="dma-stage__blob dma-stage__blob--3" />
-                  <div className="dma-stage__blob dma-stage__blob--4" />
-                  <div className="dma-stage__blob dma-stage__blob--5" />
-                  <div className="dma-stage__blob dma-stage__blob--6" />
-                  <div className="dma-stage__blob dma-stage__blob--7" />
-                  <div className="dma-stage__blob dma-stage__blob--8" />
-                  <div className="dma-stage__blob dma-stage__blob--9" />
-                  <div className="dma-stage__blob dma-stage__blob--10" />
-                  <div className="dma-stage__blob dma-stage__blob--11" />
-                  <div className="dma-stage__blob dma-stage__blob--12" />
-                </div>
-              )}
-              {!showResult && (
-                <div className="dma-stage__content">
-                  <div className="dma-stage__robot">
-                    <img src={robot} className="dma-stage__img" alt="마스코트 로봇" />
-                  </div>
-                  <h3 className="dma-stage__title">{loadingTitle}</h3>
-                  <p className="dma-stage__desc">{loadingDesc}</p>
-                  {isAnalyzing && (
-                    <div className="dma-stage__progress">
-                      <div className="dma-stage__progress-bar">
-                        <div className="dma-stage__progress-fill" style={{ width: `${progress}%` }}></div>
-                      </div>
-                      <div className="dma-stage__progress-pct">{progress}% 분석 중</div>
-                    </div>
-                  )}
-                </div>
-              )}
-              {showResult && (
-                <div className="result-layout" style={{ zIndex: 3 }}>
-
-                  {/* 결과 배너 */}
-                  <div className="media-result-banner">
-                    <div className="media-result-banner-left">
-                      <span className="media-result-banner-badge">
-                        <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                          <path d="M2.5 6l2.5 2.5 4.5-5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        AI 분석 완료
-                      </span>
-                      <div className="media-result-banner-title">미디어 시그널 분석 결과</div>
-                      <p className="media-result-banner-desc">
-                        언론 기사, 전문기관 자료, 핵심규제 프레임을 종합 반영하여<br />
-                        외부 시그널 기반의 주요 서브이슈를 도출했습니다.
-                      </p>
-                    </div>
-                    <img src={robot} className="media-result-banner-robot" alt="robot" />
-                  </div>
-
-                  {/* KPI 카드 */}
-                  <div className="result-stats-row">
-                    <div className="result-stat-card stat-card-blue">
-                      <div className="stat-icon-wrap stat-icon-blue">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                          <line x1="16" y1="13" x2="8" y2="13" />
-                          <line x1="16" y1="17" x2="8" y2="17" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="stat-label">언론 기사</div>
-                        <div className="stat-value-row">
-
-                          <div className="stat-value">{dashboardData?.stats?.press?.count ?? "0건"}</div>
-                          <div className="stat-sub">{dashboardData?.stats?.press?.sub ?? ""}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="result-stat-card stat-card-purple">
-                      <div className="stat-icon-wrap stat-icon-purple">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <line x1="3" y1="22" x2="21" y2="22" />
-                          <line x1="6" y1="18" x2="6" y2="11" />
-                          <line x1="10" y1="18" x2="10" y2="11" />
-                          <line x1="14" y1="18" x2="14" y2="11" />
-                          <line x1="18" y1="18" x2="18" y2="11" />
-                          <polygon points="12 2 2 7 22 7" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="stat-label">전문기관 자료</div>
-                        <div className="stat-value-row">
-                          <div className="stat-value">{dashboardData?.stats?.expert?.count ?? "0건"}</div>
-                          <div className="stat-sub">{dashboardData?.stats?.expert?.sub ?? ""}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="result-stat-card stat-card-orange">
-                      <div className="stat-icon-wrap stat-icon-orange">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="stat-label">규제 프레임</div>
-                        <div className="stat-value-row">
-
-                          <div className="stat-value">{dashboardData?.stats?.regulation?.count ?? "0건"}</div>
-                          <div className="stat-sub">{dashboardData?.stats?.regulation?.sub ?? ""}</div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="result-stat-card stat-card-green">
-                      <div className="stat-icon-wrap stat-icon-green">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                        </svg>
-                      </div>
-                      <div>
-                        <div className="stat-label">반영 이슈 총계</div>
-                        <div className="stat-value">{dashboardData?.stats?.total?.count ?? "0개"}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 3-패널 */}
-                  <div className="result-panels-row">
-
-                    {/* 패널 1: Source 현황 */}
-                    <div className="result-panel panel-accent-blue">
-                      <div className="panel-header-row">
-                        <span className="panel-title">
-                          <span className="panel-dot dot-blue" />
-                          Source 별 반영 현황
-                        </span>
-                        <span className="panel-badge-count">{(dashboardData?.sourceTable ?? []).length}건</span>
-                      </div>
-                      <div className="panel-body">
-                        <table className="issue-table">
-                          <thead>
-                            <tr>
-                              <th>Source</th><th>수집</th><th>반영</th><th>방식</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(dashboardData?.sourceTable ?? []).map((row, i) => (
-                              <tr key={i}>
-                                <td>{row.source}</td>
-                                <td>{row.count}</td>
-                                <td>{row.issues}</td>
-                                <td>{row.method}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* 패널 2: TOP 이슈 */}
-                    <div className="result-panel panel-accent-green">
-                      <div className="panel-header-row">
-                        <span className="panel-title">
-                          <span className="panel-dot dot-green" />
-                          미디어 TOP 이슈 점수
-                        </span>
-                        <span className="panel-badge-count">{(dashboardData?.topIssues ?? []).length}건</span>
-                      </div>
-                      <div className="panel-body">
-                        <table className="issue-table">
-                          <thead>
-                            <tr>
-                              <th style={{ width: "36px" }}>순위</th>
-                              <th>Sub Issue</th>
-                              <th>Impact</th>
-                              <th>Financial</th>
-                              <th>Source</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(dashboardData?.topIssues ?? []).map((item) => (
-                              <tr key={item.rank}>
-                                <td>
-                                  <span className={`rank-badge${item.rank <= 3 ? ` rank-top${item.rank}` : ""}`}>
-                                    {item.rank}
-                                  </span>
-                                </td>
-                                <td>{item.name}</td>
-                                <td>{item.impact}</td>
-                                <td>{item.financial}</td>
-                                <td>{item.source}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* 패널 3: 반영 방식 */}
-                    <div className="result-panel panel-accent-purple">
-                      <div className="panel-header-row">
-                        <span className="panel-title">
-                          <span className="panel-dot dot-purple" />
-                          반영 방식 안내
-                        </span>
-                      </div>
-                      <div className="panel-body">
-                        <ul className="reflect-list">
-                          {REFLECT_METHODS.map((item) => (
-                            <li key={item.key} className="reflect-item">
-                              <div className="reflect-icon">{item.icon}</div>
-                              <div>
-                                <div className="reflect-title">{item.title}</div>
-                                <p className="reflect-desc">{item.desc}</p>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="reflect-note">ⓘ 향후 MSCI·S&P·EcoVadis 등 외부 평가기관 자료 확장 가능</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 다음 단계 버튼 */}
-                  <div className="result-next-row">
-                    <button type="button" className="result-next-btn" onClick={() => navigate("/survey")}>
-                      다음 단계: 이해관계자 설문으로 이동
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                        <polyline points="12 5 19 12 12 19" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+        <MediaResultDashboard
+          dashboardOpen={dashboardOpen}
+          setDashboardOpen={setDashboardOpen}
+          showResult={showResult}
+          isAnalyzing={isAnalyzing}
+          progress={progress}
+          loadingTitle={loadingTitle}
+          loadingDesc={loadingDesc}
+          dashboardData={dashboardData}
+          navigate={navigate}
+          particleRef={particleRef}
+        />
 
         {isKisModalOpen && (
           <div className="media-modal-overlay">

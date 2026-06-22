@@ -1,8 +1,19 @@
+<<<<<<< HEAD
+"""
+service.py
+레이어: Service (onboardings)
+역할: 온보딩 지표 조회·입력·저장 서비스 — 사이클별 지표 목록 및 입력값 관리.
+"""
+=======
+>>>>>>> origin/skm_test
 from __future__ import annotations
 
 from typing import Optional
 
 from src.models.onboarding import (
+<<<<<<< HEAD
+    OnboardingAssignmentDto,
+=======
     OnboardingApprovalActionResponseDto,
     OnboardingApprovalAtomicDetailItemDto,
     OnboardingApprovalDetailDataDto,
@@ -22,16 +33,25 @@ from src.models.onboarding import (
     OnboardingAssignmentItemDto,
     OnboardingAssignmentListResponseDto,
     OnboardingAssignmentPatchRequestDto,
+>>>>>>> origin/skm_test
     OnboardingAtomicItemDto,
     OnboardingMetricItemDto,
     OnboardingMetricsResponseDto,
     OnboardingMetricValuesRequestDto,
     OnboardingMetricValuesResponseDto,
 )
+<<<<<<< HEAD
+from src.repositories import onboardingassignmentrepository as assignmentRepo
+from src.repositories import onboardingrepository as repo
+from src.repositories import onboardingscoperepository as scopeRepo
+from src.utils.companyscope import checkScope
+from src.utils.typeutils import normalizeIssueDomain, groupRows, maskEmail
+=======
 from src.utils import onboardingassignmentrepository as assignmentRepo
 from src.utils import onboardingrepository as repo
 from src.utils.companyscope import checkScope
 from src.services.onboardings import approval_service as approvalService
+>>>>>>> origin/skm_test
 from src.services.calculations.service import invalidateAffectedEntityFactsTx
 
 
@@ -66,10 +86,13 @@ APPROVER_ROLES = {"ADMIN", "ESG"}
 APPROVER_ROLE_NAMES = {"관리자", "ESG담당자", "ESG 담당자"}
 
 
+<<<<<<< HEAD
+=======
 class PreDmaG0CycleNotReadyError(ValueError):
     pass
 
 
+>>>>>>> origin/skm_test
 def listMetrics(
     *,
     companyId: int,
@@ -79,6 +102,10 @@ def listMetrics(
     batchId: Optional[int] = None,
     userModel=None,
 ) -> OnboardingMetricsResponseDto:
+<<<<<<< HEAD
+    """사이클 유형에 따라 사용자에게 노출 가능한 지표 목록과 입력값을 조합해 반환한다."""
+=======
+>>>>>>> origin/skm_test
     year = repo.resolveReportingYear(companyId, reportingYear)
     sourceMaterialityRunId = resolveCycleSourceMaterialityRunId(companyId, year, cycleType)
     if cycleType == repo.CYCLE_TYPE_ROLLUP_RESPONSE and batchId:
@@ -115,7 +142,11 @@ def listMetrics(
     actualCycleType = str(cycle.get("cycle_type") or cycleType).strip().upper()
     
     if actualCycleType == repo.CYCLE_TYPE_ROLLUP_RESPONSE and batchId:
+<<<<<<< HEAD
+        from src.repositories import rolluprepository as rollupRepo
+=======
         from src.utils import rolluprepository as rollupRepo
+>>>>>>> origin/skm_test
         snapshotAtomicIds = set(rollupRepo.resolveExternalEntitySourceAtomicIds(int(batchId)))
         masterRows = [row for row in masterRows if row.get("atomic_metric_id") in snapshotAtomicIds]
 
@@ -126,9 +157,15 @@ def listMetrics(
         includeGroupRollupResultYn=(actualCycleType != repo.CYCLE_TYPE_ROLLUP_RESPONSE),
     )
     assignmentByMetric = {row["metric_id"]: buildAssignment(row) for row in assignmentRows}
+<<<<<<< HEAD
+    atomicRowsByMetric = groupRows(masterRows, "metric_id")
+
+    from src.repositories.onboardingapprovalrepository import listCycleApprovalInboxRows
+=======
     atomicRowsByMetric = groupBy(masterRows, "metric_id")
 
     from src.utils.onboardingapprovalrepository import listCycleApprovalInboxRows
+>>>>>>> origin/skm_test
     approvalSummaries = listCycleApprovalInboxRows(
         companyId=companyId,
         reportingYear=year,
@@ -185,6 +222,10 @@ def saveMetricValues(
     userId: Optional[int] = None,
     userModel=None,
 ) -> OnboardingMetricValuesResponseDto:
+<<<<<<< HEAD
+    """입력값을 검증한 뒤 저장하고, 하위 파생 Facts를 무효화한다."""
+=======
+>>>>>>> origin/skm_test
     prepared = validateMetricValues(metricId=metricId, request=request, userId=userId, userModel=userModel)
     cycle = prepared["cycle"]
     group = prepared["group"]
@@ -204,8 +245,13 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
     if not groups:
         return 0
     from src.utils.db import getConn
+<<<<<<< HEAD
+    from src.repositories import onboardinginputrepository as inputRepo
+    from src.repositories import rolluprepository as rollupRepo
+=======
     from src.utils import onboardinginputrepository as inputRepo
     from src.utils import rolluprepository as rollupRepo
+>>>>>>> origin/skm_test
     conn = getConn()
     if not conn:
         raise RuntimeError("DB connection failed")
@@ -219,17 +265,27 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                 values = group["values"]
                 cycleId = group["cycleId"]
                 
+<<<<<<< HEAD
+                # ROLLUP_RESPONSE 사이클 쓰기 가능 여부 확인
+=======
                 # Check cycle writeability for ROLLUP_RESPONSE
+>>>>>>> origin/skm_test
                 cur.execute(
                     "SELECT cycle_type, parent_rollup_batch_id FROM ESG_ONBOARDING_CYCLE WHERE id = ?",
                     (cycleId,),
                 )
                 cycleRow = cur.fetchone()
                 if cycleRow:
+<<<<<<< HEAD
+                    scopeRepo.requireWritableCycleTx(cur, cycleRow, companyId, batchId=group.get("batchId"))
+
+                # 변경 감지를 위한 기존 값 조회
+=======
                     from src.services.onboardings.approval_service import requireWritableCycleTx
                     requireWritableCycleTx(cur, cycleRow, companyId, batchId=group.get("batchId"))
 
                 # Collect old values for change detection
+>>>>>>> origin/skm_test
                 oldByAtomic = {}
                 for value in values:
                     atomicId = value["atomicMetricId"]
@@ -249,7 +305,11 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                     )
                     oldByAtomic[atomicId] = cur.fetchone()
 
+<<<<<<< HEAD
+                # 저장
+=======
                 # Save
+>>>>>>> origin/skm_test
                 savedCount += inputRepo.upsertMetricInputValuesTx(
                     cur,
                     cycleId=cycleId,
@@ -261,7 +321,11 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                     userId=group.get("userId"),
                 )
 
+<<<<<<< HEAD
+                # 변경된 원자 지표 감지
+=======
                 # Detect changed atomics
+>>>>>>> origin/skm_test
                 changedAtomicIds = []
                 for value in values:
                     atomicId = value["atomicMetricId"]
@@ -269,7 +333,11 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
                     if _atomicValueChanged(old, value):
                         changedAtomicIds.append(atomicId)
 
+<<<<<<< HEAD
+                # 변경된 원자 지표 하위 무효화
+=======
                 # Downstream invalidation for changed atomics
+>>>>>>> origin/skm_test
                 if changedAtomicIds:
                     invalidateAffectedEntityFactsTx(
                         cur,
@@ -294,22 +362,36 @@ def saveMetricValueGroupsWithInvalidation(groups: list[dict]) -> int:
 
 
 def _atomicValueChanged(oldRow: dict, newValue: dict) -> bool:
+<<<<<<< HEAD
+    """기존 DB 행과 비교해 값이 실제로 변경되었으면 True를 반환."""
+    if oldRow is None:
+        # 신규 입력 — 항상 변경으로 간주
+=======
     """Return True if the value actually changed compared to the existing DB row."""
     if oldRow is None:
         # New insert — always counts as a change
+>>>>>>> origin/skm_test
         return True
     oldNumeric = oldRow.get("value_numeric")
     newNumeric = newValue.get("valueNumeric")
     oldText = str(oldRow.get("value_text") or "").strip()
     newText = str(newValue.get("valueText") or "").strip()
+<<<<<<< HEAD
+    # 수치 비교
+=======
     # Compare numeric
+>>>>>>> origin/skm_test
     if oldNumeric is not None or newNumeric is not None:
         try:
             if float(oldNumeric or 0) != float(newNumeric or 0):
                 return True
         except (TypeError, ValueError):
             return True
+<<<<<<< HEAD
+    # 텍스트 비교
+=======
     # Compare text
+>>>>>>> origin/skm_test
     if oldText != newText:
         return True
     return False
@@ -322,6 +404,10 @@ def validateMetricValues(
     userId: Optional[int] = None,
     userModel=None,
 ) -> dict:
+<<<<<<< HEAD
+    """입력 권한·지표 존재 여부·편집 가능 여부를 검증하고 저장 가능한 그룹 dict를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     cycle = requireCycle(request.companyId, request.reportingYear, request.cycleType, batchId=request.batchId)
     checkMetricInputPermission(
         cycle=cycle,
@@ -375,6 +461,10 @@ def validateMetricValues(
 
 
 def saveMetricValueGroups(groups: list[dict]) -> int:
+<<<<<<< HEAD
+    """batchId 필드를 제거한 뒤 다수 지표의 입력값을 일괄 저장한다."""
+=======
+>>>>>>> origin/skm_test
     sanitizedGroups = []
     for item in groups:
         group = item["group"] if "group" in item else item
@@ -393,6 +483,10 @@ def requireCycle(
     batchId: Optional[int] = None,
     sourceMaterialityRunId: Optional[int] = None,
 ) -> dict:
+<<<<<<< HEAD
+    """활성 사이클을 조회하고 없거나 비활성 상태면 ValueError를 발생시킨다."""
+=======
+>>>>>>> origin/skm_test
     effectiveRunId = resolveCycleSourceMaterialityRunId(
         companyId,
         reportingYear,
@@ -419,12 +513,20 @@ def resolveCycleSourceMaterialityRunId(
     cycleType: str,
     sourceMaterialityRunId: Optional[int] = None,
 ) -> Optional[int]:
+<<<<<<< HEAD
+    """POST_DMA_DISCLOSURE 사이클에 한해 현재 보고 워크플로우 runId를 조회해 반환한다."""
+=======
+>>>>>>> origin/skm_test
     if sourceMaterialityRunId is not None:
         return int(sourceMaterialityRunId)
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType != CYCLE_TYPE_POST_DMA_DISCLOSURE:
         return None
+<<<<<<< HEAD
+    from src.repositories import reportworkflowrepository
+=======
     from src.utils import reportworkflowrepository
+>>>>>>> origin/skm_test
 
     currentRun = reportworkflowrepository.getCurrent(companyId, reportingYear)
     if currentRun.get("id") is None:
@@ -433,6 +535,10 @@ def resolveCycleSourceMaterialityRunId(
 
 
 def cycleNotReadyMessage(cycleType: str) -> str:
+<<<<<<< HEAD
+    """사이클 유형별 '아직 시작되지 않음' 안내 메시지를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
         return POST_DMA_DISCLOSURE_CYCLE_NOT_READY
@@ -442,6 +548,10 @@ def cycleNotReadyMessage(cycleType: str) -> str:
 
 
 def scopeNotReadyMessage(cycleType: str) -> str:
+<<<<<<< HEAD
+    """사이클 유형별 '지표 범위 미초기화' 안내 메시지를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     normalizedCycleType = str(cycleType or "").strip().upper()
     if normalizedCycleType == CYCLE_TYPE_POST_DMA_DISCLOSURE:
         return POST_DMA_DISCLOSURE_SCOPE_NOT_READY
@@ -451,6 +561,10 @@ def scopeNotReadyMessage(cycleType: str) -> str:
 
 
 def syntheticGeneralMetadata():
+<<<<<<< HEAD
+    """PRE_DMA_G0 사이클용 고정 issueDomain·subIssue 메타데이터를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     return {
         "issueDomain": "general",
         "subIssueId": None,
@@ -459,6 +573,10 @@ def syntheticGeneralMetadata():
     }
 
 def syntheticDependencyMetadata():
+<<<<<<< HEAD
+    """추가 입력 필요 데이터 항목에 사용하는 고정 issueDomain·subIssue 메타데이터를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     return {
         "issueDomain": "general",
         "subIssueId": None,
@@ -467,6 +585,10 @@ def syntheticDependencyMetadata():
     }
 
 def requireMappedSubIssueMetadata(scope: dict, cycle: dict):
+<<<<<<< HEAD
+    """scope 행에서 issueDomain·subIssueId 등을 추출하고 누락 시 ValueError를 발생시킨다."""
+=======
+>>>>>>> origin/skm_test
     issueDomain = normalizeIssueDomain(scope.get("sub_issue_domain"))
     subIssueId = scope.get("source_selected_sub_issue_id") or scope.get("sub_issue_id")
     subIssueCode = scope.get("source_sub_issue_code") or scope.get("sub_issue_code")
@@ -491,6 +613,10 @@ def requireMappedSubIssueMetadata(scope: dict, cycle: dict):
     }
 
 def resolveScopeMetadata(scope: dict, cycle: dict) -> dict:
+<<<<<<< HEAD
+    """사이클 유형과 scope_source_type을 보고 적절한 issueDomain 메타데이터 dict를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     cycleType = str(cycle.get("cycle_type") or "").strip().upper()
     
     if cycleType == CYCLE_TYPE_PRE_DMA_G0:
@@ -515,6 +641,12 @@ def resolveScopeMetadata(scope: dict, cycle: dict) -> dict:
     }
 
 
+<<<<<<< HEAD
+
+
+def buildAtomicItem(row: dict, value: dict) -> OnboardingAtomicItemDto:
+    """원자 지표 마스터 행과 최신 입력값을 결합해 OnboardingAtomicItemDto를 생성한다."""
+=======
 def normalizeIssueDomain(value: Optional[str]) -> Optional[str]:
     normalizedValue = str(value or "").strip().upper()
     if normalizedValue in {"E", "ENVIRONMENT", "ENVIRONMENTAL"} or normalizedValue.startswith("E_"):
@@ -529,6 +661,7 @@ def normalizeIssueDomain(value: Optional[str]) -> Optional[str]:
 
 
 def buildAtomicItem(row: dict, value: dict) -> OnboardingAtomicItemDto:
+>>>>>>> origin/skm_test
     inputMode = resolveInputMode(row)
     return OnboardingAtomicItemDto(
         metricId=row.get("metric_id"),
@@ -550,6 +683,10 @@ def buildAtomicItem(row: dict, value: dict) -> OnboardingAtomicItemDto:
 
 
 def resolveInputMode(row: dict) -> str:
+<<<<<<< HEAD
+    """원자 지표 속성을 분석해 ROLLUP_READONLY·STRUCTURED_LOOKUP·YEAR_RANGE·MANUAL_NUMBER·MANUAL_TEXTAREA 중 하나를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     atomicMetricId = row.get("atomic_metric_id")
     atomicRole = row.get("atomic_data_role")
     rollupRole = row.get("rollup_role")
@@ -581,10 +718,18 @@ def resolveInputMode(row: dict) -> str:
 
 
 def isEditable(inputMode: str) -> bool:
+<<<<<<< HEAD
+    """inputMode가 사용자 직접 편집 가능한 모드인지 여부를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     return inputMode in EDITABLE_INPUT_MODES
 
 
 def latestValueForInputMode(rows: list[dict], atomicMetricId: str, inputMode: str) -> dict:
+<<<<<<< HEAD
+    """inputMode별 허용 소스를 기준으로 가장 우선순위 높은 최신 값 행을 선택한다."""
+=======
+>>>>>>> origin/skm_test
     if inputMode == "ROLLUP_READONLY":
         allowedSources = {"group_rollup_result"}
         priority = {"group_rollup_result": 0}
@@ -620,6 +765,10 @@ def latestValueForInputMode(rows: list[dict], atomicMetricId: str, inputMode: st
 
 
 def buildAssignment(row: dict) -> OnboardingAssignmentDto:
+<<<<<<< HEAD
+    """배정 행에서 배정 상태와 담당자 이메일(마스킹)을 추출해 OnboardingAssignmentDto를 생성한다."""
+=======
+>>>>>>> origin/skm_test
     assignmentStatus = row.get("assignment_status")
     email = None
     if str(assignmentStatus or "").strip().lower() != "unassigned":
@@ -633,6 +782,14 @@ def buildAssignment(row: dict) -> OnboardingAssignmentDto:
     )
 
 
+<<<<<<< HEAD
+
+
+
+
+def floatOrNone(value):
+    """값을 float로 변환하되 None이거나 변환 불가 시 None을 반환한다."""
+=======
 def maskEmail(email: Optional[str]) -> Optional[str]:
     if not email or "@" not in email:
         return email
@@ -650,6 +807,7 @@ def groupBy(rows: list[dict], key: str) -> dict[str, list[dict]]:
 
 
 def floatOrNone(value):
+>>>>>>> origin/skm_test
     if value is None:
         return None
     try:
@@ -658,6 +816,10 @@ def floatOrNone(value):
         return None
 
 
+<<<<<<< HEAD
+def listVisibleMetricScopesForUser(scopes: list[dict], assignmentRows: list[dict], userModel) -> tuple[list[dict], bool, str]:
+    """역할에 따라 열람 가능한 지표 범위를 필터링하고 (scopes, 성공여부, 메시지) 튜플을 반환한다."""
+=======
 def bulkAssign(request: OnboardingAssignmentBulkAssignRequestDto, userModel) -> OnboardingAssignmentBulkAssignResponseDto:
     checkScope(request.companyId, userModel)
     checkManager(userModel)
@@ -811,6 +973,7 @@ def checkManager(userModel) -> None:
 
 
 def listVisibleMetricScopesForUser(scopes: list[dict], assignmentRows: list[dict], userModel) -> tuple[list[dict], bool, str]:
+>>>>>>> origin/skm_test
     if userModel is None or isAssignmentManager(userModel):
         return scopes, True, ""
     if isConsultant(userModel):
@@ -832,6 +995,10 @@ def listVisibleMetricScopesForUser(scopes: list[dict], assignmentRows: list[dict
 
 
 def checkMetricInputPermission(*, cycle: dict, companyId: int, metricId: str, userModel) -> None:
+<<<<<<< HEAD
+    """현재 사용자가 해당 지표에 입력 권한이 있는지 확인하고 없으면 PermissionError를 발생시킨다."""
+=======
+>>>>>>> origin/skm_test
     if userModel is None:
         return
     if isConsultant(userModel):
@@ -852,6 +1019,10 @@ def checkMetricInputPermission(*, cycle: dict, companyId: int, metricId: str, us
 
 
 def checkMetricStatusPermission(summary: dict, userModel) -> bool:
+<<<<<<< HEAD
+    """검토자·관리자이거나 배정된 본인이면 True, 그 외 역할이면 False를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     if isReviewer(userModel) or isAssignmentManager(userModel):
         return True
     if isEmployee(userModel):
@@ -865,29 +1036,49 @@ def checkMetricStatusPermission(summary: dict, userModel) -> bool:
 
 
 def isAssignmentManager(userModel) -> bool:
+<<<<<<< HEAD
+    """사용자가 ADMIN 또는 ESG 담당자 역할인지 여부를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     role = str(readUserField(userModel, "role") or "").strip().upper()
     roleName = str(readUserField(userModel, "role_name") or "").strip()
     return role in ASSIGNMENT_MANAGER_ROLES or roleName in ASSIGNMENT_MANAGER_ROLE_NAMES
 
 
 def isEmployee(userModel) -> bool:
+<<<<<<< HEAD
+    """사용자가 부서 담당자(EMPLOYEE/ASSIGNEE) 역할인지 여부를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     role = str(readUserField(userModel, "role") or "").strip().upper()
     roleName = str(readUserField(userModel, "role_name") or "").strip()
     return role in EMPLOYEE_ROLES or roleName in EMPLOYEE_ROLE_NAMES
 
 
 def isConsultant(userModel) -> bool:
+<<<<<<< HEAD
+    """사용자가 컨설턴트 역할인지 여부를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     role = str(readUserField(userModel, "role") or "").strip().upper()
     roleName = str(readUserField(userModel, "role_name") or "").strip()
     return role in CONSULTANT_ROLES or roleName in CONSULTANT_ROLE_NAMES
 
 
 def isReviewer(userModel) -> bool:
+<<<<<<< HEAD
+    """사용자가 검토 가능한 역할(컨설턴트·ADMIN·ESG 담당자)인지 여부를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     role = str(readUserField(userModel, "role") or "").strip().upper()
     roleName = str(readUserField(userModel, "role_name") or "").strip()
     return role in REVIEWER_ROLES or roleName in REVIEWER_ROLE_NAMES
 
 
+<<<<<<< HEAD
+def ensureWorkflowPreDmaG0Cycle(run: dict, actorUserId: Optional[int] = None) -> dict:
+    """보고 워크플로우 run 정보를 받아 PRE_DMA_G0 사이클을 생성 또는 조회한다."""
+=======
 def submitApproval(request: OnboardingApprovalRequestDto, userModel) -> OnboardingApprovalActionResponseDto:
     checkScope(request.companyId, userModel)
     cycle = requireCycle(request.companyId, request.reportingYear, request.cycleType, batchId=getattr(request, "batchId", None))
@@ -1053,6 +1244,7 @@ def getApprovalDetail(
 
 
 def ensureWorkflowPreDmaG0Cycle(run: dict, actorUserId: Optional[int] = None) -> dict:
+>>>>>>> origin/skm_test
     if not run:
         return {}
     return repo.ensurePreDmaG0Cycle(
@@ -1065,6 +1257,10 @@ def ensureWorkflowPreDmaG0Cycle(run: dict, actorUserId: Optional[int] = None) ->
 
 
 def ensureWorkflowPostDmaDisclosureCycle(run: dict, actorUserId: Optional[int] = None) -> dict:
+<<<<<<< HEAD
+    """보고 워크플로우 run 정보를 받아 POST_DMA_DISCLOSURE 사이클을 생성 또는 조회한다."""
+=======
+>>>>>>> origin/skm_test
     if not run:
         return {}
     return repo.ensurePostDmaDisclosureCycle(
@@ -1076,6 +1272,10 @@ def ensureWorkflowPostDmaDisclosureCycle(run: dict, actorUserId: Optional[int] =
     )
 
 
+<<<<<<< HEAD
+def getActorUserId(userModel) -> Optional[int]:
+    """userModel에서 현재 사용자 ID를 int로 추출하고 없으면 None을 반환한다."""
+=======
 def actionResponse(summary: dict, message: str) -> OnboardingApprovalActionResponseDto:
     return OnboardingApprovalActionResponseDto(
         data=statusDto(summary, None),
@@ -1167,11 +1367,16 @@ def checkSelfSubmitted(summary: dict, userModel) -> bool:
 
 
 def getActorUserId(userModel) -> Optional[int]:
+>>>>>>> origin/skm_test
     value = readUserField(userModel, "id")
     return int(value) if value is not None else None
 
 
 def readUserField(userModel, key: str):
+<<<<<<< HEAD
+    """dict 또는 객체 형태의 userModel에서 지정 필드를 안전하게 읽는다."""
+=======
+>>>>>>> origin/skm_test
     if userModel is None:
         return None
     if isinstance(userModel, dict):

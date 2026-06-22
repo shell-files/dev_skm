@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+/**
+ * productSafety.jsx
+ * 레이어: Component (srTemplates/subIssues)
+ * 역할: 소비자 건강·제품안전 서브이슈의 SR 페이지 컴포넌트, adapter, metricFields, 서브이슈 매니페스트를 포함한 모듈 — 필드액션·리콜 건수·CAP 완료율 게이지와 거버넌스 내용을 렌더링
+ *
+ * exports:
+ *   productSafety (default) — id·label·adapter·metricFields·pages를 포함하는 서브이슈 매니페스트 객체
+ */
+=======
+>>>>>>> origin/skm_test
 // srTemplates/subIssues/productSafety.jsx
 // 소비자 건강·제품안전 서브이슈
 import React from "react";

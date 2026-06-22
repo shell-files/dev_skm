@@ -1,8 +1,17 @@
+<<<<<<< HEAD
+"""
+dmaengine.py
+레이어: Model
+역할: DMA 엔진 v8.2 및 v1.3 Pydantic 스키마 정의.
+  - v8.2: DMAContextProfile, ImpactAssessment, FinancialAssessment, DMASignal 등 레거시 타입
+  - v1.3: TriState, ExtractedFactsV13, ScoringPayloadV13 등 신규 캐노니컬 타입 (레거시와 병렬 공존)
+"""
+=======
+>>>>>>> origin/skm_test
 from enum import Enum
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Any, List, Optional, Literal, Dict
 
-# --- v8.2 DMA Pydantic Schemas ---
 
 class DMAContextProfile(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
@@ -161,6 +170,8 @@ class FinalMaterialityScore(BaseModel):
     coverage: dict
 
 
+<<<<<<< HEAD
+=======
 # =====================================================================================
 # DMA v1.3 MVP Slim Canonical Engine — DTO / Enum (PARALLEL ADDITION)
 # =====================================================================================
@@ -174,6 +185,7 @@ class FinalMaterialityScore(BaseModel):
 #  - Screening signal != canonical impact/financial score != final DMA rank.
 # =====================================================================================
 
+>>>>>>> origin/skm_test
 
 class TriState(str, Enum):
     """Three-valued logic for AI-extracted boolean-ish facts (no implicit False)."""

@@ -1,5 +1,15 @@
+<<<<<<< HEAD
+﻿"""
+scoringservice.py
+레이어: Service (surveys)
+역할: 설문 점수 산정 서비스 — 응답 데이터 집계 및 최종 점수 재산정.
+"""
+from src.utils.dmaaggregator import SURVEY_GROUP_WEIGHTS
+from src.repositories.dmasurveyscorerepository import (
+=======
 from src.utils.dmaaggregator import SURVEY_GROUP_WEIGHTS
 from src.utils.dmasurveyscorerepository import (
+>>>>>>> origin/skm_test
     getReadySurveyFormForScore,
     listActiveSurveyResponsesForScore,
     replaceSurveyScoresAndRecalculateFinalTx,

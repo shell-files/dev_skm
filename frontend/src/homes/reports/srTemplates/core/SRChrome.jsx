@@ -1,3 +1,29 @@
+<<<<<<< HEAD
+/**
+ * SRChrome.jsx
+ * 레이어: Component (srTemplates/core)
+ * 역할: 모든 SR 서브이슈 페이지가 공유하는 공통 프레임 컴포넌트 — 상단 dark band, 상단 nav, subnav, 섹션 헤더, 푸터, MetricBar를 포함하며 본문은 children으로 주입받음
+ *
+ * Props:
+ *   navItems — 상단 nav 탭 목록 (기본값 DEFAULT_NAV)
+ *   subNavItems — 서브 nav 탭 목록 (기본값 DEFAULT_SUBNAV)
+ *   pageTitle — 섹션 제목 (HTML 허용)
+ *   pageTitleEn — 영문 제목 (선택)
+ *   footnotes — 하단 각주 배열 (선택)
+ *   sourceNote — 하단 출처 표기 (선택)
+ *   children — 서브이슈별 본문 영역
+ *   tag — 페이지 태그 레이블 (선택)
+ *   onNavClick — nav 탭 클릭 핸들러 (선택)
+ *   onSubNavClick — subnav 탭 클릭 핸들러 (선택)
+ *
+ * exports:
+ *   SRChrome — SR 페이지 공통 레이아웃 컴포넌트
+ *   MetricBar — metric 값으로 높이가 결정되는 bar 차트 요소 (stacked 지원)
+ *   DEFAULT_NAV — 기본 상단 nav 항목 배열
+ *   DEFAULT_SUBNAV — 기본 subnav 항목 배열
+ */
+=======
+>>>>>>> origin/skm_test
 // ============================================================
 // SRChrome.jsx — SR 페이지 공통 프레임 (모든 sub-issue 재사용)
 // 상단 dark band / nav / sub nav / section header / footer 포함

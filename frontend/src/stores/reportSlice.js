@@ -1,3 +1,11 @@
+<<<<<<< HEAD
+/**
+ * reportSlice.js
+ * 레이어: Store
+ * 역할: 보고서 Redux 슬라이스 — 보고 연도·결재 프로젝트·사이클·materiality run ID 상태 관리 및 API Thunk.
+ */
+=======
+>>>>>>> origin/skm_test
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { GET, POST, POST_FORM, PUT, PATCH } from "@utils/Network";
 
@@ -927,6 +935,24 @@ export const runMediaCrawlAndAnalyze = createAsyncThunk(
       return rejectWithValue({
         status: false,
         message: apiErrorMessage(error, "미디어 분석 중 오류가 발생했습니다."),
+      });
+    }
+  }
+);
+
+// KCGS ESG 등급 입력 저장(APPROVED). 정확히 3개 연속 연도 grades 를 전송한다.
+// 저장 성공 후 미디어 분석을 다시 실행하면 KCGS pillar boost 가 점수에 반영된다.
+export const saveKcgsGrades = createAsyncThunk(
+  "report/saveKcgsGrades",
+  async ({ companyId, grades }, { rejectWithValue }) => {
+    try {
+      const res = await POST("/media/kcgs/grades", { companyId, grades });
+      return rejectIfFailed(res, rejectWithValue, "KCGS 등급 저장에 실패했습니다.");
+    } catch (error) {
+      console.error(error);
+      return rejectWithValue({
+        status: false,
+        message: apiErrorMessage(error, "KCGS 등급 저장 중 오류가 발생했습니다."),
       });
     }
   }

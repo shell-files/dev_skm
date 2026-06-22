@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+"""
+service.py
+레이어: Service (surveys)
+역할: 설문 생성·관리 서비스 — Google Sheets 연동 폼 생성 및 응답 수집 오케스트레이션.
+"""
+import csv
+import os
+
+from src.utils.sheetsutils import getSheetsService as _getSheetsService
+=======
 from src.utils.settings import settings
 
 from googleapiclient.discovery import build
@@ -6,6 +17,7 @@ from google.oauth2 import service_account
 import csv
 import os
 
+>>>>>>> origin/skm_test
 from src.services.surveys.formservice import (
     buildQuestion,
     buildRespondent,
@@ -14,6 +26,12 @@ from src.services.surveys.formservice import (
     loadSurveyTemplate,
 )
 
+<<<<<<< HEAD
+
+
+async def exportCsvProcess(sheet_id, token):
+    """Google Sheets에서 '응답' 시트를 병합해 CSV로 내보내고 파일 경로를 반환한다."""
+=======
 # =========================
 # Google Sheets API — Lazy Init
 # =========================
@@ -34,6 +52,7 @@ def _getSheetsService():
 # EXPORT CSV (Sheet 조회 API)
 # =========================
 async def exportCsvProcess(sheet_id, token):
+>>>>>>> origin/skm_test
     sheetsService = _getSheetsService()
     try:
         spreadsheet = sheetsService.spreadsheets().get(
@@ -90,8 +109,14 @@ async def exportCsvProcess(sheet_id, token):
         return {"status": "error", "message": str(e)}
 
 
+<<<<<<< HEAD
+
+def getRawProcess():
+    """설문 템플릿 원본 데이터를 반환한다."""
+=======
 # =========================
 # 템플릿 조회
 # =========================
 def getRawProcess():
+>>>>>>> origin/skm_test
     return loadSurveyTemplate()

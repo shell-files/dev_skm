@@ -1,3 +1,13 @@
+<<<<<<< HEAD
+﻿"""
+service.py
+레이어: Service (calculations)
+역할: KPI 계산 컨텍스트 오케스트레이션 — 영향 받은 엔티티 규칙 그래프 해소 및 Fact 도출·저장.
+
+의존성 흐름:
+  calculations.service → calculationrepository, calculationengine
+  approval_service, onboardings.service → calculations.service (단방향)
+=======
 """
 Calculation bounded context orchestration.
 
@@ -14,13 +24,18 @@ Import graph:
   onboardings.service -> calculations.service
 
 This module must NOT import from onboardings.service or approval_service.
+>>>>>>> origin/skm_test
 """
 from __future__ import annotations
 
 from typing import Optional
 
 from src.utils import calculationengine as calcEngine
+<<<<<<< HEAD
+from src.repositories import calculationrepository as calcRepo
+=======
 from src.utils import calculationrepository as calcRepo
+>>>>>>> origin/skm_test
 
 
 def calculateAffectedEntityFactsTx(

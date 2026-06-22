@@ -1,3 +1,8 @@
+/**
+ * Network.js
+ * 레이어: Utils
+ * 역할: axios 기반 HTTP 요청 래퍼 — GET/POST/PUT/PATCH/DELETE/POST_FORM 메서드 제공.
+ */
 import axios from 'axios'
 
 /**

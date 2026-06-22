@@ -1,3 +1,8 @@
+/**
+ * NotFound.jsx
+ * 레이어: Page
+ * 역할: 존재하지 않는 경로 접근 시 표시되는 404 에러 페이지
+ */
 import '@styles/error.css'
 
 

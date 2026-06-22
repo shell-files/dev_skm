@@ -1,3 +1,13 @@
+/**
+ * Invite.jsx
+ * 레이어: Component (mains)
+ * 역할: 컨설턴트 초대 및 자회사 관계 관리 UI를 제공하며, 초대·발송 내역과 관계 요청 승인 대기 목록을 표시하는 관리 컴포넌트
+ *
+ * 주요 상태:
+ *   selectedRole — 현재 선택된 탭 ("Company" / "Consultant")
+ *   emails1 — 컨설턴트 초대 이메일 목록 (chip 형식)
+ *   subsidiaryInput — 자회사 초대 입력값
+ */
 import React, { useState } from 'react';
 import { useAuth } from '@hooks/AuthContext';
 import { POST } from '@utils/Network';

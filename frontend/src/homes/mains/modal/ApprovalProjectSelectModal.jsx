@@ -1,3 +1,18 @@
+<<<<<<< HEAD
+/**
+ * ApprovalProjectSelectModal.jsx
+ * 레이어: Component (mains/modal)
+ * 역할: 보고연도별 지속가능경영보고서 프로젝트 목록을 카드 형태로 표시하고 조회할 프로젝트를 선택하는 모달
+ *
+ * Props:
+ *   isOpen — 모달 표시 여부
+ *   projects — 선택 가능한 보고서 프로젝트 배열 (runId, reportingYear, reportBasisType, runStatus 등)
+ *   selectedRunId — 현재 선택된 프로젝트의 runId
+ *   onSelectProject — 프로젝트 선택 핸들러
+ *   onClose — 모달 닫기 핸들러
+ */
+=======
+>>>>>>> origin/skm_test
 import React from "react";
 import { createPortal } from "react-dom";
 

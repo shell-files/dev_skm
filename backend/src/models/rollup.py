@@ -1,3 +1,11 @@
+<<<<<<< HEAD
+"""
+rollup.py
+레이어: Model
+역할: ESG 롤업 배치·요청·전송·기준값 관련 요청/응답 DTO 정의.
+"""
+=======
+>>>>>>> origin/skm_test
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -273,7 +281,11 @@ class RollupBatchSummaryResponseDto(RollupBaseModel):
     data: RollupBatchSummaryDto
 
 
+<<<<<<< HEAD
+
+=======
 # ── S5-B14 Prior-year baseline (전년도 연결 기준값 수동입력) ──────────────────
+>>>>>>> origin/skm_test
 class RollupBaselineRequirementItemDto(RollupBaseModel):
     ruleCode: str
     metricId: Optional[str] = None

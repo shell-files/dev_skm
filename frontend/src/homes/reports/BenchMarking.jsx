@@ -1,8 +1,20 @@
+<<<<<<< HEAD
+/**
+ * BenchMarking.jsx
+ * 레이어: Page
+ * 역할: 리더·피어·자사 ESG 보고서(SR) PDF를 업로드하여 AI 벤치마킹 분석을 실행하고, 이슈 점수·공통 이슈·Blind Spot 결과를 표시하는 페이지
+ */
+=======
+>>>>>>> origin/skm_test
 import { useRef, useState, Fragment, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import "@styles/benchmarking.css";
 import "@styles/dma-robot-stage.css";
+<<<<<<< HEAD
+import RankBadge from "@components/UI/RankBadge";
+=======
+>>>>>>> origin/skm_test
 import robot from "@assets/images/robot/robot_repoting_transparent.png";
 import benchIcon from "@assets/icons/steps/benchmarking.png";
 import {
@@ -461,7 +473,11 @@ const Benchmarking = () => {
   const displayData = dashboardData;
 
   return (
+<<<<<<< HEAD
+    <div id="bench-page" className="Bench-container">
+=======
     <div className="Bench-container">
+>>>>>>> origin/skm_test
       <header className="Bench-header">
         <div className="Bench-stepper-row">
           {steps.map((step, index) => (
@@ -725,11 +741,15 @@ const Benchmarking = () => {
                       <tbody>
                         {displayData.topIssues.map((item) => (
                           <tr key={item.rank}>
+<<<<<<< HEAD
+                            <td><RankBadge rank={item.rank} /></td>
+=======
                             <td>
                               <span className={`rank-badge${item.rank <= 3 ? ` rank-top${item.rank}` : ""}`}>
                                 {item.rank}
                               </span>
                             </td>
+>>>>>>> origin/skm_test
                             <td>{item.name}</td>
                             <td>{item.impact}</td>
                             <td>{item.financial}</td>

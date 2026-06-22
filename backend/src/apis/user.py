@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+"""
+user.py
+레이어: API Router
+역할: 회원 정보 수정·탈퇴 엔드포인트.
+
+엔드포인트:
+  PATCH  /  — 회원 정보 수정
+  DELETE /  — 회원 탈퇴
+"""
+=======
 # apis/user.py
 # ────────────────────────────────────────────────────────────────────────────
 # [역할] HTTP 요청 수신 후 models/user.py의 비즈니스 로직에 위임.
@@ -5,21 +16,36 @@
 # [변경점] schemas/user.py 제거 → models/user.py에서 직접 import
 # ────────────────────────────────────────────────────────────────────────────
 
+>>>>>>> origin/skm_test
 from fastapi import APIRouter, Request
 from src.models.model import userUpdateModel, userDeleteModel
 from src.models.user import updateUserProcess, deleteUserProcess
 
 router = APIRouter()
 
+<<<<<<< HEAD
+
+@router.patch("",
+        summary="회원수정 api",
+=======
 # --------------------------
 # 회원 정보 수정 API
 # --------------------------
 @router.patch("", 
         summary="회원수정 api", 
+>>>>>>> origin/skm_test
         description="회원 정보를 수정합니다.")
 async def updateUser(request: Request, userUpdateModel: userUpdateModel):
     return updateUserProcess(request, userUpdateModel)
 
+<<<<<<< HEAD
+
+@router.delete("",
+        summary="회원탈퇴 api",
+        description="회원 탈퇴 처리입니다.")
+def deleteUser(request: Request):
+    return deleteUserProcess(request)
+=======
 # --------------------------
 # 회원 탈퇴 API
 # --------------------------
@@ -28,3 +54,4 @@ async def updateUser(request: Request, userUpdateModel: userUpdateModel):
         description="회원 탈퇴 처리입니다.")
 def deleteUser(request: Request):
     return deleteUserProcess(request)
+>>>>>>> origin/skm_test

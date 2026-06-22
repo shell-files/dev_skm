@@ -1,3 +1,11 @@
+<<<<<<< HEAD
+"""
+kafkasv.py
+레이어: Utils
+역할: Kafka 메시지 발행·소비 — 이메일 발송 이벤트 처리.
+"""
+=======
+>>>>>>> origin/skm_test
 import json
 import asyncio
 import threading

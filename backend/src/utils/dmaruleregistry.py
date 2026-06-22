@@ -1,4 +1,10 @@
 """
+<<<<<<< HEAD
+dmaruleregistry.py
+레이어: Utils
+역할: DMA 규칙 레지스트리 — 규칙 카드 로딩·캐싱·버전 관리.
+"""
+=======
 Domain: DMA Materiality (v1.3 MVP Slim Engine)
 Layer: utils/rule-registry
 Responsibility: STEP 0 — Rule Load, Validate, Hash, Cache
@@ -26,11 +32,35 @@ Do not:
 - do not enable hot reload
 """
 
+>>>>>>> origin/skm_test
 from __future__ import annotations
 
 import copy
 import hashlib
 import json
+<<<<<<< HEAD
+import threading
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Dict, Mapping, Optional
+
+from src.utils.dmarulevalidator import (
+    DmaRuleValidationError,
+    EXPECTED_RULE_VERSION,
+    EXPECTED_ARCHITECTURE_REVISION,
+    EXPECTED_HASH_ALGORITHM,
+    EXPECTED_POLICY_FILES,
+    EXPECTED_CAPABILITY_KEYS,
+    validatePath,
+    validateManifest,
+    validatePolicies,
+    validatePolicyVersions,
+    validateBundle,
+    validateMediaEventResolverPolicy,
+    validateKcgsScreeningPolicy,
+    validateKisScreeningPolicy,
+)
+=======
 import re
 import threading
 from dataclasses import dataclass
@@ -69,14 +99,18 @@ EXPECTED_CAPABILITY_KEYS = frozenset({
 })
 
 _SAFE_FILENAME_RE = re.compile(r"^[A-Za-z0-9_]+\.json$")
+>>>>>>> origin/skm_test
 
 # backend/src/utils/dmaruleregistry.py -> parents[1] == backend/src
 RUNTIME_CONFIG_DIR = Path(__file__).resolve().parents[1] / "resources" / "dma" / "v1_3_mvp"
 MANIFEST_FILENAME = "manifest.json"
 
+<<<<<<< HEAD
+=======
 class DmaRuleValidationError(ValueError):
     """Raised when a v1.3 slim runtime config violates the contract."""
 
+>>>>>>> origin/skm_test
 
 @dataclass(frozen=True)
 class RuntimeConfigV13:
@@ -93,6 +127,10 @@ _lock = threading.RLock()
 _cache: Optional[RuntimeConfigV13] = None
 
 
+<<<<<<< HEAD
+def readJson(path: Path) -> Any:
+    """지정 경로의 JSON 파일을 읽어 파싱한다. 파일 미존재 또는 JSON 오류 시 DmaRuleValidationError를 발생시킨다."""
+=======
 # STEP 0. Path guard — rejects traversal, absolute, nested, non-json filenames.
 # Input: raw filename string from manifest.
 # Output: validated safe filename string.
@@ -475,6 +513,7 @@ def validateBundle(manifest: Dict[str, Any], policies: Dict[str, Dict[str, Any]]
 
 
 def readJson(path: Path) -> Any:
+>>>>>>> origin/skm_test
     if not path.exists():
         raise DmaRuleValidationError(f"Required runtime config file is missing: {path.name}")
     try:
@@ -488,6 +527,16 @@ def readJson(path: Path) -> Any:
 
 
 def _canonicalJson(obj: Any) -> str:
+<<<<<<< HEAD
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def computeConfigHash(policies: Mapping[str, Any]) -> str:
+    """
+    정책 파일 집합의 SHA-256 해시를 계산한다.
+    파일명을 정렬한 후 각 파일의 정규화 JSON을 순서대로 해싱하여 재현 가능성을 보장한다.
+    """
+=======
     """Canonical JSON: keys sorted, compact separators — hash-invariant to key order and whitespace."""
     return json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
@@ -496,6 +545,7 @@ def _canonicalJson(obj: Any) -> str:
 # Input: policy dict keyed by filename.
 # Output: 'sha256:<hexdigest>' string.
 def computeConfigHash(policies: Mapping[str, Any]) -> str:
+>>>>>>> origin/skm_test
     digest = hashlib.sha256()
     for filename in sorted(policies):
         digest.update(filename.encode("utf-8"))
@@ -535,10 +585,18 @@ def _loadBundle() -> RuntimeConfigV13:
     )
 
 
+<<<<<<< HEAD
+def getDmaRules(forceReload: bool = False) -> RuntimeConfigV13:
+    """
+    v1.3 runtime config 번들을 반환한다.
+    스레드 안전 캐시를 사용하며 forceReload=True이면 디스크에서 재로드한다.
+    """
+=======
 # STEP 0. Load and cache the v1.3 slim runtime config bundle (singleton).
 # Input: forceReload=True bypasses cache (used by tests).
 # Output: immutable RuntimeConfigV13 snapshot.
 def getDmaRules(forceReload: bool = False) -> RuntimeConfigV13:
+>>>>>>> origin/skm_test
     global _cache
     with _lock:
         if _cache is None or forceReload:
@@ -547,21 +605,37 @@ def getDmaRules(forceReload: bool = False) -> RuntimeConfigV13:
 
 
 def resetDmaRulesForTest() -> None:
+<<<<<<< HEAD
+    """테스트 격리를 위해 인메모리 캐시를 초기화한다."""
+=======
     """Clear the singleton cache (test helper)."""
+>>>>>>> origin/skm_test
     global _cache
     with _lock:
         _cache = None
 
 
 def getManifest() -> Dict[str, Any]:
+<<<<<<< HEAD
+    """로드된 manifest.json의 딥카피를 반환한다 (외부 변경 차단)."""
+=======
+>>>>>>> origin/skm_test
     return copy.deepcopy(getDmaRules().manifest)
 
 
 def getAllPolicies() -> Dict[str, Dict[str, Any]]:
+<<<<<<< HEAD
+    """로드된 전체 정책 파일 맵의 딥카피를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     return copy.deepcopy(getDmaRules().policies)
 
 
 def getPolicy(name: str) -> Dict[str, Any]:
+<<<<<<< HEAD
+    """이름(확장자 선택)으로 단일 정책 파일을 조회하여 딥카피로 반환한다. 미존재 시 DmaRuleValidationError."""
+=======
+>>>>>>> origin/skm_test
     filename = name if name.endswith(".json") else f"{name}.json"
     filename = validatePath(filename)
     policies = getDmaRules().policies
@@ -571,22 +645,42 @@ def getPolicy(name: str) -> Dict[str, Any]:
 
 
 def getConfigHash() -> str:
+<<<<<<< HEAD
+    """현재 로드된 정책 번들의 SHA-256 해시 문자열을 반환한다."""
+=======
+>>>>>>> origin/skm_test
     return getDmaRules().configHash
 
 
 def getRuleVersion() -> str:
+<<<<<<< HEAD
+    """로드된 번들의 ruleVersion 문자열을 반환한다."""
+=======
+>>>>>>> origin/skm_test
     return getDmaRules().ruleVersion
 
 
 def getArchRevision() -> str:
+<<<<<<< HEAD
+    """로드된 번들의 architectureRevision 문자열을 반환한다."""
+=======
+>>>>>>> origin/skm_test
     return getDmaRules().architectureRevision
 
 
 def getCapabilities() -> Dict[str, str]:
+<<<<<<< HEAD
+    """manifest capabilities 전체의 딥카피를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     return copy.deepcopy(getDmaRules().capabilities)
 
 
 def getCapability(name: str) -> Optional[str]:
+<<<<<<< HEAD
+    """지정 capability 키의 값을 반환한다. 존재하지 않으면 None을 반환한다."""
+=======
+>>>>>>> origin/skm_test
     return getDmaRules().capabilities.get(name)
 
 

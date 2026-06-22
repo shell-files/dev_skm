@@ -1,3 +1,14 @@
+<<<<<<< HEAD
+/**
+ * ecoProduct.jsx
+ * 레이어: Component (srTemplates/subIssues)
+ * 역할: 저탄소·친환경 제품 서브이슈의 SR 페이지 컴포넌트, adapter, metricFields, 서브이슈 매니페스트를 포함한 모듈 — 친환경 제품 매출액·회피 배출량·매출 비중 게이지를 렌더링
+ *
+ * exports:
+ *   ecoProduct (default) — id·label·adapter·metricFields·pages를 포함하는 서브이슈 매니페스트 객체
+ */
+=======
+>>>>>>> origin/skm_test
 // srTemplates/subIssues/ecoProduct.jsx
 // 저탄소·친환경 제품 서브이슈
 import React from "react";

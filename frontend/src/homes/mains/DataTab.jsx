@@ -1,8 +1,111 @@
-import React from 'react';
-import TabButton from '@components/UI/TabButton';
-import BatchActionBar from '@components/UI/BatchActionBar';
+/**
+ * DataTab.jsx
+ * 레이어: Component (mains) — 구버전 파일
+ * 역할: ManagerData 페이지의 승인 항목 테이블 탭 — 도메인·서브이슈 필터, 상태 필터, 행별·일괄 승인·검토·반려 액션, 승인 상세 모달 연동을 담당
+ *
+ * Props:
+ *   activeService — 현재 활성 서비스 유형 (예: "disclosure")
+ *   isLoading — 데이터 로딩 여부
+ *   activeDataCategory — 현재 도메인 필터 ("all" / "environmental" 등)
+ *   activeSubCategory — 현재 서브이슈 필터
+ *   selectedIds — 일괄 처리 선택된 항목 ID 배열
+ *   setSelectedIds — 선택 항목 상태 업데이트 함수
+ *   pagedInputs — 현재 페이지에 표시할 승인 항목 배열
+ *   dataPage — 현재 페이지 번호
+ *   userRole — 현재 사용자 역할
+ *   hasConsultant — 컨설턴트 검토 단계 포함 여부
+ *   statusFilter — 승인 상태 필터 ("all" / "APPROVED" / "PENDING" / "REJECTED")
+ *   readOnlyYn — 읽기 전용 여부
+ *   handleMainCategoryChange — 도메인 카테고리 변경 핸들러
+ *   setActiveSubCategory — 서브이슈 필터 업데이트 함수
+ *   handleBulkAction — 일괄 승인·반려 핸들러
+ *   fetchData — 데이터 새로고침 핸들러
+ *   setDataPage — 페이지 번호 업데이트 함수
+ *   handleAction — 단건 승인·반려 핸들러
+ *   actionLoading — 승인 처리 로딩 여부
+ *   approvalDetail — 선택된 항목의 상세 데이터
+ *   approvalDetailLoading — 상세 로딩 여부
+ *   approvalDetailError — 상세 조회 오류
+ *   fetchApprovalDetail — 승인 상세 조회 함수
+ *
+ * 의존 컴포넌트:
+ *   ApprovalDetailModal — 지표 승인 상세 조회·승인·반려 모달
+ */
+import React, { useEffect, useMemo, useState } from "react";
+import TabButton from "@components/UI/TabButton";
+import BatchActionBar from "@components/UI/BatchActionBar";
+import ApprovalDetailModal from "./modal/ApprovalDetailModal";
+import ModalWrapper from "@components/UI/ModalWrapper";
+import LoadingSpinner from "@components/UI/LoadingSpinner";
 import "@styles/Manager.css";
 import "@styles/TabButton.css";
+
+const PAGE_SIZE = 10;
+const DOMAIN_ORDER = ["general", "environmental", "social", "governance"];
+const DOMAIN_LABEL = {
+  general: "General",
+  environmental: "E",
+  social: "S",
+  governance: "G",
+};
+
+const safeArray = (value) => (Array.isArray(value) ? value : []);
+
+const normalizeIssueDomain = (item = {}) =>
+  String(item.issueDomain ?? item.issue_domain ?? item.domain ?? "general").trim();
+
+const normalizeSubIssueCode = (item = {}) => {
+  const value =
+    item.subIssueCode ??
+    item.sub_issue_code ??
+    item.sourceSubIssueCode ??
+    item.source_sub_issue_code;
+  return value ? String(value).trim() : "";
+};
+
+const normalizeSubIssueName = (item = {}) => {
+  const value =
+    item.subIssueName ??
+    item.sub_issue_name ??
+    item.displaySubIssueName;
+  return value ? String(value).trim() : normalizeSubIssueCode(item);
+};
+
+const normalizeApprovalStatus = (item = {}) =>
+  String(item.approvalStatus ?? item.status ?? "NOT_STARTED")
+    .trim()
+    .toUpperCase();
+
+const normalizeSubmitStatus = (item = {}) => {
+  if (item.submitStatus) return String(item.submitStatus).toUpperCase();
+  const status = normalizeApprovalStatus(item);
+  return ["SUBMITTED", "REVIEWED", "APPROVED", "REJECTED"].includes(status)
+    ? "SUBMITTED"
+    : "DRAFT";
+};
+
+const normalizeReviewStatus = (item = {}) => {
+  if (item.reviewStatus) return String(item.reviewStatus).toUpperCase();
+  const status = normalizeApprovalStatus(item);
+  return ["APPROVED", "REJECTED"].includes(status) ? "REVIEWED" : "PENDING";
+};
+
+const isActionSupported = (item = {}, readOnlyYn = false) =>
+  !readOnlyYn && item.actionSupportedYn !== false;
+
+const actionDisabledTitle = (item = {}, readOnlyYn = false) =>
+  readOnlyYn
+    ? "Completed projects are read-only."
+    : item.actionDisabledReason ||
+      "This item does not support approval actions in the current step.";
+
+const submitLabel = (status) => (status === "SUBMITTED" ? "제출 완료" : "작성 중");
+const reviewLabel = (status) => (status === "REVIEWED" ? "검토 완료" : "대기");
+const approvalLabel = (status) => {
+  if (status === "APPROVED") return "승인";
+  if (status === "REJECTED") return "반려";
+  return "대기";
+};
 
 const DataTab = ({
   activeService,
@@ -12,256 +115,548 @@ const DataTab = ({
   selectedIds,
   setSelectedIds,
   pagedInputs,
-  totalDataPages,
   dataPage,
   userRole,
   hasConsultant,
-
+  statusFilter = "all",
+  readOnlyYn = false,
   handleMainCategoryChange,
   setActiveSubCategory,
-  toggleSelect,
-  toggleSelectAll,
   handleBulkAction,
   fetchData,
   setDataPage,
-  handleAction
+  handleAction,
+  actionLoading = false,
+  approvalDetail = null,
+  approvalDetailLoading = false,
+  approvalDetailError = null,
+  fetchApprovalDetail,
 }) => {
-  const CATEGORY_MAP = {
-    // [공시] 지표 그룹
-    general: ["기업개요", "사업구조", "보고정보", "거버넌스개요", "전략", "정책", "이해관계자", "재무·경제가치", "투자·R&D", "생산·판매", "인증·특허"],
-    environmental: [
-      "Climate", "Energy", "Water", "Pollution", "Circularity", "Biodiversity", "Product_env", "Supply Chain_env", "Sustainable investment", // 공시
-      "Carbon_Scope1", "Carbon_Scope2" // [탄소관리]
-    ],
-    social: [
-      "Labor", "Safety", "Talent", "Diversity", "Human Rights", "Supply Chain_social", "Community", "Product_resp", "Privacy", // 공시
-      "Supply_Audit", "협력사 평가" // [공급망 관리]
-    ],
-    governance: ["Governance", "Risk", "compliance", "Ethics", "Business Conduct", "Data Governance"] // 공시
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedItemForDetail, setSelectedItemForDetail] = useState(null);
+  const [isBulkRejectModalOpen, setIsBulkRejectModalOpen] = useState(false);
+  const [bulkRejectReason, setBulkRejectReason] = useState("");
+  const [modalActionMode, setModalActionMode] = useState(null);
+
+  const sourceInputs = useMemo(() => safeArray(pagedInputs), [pagedInputs]);
+
+  const displayInputs = sourceInputs;
+
+  const availableDomains = useMemo(
+    () =>
+      DOMAIN_ORDER.filter((domain) =>
+        displayInputs.some((item) => normalizeIssueDomain(item) === domain)
+      ),
+    [displayInputs]
+  );
+
+  const availableSubIssues = useMemo(() => {
+    if (activeDataCategory === "all") return [];
+    const subIssueMap = new Map();
+    displayInputs
+      .filter((item) => normalizeIssueDomain(item) === activeDataCategory)
+      .forEach((item) => {
+        const code = normalizeSubIssueCode(item);
+        if (!code || subIssueMap.has(code)) return;
+        subIssueMap.set(code, {
+          value: code,
+          label: normalizeSubIssueName(item),
+        });
+      });
+    return [...subIssueMap.values()].sort((a, b) =>
+      String(a.label || a.value).localeCompare(String(b.label || b.value))
+    );
+  }, [displayInputs, activeDataCategory]);
+
+  useEffect(() => {
+    if (
+      activeDataCategory !== "all" &&
+      !availableDomains.includes(activeDataCategory)
+    ) {
+      handleMainCategoryChange("all");
+    }
+  }, [activeDataCategory, availableDomains, handleMainCategoryChange]);
+
+  useEffect(() => {
+    if (
+      activeSubCategory !== "all" &&
+      !availableSubIssues.some((subIssue) => subIssue.value === activeSubCategory)
+    ) {
+      setActiveSubCategory("all");
+    }
+  }, [activeSubCategory, availableSubIssues, setActiveSubCategory]);
+
+  const filteredInputs = useMemo(() => {
+    return displayInputs.filter((item) => {
+      const itemService = item.service || "disclosure";
+      if (
+        item.service &&
+        activeService &&
+        activeService !== "all" &&
+        itemService !== activeService
+      ) {
+        return false;
+      }
+      if (
+        activeDataCategory !== "all" &&
+        normalizeIssueDomain(item) !== activeDataCategory
+      ) {
+        return false;
+      }
+      if (
+        activeSubCategory !== "all" &&
+        normalizeSubIssueCode(item) !== activeSubCategory
+      ) {
+        return false;
+      }
+      if (statusFilter !== "all") {
+        const status = normalizeApprovalStatus(item);
+        if (statusFilter === "PENDING") {
+          return !["APPROVED", "REJECTED"].includes(status);
+        }
+        return status === String(statusFilter).toUpperCase();
+      }
+      return true;
+    });
+  }, [
+    activeDataCategory,
+    activeService,
+    activeSubCategory,
+    displayInputs,
+    statusFilter,
+  ]);
+
+  const totalDataPages = Math.max(1, Math.ceil(filteredInputs.length / PAGE_SIZE));
+  const visibleInputs = useMemo(
+    () => filteredInputs.slice((dataPage - 1) * PAGE_SIZE, dataPage * PAGE_SIZE),
+    [filteredInputs, dataPage]
+  );
+
+  useEffect(() => {
+    if (dataPage > totalDataPages) {
+      setDataPage(totalDataPages);
+    }
+  }, [dataPage, totalDataPages, setDataPage]);
+
+  const effectiveViewerRole = userRole ?? "guest";
+  const isConsultant =
+    String(effectiveViewerRole).toUpperCase().includes("CONSULTANT") ||
+    String(effectiveViewerRole).includes("consultant");
+
+  const effectiveHasConsultant = hasConsultant;
+
+  const selectedRows = useMemo(
+    () => displayInputs.filter((item) => selectedIds.includes(item.id)),
+    [displayInputs, selectedIds]
+  );
+  const selectedSupportedRows = selectedRows.filter((item) =>
+    isActionSupported(item, readOnlyYn)
+  );
+
+  const canBulkApprove =
+    !readOnlyYn &&
+    !actionLoading &&
+    !isConsultant &&
+    selectedSupportedRows.length > 0 &&
+    selectedSupportedRows.every(
+      (item) => !effectiveHasConsultant || normalizeReviewStatus(item) === "REVIEWED"
+    );
+
+  const handleBulkReview = () => {
+    if (actionLoading || !selectedSupportedRows.length) return;
+    handleBulkAction("REVIEWED");
   };
+
+  const handleBulkApprove = () => {
+    if (actionLoading || !canBulkApprove) return;
+    handleBulkAction("APPROVED");
+  };
+
+  const handleBulkReject = () => {
+    if (actionLoading || !selectedSupportedRows.length) return;
+    setBulkRejectReason("");
+    setIsBulkRejectModalOpen(true);
+  };
+
+  const handleOpenApprovalDetail = async (item, actionMode = null) => {
+    setSelectedItemForDetail(item);
+    setModalActionMode(actionMode);
+    setIsDetailModalOpen(true);
+    try {
+      await fetchApprovalDetail?.(item.metricId || item.id);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleToggleSelectAll = () => {
+    if (readOnlyYn || actionLoading) return;
+
+    const visibleIds = visibleInputs.map((item) => item.id);
+    const allSelected =
+      visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
+    setSelectedIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !visibleIds.includes(id))
+        : [...new Set([...prev, ...visibleIds])]
+    );
+  };
+
+  const toggleSelect = (id) => {
+    if (readOnlyYn || actionLoading) return;
+
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((value) => value !== id) : [...prev, id]
+    );
+  };
+
+  const runAction = async (item, status, commentText = "") => {
+    if (!isActionSupported(item, readOnlyYn) || actionLoading) return false;
+    return handleAction(item.id, status, commentText);
+  };
+
+  const closeDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setModalActionMode(null);
+  };
+
+  const detailMetricItem =
+    approvalDetail?.metricId === selectedItemForDetail?.metricId
+      ? {
+          ...selectedItemForDetail,
+          ...approvalDetail,
+        }
+      : selectedItemForDetail;
 
   return (
     <section id="datatap_page" className="fade-in">
       <div className="ob-body" style={{ padding: 0 }}>
-        <div className="data-control-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-
-        {/* 👇 기존 그대로 유지 */}
-        {/* 상단 카테고리 탭 (표준 컴포넌트 교체) */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flex: 1 }}>
-          <TabButton.Category 
-            tabs={[
-              { label: '전체', value: 'all' },
-              { label: '경영일반', value: 'general' },
-              { label: 'E', value: 'environmental' },
-              { label: 'S', value: 'social' },
-              { label: 'G', value: 'governance' }
-            ]}
-            activeTab={activeDataCategory}
-            onTabChange={(val) => handleMainCategoryChange(val)}
-            className="data-category-tabs"
-          />
-
-          {/* 일괄 처리 바를 탭 옆으로 배치 (온보딩 스타일) */}
-          <BatchActionBar 
-            selectedCount={selectedIds.length}
-            actions={[
-              // 1. 컨설턴트 전용
-              ...(userRole?.includes('CONSULTANT') || userRole?.includes('컨설턴트') ? [
-                { label: '선택 검토 완료', onClick: () => handleBulkAction('reviewed'), className: 'submit' }
-              ] : []),
-              
-              // 2. ESG 담당자/관리자 전용
-              ...(userRole?.includes('ESG') || userRole?.includes('관리자') || userRole?.includes('ADMIN') ? [
-                { label: '최종 승인', onClick: () => handleBulkAction('approved'), className: 'submit' }
-              ] : []),
-
-              // 3. 공통
-              { label: '선택 반려', onClick: () => handleBulkAction('rejected'), className: 'reject' }
-            ]}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button className="btn-primary" onClick={fetchData} disabled={isLoading}>
-            {isLoading ? "로딩 중..." : "데이터 새로고침"}
-          </button>
-        </div>
-      </div>
-
-      {/* 하위 이슈그룹 탭 + 표 영역 (온보딩 스타일 wrapper 적용) */}
-      <div className="ob-table-main-container" style={{ marginTop: '30px' }}>
-        {activeDataCategory !== 'all' && (
-          <div style={{ marginBottom: '-1px', position: 'relative', zIndex: 2 }}>
-            <TabButton.Sub 
+        <div
+          className="data-control-row"
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "15px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "20px", flex: 1 }}>
+            <TabButton.Category
               tabs={[
-                { label: '전체 그룹', value: 'all' },
-                ...(() => {
-                  const allGroups = CATEGORY_MAP[activeDataCategory] || [];
-                  const carbonSupplyGroups = ["Carbon_Scope1", "Carbon_Scope2", "Supply_Audit", "협력사 평가"];
-                  
-                  if (activeService === 'carbon') {
-                    return allGroups.filter(g => ["Carbon_Scope1", "Carbon_Scope2"].includes(g));
-                  }
-                  if (activeService === 'supply') {
-                    return allGroups.filter(g => ["Supply_Audit", "협력사 평가"].includes(g));
-                  }
-                  // disclosure: 탄소/공급망 제외 모든 그룹
-                  return allGroups.filter(g => !carbonSupplyGroups.includes(g));
-                })().map(g => ({ label: g, value: g }))
+                { label: "All", value: "all" },
+                ...availableDomains.map((domain) => ({
+                  label: DOMAIN_LABEL[domain] || domain,
+                  value: domain,
+                })),
               ]}
-              activeTab={activeSubCategory}
-              onTabChange={(val) => setActiveSubCategory(val)}
-              categoryTheme={
-                activeDataCategory === 'environmental' ? 'E' :
-                activeDataCategory === 'social' ? 'S' :
-                activeDataCategory === 'governance' ? 'G' : '경영일반'
-              }
-              className="data-sub-tabs"
+              activeTab={activeDataCategory}
+              onTabChange={(value) => handleMainCategoryChange(value)}
+              className="data-category-tabs"
+            />
+
+            <BatchActionBar
+              selectedCount={selectedIds.length}
+              actions={[
+                ...(isConsultant
+                  ? [
+                      {
+                        label: "검토 완료 상태로 변경",
+                        onClick: handleBulkReview,
+                        className: "submit",
+                        disabled: actionLoading || !selectedSupportedRows.length,
+                      },
+                    ]
+                  : [
+                      {
+                        label: "선택 항목 최종 승인",
+                        onClick: handleBulkApprove,
+                        className: "submit",
+                        disabled: actionLoading || !canBulkApprove,
+                      },
+                    ]),
+                {
+                  label: "선택 항목 반려",
+                  onClick: handleBulkReject,
+                  className: "reject",
+                  disabled: actionLoading || !selectedSupportedRows.length,
+                },
+              ]}
             />
           </div>
-        )}
 
-        {/* 👇 테이블 영역 */}
-        {isLoading ? (
-          <div className="loading-container">
-            <div className="spinner"></div>
-            <p>데이터를 처리하고 있습니다...</p>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button className="btn-primary" onClick={fetchData} disabled={isLoading || actionLoading}>
+              {isLoading || actionLoading ? "Loading..." : "데이터 새로고침"}
+            </button>
           </div>
-        ) : (
-          <div className="ob-table-wrap" style={{ borderTopLeftRadius: activeDataCategory === 'all' ? '12px' : '0' }}>
-            <table className="ob-table">
-            <thead>
-              <tr>
-                <th style={{ width: '120px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '8px' }}>
-                    <input
-                      type="checkbox"
-                      className="ob-checkbox"
-                      checked={pagedInputs.length > 0 && pagedInputs.every(i => selectedIds.includes(i.id))}
-                      onChange={toggleSelectAll}
-                    />
-                    <span>ID</span>
-                  </div>
-                </th>
-                <th>이슈 그룹</th>
-                <th>지표명</th>
-                <th>입력값</th>
-                <th>첨부</th>
-                <th>담당자</th>
-                <th>상태</th>
-                <th style={{ width: '180px' }}>관리</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagedInputs.length === 0 ? (
-                <tr>
-                  <td colSpan="8" style={{ padding: '80px 0', color: '#94a3b8', textAlign: 'center', background: '#fff' }}>
-                    <div style={{ marginBottom: '8px', fontSize: '24px' }}>📂</div>
-                    해당 조건에 맞는 데이터가 없습니다.
-                  </td>
-                </tr>
-              ) : (
-                pagedInputs.map(item => (
-                <tr key={item.id} className={selectedIds.includes(item.id) ? "selected" : ""}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingLeft: '8px' }}>
+        </div>
+
+        <div className="ob-table-main-container" style={{ marginTop: "30px" }}>
+          {activeDataCategory !== "all" && availableSubIssues.length > 0 && (
+            <div style={{ marginBottom: "-1px", position: "relative", zIndex: 2 }}>
+              <TabButton.Sub
+                tabs={[
+                  { label: "All Sub-Issues", value: "all" },
+                  ...availableSubIssues,
+                ]}
+                activeTab={activeSubCategory}
+                onTabChange={(value) => setActiveSubCategory(value)}
+                categoryTheme={DOMAIN_LABEL[activeDataCategory] || "General"}
+                className="data-sub-tabs"
+              />
+            </div>
+          )}
+
+          {isLoading ? (
+            <LoadingSpinner message="Loading approval inbox..." />
+          ) : (
+            <div
+              className="ob-table-wrap"
+              style={{ borderTopLeftRadius: activeDataCategory === "all" ? "12px" : "0" }}
+            >
+              <table className="ob-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: "44px" }}>
                       <input
                         type="checkbox"
                         className="ob-checkbox"
-                        checked={selectedIds.includes(item.id)}
-                        onChange={() => toggleSelect(item.id)}
+                        aria-label="Select all"
+                        checked={
+                          visibleInputs.length > 0 &&
+                          visibleInputs.every((item) => selectedIds.includes(item.id))
+                        }
+                        disabled={readOnlyYn || actionLoading}
+                        onChange={handleToggleSelectAll}
                       />
-                      <span style={{ fontSize: '13px', fontWeight: '600', color: '#475569' }}>
-                        {item.issueId || item.id}
-                      </span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={`sr-ig-chip sr-theme-${item.category}`}>
-                      {item.issueGroup}
-                    </span>
-                  </td>
-                  <td className="st-left">{item.checklistQuestion || item.questionName}</td>
-                  <td><strong>{item.value || '-'}</strong></td>
-                  <td>{item.attachmentFile ? '📎 파일' : '-'}</td>
-                  <td>{item.userName}</td>
-                  <td className="cell-status">
-                    {(item.status === 'PENDING' || item.status === 'SUBMITTED' || item.status === 'pending') && <span className="ob-status st-submitted">승인대기</span>}
-                    {(item.status === 'REVIEWED' || item.status === 'reviewed') && <span className="ob-status st-submitted">검토완료</span>}
-                    {(item.status === 'APPROVED' || item.status === 'approved') && <span className="ob-status st-approved">승인완료</span>}
-                    {(item.status === 'REJECTED' || item.status === 'rejected') && <span className="ob-status st-rejected">반려</span>}
-                  </td>
-                  <td>
-                    {/* [디버깅] 버튼이 안 나올 경우 아래 주석을 풀어 확인 가능 */}
-                    {/* <div style={{fontSize:'10px', color:'#ccc'}}>{userRole} / {item.status}</div> */}
+                    </th>
+                    <th style={{ width: "100px" }}>Metric ID</th>
+                    <th>지표명</th>
+                    <th style={{ width: "110px" }}>담당자</th>
+                    <th style={{ width: "80px" }}>미입력</th>
+                    <th style={{ width: "100px" }}>검토 상태</th>
+                    <th style={{ width: "100px" }}>승인 상태</th>
+                    <th style={{ width: "140px" }}>제출일</th>
+                    <th style={{ width: "280px" }}>관리</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleInputs.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan="9"
+                        style={{
+                          padding: "80px 0",
+                          color: "#94a3b8",
+                          textAlign: "center",
+                          background: "#fff",
+                        }}
+                      >
+                        조건에 맞는 데이터가 없습니다.
+                      </td>
+                    </tr>
+                  ) : (
+                    visibleInputs.map((item) => {
+                      const reviewStatus = normalizeReviewStatus(item);
+                      const approvalStatus = normalizeApprovalStatus(item);
+                      const submitStatus = normalizeSubmitStatus(item);
+                      const supported = isActionSupported(item, readOnlyYn);
+                      const unsupportedTitle = supported
+                        ? ""
+                        : actionDisabledTitle(item, readOnlyYn);
+                      const canApprove =
+                        supported &&
+                        !isConsultant &&
+                        (!effectiveHasConsultant || reviewStatus === "REVIEWED");
 
-                    {/* 1. 컨설턴트/관리자 공통: 역할에 맞는 워크플로우 로직 */}
-                    <div className="ob-actions">
-                      {/* [컨설턴트 전용] PENDING 상태일 때 검토 완료 가능 */}
-                      {(userRole?.includes('CONSULTANT') || userRole?.includes('컨설턴트')) && (item.status === 'PENDING' || item.status === 'pending') && (
-                        <button className="ob-act-btn ob-act-submit" onClick={() => handleAction(item.id, 'REVIEWED')}>검토 완료</button>
-                      )}
-
-                      {/* [ESG 담당자/관리자 전용] 승인 로직 */}
-                      {(userRole?.includes('ESG') || userRole?.includes('관리자')) && (
-                        <>
-                          {/* 2단계 워크플로우: 컨설턴트가 없으면 PENDING에서 바로 최종 승인 가능 */}
-                          {!hasConsultant && (item.status === 'PENDING' || item.status === 'pending') && (
-                            <button className="ob-act-btn ob-act-submit" onClick={() => handleAction(item.id, 'APPROVED')}>최종 승인</button>
-                          )}
-                          {/* 3단계 워크플로우: 컨설턴트가 있으면 REVIEWED 상태에서 최종 승인 가능 */}
-                          {(item.status === 'REVIEWED' || item.status === 'reviewed') && (
-                            <button className="ob-act-btn ob-act-submit" onClick={() => handleAction(item.id, 'APPROVED')}>최종 승인</button>
-                          )}
-                        </>
-                      )}
-
-                      {/* [공통] 반려 기능 (승인된 항목 제외) */}
-                      {(userRole?.includes('CONSULTANT') || userRole?.includes('컨설턴트') || userRole?.includes('ESG') || userRole?.includes('관리자')) && 
-                       (item.status === 'PENDING' || item.status === 'pending' || item.status === 'REVIEWED' || item.status === 'reviewed') && (
-                        <button className="ob-act-btn ob-act-reject" onClick={() => handleAction(item.id, 'REJECTED')} style={{ marginLeft: '4px' }}>반려</button>
-                      )}
-
-                      {/* [컨설턴트 전용] 이미 검토한 항목 취소 기능 */}
-                      {(userRole?.includes('CONSULTANT') || userRole?.includes('컨설턴트')) && (item.status === 'REVIEWED' || item.status === 'reviewed') && (
-                        <button className="ob-act-btn ob-act-draft" onClick={() => handleAction(item.id, 'PENDING')}>검토 취소</button>
-                      )}
-
-                      {/* 처리 완료된 항목 되돌리기 (수정하기) */}
-                      {(item.status === 'APPROVED' || item.status === 'approved' || item.status === 'REJECTED' || item.status === 'rejected') && (
-                        <button 
-                          className="ob-act-btn ob-act-draft" 
-                          onClick={() => handleAction(item.id, 'PENDING')}
-                        >
-                          수정하기
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              )))}
-            </tbody>
-          </table>
+                      return (
+                        <tr key={item.id} className={selectedIds.includes(item.id) ? "selected" : ""}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              className="ob-checkbox"
+                              aria-label={`Select ${item.metricId || item.id}`}
+                              checked={selectedIds.includes(item.id)}
+                              disabled={readOnlyYn || actionLoading}
+                              onChange={() => toggleSelect(item.id)}
+                            />
+                          </td>
+                          <td style={{ fontSize: "13px", fontWeight: 600, color: "#475569" }}>
+                            {item.metricId || item.id}
+                          </td>
+                          <td className="st-left">{item.metricName || item.checklistQuestion || "-"}</td>
+                          <td>{item.assigneeName || item.userName || "-"}</td>
+                          <td className="ob-completion-cell">{item.inputMissingCount || 0}</td>
+                          <td className="cell-status">
+                            <span className={`ob-status ${reviewStatus === "REVIEWED" ? "st-reviewed" : "st-pending"}`}>
+                              {reviewLabel(reviewStatus)}
+                            </span>
+                          </td>
+                          <td className="cell-status">
+                            <span
+                              className={`ob-status ${
+                                approvalStatus === "APPROVED"
+                                  ? "st-approved"
+                                  : approvalStatus === "REJECTED"
+                                    ? "st-rejected"
+                                    : "st-pending"
+                              }`}
+                            >
+                              {approvalLabel(approvalStatus)}
+                            </span>
+                          </td>
+                          <td>{item.submittedAt || "-"}</td>
+                          <td>
+                            <div className="ob-actions">
+                              <button
+                                className="ob-act-btn ob-act-draft ob-detail-btn"
+                                onClick={() => handleOpenApprovalDetail(item)}
+                                disabled={actionLoading}
+                              >
+                                상세 확인
+                              </button>
+                              {isConsultant ? (
+                                <>
+                                  <button
+                                    className="ob-act-btn ob-act-submit"
+                                    onClick={() => runAction(item, "REVIEWED")}
+                                    disabled={actionLoading || !supported}
+                                    title={unsupportedTitle}
+                                  >
+                                    검토 완료
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="ob-act-btn ob-act-reject"
+                                    onClick={() => runAction(item, "REJECTED")}
+                                    disabled={actionLoading || !supported}
+                                    title={unsupportedTitle}
+                                  >
+                                    반려
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    className="ob-act-btn ob-act-submit"
+                                    onClick={() => handleOpenApprovalDetail(item, "approve")}
+                                    disabled={actionLoading || !canApprove}
+                                    title={
+                                      !supported
+                                        ? unsupportedTitle
+                                        : !canApprove
+                                          ? "Consultant review must be completed first."
+                                          : ""
+                                    }
+                                    style={!canApprove ? { opacity: 0.5, cursor: "not-allowed" } : {}}
+                                  >
+                                    최종 승인
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="ob-act-btn ob-act-reject"
+                                    onClick={() => runAction(item, "REJECTED")}
+                                    disabled={actionLoading || !supported}
+                                    title={unsupportedTitle}
+                                  >
+                                    반려
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
-      )}
+
+        {!isLoading && totalDataPages > 1 && (
+          <div className="pagination">
+            {Array.from({ length: totalDataPages }).map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setDataPage(index + 1)}
+                className={`page-btn ${dataPage === index + 1 ? "active" : ""}`}
+                style={
+                  dataPage === index + 1
+                    ? { backgroundColor: "#03a94d", color: "#fff", border: "none" }
+                    : {}
+                }
+              >
+                {index + 1}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* 페이지네이션 그대로 */}
-      {!isLoading && totalDataPages > 1 && (
-        <div className='pagination'>
-          {Array.from({ length: totalDataPages }).map((_, i) => (
+      <ApprovalDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={closeDetailModal}
+        metricItem={detailMetricItem}
+        viewerRole={effectiveViewerRole}
+        hasConsultant={effectiveHasConsultant}
+        readOnlyYn={readOnlyYn}
+        modalActionMode={modalActionMode}
+        loading={approvalDetailLoading}
+        error={approvalDetailError}
+        actionLoading={actionLoading}
+        onReview={async ({ commentText }) => {
+          const success = await runAction(selectedItemForDetail, "REVIEWED", commentText);
+          if (success) {
+            closeDetailModal();
+          }
+        }}
+        onApprove={async ({ commentText }) => {
+          const success = await runAction(selectedItemForDetail, "APPROVED", commentText);
+          if (success) {
+            closeDetailModal();
+          }
+        }}
+        onReject={async ({ commentText }) => {
+          if (!commentText?.trim()) return;
+          const success = await runAction(selectedItemForDetail, "REJECTED", commentText);
+          if (success) {
+            closeDetailModal();
+          }
+        }}
+      />
+
+      {isBulkRejectModalOpen && (
+        <ModalWrapper
+          title="Reject selected items"
+          onClose={() => setIsBulkRejectModalOpen(false)}
+          footer={
             <button
-              key={i}
-              onClick={() => setDataPage(i + 1)}
-              className={`page-btn ${dataPage === i + 1 ? 'active' : ''}`}
-              style={dataPage === i + 1 ? { backgroundColor: '#03a94d', color: '#fff', border: 'none' } : {}}
+              type="button"
+              className="btn-confirm"
+              disabled={!bulkRejectReason.trim()}
+              title={!bulkRejectReason.trim() ? "Enter rejection reason." : ""}
+              onClick={async () => {
+                const success = await handleBulkAction("REJECTED", bulkRejectReason.trim());
+                if (success) setIsBulkRejectModalOpen(false);
+              }}
             >
-              {i + 1}
+              Confirm reject
             </button>
-          ))}
-        </div>
+          }
+        >
+          <p>Reject {selectedSupportedRows.length} selected items.</p>
+          <textarea
+            className="reject-textarea"
+            placeholder="Enter rejection reason."
+            value={bulkRejectReason}
+            onChange={(event) => setBulkRejectReason(event.target.value)}
+            style={{ width: "100%", height: "120px", padding: "10px", border: "1px solid #ddd", borderRadius: "6px", marginTop: "10px" }}
+          />
+        </ModalWrapper>
       )}
-      </div>
+
     </section>
   );
 };

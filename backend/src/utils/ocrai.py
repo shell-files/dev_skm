@@ -1,3 +1,8 @@
+"""
+ocrai.py
+레이어: Utils
+역할: Google Gemini AI를 이용한 OCR 이미지 분석 유틸리티.
+"""
 from google import genai
 from google.genai import types
 import json
@@ -15,6 +20,7 @@ modelName = settings.gemini_model
 
 # JSON 응답 정제용 함수
 def clean(responseText: str) -> list:
+    """LLM이 반환한 JSON 문자열을 파싱해 파이썬 리스트로 변환한다. 이스케이프 문자 등 비정형 형식도 보정한다."""
     if not responseText:
         return []
     try:
@@ -33,7 +39,7 @@ RETRY_DELAY = 5  # seconds
 
 # Ollama LLM 호출용 함수
 async def gemini(results: List[Dict[str, Any]], filePaths: List[str]) -> List[Dict[str, Any]]:
-    
+    """이중중대성평가(DMA) PDF 파일 목록을 Gemini에 업로드하고 이슈·서브이슈 목록을 비동기로 추출해 반환한다."""
     semaphore = asyncio.Semaphore(MAX_TASKS)
     # 개별 파일 분석 함수
     async def oneGemini(result: Dict[str, Any], filePath: str) -> Dict[str, Any]:

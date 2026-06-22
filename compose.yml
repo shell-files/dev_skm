@@ -29,12 +29,17 @@ services:
       - ./backend/uv.lock:/workspace/uv.lock
       - ./backend/.python-version:/workspace/.python-version
       - ./backend/src:/workspace/src
+      - ./backend/static:/workspace/static
+      - backend_venv:/workspace/.venv
+      - uv_cache:/root/.cache/uv
       - ./backend/srfiles:/workspace/srfiles
       - skm_secrets:/workspace/secrets
+      - backend_model_cache:/workspace/model_cache
       
     environment:
       - HOST_IP=${HOST_IP}
       - DOMAIN=${DOMAIN}
+      - SKM_DOMAIN=${SKM_DOMAIN}
       - KAFKA_SERVER=${KAFKA_SERVER}
       - KAFKA_TOPIC=${KAFKA_TOPIC}
       - MAIL_USERNAME=${MAIL_USERNAME}
@@ -58,7 +63,17 @@ services:
       - COOKIE_KEY=${COOKIE_KEY}
       - FILE_DIR=${FILE_DIR}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS}
       - GEMINI_MODEL=${GEMINI_MODEL}
+      - APPS_SCRIPT_URL=${APPS_SCRIPT_URL}
+      - GOOGLE_PROJECT_ID=${GOOGLE_PROJECT_ID}
+      - PG_DB_HOST=${PG_DB_HOST}
+      - PG_DB_PORT=${PG_DB_PORT}
+      - PG_DB_DATABASE=${PG_DB_DATABASE}
+      - PG_DB_USER=${PG_DB_USER}
+      - PG_DB_PASSWORD=${PG_DB_PASSWORD}
+      - OLLAMA_URL=${OLLAMA_URL}
+      
     command: ["uv", "run", "fastapi", "run"]
 
   # mariadb:
@@ -88,3 +103,6 @@ networks:
 volumes:
   skm_secrets:
     external: true
+  backend_venv:
+  backend_model_cache:
+  uv_cache:

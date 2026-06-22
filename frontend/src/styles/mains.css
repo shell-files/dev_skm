@@ -276,6 +276,7 @@ body {
 }
 
 #main_page .header-action {
+    border: none;
     cursor: pointer;
     font-size: 14px;
     color: #555;
@@ -404,6 +405,76 @@ body {
     margin-left: auto;
 }
 
+/* ── 헤더 프로젝트 정보 영역 ── */
+#main_page .header-project-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 14px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+#main_page .header-project-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 10px;
+    background: #dcfce7;
+    color: #16a34a;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+#main_page .header-project-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    white-space: nowrap;
+}
+
+#main_page .header-project-change-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+#main_page .header-project-change-btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #334155;
+}
+
+
+#main_page .header-project-empty {
+    background: #fffbeb;
+    border-color: #fde68a;
+    gap: 7px;
+}
+
+#main_page .header-project-none {
+    font-size: 13px;
+    font-weight: 600;
+    color: #92400e;
+    white-space: nowrap;
+}
+
+
 /* 데스크탑 상단 토글 버튼 스타일 */
 #main_page .sidebar-toggle-btn {
     background: none;
@@ -451,6 +522,7 @@ body {
     left: 260px;
     border-left: none;
     border-radius: 0 25px 25px 0;
+    z-index: 1;
 }
 
 #main_page .sidebar-edge-toggle.closed {

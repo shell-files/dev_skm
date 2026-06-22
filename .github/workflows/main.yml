@@ -24,8 +24,10 @@ jobs:
           "VITE_API_URL=${{ secrets.VITE_API_URL }}" | Set-Content -Path .env -Encoding UTF8
           "VITE_API_URL_MAIN=${{ secrets.VITE_API_URL_MAIN }}" | Add-Content -Path .env
           "VITE_API_URL_SKM=${{ secrets.VITE_API_URL_SKM }}" | Add-Content -Path .env
+          "VITE_API_URL_SKM_BACK=${{ secrets.VITE_API_URL_SKM_BACK }}" | Add-Content -Path .env
           "VITE_API_URL_HG=${{ secrets.VITE_API_URL_HG }}" | Add-Content -Path .env
           "VITE_API_URL_TV=${{ secrets.VITE_API_URL_TV }}" | Add-Content -Path .env
+          "VITE_USE_PG_PIPELINE=${{ secrets.VITE_USE_PG_PIPELINE }}" | Add-Content -Path .env
       - name: Node Build
         working-directory: ./frontend
         run: npm run build
@@ -40,6 +42,7 @@ jobs:
         env:
           HOST_IP: ${{ secrets.HOST_IP }}
           DOMAIN: ${{ secrets.DOMAIN }}
+          SKM_DOMAIN: ${{ secrets.SKM_DOMAIN }}
           KAFKA_SERVER: ${{ secrets.KAFKA_SERVER }}
           KAFKA_TOPIC: ${{ secrets.KAFKA_TOPIC }}
           MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
@@ -63,6 +66,16 @@ jobs:
           COOKIE_KEY: ${{ secrets.COOKIE_KEY }}
           FILE_DIR: ${{ secrets.FILE_DIR }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
           GEMINI_MODEL: ${{ secrets.GEMINI_MODEL }}
+          GOOGLE_PROJECT_ID: ${{ secrets.GOOGLE_PROJECT_ID }}
+          APPS_SCRIPT_URL: ${{ secrets.APPS_SCRIPT_URL }}
+          PG_DB_HOST: ${{ secrets.PG_DB_HOST }}
+          PG_DB_PORT: ${{ secrets.PG_DB_PORT }}
+          PG_DB_DATABASE: ${{ secrets.PG_DB_DATABASE }}
+          PG_DB_USER: ${{ secrets.PG_DB_USER }}
+          PG_DB_PASSWORD: ${{ secrets.PG_DB_PASSWORD }}
+          USE_PG_PIPELINE: ${{ secrets.USE_PG_PIPELINE }}
+          OLLAMA_URL: ${{ secrets.OLLAMA_URL }}
         working-directory: .
         run: docker compose up -d

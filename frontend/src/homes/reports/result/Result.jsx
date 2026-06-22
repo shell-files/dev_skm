@@ -1,0 +1,823 @@
+/**
+ * Result.jsx
+ * 전체 결과 페이지 — DMA 4단계. 이중 중대성 평가 최종 결과 표시.
+ * 좌측: 후보군 선정 과정 + 최종 선정/제외 이슈 테이블.
+ * 우측: 점수 해석(분석축 기여도/Blind Spot/매트릭스) + 상세 점수 탭.
+ *
+ * 주요 데이터:
+ *   matrixItems    — 이중 중대성 산점도 데이터 (10점 스케일 원본)
+ *   topIssues      — 최종 Top 이슈 목록 (final 점수 기준)
+ *   selectedItems  — 선정 과정 이슈 목록 (단계별 점수 포함)
+ *
+ * 주요 헬퍼 (파일 상단):
+ *   toScale3     — 10점 → 1~3 스케일 변환 (HIGH=7.0 기준)
+ *   toLevel3     — 10점 → ImportanceBadge 레벨 변환
+ *   axisAvg      — 분석축 평균 계산 (0값 제외)
+ *   stageWeights — 단계 점수 → 기여도 비율(%) 계산 (합=100 보장)
+ *
+ * 의존:
+ *   DoubleMaterialityChart — 이중 중대성 매트릭스 차트
+ *   ImportanceBadge        — 중요도 뱃지 컴포넌트
+ */
+
+import { useEffect, useRef, useState, Fragment } from "react";
+import { useNavigate, useLocation } from "react-router";
+import Observing from "@assets/icons/result_page/observe.png";
+import Chain from "@assets/icons/result_page/valuechain.png";
+import { showConfirmAlert, showDefaultAlert } from "@components/UI/ServiceAlert";
+import { useDispatch, useSelector } from "react-redux";
+import { generateReport, fetchMaterialityResults, fetchMaterialitySelectionProcess, finalizeSelectedSubIssues } from "@stores/reportSlice";
+import { useAuth } from '@hooks/AuthContext.jsx';
+import DoubleMaterialityMatrix from "./DoubleMaterialityChart";
+import ImportanceBadge from "./ImportanceBadge";
+
+import "@styles/result.css";
+import "@styles/benchmarking.css";
+import "@styles/media.css";
+
+
+// 10점 스케일 → 차트용 1~3 스케일 (7.0 = High 기준)
+const normalize10to3 = (v10) => (v10 != null ? (v10 / 10) * 3 : null);
+// 10점 스케일 → ImportanceBadge용 1/2/3 레벨
+const toImportanceLevel = (v10) => {
+  if (v10 == null) return null;
+  if (v10 < 6) return 1;
+  if (v10 < 9) return 2;
+  return 3;
+};
+
+// 도메인별 색상 헬퍼
+const domainColor = { E: "#22c55e", S: "#f59e0b", G: "#3b82f6" };
+const getDomainColor = (domain) => domainColor[domain] ?? "#94a3b8";
+
+// 존재하는(>0) 값들만 평균. 모두 없으면 null
+const avgPresent = (...values) => {
+  const nums = values
+    .map(Number)
+    .filter((v) => Number.isFinite(v) && v > 0);
+  if (nums.length === 0) return null;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+};
+
+// 각 stage raw score → 비율(%). 값 없는 stage는 0%, 합계 항상 100 보장.
+const toContributionPct = ({ bench, media, survey }) => {
+  const entries = [
+    ["bench", bench],
+    ["media", media],
+    ["survey", survey],
+  ].filter(([, value]) => value != null && value > 0);
+
+  if (entries.length === 0) {
+    return { bench: 0, media: 0, survey: 0, hasData: false };
+  }
+
+  const total = entries.reduce((sum, [, value]) => sum + value, 0);
+  const result = { bench: 0, media: 0, survey: 0, hasData: true };
+
+  let allocated = 0;
+  entries.forEach(([key, value], idx) => {
+    if (idx === entries.length - 1) {
+      // 반올림 오차를 마지막 non-zero 축에 보정 → 합계 100
+      result[key] = 100 - allocated;
+    } else {
+      result[key] = Math.round((value / total) * 100);
+      allocated += result[key];
+    }
+  });
+
+  return result;
+};
+
+
+const MATRIX_POINTS = [];
+
+const SELECTED_ISSUES = [];
+
+const EXCLUDED_ISSUES = [];
+
+
+const MATRIX_ZONES = [
+  {
+    label: "High - High 영역", labelColor: "#ef4444", bg: "#fff5f5", border: "#fecaca",
+    desc: "재무적 영향과 사회/환경적 영향이 모두 높은 핵심 이슈입니다. 최우선 대응 및 전략 자원 집중이 필요합니다."
+  },
+  {
+    label: "High Impact / Medium Financial", labelColor: "#d97706", bg: "#fffbeb", border: "#fed7aa",
+    desc: "사회-환경적 영향은 크지만 재무적 영향은 중간 수준입니다. 이해관계자 기대 관리 및 선제적 대응으로 리스크를 완화하세요."
+  },
+  {
+    label: "High Financial / Medium Impact", labelColor: "#2563eb", bg: "#eff6ff", border: "#bfdbfe",
+    desc: "재무적 영향은 크지만 사회-환경적 영향은 중간 수준입니다. 재무 리스크 관리와 함께 영향 개선을 병행하세요."
+  },
+];
+
+const PRIORITY_ITEMS = [
+  { rank: "1순위", color: "#ef4444", name: "기후변화 대응", score: "4.6" },
+  { rank: "2순위", color: "#f97316", name: "지속가능한 공급망 관리", score: "4.3" },
+  { rank: "3순위", color: "#f59e0b", name: "정보보호 및 데이터 보안", score: "4.1" },
+  { rank: "4순위", color: "#22c55e", name: "인재 육성 및 역량 강화", score: "3.8" },
+  { rank: "5순위", color: "#3b82f6", name: "친환경 제품 및 서비스 확대", score: "3.6" },
+];
+
+const CAT_BADGE_STYLE = {
+  E: { bg: "#dcfce7", color: "#16a34a", text: "환경(E)" },
+  S: { bg: "#dbeafe", color: "#2563eb", text: "사회(S)" },
+  G: { bg: "#fee2e2", color: "#dc2626", text: "거버넌스(G)" },
+};
+
+
+
+const ONBOARDING_ROWS = [
+  { name: "기후변화 대응", e: true, s: true, g: false, count: "8개", done: "3/8", doneColor: "#ef4444" },
+  { name: "지속가능한 공급망 관리", e: false, s: true, g: true, count: "6개", done: "2/6", doneColor: "#ef4444" },
+  { name: "정보보호 및 데이터 보안", e: false, s: false, g: true, count: "5개", done: "1/5", doneColor: "#ef4444" },
+  { name: "인재 육성 및 역량 강화", e: false, s: true, g: false, count: "6개", done: "4/6", doneColor: "#475569" },
+  { name: "친환경 제품 및 서비스 확대", e: true, s: false, g: false, count: "5개", done: "2/5", doneColor: "#ef4444" },
+];
+
+const MISSING_DATA_ROWS = [
+  { name: "온실가스 배출량 (Scope 1,2,3)", missing: "Scope 3 카테고리 11, 12, 15", pct: "60", barColor: "#22c55e" },
+  { name: "용수 사용량 및 재활용률", missing: "사업장별 용수 사용량", pct: "40", barColor: "#ef4444" },
+  { name: "공급망 ESG 평가 비율", missing: "1차 협력사 평가 데이터", pct: "50", barColor: "#f59e0b" },
+  { name: "정보보호 사고 건수", missing: "연도별 사고 유형 및 건수", pct: "30", barColor: "#ef4444" },
+];
+
+const SCATTER_TABLE_ROWS = [
+  { rank: 1, cat: "E", name: "기후목표·전환계획", type: "위기", period: "장기", fin: "3", impact: "3" },
+  { rank: 2, cat: "E", name: "저탄소·친환경 제품", type: "기회", period: "단기", fin: "2", impact: "3" },
+  { rank: 3, cat: "S", name: "교육훈련·역량개발", type: "위기", period: "장기", fin: "2", impact: "2" },
+  { rank: 4, cat: "S", name: "소비자 건강·제품안전", type: "기회", period: "장기", fin: "2", impact: "1" },
+  { rank: 5, cat: "S", name: "공급망 감사·시정조치", type: "위기", period: "단기", fin: "1", impact: "2" },
+];
+
+const Result = () => {
+  const { loading: isGenerating } = useSelector((state) => state.report.generateReportStatus);
+  const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeIndex = 3;
+
+  // S5-B14: RollupSummaryPanel "보고서 생성하기" 진입 시 "점수 해석"(index 2) 탭으로 시작
+  const rawInitialLeftTab = Number(location.state?.initialLeftTab ?? 0);
+  const safeInitialLeftTab =
+    Number.isInteger(rawInitialLeftTab) && rawInitialLeftTab >= 0 && rawInitialLeftTab <= 2
+      ? rawInitialLeftTab
+      : 0;
+
+  const runId = useSelector((state) => state.report.currentRunId);
+  const materialityResults = useSelector((state) => state.report.materialityResults);
+  const materialitySelectionProcess = useSelector((state) => state.report.materialitySelectionProcess);
+  const finalizeSelectionLoading = useSelector((state) => state.report.loading.finalizeSelectedSubIssues);
+
+  useEffect(() => {
+    if (!runId) {
+      navigate("/benchmk");
+      return;
+    }
+    dispatch(fetchMaterialityResults({ runId }));
+    dispatch(fetchMaterialitySelectionProcess({ runId }));
+  }, [dispatch, runId, navigate]);
+
+  const handleFinalize = async () => {
+    if (!runId || finalizeSelectionLoading) return;
+    const result = await dispatch(finalizeSelectedSubIssues({ runId }));
+    if (finalizeSelectedSubIssues.fulfilled.match(result)) {
+      dispatch(fetchMaterialityResults({ runId }));
+      dispatch(fetchMaterialitySelectionProcess({ runId }));
+    }
+  };
+
+
+  // matrixItems → 10점 원본값 그대로 (차트 도메인이 동적으로 맞춤)
+  const apiMatrixPoints = materialityResults?.matrixItems?.map((item) => ({
+    x: item.xFinancialScore10,
+    y: item.yImpactScore10,
+    rank: item.rankNo,
+    label: item.displaySubIssueName,
+    cat: item.domain,
+    selected: item.selectedYn,
+  }));
+  const matrixChartData = apiMatrixPoints ?? MATRIX_POINTS;
+
+  // 요약 카드 수치 (API 우선, fallback: 하드코딩)
+  const summaryEvalCount = materialityResults?.totalCandidateSubIssueCount ?? 62;
+  const summaryScoredCount = materialityResults?.scoredSubIssueCount ?? 25;
+  const summarySelectedCount = materialityResults?.selectedSubIssueCount ?? 10;
+  const summaryHighCount = materialityResults?.highPriorityCount ?? 5;
+
+  // 선정 이슈 테이블 데이터 (선정 과정 API)
+  const selectedIssues = materialitySelectionProcess?.selectedIssues?.map((item) => ({
+    name: item.displaySubIssueName,
+    candRank: item.rankNo,
+    finalRank: item.rankNo,
+    reason: item.selectionReason ?? "-",
+  })) ?? SELECTED_ISSUES;
+
+  // 제외 이슈 테이블 데이터 (선정 과정 API)
+  const excludedIssues = materialitySelectionProcess?.excludedIssues?.map((item) => ({
+    name: item.displaySubIssueName,
+    candRank: item.rankNo,
+    reason: item.selectionReason ?? "-",
+  })) ?? EXCLUDED_ISSUES;
+
+  // 선정 과정 플로우 수치
+  const flowCandidateCount = materialitySelectionProcess?.candidateCount ?? 62;
+  const flowScoredCount = materialitySelectionProcess?.scoredCount ?? 25;
+  const flowSelectedCount = materialitySelectionProcess?.selectedCount ?? 10;
+
+  // 점수 포맷 헬퍼
+  const fmtScore = (v) => (v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : "-");
+
+  // 단계 점수(benchmark/media/survey)는 items[](MaterialityResultItemDto)에만 존재.
+  // topIssues[](TopIssueDto)에는 final 점수만 있으므로 subIssueCode로 join한다.
+  const itemByCode = {};
+  (materialityResults?.items ?? []).forEach((it) => {
+    if (it?.subIssueCode) itemByCode[it.subIssueCode] = it;
+  });
+
+  // Top 이슈 소스: topIssues → selected items → []
+  // 절대 items.slice(0,5)로 무조건 자르지 않는다.
+  const topSource =
+    materialityResults?.topIssues?.length
+      ? materialityResults.topIssues
+      : (materialityResults?.items?.filter((it) => it.selectedYn) ?? []);
+
+  // 최종 Top 이슈 점수 분해 (final은 topIssues, 단계 점수는 items join)
+  const topIssueScores = topSource.map((issue) => {
+    const it = itemByCode[issue.subIssueCode] ?? {};
+    return {
+      name: issue.displaySubIssueName ?? issue.subIssueCode,
+      finalScore: fmtScore(issue.finalScore05 ?? it.finalScore05),
+      impact: fmtScore(issue.finalImpactScore05 ?? it.finalImpactScore05),
+      financial: fmtScore(issue.finalFinancialScore05 ?? it.finalFinancialScore05),
+      benchmark: fmtScore(it.benchmarkImpactScore05),
+      media: fmtScore(it.mediaImpactScore05),
+      survey: fmtScore(it.surveyImpactScore05),
+    };
+  });
+
+  // 분석축 기여도 (items join으로 단계 점수 확보 후 비율 계산)
+  const contributionData = topSource.map((issue, idx) => {
+    const it = itemByCode[issue.subIssueCode] ?? {};
+    const bench = avgPresent(it.benchmarkImpactScore05, it.benchmarkFinancialScore05);
+    const media = avgPresent(it.mediaImpactScore05, it.mediaFinancialScore05);
+    const survey = avgPresent(it.surveyImpactScore05, it.surveyFinancialScore05);
+    const pct = toContributionPct({ bench, media, survey });
+    return {
+      rank: issue.rankNo ?? idx + 1,
+      rankColor: getDomainColor(issue.domain),
+      name: issue.displaySubIssueName ?? issue.subIssueCode,
+      bench: pct.bench,
+      media: pct.media,
+      survey: pct.survey,
+      hasData: pct.hasData,
+    };
+  });
+  const contributionHasAnyData = contributionData.some((r) => r.hasData);
+
+  // Blind Spot (분석축 간 점수 격차가 큰 이슈, 2개 이상 stage 값 보유시)
+  const blindSpots = topSource.reduce((acc, issue) => {
+    const it = itemByCode[issue.subIssueCode] ?? {};
+    const bench = avgPresent(it.benchmarkImpactScore05, it.benchmarkFinancialScore05);
+    const media = avgPresent(it.mediaImpactScore05, it.mediaFinancialScore05);
+    const survey = avgPresent(it.surveyImpactScore05, it.surveyFinancialScore05);
+    const present = [
+      ["벤치마킹", bench],
+      ["미디어", media],
+      ["설문", survey],
+    ].filter(([, v]) => v != null && v > 0);
+    if (present.length < 2) return acc;
+    const vals = present.map(([, v]) => v);
+    const maxVal = Math.max(...vals);
+    const minVal = Math.min(...vals);
+    const gap = maxVal - minVal;
+    if (gap >= 0.5) {
+      const maxLabel = present.find(([, v]) => v === maxVal)[0];
+      const minLabel = present.find(([, v]) => v === minVal)[0];
+      acc.push({
+        rank: issue.rankNo,
+        rankColor: getDomainColor(issue.domain),
+        name: issue.displaySubIssueName ?? issue.subIssueCode,
+        desc: `${maxLabel} 점수 높음, ${minLabel} 점수 낮음`,
+        badge: `${maxLabel}-${minLabel} 격차 +${gap.toFixed(1)}`,
+        badgeBg: "#f1f5f9",
+        badgeColor: "#475569",
+      });
+    }
+    return acc;
+  }, []);
+
+  // 선정 사유 (selectionReasons[])
+  const selectionReasonItems = materialityResults?.selectionReasons;
+
+  // 우선순위 이슈 (topIssues[])
+  const priorityItems = materialityResults?.topIssues?.map((issue) => ({
+    rank: `${issue.rankNo}순위`,
+    color: getDomainColor(issue.domain),
+    name: issue.displaySubIssueName,
+    score: String(issue.finalScore05?.toFixed(2) ?? ""),
+  })) ?? PRIORITY_ITEMS;
+
+  // 산점도 테이블 행 (matrixItems[])
+  const scatterTableRows = materialityResults?.matrixItems?.map((item) => ({
+    rank: item.rankNo,
+    cat: item.domain,
+    name: item.displaySubIssueName,
+    selected: item.selectedYn,
+    fin: toImportanceLevel(item.xFinancialScore10),
+    impact: toImportanceLevel(item.yImpactScore10),
+  })) ?? SCATTER_TABLE_ROWS;
+
+  const steps = [
+    { id: 1, title: "벤치마킹 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7" /><line x1="15.5" y1="15.5" x2="21" y2="21" /><line x1="7" y1="13" x2="7" y2="11" /><line x1="10" y1="13" x2="10" y2="8.5" /><line x1="13" y1="13" x2="13" y2="7" /><line x1="6" y1="13" x2="14" y2="13" /></svg>, path: "/benchmk" },
+    { id: 2, title: "미디어 분석", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /><polyline points="5,13 8,10 11,12 14,8 19,6" /></svg>, path: "/media" },
+    { id: 3, title: "이해관계자 설문", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" /><polyline points="9,11 10.5,12.5 13,10" /><polyline points="9,16 10.5,17.5 13,15" /><line x1="13" y1="11" x2="16" y2="11" /><line x1="13" y1="16" x2="16" y2="16" /></svg>, path: "/survey" },
+    { id: 4, title: "전체 결과", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="20" x2="21" y2="20" /><line x1="3" y1="4" x2="3" y2="20" /><rect x="5" y="13" width="3" height="7" /><rect x="10" y="10" width="3" height="10" /><rect x="15" y="8" width="3" height="12" /><circle cx="19" cy="4" r="3" /><polyline points="17.5,4 18.5,5 21,2.5" /></svg>, path: "/result" },
+    { id: 5, title: "보고서 초안", icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z" /></svg>, path: "/draft" },
+  ];
+
+
+  const [leftTab, setLeftTab] = useState(safeInitialLeftTab);
+  const [rightTab, setRightTab] = useState(0);
+  const [openSections, setOpenSections] = useState({ 1: true, 2: true });
+
+
+  const particleRef = useRef(null);
+
+  useEffect(() => {
+    createParticles();
+  }, []);
+
+  const createParticles = () => {
+    if (!particleRef.current) return;
+    particleRef.current.innerHTML = "";
+    for (let i = 0; i < 12; i++) {
+      const p = document.createElement("div");
+      p.className = "particle";
+      const size = Math.random() * 5 + 3;
+      p.style.width = `${size}px`;
+      p.style.height = `${size}px`;
+      p.style.left = `${Math.random() * 100}%`;
+      p.style.top = `${Math.random() * 100}%`;
+      p.style.animationDelay = `${Math.random() * 2}s`;
+      particleRef.current.appendChild(p);
+    }
+  };
+  const { selectedCompany } = useAuth();
+  const companyId = selectedCompany.company_id;
+  const year = useSelector((state) => state.report.currentYear);
+  const handleGenerateReport = async () => {
+    console.log(companyId, runId, year)
+    if (isGenerating) return;
+    if (!companyId || !runId || !year) {
+      await showConfirmAlert("경고", "회사 또는 프로젝트 선택 정보가 없습니다.", "warning");
+      return;
+    }
+
+    try {
+      await dispatch(generateReport({
+        companyId,
+        materialityRunId: runId,
+        year,
+      })).unwrap();
+      await showDefaultAlert(
+        "보고서 초안 생성 완료",
+        "AI가 ESG 보고서 초안을 성공적으로 생성했습니다. 초안 페이지로 이동합니다.",
+        "success"
+      );
+      navigate("/draft");
+    } catch (error) {
+      const errorMessage = error?.message || "보고서를 생성하는 중 오류가 발생했습니다.";
+      await showConfirmAlert(
+        "보고서 생성 실패",
+        errorMessage,
+        "error"
+      );
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const moveStep = (index) => {
+    if (index === activeIndex) return;
+    navigate(steps[index].path);
+  };
+
+  const navigateToPostDmaOnboarding = () => {
+    navigate("/onb", {
+      state: {
+        preferredCycleType: "POST_DMA_DISCLOSURE",
+        sourceMaterialityRunId: runId,
+      },
+    });
+  };
+
+  const toggleSection = (id) => {
+    setOpenSections(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  return (
+    <div className="sr-container">
+      <header className="sr-header">
+
+        <div className="sr-stepper-row">
+          {steps.map((step, index) => (
+            <Fragment key={step.id}>
+              <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
+                <div className="step-icon-circle">{step.icon}</div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 800 }}>{step.title}</div>
+              </div>
+              {index < steps.length - 1 && <div className="step-line" />}
+            </Fragment>
+          ))}
+        </div>
+      </header>
+
+      <main id="result-main" className="main-content">
+        <div id="result-panels-wrap">
+
+          <section id="result-left-panel">
+            <div className="result-tab-bar">
+              {[ "후보군 최종선정 과정", "최종선정요약", "점수 해석"].map((label, i) => (
+                <button
+                  key={i}
+                  className={`result-tab-button ${leftTab === i ? "active" : ""}`}
+                  onClick={() => setLeftTab(i)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {leftTab === 0 && (
+              <div className="result-tab-pane" style={{ gap: "24px" }}>
+
+                <div className="process-card">
+                  <div className="process-card-title">후보군 최종 선정 과정</div>
+                  <div className="process-card-body">
+
+                    <div className="flow-col">
+                      {[
+                        {
+                          count: `${flowCandidateCount}개 평가 대상`, desc: "벤치마킹, 미디어, 이해관계자 설문을 통해<br>도출된 전체 평가 이슈 수집", last: false,
+                          icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                        },
+                        {
+                          count: `${flowScoredCount}개 후보군`, desc: "양축 점수 기준 충족 및 주요성 기준을<br>충족한 이슈", last: false,
+                          icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
+                        },
+                        {
+                          count: `최종 ${flowSelectedCount}개 선정`, desc: "이사회 및 ESG 실무 협의 기반<br>보고서 핵심 이슈로 최종 선정", last: true,
+                          icon: <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+                        },
+                      ].map((card, i) => (
+                        <div key={i}>
+                          <div className={`flow-card${card.last ? " last" : ""}`}>
+                            <div className="icon-circle-lg">{card.icon}</div>
+                            <div>
+                              <div className="flow-count">{card.count}</div>
+                              <div className="flow-desc" dangerouslySetInnerHTML={{ __html: card.desc }} />
+                            </div>
+                          </div>
+                          {!card.last && <div className="flow-arrow">↓</div>}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="criteria-card">
+                      <div className="criteria-card-title">선정 기준</div>
+                      <div className="criteria-item-list">
+                        {[
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="11" y2="13" /><polyline points="13,12 14.5,13.5 17,11" /><line x1="8" y1="17" x2="11" y2="17" /><polyline points="13,16 14.5,17.5 17,15" /></svg>, text: "양측 점수 기준 충족", sub: "(재무적·사회적 영향 모두 Medium 이상)" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="6" /><line x1="14.5" y1="14.5" x2="20" y2="20" /><polyline points="7,12 9,9 11,11 13,8" /></svg>, text: "2개 이상 분석축에서 반복 관측" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.5 2v6h-6" /><path d="M2.5 22v-6h6" /><path d="M2 11.5A10 10 0 0 1 18.8 7.2" /><path d="M22 12.5A10 10 0 0 1 5.2 16.8" /></svg>, text: "가치사슬 관련성 높음" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>, text: "이해관계자 관심도 높음" },
+                          { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M11 3.5a1 1 0 1 0 2 0 1 1 0 0 0-2 0" /><line x1="12" y1="4.5" x2="12" y2="20" /><line x1="2.5" y1="7.5" x2="21.5" y2="7.5" /><line x1="4" y1="7.5" x2="1" y2="14.5" /><line x1="4" y1="7.5" x2="4" y2="14.5" /><line x1="4" y1="7.5" x2="7" y2="14.5" /><path d="M1 14.5 Q4 18 7 14.5" /><line x1="20" y1="7.5" x2="17" y2="14.5" /><line x1="20" y1="7.5" x2="20" y2="14.5" /><line x1="20" y1="7.5" x2="23" y2="14.5" /><path d="M17 14.5 Q20 18 23 14.5" /><path d="M9 20h6" strokeWidth="2.2" /></svg>, text: "리스크/기회 요인으로서의 중요성 고려" },
+                        ].map((item, i) => (
+                          <div key={i} className="criteria-item-row">
+                            <div className="icon-circle-sm">{item.icon}</div>
+                            <div className="criteria-item-text">
+                              {item.text}{item.sub && <><br /><span style={{ color: "#64748b" }}>{item.sub}</span></>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="card-container">
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "5px" }}>
+                    <div>
+                      <div className="section-title-sm">최종 선정 이슈</div>
+                      <table className="issue-table-inner" style={{ width: "100%", minWidth: 0 }}>
+                        <thead>
+                          <tr>
+                            <th className="th-left">이슈</th>
+                            <th className="th-center" style={{ width: "50%" }}>최종순위</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedIssues.map((row, i) => (
+                            <tr key={i} style={{ borderBottom: i < selectedIssues.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                              <td className="td-name" style={{ wordBreak: "keep-all" }}>{row.name}</td>
+                              <td className="td-center-green">{row.finalRank}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div style={{ borderLeft: "1px solid #f1f5f9", paddingLeft: "20px" }}>
+                      <div className="section-title-red">제외된 이슈</div>
+                      <table className="issue-table-inner" style={{ width: "100%", minWidth: 0 }}>
+                        <thead>
+                          <tr>
+                            <th className="th-left">이슈</th>
+                            <th className="th-center" style={{ width: "50%" }}>최종순위</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {excludedIssues.slice(0, 5).map((row, i) => (
+                            <tr key={i} style={{ borderBottom: i < Math.min(excludedIssues.length, 5) - 1 ? "1px solid #f1f5f9" : "none" }}>
+                              <td className="td-name" style={{ wordBreak: "keep-all" }}>{row.name}</td>
+                              <td className="td-center">{row.candRank}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            )}
+            {leftTab === 1 && (
+              <div className="result-tab-pane">
+                <div className="card-container">
+                  <div className="card-title-row">
+                    <span className="card-title">최종 선정 요약</span>
+
+                  </div>
+                  <div id="result-summary-grid" className="summary-grid">
+                    {[
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>, label: "평가 대상", value: `${summaryEvalCount}개`, cls: "" },
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2z" /></svg>, label: "최종 선정", value: `${summarySelectedCount}개`, cls: "success", valueClass: "text-green" },
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.8"><polyline points="17 11 12 6 7 11" /><polyline points="17 18 12 13 7 18" /></svg>, label: "High 영역", value: `${summaryHighCount}개`, cls: "danger", valueClass: "text-red" },
+                      { icon: <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>, label: "후보군", value: `${summaryScoredCount}개`, cls: "" },
+                    ].map((card, i) => (
+                      <div key={i} className={`info-card ${card.cls}`}>
+                        {card.icon}
+                        <div className="card-label">{card.label}</div>
+                        <div className={`card-value ${card.valueClass || ""}`}>{card.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {materialityResults?.selectionSource === "RANK_FALLBACK" && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", padding: "12px 16px" }}>
+                    <span style={{ fontSize: "0.84rem", color: "#92400e", fontWeight: 600 }}>
+                      임시 Top 5 — 점수 기반 자동 선정 상태입니다. 확정 저장 후 보고서 초안을 생성하세요.
+                    </span>
+                    <button
+                      onClick={handleFinalize}
+                      disabled={finalizeSelectionLoading}
+                      style={{ marginLeft: "16px", padding: "7px 18px", background: "#03A94D", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, fontSize: "0.82rem", cursor: finalizeSelectionLoading ? "not-allowed" : "pointer", opacity: finalizeSelectionLoading ? 0.6 : 1, flexShrink: 0 }}
+                    >
+                      {finalizeSelectionLoading ? "저장 중..." : "Top 5 확정 저장"}
+                    </button>
+                  </div>
+                )}
+                {materialityResults?.selectionSource === "TABLE" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "12px", padding: "12px 16px" }}>
+                    <span style={{ color: "#03A94D", fontWeight: 800, fontSize: "1rem" }}>✓</span>
+                    <span style={{ fontSize: "0.84rem", color: "#166534", fontWeight: 600 }}>Top 5 확정 완료 — 저장된 선정 이슈 기준으로 표시됩니다.</span>
+                  </div>
+                )}
+
+
+                <div className="card-container">
+                  <div className="card-title">최종 Top 이슈 점수 분해</div>
+                  <div className="result-table-scroll">
+                    <table className="result-table">
+                      <thead>
+                        <tr><th>이슈</th><th>최종점수</th><th>영향</th><th>재무</th><th>벤치마킹</th><th>미디어</th><th>설문</th></tr>
+                      </thead>
+                      <tbody>
+                        {topIssueScores.length > 0
+                          ? topIssueScores.map((row, i) => (
+                            <tr key={i}>
+                              <td className="issue-name">{row.name}</td>
+                              <td className="score-main">{row.finalScore}</td>
+                              <td>{row.impact}</td>
+                              <td>{row.financial}</td>
+                              <td>{row.benchmark}</td>
+                              <td>{row.media}</td>
+                              <td>{row.survey}</td>
+                            </tr>
+                          ))
+                          : (
+                            <tr>
+                              <td colSpan={7} style={{ textAlign: "center", color: "#94a3b8", padding: "20px", fontSize: "0.82rem" }}>
+                                최종 이슈 데이터가 없습니다. 최종 Top 5 이슈 확정 후 다시 확인하세요.
+                              </td>
+                            </tr>
+                          )
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {leftTab === 2 && (
+              <div className="card-container result-tab-pane">
+                <div className="card-title-row">
+                  <span className="card-title">점수 해석</span>
+                </div>
+
+                <section id="result-contribution">
+                  <div className="section-title">1. 분석축 기여도</div>
+                  <div className="section-desc">각 주요 이슈 점수에 대한 분석축(벤치마킹/미디어/설문) 기여도를 보여줍니다.</div>
+                  <div id="legend-row">
+                    {[["#22c55e", "벤치마킹"], ["#3b82f6", "미디어"], ["#f59e0b", "설문"]].map(([color, label]) => (
+                      <div key={label} className="legend-item">
+                        <span className="legend-dot" style={{ background: color }}></span>{label}
+                      </div>
+                    ))}
+                  </div>
+                  <div id="contribution-list">
+                    {topSource.length === 0 ? (
+                      <div className="contrib-empty">최종 이슈 데이터가 없습니다. 최종 Top 5 이슈 확정 후 다시 확인하세요.</div>
+                    ) : !contributionHasAnyData ? (
+                      <div className="contrib-empty">분석축 점수 데이터가 없습니다. 벤치마킹/미디어/설문 점수 반영 상태를 확인하세요.</div>
+                    ) : (
+                      contributionData.map((item) => (
+                        <div key={item.rank} className="contribution-row">
+                          <div className="contribution-label">
+                            <span className="rank-circle" style={{ background: item.rankColor }}>{item.rank}</span>
+                            <span className="contribution-name">{item.name}</span>
+                          </div>
+                          {item.hasData ? (
+                            <div className="contribution-bar">
+                              <div className="bar-seg bench" style={{ width: `${item.bench}%` }}>{item.bench > 0 ? `${item.bench}%` : ""}</div>
+                              <div className="bar-seg media" style={{ width: `${item.media}%` }}>{item.media > 0 ? `${item.media}%` : ""}</div>
+                              <div className="bar-seg survey" style={{ width: `${item.survey}%` }}>{item.survey > 0 ? `${item.survey}%` : ""}</div>
+                            </div>
+                          ) : (
+                            <div className="contribution-bar contribution-bar--empty">점수 데이터 없음</div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </section>
+
+                <section id="result-blind-spot">
+                  <div className="section-title">2. 분석축 간 불일치 / Blind Spot</div>
+                  <div className="section-desc">분석축 간 점수 편차가 큰 이슈를 확인하여 전략적 블라인드 스팟을 식별합니다.</div>
+                  <div id="blind-spot-list">
+                    {blindSpots.length > 0
+                      ? blindSpots.map((item) => (
+                          <div key={item.rank} className="blind-spot-row">
+                            <span className="rank-circle sm" style={{ background: item.rankColor }}>{item.rank}</span>
+                            <div className="blind-spot-info">
+                              <div className="blind-spot-name">{item.name}</div>
+                              <div className="blind-spot-desc">{item.desc}</div>
+                            </div>
+                            <span className="blind-spot-badge" style={{ background: item.badgeBg, color: item.badgeColor }}>{item.badge}</span>
+                          </div>
+                        ))
+                      : <div style={{ color: "#94a3b8", fontSize: "0.82rem", padding: "12px 0" }}>분석축 간 점수 격차가 큰 이슈가 없습니다.</div>
+                    }
+                  </div>
+                </section>
+
+                <section id="result-matrix-zones">
+                  <div className="section-title">3. 매트릭스 해석</div>
+                  <div className="section-desc">이중 중대성 매트릭스 영역별 의미를 안내합니다.</div>
+                  <div id="matrix-zone-list">
+                    {MATRIX_ZONES.map((zone, i) => (
+                      <div
+                        key={i}
+                        className="matrix-zone-row"
+                        style={{ background: zone.bg, borderColor: zone.border }}
+                      >
+                        <div className="matrix-zone-label">
+                          <span style={{ color: zone.labelColor }}>{zone.label}</span>
+                        </div>
+                        <div className="matrix-zone-desc" dangerouslySetInnerHTML={{ __html: zone.desc.replace(/\n/g, "<br>") }} />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+                <section>
+                  <div className="result-matrix-zones">
+                    <span className="section-title">4. 바로가기</span>
+                  </div>
+                  <div id="shortcut-grid">
+                    {[
+                      {
+                        bg: "#dcfce7", title: "온보딩 지표 확인", desc: "지표 정의 및 입력 항목 보기", path: "/onb",
+                        icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></svg>
+                      },
+                      {
+                        bg: "#ede9fe", title: "보고서 초안 생성", desc: "선택 이슈 기반 초안 생성", path: "/draft",
+                        icon: <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+                      },
+                    ].map((item) => (
+                      <div
+                        key={item.title}
+                        className={`shortcut-card ${item.path === "/draft" && isGenerating ? "shortcut-disabled" : ""}`}
+                        onClick={() => {
+                          if (item.path === "/draft" && isGenerating) return;
+                          if (item.path === "/onb") {
+                            navigateToPostDmaOnboarding();
+                            return;
+                          }
+                          item.path === "/draft" ? handleGenerateReport() : navigate(item.path);
+                        }}
+                      >
+                        <div className="shortcut-icon" style={{ background: item.bg }}>{item.icon}</div>
+                        <div className="shortcut-text">
+                          <div className="shortcut-title">{item.title}</div>
+                          <div className="shortcut-desc">
+                            {item.path === "/draft" && isGenerating ? "보고서 생성 중..." : item.desc}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            )}
+          </section >
+
+          < section id="result-right-panel" >
+
+            {rightTab === 0 && (
+              <div className="result-tab-pane">
+                <div className="matrix-card">
+                  <div id="matrix-card-title">이중 중대성 매트릭스</div>
+                  <DoubleMaterialityMatrix data={matrixChartData} />
+                </div>
+                <div id="table-card">
+                  <div className="scatter-legend-row">
+                    {[["Low,", 1], ["Middle,", 2], ["High,", 3]].map(([label, filled]) => (
+                      <span key={label} className="scatter-legend-item">
+                        <span className="scatter-legend-dots">
+                          {[1, 2, 3].map((i) => (
+                            <span key={i} className="scatter-legend-dot" style={{ backgroundColor: i <= filled ? "#1e293b" : "transparent" }} />
+                          ))}
+                        </span>
+                        <span className="scatter-legend-label">{label}</span>
+                      </span>
+                    ))}
+                  </div>
+                  <table className="result-table">
+                    <thead>
+                      <tr><th>순위</th><th>구분</th><th>탑 이슈</th><th>재무중요성</th><th>영향중요성</th></tr>
+                    </thead>
+                    <tbody>
+                      {scatterTableRows.slice(0, 10).map((row) => (
+                        <tr key={row.rank}>
+                          <td className="score-main">{row.rank}</td>
+                          <td><span className={`badge badge-${row.cat?.toLowerCase()}`}>{row.cat}</span></td>
+                          <td className="issue-name">{row.name}</td>
+                          <td><ImportanceBadge value={row.fin} /></td>
+                          <td><ImportanceBadge value={row.impact} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {
+              rightTab === 1 && (
+                <div className="result-result-dashboard" id="right-tab-empty">
+                  <div className="robot-view-container">
+                    <div className="particle-field" ref={particleRef}></div>
+                    <div className="robot-stage">
+                      <div className="robot-float-wrap">
+                        <img src={robot} className="robot-main-img" alt="robot" />
+                      </div>
+                    </div>
+                    <h3 id="robot-empty-title">분석 미실행 상태</h3>
+                    <p id="robot-empty-desc">하단의 '설문 결과 분석' 버튼을 작동시켜 주십시오.</p>
+                  </div>
+                </div>
+              )
+            }
+          </section >
+
+        </div >
+      </main >
+    </div >
+  );
+};
+
+export default Result;

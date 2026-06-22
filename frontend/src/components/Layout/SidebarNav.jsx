@@ -1,46 +1,52 @@
+/**
+ * SidebarNav.jsx
+ * 레이어: Component (Layout)
+ * 역할: 좌측 사이드바 내비게이션 — 메뉴 트리, 보고 기준 선택 모달, 권한별 메뉴 노출 포함.
+ */
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router";
 import { useAuth } from '@hooks/AuthContext.jsx';
+import ReportBasisSelectModal from "@components/UI/ReportBasisSelectModal.jsx";
+import { showDefaultAlert } from "@components/UI/ServiceAlert";
+import { decodeJson } from "@utils/Base64";
+import { DEFAULT_REPORTING_YEAR } from "@stores/reportSlice";
 
 const Sidebarnav = ({ isOpen, setIsOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { selectedCompany, selectCompany, handleLogout, goHome, goMyPage, openAlarmCenter } = useAuth();
+    const { selectedCompany, selectCompany, handleLogout, goHome, goMyPage, openAlarmCenter, companies, setIsBasisModalOpen } = useAuth();
+    const companyId =
+        selectedCompany?.company_id ??
+        selectedCompany?.companyId;
 
-    // 권한 확인
-    const role = selectedCompany?.role || "ESG담당자";
-    const isSysAdmin = role === "시스템관리자";
-    const isESG = role === "ESG담당자" || role === "ESG 담당자";
-    const isConsultant = role === "컨설턴트";
+    // 권한 확인 (UI 노출용)
+    const role = selectedCompany?.role ?? "guest";
+    const isSysAdmin = role === "시스템관리자" || role === "관리자" || role === "ADMIN";
+    const isESG = role === "ESG담당자" || role === "ESG 담당자" || role === "ESG";
+    const isConsultant = role === "컨설턴트" || role === "CONSULTANT";
+    const isDept = role === "부서담당자" || role === "부서 담당자" || role === "EMPLOYEE" || role === "ASSIGNEE";
 
-    const canViewService = isSysAdmin || isESG || isConsultant;
-    const canViewAdmin = isSysAdmin || isESG || isConsultant;
+    // 메뉴 접근 권한
+    const showReportProj = isESG || isSysAdmin;
+    const showOnboarding = isESG || isSysAdmin || isDept;
+    const showDataApproval = isESG || isSysAdmin || isConsultant;
+    const showPersonnel = isESG || isSysAdmin;
 
     // 아코디언 상태 관리
     const [expanded, setExpanded] = useState({
+        onboarding: false,
         service: true,
         admin: false,
         settings: false
     });
 
-    const [expandedSub, setExpandedSub] = useState({
-        report: false,
-        carbon: false,
-        supply: false
-    });
-
     const [filteredCompanies, setFilteredCompanies] = useState([]);
-    const [companies, setCompanies] = useState([]);
+    // const [companies, setCompanies] = useState([]);
     const [companie, setCompanie] = useState("");
     const [searchTerm, setSearchTerm] = useState("");
 
     const toggleAccordion = (key) => {
         setExpanded(prev => ({ ...prev, [key]: !prev[key] }));
-    };
-
-    const toggleSubAccordion = (key, e) => {
-        e.stopPropagation();
-        setExpandedSub(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
     const isActive = (path) => location.pathname.includes(path);
@@ -104,26 +110,11 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
     };
 
     useEffect(() => {
-        const allCompanie = localStorage.getItem("companies");
-        const parsedCompanies = allCompanie ? JSON.parse(allCompanie) : [];
-        const arr = [
-            { "company_id": 0, "company_name": "선택하세요" },
-            ...parsedCompanies
-        ];
-        setCompanies(arr);
-        setFilteredCompanies(arr);
-        return () => {
-            window.removeEventListener('pointermove', handlePointerMove);
-            window.removeEventListener('pointerup', handlePointerUp);
-        };
-    }, []);
-
-    useEffect(() => {
         const timer = setTimeout(() => {
             handleScroll();
         }, 350);
         return () => clearTimeout(timer);
-    }, [expanded, expandedSub]);
+    }, [expanded]);
 
     useEffect(() => {
         let observer;
@@ -155,54 +146,106 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
         }
     }
 
-    const goBenchMk = () => { navigate("/benchmk"); if(window.innerWidth <= 800) setIsOpen(false); };
-    const goOnboard = () => { navigate("/onb"); if(window.innerWidth <= 800) setIsOpen(false); };
+    // const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
+
+    const handleReportNav = () => {
+        if (!companyId) {
+            showDefaultAlert("오류", "회사를 먼저 선택해 주세요.", "error");
+            return;
+        }
+
+        setIsBasisModalOpen(true);
+    };
+
+    const goManagerdata = () => { navigate("/managerData"); if(window.innerWidth <= 800) setIsOpen(false); };
     const goManager = () => { navigate("/manager"); if(window.innerWidth <= 800) setIsOpen(false); };
     const handleGoHome = () => { goHome(); if(window.innerWidth <= 800) setIsOpen(false); };
 
     return (
-        <aside
-            className={`sidebar ${isOpen ? "open" : "closed"}`}
-            id="globalSidebar"
-        >
+        <aside className={`sidebar ${isOpen ? "open" : "closed"}`} id="globalSidebar">
+
             <div className="nav-scroll-wrapper">
                 <div className="nav-scroll-area" ref={scrollRef}>
                     <div className="nav-group">
                         <div className="nav-item" onClick={handleGoHome}>
-                            <span>대시보드</span>
+                            <span>HOME</span>
                         </div>
                     </div>
-                    <div className="nav-group">
-                        <div className="nav-item" onClick={goBenchMk}>
-                            <div className="nav-accordion-header">
-                                <span>지속가능경영보고서</span>
+                    
+                    {showReportProj && (
+                        <div className="nav-group">
+                            <div className="nav-item" onClick={handleReportNav}>
+                                <div className="nav-accordion-header">
+                                    <span>지속가능경영보고서</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div className="nav-group">
-                        <div className="nav-item" onClick={goOnboard}>
-                            <span>데이터 입력</span>
-                        </div>
-                    </div>
-                    <div className="nav-group">
-                        <div
-                            className="nav-item"
-                            onClick={() => toggleAccordion("admin")}
-                        >
-                            <div className="nav-accordion-header">
-                                <span>ESG 담당자 통합 관리</span>
-                                <svg className={`nav-arrow ${expanded.admin ? "expanded" : ""}`} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M9 5l7 7-7 7"></path>
-                                </svg>
-                            </div>
-                        </div>
+                    )}
 
-                        <div className={`nav-accordion-content ${expanded.admin ? "expanded" : ""}`}>
-                            <div className="inner-wrapper">
-                                <div className="nav-item sub-item" onClick={goManager}>데이터 승인</div>
+                    {showOnboarding && (
+                        <div className="nav-group">
+                            <div
+                                className="nav-item"
+                                onClick={() => toggleAccordion("onboarding")}
+                            >
+                                <div className="nav-accordion-header">
+                                    <span>데이터 입력</span>
+                                    <svg className={`nav-arrow ${expanded.onboarding ? "expanded" : ""}`} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div className={`nav-accordion-content ${expanded.onboarding ? "expanded" : ""}`}>
+                                <div className="inner-wrapper">
+                                    <div className="nav-item sub-item" onClick={() => {
+                                        if (!companyId) {
+                                            showDefaultAlert("오류", "회사를 먼저 선택해주세요", "error");
+                                            return;
+                                        }
+                                        handleReportNav();
+                                        if(window.innerWidth <= 800) setIsOpen(false);
+                                    }}>
+                                        내 프로젝트
+                                    </div>
+                                    <div className="nav-item sub-item" onClick={() => {
+                                        if (!companyId) {
+                                            showDefaultAlert("오류", "회사를 먼저 선택해주세요", "error");
+                                            return;
+                                        }
+                                        navigate("/onb?mode=ROLLUP_RESPONSE");
+                                        if(window.innerWidth <= 800) setIsOpen(false);
+                                    }}>
+                                        데이터 요청 목록
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
+
+                    {(showDataApproval || showPersonnel) && (
+                        <div className="nav-group">
+                            <div
+                                className="nav-item"
+                                onClick={() => toggleAccordion("admin")}
+                            >
+                                <div className="nav-accordion-header">
+                                    <span>ESG 담당자 통합 관리</span>
+                                    <svg className={`nav-arrow ${expanded.admin ? "expanded" : ""}`} viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <path d="M9 5l7 7-7 7"></path>
+                                    </svg>
+                                </div>
+                            </div>
+
+                            <div className={`nav-accordion-content ${expanded.admin ? "expanded" : ""}`}>
+                                <div className="inner-wrapper">
+                                    {showDataApproval && <div className="nav-item sub-item" onClick={goManagerdata}>데이터 승인</div>}
+                                    {showPersonnel && <div className="nav-item sub-item" onClick={goManager}>인원 관리</div>}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="nav-group">
                         <div className="nav-item" onClick={() => toggleAccordion("settings")}>
                             <div className="nav-accordion-header">
@@ -224,16 +267,22 @@ const Sidebarnav = ({ isOpen, setIsOpen }) => {
                 </div>
             </div>
 
-            <div className="sidebar-footer">
-                <div className="search-container">
-                    <input type="text" className="company-search" id="companySearchInput" placeholder="회사 검색..." />
-                </div>
-                <select className="company-select" id="sidebarCompanySelect">
-                    <option value="SKM">SKM</option>
-                    <option value="HG">HG</option>
-                    <option value="TV">TV</option>
-                </select>
-            </div>
+            {
+              companies.length > 1 && 
+              <div className="sidebar-footer">
+                  <div className="search-container">
+                      <button type="button" className="company-search" onClick={()=>navigate('/companyselect')}>회사 선택</button>
+                  </div>
+              </div>
+            }
+
+            <ReportBasisSelectModal 
+                // isOpen={isBasisModalOpen} 
+                // onClose={() => setIsBasisModalOpen(false)} 
+                companyId={companyId}
+                reportingYear={selectedCompany?.reportingYear || DEFAULT_REPORTING_YEAR}
+            />
+
         </aside>
     );
 }

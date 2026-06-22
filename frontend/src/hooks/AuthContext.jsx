@@ -1,12 +1,15 @@
 /**
- * AuthContext.jsx - 전역 인증 상태 관리 컨텍스트
+ * AuthContext.jsx
+ * 레이어: Hook
+ * 역할: 전역 인증 상태 관리 컨텍스트 — 로그인·로그아웃·사용자 정보 조회 및 인증 가드 제공.
  */
 
-import { createContext, useState, useContext, useEffect } from "react";
+import { createContext, useState, useContext, useEffect, Component } from "react";
 import { GET, POST, PUT, PATCH, DELETE } from "@utils/Network";
 import { useNavigate } from "react-router";
-import { checkUser } from "@stores/authSlice";
+import { checkUser, logoutUser, loginUser, updateUserName, updateCompanyName, setUserEmail } from "@stores/authSlice";
 import { useDispatch, useSelector } from "react-redux";
+import {showConfirmAlert} from "@components/UI/ServiceAlert"
 
 const AuthContext = createContext(null);
 
@@ -24,11 +27,15 @@ const safeJsonParse = (value, fallback) => {
 export const AuthProvider = ({ children }) => {
 	// [변수] user: 현재 로그인한 사용자 정보
 	const [user, setUser] = useState(null);
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+
+  // 모달 모달
+  const [isBasisModalOpen, setIsBasisModalOpen] = useState(false);
 
   const dispatch = useDispatch();
 
 	const userName = useSelector((state) => state.auth.userName);
+  const userEmail = useSelector((state) => state.auth.userEmail);
 
 	// [변수] isAuthReady: localStorage 복원 완료 여부 (라우터 가드에서 활용)
 	const isAuthReady = useSelector((state) => state.auth.isAuthReady);
@@ -43,13 +50,25 @@ export const AuthProvider = ({ children }) => {
 
   // [변수] isLoading: 로딩 상태 여부
 	const isLoading = useSelector((state) => state.auth.loading);
-
+  // [변수] 이름 변경 
+  const updateName = (newName) => {
+    dispatch(updateUserName(newName));
+  };
 	/**
    * [이펙트] 앱 진입 시 localStorage에서 이전 세션 복원
    */
-  useEffect(() => { 
-    dispatch(checkUser()); 
+  useEffect(() => {
+    dispatch(checkUser());
   }, []);
+
+  useEffect(() => {
+    if (!isAuthReady || userEmail) return;
+    POST('/auth').then(res => {
+      if (res?.status === true && res?.data?.user) {
+        dispatch(setUserEmail(res.data.user));
+      }
+    }).catch(() => {});
+  }, [isAuthReady, userEmail, dispatch]);
   
   // selectedCompany
 
@@ -72,32 +91,48 @@ export const AuthProvider = ({ children }) => {
 	/**
    * [함수] login: 로그인 API 응답 데이터를 받아 전역 상태 및 localStorage에 저장
    */
-  const login = (data) => {
-		try {
-      console.log(data);
-    } catch (error) {
-      console.error("Login API failed:", error);
-    } finally {
-      
+  const login = async (data) => {
+    const resultAction = await dispatch(loginUser(data));
+    if(loginUser.fulfilled.match(resultAction)) {
+      const res = resultAction.payload;
+      if(res.status === true) {
+        const storedCompanies = res.data.companies;
+        if(storedCompanies.length === 1) {
+          ( async ()=> {
+            const res = await POST("/company", { companyId:  storedCompanies[0]?.company_id.toString()});
+            if (res.status === true) navigate("/");
+          })();
+        } else {
+          navigate("/companyselect");
+        }
+      }
     }
-	};
+  }
 
 	/**
    * [함수] logout: API 호출 후 전역 인증 상태 초기화 및 localStorage 전체 삭제
    */
   const logout = async () => {
-    try {
-      
-    } catch (error) {
-      console.error("Logout API failed:", error);
-    } finally {
-      
+    const resultAction = await dispatch(logoutUser());
+    if(logoutUser.fulfilled.match(resultAction)) {
+      const res = resultAction.payload;
+      if(res.status === true) {
+        navigate("/");
+      }
     }
   };
+
    // nav관련 navigate
    const handleLogout = async () => {
+      const isConfirmed = await showConfirmAlert(
+        "로그아웃", 
+        "정말 로그아웃하시겠습니까?", 
+        "warning"
+      );
+
+      if (isConfirmed) {
         await logout();
-        navigate('/');
+      }
     };
     const toggleSidebarMobile = () => {
         const sidebar = document.getElementById('globalSidebar');
@@ -123,7 +158,12 @@ export const AuthProvider = ({ children }) => {
 	};
 
 	// 전역 인증 상태 관리 컨텍스트에 필요한 값들을 객체로 묶어서 제공
-	const authContextValue = {login, goMyPage, goHome, userName, selectedCompany, companies, isAuthReady, isLoading};
+	const authContextValue = {login, goMyPage, goHome,
+    userName, userEmail, selectedCompany,
+    companies, isAuthReady, isLoading,
+    updateName, logoutUser,handleLogout,
+    isBasisModalOpen, setIsBasisModalOpen
+  };
  
 	return (
 		<AuthContext.Provider value={authContextValue}>

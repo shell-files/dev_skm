@@ -1,38 +1,38 @@
+"""
+rediscl.py
+레이어: Utils
+역할: Redis 클라이언트 — 토큰·회사·로테이션 세션 저장·조회·삭제.
+"""
 from src.utils.settings import settings
 import redis
 
-# --------------------------
-# redis client로 설정
-# client1 : accesstoken
-# client2 : 임시비밀번호
-# client3 : 회사 선택
-# --------------------------
+
 client1 = redis.Redis(
-  host=settings.redis_host,
-  port=settings.redis_port,
-  db=settings.redis_db1,
-  decode_responses=True
+    host=settings.redis_host,
+    port=settings.redis_port,
+    db=settings.redis_db1,
+    decode_responses=True,
 )
 client2 = redis.Redis(
-  host=settings.redis_host,
-  port=settings.redis_port,
-  db=settings.redis_db2,
-  decode_responses=True
+    host=settings.redis_host,
+    port=settings.redis_port,
+    db=settings.redis_db2,
+    decode_responses=True,
 )
 client3 = redis.Redis(
-  host=settings.redis_host,
-  port=settings.redis_port,
-  db=settings.redis_db3,
-  decode_responses=True
+    host=settings.redis_host,
+    port=settings.redis_port,
+    db=settings.redis_db3,
+    decode_responses=True,
 )
 
-# --------------------------
-# setTokenRedis: Token Redis(client1)에 값을 저장하는 함수
-# --------------------------
+
 def setTokenRedis(uuid: str, token: str):
-    """Redis에 uuid를 키로, accessToken을 값으로 저장"""
+<<<<<<< HEAD
+    """액세스 토큰을 Redis DB1에 UUID 키로 저장한다."""
+=======
+>>>>>>> origin/skm_test
     try:
-        # set(key, value)
         client1.set(uuid, token)
         print(f"Success: Set Redis - uuid: {uuid}")
         return {"status": True}
@@ -40,11 +40,12 @@ def setTokenRedis(uuid: str, token: str):
         print(f"Error setting Redis keys: {e}")
         return {"status": False}
 
-# --------------------------
-# getTokenRedis: Token Redis(client1)에서 저장된 값을 가져오는 함수
-# --------------------------
+
 def getTokenRedis(uuid: str):
-    """uuid로 accessToken 조회"""
+<<<<<<< HEAD
+    """UUID로 Redis DB1에서 액세스 토큰을 조회한다. 존재하지 않으면 status=False를 반환한다."""
+=======
+>>>>>>> origin/skm_test
     try:
         result = client1.get(uuid)
         if result:
@@ -54,25 +55,63 @@ def getTokenRedis(uuid: str):
         print(f"Error getting Redis value: {e}")
         return {"status": False}
 
-# --------------------------
-# delTokenRedis: Token Redis(client1)에 저장된 값을 삭제하는 함수
-# --------------------------
+
+def getInviteRedis(uuid: str):
+<<<<<<< HEAD
+    """UUID로 Redis DB3에서 초대 토큰을 조회한다."""
+=======
+>>>>>>> origin/skm_test
+    try:
+        result = client3.get(uuid)
+        if result:
+            return {"status": True, "uuid": uuid, "token": result}
+        return {"status": False, "message": "Key not found"}
+    except Exception as e:
+        print(f"Error getting Redis value: {e}")
+        return {"status": False}
+
+
 def delTokenRedis(uuid: str):
-    """특정 uuid 키 삭제"""
+<<<<<<< HEAD
+    """Redis DB1에서 UUID 키를 삭제한다."""
+=======
+>>>>>>> origin/skm_test
     try:
         client1.delete(uuid)
         return {"status": True}
     except Exception as e:
         print(f"Error deleting Redis key: {e}")
         return {"status": False}
-    
-# --------------------------
-# setPasswordRedis: Password Redis(client2)에 값을 저장하는 함수
-# --------------------------
-def setPasswordRedis(tempPwd: str, email: str):
-    """Redis에 tempPwd를 키로, Email을 값으로 저장"""
+
+
+def setRotatedTokenRedis(oldUuid: str, newUuid: str, seconds: int = 30):
+    """토큰 갱신 시 구 UUID → 신 UUID 매핑을 저장한다 (동시 요청 Race Condition 방지용)."""
     try:
-        # set(key, value)
+        client1.set(f"rotated:{oldUuid}", newUuid, ex=seconds)
+        return {"status": True}
+    except Exception as e:
+        print(f"Error setting rotated key: {e}")
+        return {"status": False}
+
+
+def getRotatedTokenRedis(oldUuid: str):
+    """구 UUID가 이미 갱신된 경우 신 UUID를 반환한다."""
+    try:
+        result = client1.get(f"rotated:{oldUuid}")
+        if result:
+            return {"status": True, "newUuid": result}
+        return {"status": False}
+    except Exception as e:
+        print(f"Error getting rotated key: {e}")
+        return {"status": False}
+
+
+def setPasswordRedis(tempPwd: str, email: str):
+<<<<<<< HEAD
+    """임시 비밀번호를 키로, 이메일을 값으로 Redis DB2에 저장한다."""
+=======
+>>>>>>> origin/skm_test
+    try:
         client2.set(tempPwd, email)
         print(f"Success: Set Redis - tempPwd: {tempPwd}")
         return {"status": True}
@@ -80,11 +119,12 @@ def setPasswordRedis(tempPwd: str, email: str):
         print(f"Error setting Redis keys: {e}")
         return {"status": False}
 
-# --------------------------
-# getPasswordRedis: Password Redis(client2)에서 저장된 값을 가져오는 함수
-# --------------------------
+
 def getPasswordRedis(tempPwd: str):
-    """tempPwd로 Email 조회"""
+<<<<<<< HEAD
+    """임시 비밀번호로 Redis DB2에서 연결된 이메일을 조회한다."""
+=======
+>>>>>>> origin/skm_test
     try:
         result = client2.get(tempPwd)
         if result:
@@ -94,23 +134,25 @@ def getPasswordRedis(tempPwd: str):
         print(f"Error getting Redis value: {e}")
         return {"status": False}
 
-# --------------------------
-# delPasswordRedis: Password Redis(client2)에 저장된 값을 삭제하는 함수
-# --------------------------
+
 def delPasswordRedis(tempPwd: str):
-    """특정 tempPwd 키 삭제"""
+<<<<<<< HEAD
+    """Redis DB2에서 임시 비밀번호 키를 삭제한다."""
+=======
+>>>>>>> origin/skm_test
     try:
         client2.delete(tempPwd)
         return {"status": True}
     except Exception as e:
         print(f"Error deleting Redis key: {e}")
         return {"status": False}
-    
-# --------------------------
-# setCompanyRedis: Company Redis(client3)에 값을 저장하는 함수
-# --------------------------
+
+
 def setCompanyRedis(uuid: str, companyId: int):
-    """Redis에 uuid를 키로, 선택한 회사 저장"""
+<<<<<<< HEAD
+    """세션 UUID에 연결된 선택 회사 ID를 Redis DB3에 저장한다."""
+=======
+>>>>>>> origin/skm_test
     try:
         client3.set(uuid, companyId)
         return {"status": True}
@@ -118,11 +160,12 @@ def setCompanyRedis(uuid: str, companyId: int):
         print(f"Error setting Redis keys: {e}")
         return {"status": False}
 
-# --------------------------
-# getCompanyRedis: Company Redis(client3)에서 저장된 값을 가져오는 함수
-# --------------------------
+
 def getCompanyRedis(uuid: str):
-    """ uuid로 회사 조회"""
+<<<<<<< HEAD
+    """Redis DB3에서 UUID에 연결된 선택 회사 ID를 조회한다."""
+=======
+>>>>>>> origin/skm_test
     try:
         result = client3.get(uuid)
         if result:
@@ -132,11 +175,42 @@ def getCompanyRedis(uuid: str):
         print(f"Error getting Redis value: {e}")
         return {"status": False}
 
-# --------------------------
-# delCompanyRedis: Company Redis(client3)에 저장된 값을 삭제하는 함수
-# --------------------------
+
 def delCompanyRedis(uuid: str):
-    """특정 uuid 키 삭제"""
+<<<<<<< HEAD
+    """Redis DB3에서 UUID 기반 선택 회사 ID 키를 삭제한다."""
+=======
+>>>>>>> origin/skm_test
+    try:
+        client3.delete(uuid)
+        return {"status": True}
+    except Exception as e:
+        print(f"Error deleting Redis key: {e}")
+        return {"status": False}
+
+
+def setInviteRedis(uuid: str, token: str, expireSeconds: int | None = None):
+<<<<<<< HEAD
+    """초대 토큰을 Redis DB3에 저장한다. expireSeconds가 있으면 TTL을 설정한다."""
+=======
+>>>>>>> origin/skm_test
+    try:
+        if expireSeconds:
+            client3.set(uuid, token, ex=expireSeconds)
+        else:
+            client3.set(uuid, token)
+        print(f"Success: Set Redis - uuid: {uuid}")
+        return {"status": True}
+    except Exception as e:
+        print(f"Error setting Redis keys: {e}")
+        return {"status": False}
+
+
+def delInviteRedis(uuid: str):
+<<<<<<< HEAD
+    """Redis DB3에서 초대 토큰 UUID 키를 삭제한다."""
+=======
+>>>>>>> origin/skm_test
     try:
         client3.delete(uuid)
         return {"status": True}

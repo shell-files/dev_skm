@@ -1,3 +1,8 @@
+/**
+ * SignupInputField.jsx
+ * 레이어: Component (UI)
+ * 역할: 회원가입 폼의 입력 필드 — 라벨, 유효성 메시지, 비밀번호 표시 토글을 포함한 공통 입력 컴포넌트.
+ */
 const SignupInputField = ({
     label,
     name,

@@ -1,27 +1,39 @@
+/**
+ * App.jsx
+ * 레이어: Page (루트 레이아웃)
+ * 역할: 인증 상태에 따라 로그인 라우트와 메인 레이아웃(헤더·사이드바·라우트)을 분기 렌더링하는 최상위 컴포넌트
+ *
+ * 의존 컴포넌트:
+ *   Headernav — 상단 전역 헤더
+ *   Sidebarnav — 좌측 전역 사이드바
+ *   Dashboard — 메인 대시보드 페이지
+ *   NotFound — 404 에러 페이지
+ *   Login, SignUp, CompanySelect — 로그인 관련 페이지
+ */
 import React, { useState, useEffect } from "react";
-import { Routes, Route } from "react-router";
+import { Routes, Route, Outlet } from "react-router";
 import '@styles/App.css'
 import "@styles/mains.css";
 import NotFound from '@errors/NotFound.jsx';
-import OnBoard from '@onboards/OnBoard.jsx';
-import Benchmarking from '@reports/Benchmarking.jsx';
-import Media from '@reports/Media.jsx';
-import Survey from '@reports/Survey.jsx';
+import Onboarding from '@onboards/OnBoard.jsx';
+import Benchmarking from '@reports/bench/BenchMarking.jsx';
+import Media from '@reports/media/Media.jsx';
+import Survey from '@reports/survey/Survey.jsx';
+import Result from '@reports/result/Result.jsx';
+import Draft from '@reports/Draft.jsx';
 import Mypage from '@mains/Mypage.jsx';
 import Manager from '@mains/Manager.jsx';
+import ManagerData from '@mains/managerdata/ManagerData.jsx';
 import Dashboard from './Dashboard.jsx';
 import Headernav from '@components/Layout/HeaderNav.jsx'
 import Sidebarnav from '@components/Layout/SidebarNav.jsx'
-
-
-
-const Main = () => {
-  return (
-    <h1>MAIN</h1>
-  )
-}
+import Login from "@logins/Login";
+import SignUp from "@logins/SignUp";
+import CompanySelect from "@logins/CompanySelect";
+import { useAuth } from '@hooks/AuthContext.jsx';
 
 const App = () => {
+  const { isAuthReady, isLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(()=>{
     if (typeof window !== "undefined") {
       return window.innerWidth > 800;
@@ -40,8 +52,21 @@ const App = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  if (isLoading) return <></>;
+
+  if(!isAuthReady) {
+    return (
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/signup" element={<SignUp />} />
+        
+        {/* <Route path="*" element={<NotFound />} /> */}
+      </Routes>
+    )
+  }
+
 	return (
-		<div id="main_page">
+    <div id="main_page">
       {/* 1. 상단 전역 헤더 배치 */}
       <Headernav
         isSidebarOpen={isSidebarOpen}
@@ -72,14 +97,16 @@ const App = () => {
         <main className="ob-body" style={{ flex: 1, width: '100%' }}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/company/:id" element={<Main />} />
-            <Route path="/onb" element={<OnBoard />} />
+            <Route path="/companyselect" element={<CompanySelect />} />
+            <Route path="/onb" element={<Onboarding />} />
             <Route path="/benchmk" element={<Benchmarking />} />
+            <Route path="/result" element={<Result />} />
             <Route path="/media" element={<Media />} />
+            <Route path="/draft" element={<Draft />} />
             <Route path="/survey" element={<Survey />} />
-            {/* <Route path="/dashboard" element={<Dashboard />} /> */}
             <Route path="/mypage" element={<Mypage />} />
             <Route path="/manager" element={<Manager />} />
+            <Route path="/managerData" element={<ManagerData />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>

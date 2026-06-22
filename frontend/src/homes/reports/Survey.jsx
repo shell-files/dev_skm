@@ -1,989 +1,855 @@
-import { useEffect, useRef, useState } from "react";
+<<<<<<< HEAD
+/**
+ * Survey.jsx
+ * 레이어: Page
+ * 역할: 임직원·경영진·외부이해관계자 대상 ESG 설문 URL 관리, 응답 동기화, 집계 반영 및 설문 결과 대시보드를 제공하는 이해관계자 설문 페이지
+ */
+=======
+>>>>>>> origin/skm_test
+import { useEffect, useState, Fragment } from "react";
 import { useNavigate } from "react-router";
-
+import { useSelector, useDispatch } from "react-redux";
 import "@styles/sr.css";
+import "@styles/survey.css";
+import "@styles/dma-robot-stage.css";
 
 import robot from "@assets/images/robot/robot_servey_t.png";
+import surveyIcon from "@assets/icons/steps/survey.png";
 
 import {
   showDefaultAlert,
   showConfirmAlert,
 } from "@components/UI/ServiceAlert";
 
-/**
- * 이해관계자 설문 페이지
- *
- * 주요 기능
- * 1. 설문 URL 복사
- * 2. KPI 목표 인원 입력
- * 3. 실시간 통계 집계 시뮬레이션
- * 4. AI 설문 분석 진행
- * 5. 단계별(step) 페이지 이동
- */
+import { useAuth } from "@hooks/AuthContext";
+
+import {
+  fetchSurveyForm as fetchSurveyFormThunk,
+  retrySurveyForm as retrySurveyFormThunk,
+  importSurveyResponses as importSurveyResponsesThunk,
+  recalculateSurveyScores as recalculateSurveyScoresThunk,
+  fetchSurveyResponseStatus as fetchSurveyResponseStatusThunk,
+  saveSurveyResponseTargets as saveSurveyResponseTargetsThunk,
+  fetchMaterialitySurveyResult as fetchMaterialitySurveyResultThunk,
+  clearSurveyState,
+} from "@stores/reportSlice";
+
+/* ── 그룹 메타 ──────────────────────────────────── */
+const GROUP_META = {
+  employee: {
+    label: "임직원",
+    color: "#03A94D",
+    bg: "#e8f8ef",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+  },
+  management: {
+    label: "경영진",
+    color: "#3b82f6",
+    bg: "#eff6ff",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
+      </svg>
+    ),
+  },
+  external: {
+    label: "외부이해관계자",
+    color: "#f97316",
+    bg: "#fff7ed",
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
+};
+const GROUP_KEYS = ["employee", "management", "external"];
+const GROUP_SCORE_KEY = {
+  employee:   "employeeImpactScore05",
+  management: "managementImpactScore05",
+  external:   "externalImpactScore05",
+};
+
+/* ── 표시 헬퍼 ──────────────────────────────────── */
+// responseRate(0~1 fraction) → 0~100 (소수 1자리)
+const pctFromRate = (rate) => Math.round((rate ?? 0) * 1000) / 10;
+// 목표 인원이 0이면 백분율 대신 "목표 미설정" 표기
+const displayRate = (rate, targetCount) =>
+  targetCount > 0 ? `${pctFromRate(rate).toFixed(1)}%` : "목표 미설정";
+const rateBarWidth = (rate, targetCount) =>
+  targetCount > 0 ? Math.min(100, pctFromRate(rate)) : 0;
+// 점수 포맷: 숫자면 toFixed(2), null/undefined면 "-"
+const fmtScore = (v) =>
+  v != null && Number.isFinite(Number(v)) ? Number(v).toFixed(2) : "-";
+
+const URL_LABEL = {
+  employee:   (year) => `임직원 ESG ${year} 설문조사`,
+  management: (year) => `경영진 ESG ${year} 설문조사`,
+  external:   (year) => `외부이해관계자 용 ESG ${year} 설문조사`,
+};
+
 const Survey = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { selectedCompany } = useAuth();
+  const currentRunId  = useSelector((state) => state.report.currentRunId);
+  const currentYear   = useSelector((state) => state.report.currentYear);
 
-  /**
-   * 현재 페이지 Step Index
-   * benchmarking: 0
-   * media: 1
-   * survey: 2
-   */
+  /* Redux state */
+  const surveyForm       = useSelector((s) => s.report.survey.form);
+  const surveyFormLoading= useSelector((s) => s.report.loading.surveyForm);
+  const responseStatus   = useSelector((s) => s.report.survey.responseStatus);
+  const surveyActionLoading = useSelector(
+    (s) =>
+      s.report.loading.surveyImport ||
+      s.report.loading.surveyRecalculate ||
+      s.report.loading.surveyRetry ||
+      s.report.loading.surveyTargets
+  );
+  const responseStatusLoading = useSelector((s) => s.report.loading.surveyResponseStatus);
+  const surveyResult        = useSelector((s) => s.report.survey.result);
+  const surveyResultLoading = useSelector((s) => s.report.loading.surveyResult);
+  const surveyErrorRaw = useSelector(
+    (s) =>
+      s.report.error.surveyImport ||
+      s.report.error.surveyRecalculate ||
+      s.report.error.surveyRetry ||
+      null
+  );
+  const surveyError = surveyErrorRaw?.message ?? null;
+
+  /* 목표 인원 / 대시보드 로컬 상태 */
+  const [localTargets, setLocalTargets] = useState({ employee: 150, management: 20, external: 80 });
+  const [targetsDirty, setTargetsDirty] = useState(false);
+  const [recalcDone, setRecalcDone] = useState(false);
+  const [dashboardOpen, setDashboardOpen] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
   const activeIndex = 2;
 
-  /**
-   * ESG 보고서 생성 프로세스 Step 정의
-   */
   const steps = [
     {
-      id: 1,
-      title: "벤치마킹 분석",
-      icon: "🎯",
-      path: "/benchmk",
+      id: 1, title: "벤치마킹 분석", path: "/benchmk",
+      icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="10" cy="10" r="7"/><line x1="15.5" y1="15.5" x2="21" y2="21"/><line x1="7" y1="13" x2="7" y2="11"/><line x1="10" y1="13" x2="10" y2="8.5"/><line x1="13" y1="13" x2="13" y2="7"/><line x1="6" y1="13" x2="14" y2="13"/></svg>,
     },
     {
-      id: 2,
-      title: "미디어 분석",
-      icon: "📺",
-      path: "/media",
+      id: 2, title: "미디어 분석", path: "/media",
+      icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><polyline points="5,13 8,10 11,12 14,8 19,6"/></svg>,
     },
     {
-      id: 3,
-      title: "이해관계자 설문",
-      icon: "👥",
-      path: "/survey",
+      id: 3, title: "이해관계자 설문", path: "/survey",
+      icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><polyline points="9,11 10.5,12.5 13,10"/><polyline points="9,16 10.5,17.5 13,15"/><line x1="13" y1="11" x2="16" y2="11"/><line x1="13" y1="16" x2="16" y2="16"/></svg>,
     },
     {
-      id: 4,
-      title: "전체 결과",
-      icon: "📊",
-      path: "/result",
+      id: 4, title: "전체 결과", path: "/result",
+      icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="20" x2="21" y2="20"/><line x1="3" y1="4" x2="3" y2="20"/><rect x="5" y="13" width="3" height="7"/><rect x="10" y="10" width="3" height="10"/><rect x="15" y="8" width="3" height="12"/><circle cx="19" cy="4" r="3"/><polyline points="17.5,4 18.5,5 21,2.5"/></svg>,
     },
     {
-      id: 5,
-      title: "보고서 초안",
-      icon: "📄",
-      path: "/draft",
+      id: 5, title: "보고서 초안", path: "/draft",
+      icon: <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/></svg>,
     },
   ];
 
-  /**
-   * KPI 입력값 상태
-   */
-  const [kpiData, setKpiData] = useState({
-    emp: 150,
-    exec: 20,
-    ext: 80,
-  });
+  /* ── Effects ───────────────────────────────────── */
 
-  /**
-   * 실시간 집계 결과 상태
-   */
-  const [liveData, setLiveData] = useState({
-    emp: 0,
-    exec: 0,
-    ext: 0,
-  });
-
-  /**
-   * 진행률 상태
-   */
-  const [progress, setProgress] = useState(0);
-
-  /**
-   * AI 분석 진행 상태
-   */
-  const [isAnalyzing, setIsAnalyzing] =
-    useState(false);
-
-  /**
-   * 대시보드 열림 상태
-   */
-  const [dashboardOpen, setDashboardOpen] =
-    useState(false);
-
-  /**
-   * 결과 표시 상태
-   */
-  const [showResult, setShowResult] =
-    useState(false);
-
-  /**
-   * KPI 집계 완료 여부
-   */
-  const [aggregationDone, setAggregationDone] =
-    useState(false);
-
-  /**
-   * 실시간 요약 메시지
-   */
-  const [summaryText, setSummaryText] =
-    useState(
-      "하단의 '실시간 통계 집계' 버튼을 누르면 연동 데이터 파싱 결과 요약이 표시됩니다."
-    );
-
-  /**
-   * 파티클 DOM Ref
-   */
-  const particleRef = useRef(null);
-
-  /**
-   * 최초 마운트 시 파티클 생성
-   */
   useEffect(() => {
-    createParticles();
-  }, []);
-
-  /**
-   * AI 분석 진행 시 Progress 증가
-   */
-  useEffect(() => {
-    let interval;
-
-    if (isAnalyzing) {
-      interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval);
-
-            setIsAnalyzing(false);
-            setShowResult(true);
-
-            return 100;
-          }
-
-          return prev + 2;
-        });
-      }, 30);
-    }
-
-    return () => clearInterval(interval);
-  }, [isAnalyzing]);
-
-  /**
-   * 배경 파티클 생성 함수
-   */
-  const createParticles = () => {
-    if (!particleRef.current) return;
-
-    particleRef.current.innerHTML = "";
-
-    for (let i = 0; i < 12; i++) {
-      const particle =
-        document.createElement("div");
-
-      particle.className = "particle";
-
-      const size = Math.random() * 5 + 3;
-
-      particle.style.width = `${size}px`;
-      particle.style.height = `${size}px`;
-
-      particle.style.left = `${
-        Math.random() * 100
-      }%`;
-
-      particle.style.top = `${
-        Math.random() * 100
-      }%`;
-
-      particle.style.animationDelay = `${
-        Math.random() * 2
-      }s`;
-
-      particleRef.current.appendChild(particle);
-    }
-  };
-
-  /**
-   * Step 클릭 이동 함수
-   */
-  const moveStep = (index) => {
-    if (isAnalyzing) return;
-
-    if (index === activeIndex) return;
-
-    navigate(steps[index].path);
-  };
-
-  /**
-   * KPI 값 변경 함수
-   */
-  const handleKpiChange = (type, value) => {
-    setKpiData((prev) => ({
-      ...prev,
-      [type]: Number(value),
-    }));
-  };
-
-  /**
-   * URL 복사 함수
-   */
-  const copyUrl = async (url) => {
-    try {
-      await navigator.clipboard.writeText(url);
-
-      showDefaultAlert(
-        "복사 완료",
-        "설문 주소가 클립보드에 복사되었습니다.",
-        "success"
-      );
-    } catch (error) {
-      showDefaultAlert(
-        "복사 실패",
-        "클립보드 복사 중 문제가 발생했습니다.",
-        "error"
-      );
-    }
-  };
-
-  /**
-   * 실시간 KPI 집계 실행
-   *
-   * 실제 서비스에서는
-   * Google Sheet / DB / API 응답값 등을
-   * 기반으로 실시간 집계 가능
-   */
-  const runLiveKpiAggregation = async () => {
-    setLiveData({
-      emp: 124,
-      exec: 18,
-      ext: 45,
-    });
-
-    setAggregationDone(true);
-
-    setSummaryText(
-      "AI 응답 데이터 동기화가 완료되었습니다. 외부이해관계자 그룹의 참여율이 상대적으로 낮아 추가 독려가 필요합니다."
-    );
-
-    await showDefaultAlert(
-      "실시간 집계 완료",
-      "우측 KPI 패널 데이터가 최신 상태로 업데이트되었습니다.",
-      "success"
-    );
-  };
-
-  /**
-   * AI 설문 분석 실행
-   */
-  const runSurveyAnalysis = async () => {
-    if (isAnalyzing) return;
-
-    /**
-     * KPI 집계 미실행 상태 방지
-     */
-    if (!aggregationDone) {
-      showDefaultAlert(
-        "집계 필요",
-        "실시간 통계 집계를 먼저 실행해주세요.",
-        "warning"
-      );
-
+    if (!currentRunId) {
+      dispatch(clearSurveyState());
+      setRecalcDone(false);
       return;
     }
+    dispatch(fetchSurveyFormThunk({ runId: currentRunId }));
+    dispatch(fetchSurveyResponseStatusThunk({ runId: currentRunId }));
+    dispatch(fetchMaterialitySurveyResultThunk({ runId: currentRunId }));
+  }, [currentRunId, dispatch]);
 
-    const confirmed =
-      await showConfirmAlert(
-        "설문 결과 분석",
-        "AI 기반 이중 중대성 분석을 시작하시겠습니까?",
-        "question"
-      );
+  useEffect(() => {
+    if (!responseStatus?.groups) return;
+    setLocalTargets({
+      employee:   responseStatus.groups.employee?.targetCount   ?? 150,
+      management: responseStatus.groups.management?.targetCount ?? 20,
+      external:   responseStatus.groups.external?.targetCount   ?? 80,
+    });
+    setTargetsDirty(false);
+  }, [responseStatus]);
 
-    if (!confirmed) return;
+  /* ── Handlers ──────────────────────────────────── */
 
+  const handleFetchSurveyForm = () => {
+    if (!currentRunId) return;
+    dispatch(fetchSurveyFormThunk({ runId: currentRunId }));
+  };
+
+  const handleRetrySurveyForm = async () => {
+    if (!currentRunId || surveyActionLoading) return;
+    const ok = await showConfirmAlert("설문 URL 재생성", "설문 URL 생성을 다시 시도할까요?", "question");
+    if (!ok) return;
+    const res = await dispatch(retrySurveyFormThunk({ runId: currentRunId }));
+    if (retrySurveyFormThunk.fulfilled.match(res)) {
+      await showDefaultAlert("완료", "설문 URL 생성 상태를 갱신했습니다.", "success");
+    } else {
+      await showDefaultAlert("실패", "설문 URL 재시도에 실패했습니다.", "error");
+    }
+  };
+
+  const handleRefreshStatus = () => {
+    if (!currentRunId) return;
+    dispatch(fetchSurveyResponseStatusThunk({ runId: currentRunId }));
+  };
+
+  const handleSaveTargets = async () => {
+    if (!currentRunId || surveyActionLoading) return;
+    const res = await dispatch(saveSurveyResponseTargetsThunk({ runId: currentRunId, targets: localTargets }));
+    if (saveSurveyResponseTargetsThunk.fulfilled.match(res)) {
+      setTargetsDirty(false);
+      await showDefaultAlert("저장 완료", "목표 인원이 저장되었습니다.", "success");
+    } else {
+      await showDefaultAlert("저장 실패", "목표 인원 저장에 실패했습니다.", "error");
+    }
+  };
+
+  const handleSyncSurveyResponses = async () => {
+    if (!currentRunId || surveyActionLoading) return;
+    if (!isReady) {
+      await showDefaultAlert("확인 필요", "READY 상태의 설문 폼이 필요합니다.", "warning");
+      return;
+    }
+    const ok = await showConfirmAlert(
+      "설문 응답 동기화",
+      "Google Sheet의 최신 설문 응답을 DB로 가져오고 응답 현황을 갱신할까요?",
+      "question"
+    );
+    if (!ok) return;
+    const res = await dispatch(importSurveyResponsesThunk({ runId: currentRunId }));
+    if (importSurveyResponsesThunk.fulfilled.match(res)) {
+      const raw = res.payload?.data ?? res.payload;
+      const empC  = raw?.respondentCounts?.employee   ?? 0;
+      const mgmtC = raw?.respondentCounts?.management ?? 0;
+      const extC  = raw?.respondentCounts?.external   ?? 0;
+      console.debug("[Survey] sync:", raw);
+      await showDefaultAlert("응답 동기화 완료", `임직원 ${empC}명 / 경영진 ${mgmtC}명 / 외부 ${extC}명`, "success");
+      dispatch(fetchSurveyResponseStatusThunk({ runId: currentRunId }));
+      dispatch(fetchMaterialitySurveyResultThunk({ runId: currentRunId }));
+    } else {
+      await showDefaultAlert("실패", "설문 응답 동기화에 실패했습니다.", "error");
+    }
+  };
+
+  const handleRecalculate = async () => {
+    if (!currentRunId || surveyActionLoading) return;
+    const ok = await showConfirmAlert("응답 집계 반영", "설문 점수를 이중중대성 평가 점수에 반영할까요?", "question");
+    if (!ok) return;
     setDashboardOpen(true);
-
-    setShowResult(false);
-
-    setProgress(0);
-
     setIsAnalyzing(true);
+    const res = await dispatch(recalculateSurveyScoresThunk({ runId: currentRunId }));
+    setIsAnalyzing(false);
+    if (recalculateSurveyScoresThunk.fulfilled.match(res)) {
+      console.debug("[Survey] recalculate:", res.payload?.data ?? res.payload);
+      setRecalcDone(true);
+      dispatch(fetchSurveyResponseStatusThunk({ runId: currentRunId }));
+      dispatch(fetchMaterialitySurveyResultThunk({ runId: currentRunId }));
+    } else {
+      await showDefaultAlert("실패", "응답 집계 반영에 실패했습니다.", "error");
+    }
   };
 
-  /**
-   * 대시보드 토글
-   */
-  const toggleDashboard = () => {
-    setDashboardOpen((prev) => !prev);
+  /* ── Helpers ──────────────────────────────────── */
+
+  const copyUrl = async (url) => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      showDefaultAlert("복사 완료", "클립보드 복사 완료", "success");
+    } catch {
+      showDefaultAlert("복사 실패", "오류 발생", "error");
+    }
   };
 
-  /**
-   * 퍼센트 계산 함수
-   */
-  const getPercent = (current, total) => {
-    if (!total) return 0;
-
-    return ((current / total) * 100).toFixed(1);
+  const openUrl = (url) => { if (url) window.open(url, "_blank", "noopener,noreferrer"); };
+  const moveStep = (i) => { if (i !== activeIndex) navigate(steps[i].path); };
+  const handleTargetChange = (group, value) => {
+    const n = Math.max(0, Math.floor(Number(value)));
+    if (!Number.isFinite(n)) return;
+    setLocalTargets((prev) => ({ ...prev, [group]: n }));
+    setTargetsDirty(true);
   };
 
-  return (
-    <div className="sr-container">
-      {/* =========================================================
-          Header
-      ========================================================== */}
-      <header className="sr-header">
-        <h1 className="sr-title">
-          지속가능경영보고서 AI 자동 생성
-        </h1>
+  /* ── Derived ──────────────────────────────────── */
+  const isReady = surveyForm?.surveyStatus === "READY";
+  const isActionDisabled = !currentRunId || surveyActionLoading || !isReady;
+  const groups = responseStatus?.groups ?? null;
+  const totals = responseStatus?.totals ?? null;
 
-        {/* =====================================================
-            Stepper 영역
-        ====================================================== */}
-        <div className="sr-stepper-row">
-          {steps.map((step, index) => (
-            <div
-              key={step.id}
-              style={{
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              <div
-                className={`step-box ${
-                  index === activeIndex
-                    ? "active"
-                    : ""
-                }`}
-                onClick={() => moveStep(index)}
-              >
-                <div className="step-icon-circle">
-                  {step.icon}
-                </div>
+  // 설문 Top 이슈 점수 (GET /materiality/survey/{runId})
+  const surveyTopIssues = surveyResult?.topIssues ?? [];
 
-                <div
-                  style={{
-                    fontSize: "0.8rem",
-                    fontWeight: 800,
-                  }}
-                >
-                  {step.title}
-                </div>
+  // 그룹별 상위 2개 Sub-Issue (해당 그룹 Impact 점수 기준 정렬)
+  const stakeholderTopIssues = {};
+  GROUP_KEYS.forEach((key) => {
+    const scoreKey = GROUP_SCORE_KEY[key];
+    stakeholderTopIssues[key] = [...surveyTopIssues]
+      .filter((issue) => issue[scoreKey] != null)
+      .sort((a, b) => Number(b[scoreKey]) - Number(a[scoreKey]))
+      .slice(0, 2);
+  });
+
+  /* ── URL panel ────────────────────────────────── */
+  const renderUrlArea = () => {
+    if (surveyFormLoading) return <p className="survey-status-box">설문 URL 상태를 불러오는 중...</p>;
+    if (!currentRunId)     return <p className="survey-status-box">분석 실행 후 설문 URL이 자동 생성됩니다.</p>;
+    if (surveyForm?.surveyStatus === "RETRYABLE") {
+      return (
+        <div>
+          <p className="survey-error-box">{surveyForm.errorMessage || "설문 URL 생성에 실패했습니다."}</p>
+          <button className="survey-btn" style={{ marginBottom: 0 }} onClick={handleRetrySurveyForm} disabled={surveyActionLoading}>재시도</button>
+        </div>
+      );
+    }
+    if (surveyForm === null) {
+      return (
+        <div>
+          <p className="survey-status-box">미디어 분석 완료 후 설문 URL이 자동 생성됩니다.</p>
+          <button className="survey-btn" style={{ marginBottom: 0, marginTop: "8px" }} onClick={handleFetchSurveyForm} disabled={surveyFormLoading}>URL 생성 상태 재조회</button>
+        </div>
+      );
+    }
+    if (surveyForm.surveyStatus === "GENERATING") return <p className="survey-status-box">설문 URL 자동 생성 중입니다...</p>;
+
+    const urlRows = [
+      { key: "employee",   url: surveyForm.employeeFormUrl },
+      { key: "management", url: surveyForm.managementFormUrl },
+      { key: "external",   url: surveyForm.externalFormUrl },
+    ];
+    return (
+      <div className="svurl-list">
+        {urlRows.map(({ key, url }) => {
+          const meta = GROUP_META[key];
+          return (
+            <div className="svurl-row" key={key}>
+              <div className="svurl-row-left">
+                <span className="svgroup-icon-sm" style={{ background: meta.bg, color: meta.color }}>{meta.icon}</span>
+                <span className="svgroup-badge" style={{ color: meta.color, background: meta.bg }}>{meta.label}</span>
               </div>
-
-              {index < steps.length - 1 && (
-                <div className="step-line"></div>
+              {isReady && url ? (
+                <div className="svurl-row-right">
+                  <span className="svurl-text" title={url}>{url}</span>
+                  <button className="svurl-btn svurl-btn--dark" onClick={() => window.open(url, '_blank')}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    열기
+                  </button>
+                  <button className="svurl-btn svurl-btn--green" onClick={() => copyUrl(url)}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                    복사
+                  </button>
+                </div>
+              ) : (
+                <span className="svurl-empty">URL 없음</span>
               )}
             </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  /* ── Response rate panel ──────────────────────── */
+  const renderResponseRate = () => {
+    if (responseStatusLoading) return <p className="survey-status-box" style={{ marginTop: "12px" }}>응답 현황 불러오는 중...</p>;
+    if (!currentRunId || !groups) return <p className="survey-status-box" style={{ marginTop: "12px" }}>runId를 선택하면 응답 현황이 표시됩니다.</p>;
+
+    return (
+      <div className="svrate-list">
+        {GROUP_KEYS.map((key) => {
+          const grp  = groups[key];
+          if (!grp) return null;
+          const meta = GROUP_META[key];
+          const hasTarget = grp.targetCount > 0;
+          return (
+            <div className="svrate-card" key={key}>
+              <div className="svrate-card-top">
+                <div className="svrate-card-left">
+                  <span className="svgroup-icon-sm" style={{ background: meta.bg, color: meta.color }}>{meta.icon}</span>
+                  <span className="svrate-group-name">{meta.label}</span>
+                </div>
+                <div className="svrate-card-count">
+                  <strong style={{ color: "#1e293b", fontSize: "1.15rem" }}>{grp.responseCount}</strong>
+                  <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>{hasTarget ? ` / ${grp.targetCount} 명` : " 명 · 목표 미설정"}</span>
+                </div>
+              </div>
+              <div className="svrate-bar-row">
+                <div className="svrate-bar-bg">
+                  <div className="svrate-bar-fill" style={{ width: `${rateBarWidth(grp.responseRate, grp.targetCount)}%`, background: meta.color }} />
+                </div>
+                <span className="svrate-pct" style={{ color: meta.color }}>{displayRate(grp.responseRate, grp.targetCount)}</span>
+              </div>
+            </div>
+          );
+        })}
+
+        {totals && (
+          <div className="svrate-total-card">
+            <div className="svrate-total-stat">
+              <div className="svrate-total-icon" style={{ background: "#e8f8ef" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                </svg>
+              </div>
+              <div>
+                <div className="svrate-total-label">총 응답</div>
+                <div className="svrate-total-value">{totals.responseCount} <span style={{ fontSize: "0.8rem", fontWeight: 500 }}>명</span></div>
+              </div>
+            </div>
+            <div className="svrate-total-divider" />
+            <div className="svrate-total-stat">
+              <div className="svrate-total-icon" style={{ background: "#e8f8ef" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+              </div>
+              <div>
+                <div className="svrate-total-label">응답률</div>
+                <div className="svrate-total-value">{totals.targetCount > 0 ? <>{pctFromRate(totals.responseRate).toFixed(1)}<span style={{ fontSize: "0.8rem", fontWeight: 500 }}>%</span></> : <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#94a3b8" }}>목표 미설정</span>}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {recalcDone && (
+          <div className="survey-recalc-done" style={{ marginTop: "10px" }}>
+            이중 중대성 평가 점수에 설문 응답이 반영되었습니다.
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /* ── Render ────────────────────────────────────── */
+  return (
+<<<<<<< HEAD
+    <div id="survey-page" className="survey-container">
+=======
+    <div className="survey-container">
+>>>>>>> origin/skm_test
+      {/* Stepper */}
+      <header className="survey-header">
+        <div className="survey-stepper-row">
+          {steps.map((step, index) => (
+            <Fragment key={step.id}>
+              <div className={`step-box ${index === activeIndex ? "active" : ""}`} onClick={() => moveStep(index)}>
+                <div className="step-icon-circle">{step.icon}</div>
+                <div style={{ fontSize: "0.8rem", fontWeight: 800 }}>{step.title}</div>
+              </div>
+              {index < steps.length - 1 && <div className="step-line" />}
+            </Fragment>
           ))}
         </div>
       </header>
 
-      {/* =========================================================
-          Main Content
-      ========================================================== */}
       <main className="main-content">
-        <div className="input-card">
-          <h2
-            style={{
-              fontSize: "1.4rem",
-              fontWeight: 800,
-              marginBottom: "6px",
-            }}
-          >
-            이해관계자 설문
-          </h2>
+        <div className="survey-input-card">
 
-          <p
-            style={{
-              color: "#64748b",
-              fontSize: "0.9rem",
-              marginBottom: "4px",
-            }}
-          >
-            각 이해관계자 그룹별 설문 발송 관리 및
-            실시간 집계 결과를 매핑합니다.
-          </p>
-
-          {/* =====================================================
-              설문 영역
-          ====================================================== */}
-          <div className="survey-section-grid">
-            {/* =================================================
-                설문 URL / KPI 관리
-            ================================================== */}
-            <div className="survey-wrapper">
-              <div className="survey-badge white-badge">
-                설문 URL & 발송 관리
+          {/* 상단 고정 영역 */}
+          <div className="sv-top-section">
+            {/* 페이지 헤더 */}
+            <div className="survey-page-header">
+              <div className="survey-page-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/>
+                  <polyline points="9,11 10.5,12.5 13,10"/><polyline points="9,16 10.5,17.5 13,15"/>
+                  <line x1="13" y1="11" x2="16" y2="11"/><line x1="13" y1="16" x2="16" y2="16"/>
+                </svg>
               </div>
-
-              <div className="survey-panel">
-                <div className="survey-group-list">
-                  {/* 임직원 */}
-                  <div className="survey-row-box">
-                    <label>임직원</label>
-
-                    <div className="url-input-line">
-                      <input
-                        type="text"
-                        value="https://forms.gle/emp_sample_skm"
-                        readOnly
-                      />
-
-                      <button
-                        className="btn-url-copy"
-                        onClick={() =>
-                          copyUrl(
-                            "https://forms.gle/emp_sample_skm"
-                          )
-                        }
-                      >
-                        복사
-                      </button>
-                    </div>
-
-                    <div className="kpi-input-line">
-                      <span>
-                        총 발송 인원 (KPI) :
-                      </span>
-
-                      <input
-                        type="number"
-                        value={kpiData.emp}
-                        onChange={(e) =>
-                          handleKpiChange(
-                            "emp",
-                            e.target.value
-                          )
-                        }
-                      />
-
-                      명
-                    </div>
-                  </div>
-
-                  {/* 경영진 */}
-                  <div className="survey-row-box">
-                    <label>경영진</label>
-
-                    <div className="url-input-line">
-                      <input
-                        type="text"
-                        value="https://forms.gle/exec_sample_skm"
-                        readOnly
-                      />
-
-                      <button
-                        className="btn-url-copy"
-                        onClick={() =>
-                          copyUrl(
-                            "https://forms.gle/exec_sample_skm"
-                          )
-                        }
-                      >
-                        복사
-                      </button>
-                    </div>
-
-                    <div className="kpi-input-line">
-                      <span>
-                        총 발송 인원 (KPI) :
-                      </span>
-
-                      <input
-                        type="number"
-                        value={kpiData.exec}
-                        onChange={(e) =>
-                          handleKpiChange(
-                            "exec",
-                            e.target.value
-                          )
-                        }
-                      />
-
-                      명
-                    </div>
-                  </div>
-
-                  {/* 외부 이해관계자 */}
-                  <div className="survey-row-box">
-                    <label>외부이해관계자</label>
-
-                    <div className="url-input-line">
-                      <input
-                        type="text"
-                        value="https://forms.gle/ext_sample_skm"
-                        readOnly
-                      />
-
-                      <button
-                        className="btn-url-copy"
-                        onClick={() =>
-                          copyUrl(
-                            "https://forms.gle/ext_sample_skm"
-                          )
-                        }
-                      >
-                        복사
-                      </button>
-                    </div>
-
-                    <div className="kpi-input-line">
-                      <span>
-                        총 발송 인원 (KPI) :
-                      </span>
-
-                      <input
-                        type="number"
-                        value={kpiData.ext}
-                        onChange={(e) =>
-                          handleKpiChange(
-                            "ext",
-                            e.target.value
-                          )
-                        }
-                      />
-
-                      명
-                    </div>
-                  </div>
+              <div className="survey-page-text">
+                <h2 className="survey-page-title">이해관계자 설문</h2>
+                <p className="survey-page-desc">
+                  임직원·경영진·외부이해관계자를 대상으로 ESG 이슈의 중요도를 직접 평가받습니다.
+                  설문 URL을 배포하고 응답을 집계하여 <strong>이중 중대성 평가</strong>에 반영합니다.
+                </p>
+                <div className="survey-tag-row">
+                  <span className="survey-tag survey-tag-green">설문 URL 자동 생성</span>
+                  <span className="survey-tag survey-tag-blue">3그룹 분류</span>
+                  <span className="survey-tag survey-tag-purple">AI 집계 분석</span>
+                  <span className="survey-tag survey-tag-orange">이중 중대성 반영</span>
                 </div>
               </div>
             </div>
 
-            {/* =================================================
-                실시간 KPI 통계 패널
-            ================================================== */}
-            <div className="survey-wrapper">
-              <div className="survey-badge white-badge">
-                실시간 통계 집계 (KPI 현황)
+            {/* 그룹 카드 */}
+            <div className="survey-group-grid">
+              <div className="survey-group-card survey-group-card--green">
+                <div className="survey-group-card-head">
+                  <span className="survey-group-badge survey-group-badge--green">임직원</span>
+                  <span className="survey-group-label survey-group-label--green">Employee</span>
+                </div>
+                <p className="survey-group-desc">기업 활동이 환경·사회에 미치는 영향 관점에서 ESG 이슈의 중요도를 평가합니다.</p>
               </div>
-
-              <div className="survey-panel">
-                <div className="sheets-dashboard-grid">
-                  {/* 임직원 */}
-                  <div className="chart-status-card">
-                    <div className="chart-header">
-                      <span className="label">
-                        임직원 제출 현황
-                      </span>
-
-                      <div className="value">
-                        <span>
-                          {liveData.emp}
-                        </span>
-
-                        {" / "}
-
-                        <span>
-                          {kpiData.emp}
-                        </span>
-
-                        <span>명</span>
-                      </div>
-                    </div>
-
-                    <div className="api-progress-container">
-                      <div
-                        className="api-progress-bar"
-                        style={{
-                          width: `${getPercent(
-                            liveData.emp,
-                            kpiData.emp
-                          )}%`,
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* 경영진 */}
-                  <div className="chart-status-card">
-                    <div className="chart-header">
-                      <span className="label">
-                        경영진 제출 현황
-                      </span>
-
-                      <div className="value">
-                        <span>
-                          {liveData.exec}
-                        </span>
-
-                        {" / "}
-
-                        <span>
-                          {kpiData.exec}
-                        </span>
-
-                        <span>명</span>
-                      </div>
-                    </div>
-
-                    <div className="api-progress-container">
-                      <div
-                        className="api-progress-bar"
-                        style={{
-                          width: `${getPercent(
-                            liveData.exec,
-                            kpiData.exec
-                          )}%`,
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-
-                  {/* 외부 이해관계자 */}
-                  <div className="chart-status-card">
-                    <div className="chart-header">
-                      <span className="label">
-                        외부관계자 제출 현황
-                      </span>
-
-                      <div className="value">
-                        <span>
-                          {liveData.ext}
-                        </span>
-
-                        {" / "}
-
-                        <span>
-                          {kpiData.ext}
-                        </span>
-
-                        <span>명</span>
-                      </div>
-                    </div>
-
-                    <div className="api-progress-container">
-                      <div
-                        className="api-progress-bar"
-                        style={{
-                          width: `${getPercent(
-                            liveData.ext,
-                            kpiData.ext
-                          )}%`,
-                          background: "#ffb300",
-                        }}
-                      ></div>
-                    </div>
-                  </div>
+              <div className="survey-group-card survey-group-card--blue">
+                <div className="survey-group-card-head">
+                  <span className="survey-group-badge survey-group-badge--blue">경영진</span>
+                  <span className="survey-group-label survey-group-label--blue">Management</span>
                 </div>
-
-                {/* =================================================
-                    AI 메시지 박스
-                ================================================== */}
-                <div className="ai-message-box">
-                  <strong
-                    style={{
-                      color:
-                        "var(--sr-primary)",
-                    }}
-                  >
-                    [AI 응답 데이터 분석 결과]
-                  </strong>
-
-                  <p
-                    style={{
-                      marginTop: "4px",
-                      color: "#475569",
-                    }}
-                  >
-                    {summaryText}
-                  </p>
+                <p className="survey-group-desc">ESG 이슈가 기업의 재무성과, 사업 지속가능성 및 경영 전략에 미치는 영향을 고려하여 중요도를 평가합니다.</p>
+              </div>
+              <div className="survey-group-card survey-group-card--orange">
+                <div className="survey-group-card-head">
+                  <span className="survey-group-badge survey-group-badge--orange">외부</span>
+                  <span className="survey-group-label survey-group-label--orange">External Stakeholder</span>
                 </div>
+                <p className="survey-group-desc">고객, 투자자, 협력사, 지역사회 등 이해관계자의 관점에서 ESG 이슈의 중요도를 평가합니다.</p>
               </div>
             </div>
+
+            {/* 에러 */}
+            {surveyError && <div className="survey-error-box" style={{ marginTop: "10px" }}>{surveyError}</div>}
           </div>
 
-          {/* =====================================================
-              Action Buttons
-          ====================================================== */}
-          <div className="action-btn-group">
-            <button
-              className="sr-btn"
-              onClick={runLiveKpiAggregation}
-            >
-              실시간 통계 집계
-            </button>
+          {/* 2패널 그리드 */}
+          <div className="survey-section-grid">
 
-            <button
-              className="sr-btn secondary"
-              onClick={runSurveyAnalysis}
-              style={{marginBottom: "50px"}}
-            >
-              설문 결과 분석
-            </button>
+            {/* ── 좌: URL & 목표 인원 ── */}
+            <div className="sv-panel-card">
+              {/* 패널 헤더 */}
+              <div className="sv-panel-header">
+                <div className="sv-panel-header-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+                  </svg>
+                </div>
+                <div>
+                  <div className="sv-panel-title">설문 URL & 발송 관리</div>
+                  <div className="sv-panel-subtitle">대상 그룹별 설문 URL을 관리하고, 발송 목표 인원을 설정합니다.</div>
+                </div>
+              </div>
+
+              {/* URL 영역 */}
+              <div className="sv-panel-body">
+                {renderUrlArea()}
+
+                {/* 목표 인원 */}
+                <div className="sv-target-section">
+                  <div className="sv-target-label">발송 목표 인원</div>
+                  <div className="sv-target-row">
+                    {GROUP_KEYS.map((key) => {
+                      const meta = GROUP_META[key];
+                      return (
+                        <div className="sv-target-item" key={key}>
+                          <span className="svgroup-icon-sm" style={{ background: meta.bg, color: meta.color }}>{meta.icon}</span>
+                          <span className="sv-target-item-label">{meta.label}</span>
+                          <input
+                            type="number"
+                            min="0"
+                            className="sv-target-input"
+                            value={localTargets[key]}
+                            onChange={(e) => handleTargetChange(key, e.target.value)}
+                          />
+                          <span className="sv-target-unit">명</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {currentRunId && (
+                    <button
+                      className={`sv-save-btn${targetsDirty ? "" : " sv-save-btn--disabled"}`}
+                      onClick={handleSaveTargets}
+                      disabled={!targetsDirty || surveyActionLoading}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                        <polyline points="17,21 17,13 7,13 7,21"/>
+                        <polyline points="7,3 7,8 15,8"/>
+                      </svg>
+                      {surveyActionLoading ? "저장 중..." : "목표 인원 저장"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* ── 우: 응답 현황 ── */}
+            <div className="sv-panel-card">
+              {/* 패널 헤더 */}
+              <div className="sv-panel-header">
+                <div className="sv-panel-header-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"/>
+                    <line x1="12" y1="20" x2="12" y2="4"/>
+                    <line x1="6" y1="20" x2="6" y2="14"/>
+                  </svg>
+                </div>
+                <div>
+                  <div className="sv-panel-title">응답 현황</div>
+                </div>
+              </div>
+
+              {/* 액션 버튼 */}
+              <div className="sv-panel-body">
+                <div className="sv-action-row">
+                  <button className="sv-action-btn sv-action-btn--outline" onClick={handleSyncSurveyResponses} disabled={isActionDisabled} title={!isReady ? "READY 상태 설문 폼이 필요합니다." : "Google Sheet 응답을 가져오고 현황을 갱신합니다."}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                      <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    {surveyActionLoading ? "동기화 중..." : "설문 응답 동기화"}
+                  </button>
+                  <button className="sv-action-btn sv-action-btn--green" onClick={handleRecalculate} disabled={isActionDisabled} title={!isReady ? "READY 상태 설문 폼이 필요합니다." : ""}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <polyline points="12 6 12 12 16 14"/>
+                    </svg>
+                    응답 집계 반영
+                  </button>
+                </div>
+
+                {renderResponseRate()}
+              </div>
+            </div>
+
           </div>
         </div>
       </main>
 
-      {/* =========================================================
-          Result Dashboard
-      ========================================================== */}
-      <div
-        className={`sr-result-dashboard ${
-          dashboardOpen ? "open" : ""
-        }`}
-      >
-        {/* Dashboard Handle */}
-        <div
-          className="dashboard-handle"
-          onClick={toggleDashboard}
-        >
-          <div className="handle-pill">
+      {/* ── 하단 슬라이드업 결과 대시보드 ── */}
+      <div className={`survey-result-dashboard ${dashboardOpen ? "open" : ""}`}>
+        {/* Handle */}
+        <div className="dashboard-handle" onClick={() => setDashboardOpen((o) => !o)}>
+          <div className={`handle-pill${isAnalyzing ? " handle-pill--analyzing" : recalcDone ? " handle-pill--done" : ""}`}>
             {isAnalyzing
               ? "AI 분석 진행 중..."
-              : showResult
-              ? "분석 완료 - 결과 요약 확인"
-              : "실시간 분석 대기 중"}
+              : recalcDone
+                ? "분석 완료 — 결과 요약 확인"
+                : "실시간 분석 대기 중"}
           </div>
         </div>
 
-        {/* =====================================================
-            Robot View
-        ====================================================== */}
-        <div
-          className={`robot-view-container ${
-            isAnalyzing ? "analyzing" : ""
-          }`}
-        >
-          {/* Particle */}
-          <div
-            className="particle-field"
-            ref={particleRef}
-          ></div>
+        {/* Body — result only */}
+        {recalcDone && groups ? (
+        <div className="sv-dashboard-body">
+          <>
 
-          {/* =================================================
-              Loading Content
-          ================================================== */}
-          {!showResult ? (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "100%",
-              }}
-            >
-              <div className="robot-stage">
-                <div className="robot-float-wrap">
-                  <img
-                    src={robot}
-                    className="robot-main-img"
-                    alt="robot"
-                  />
-                </div>
+              <div className="sv-dashboard-complete-banner">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                이중 중대성 평가 점수에 설문 응답이 반영되었습니다. <strong>전체 결과</strong> 페이지에서 상세 결과를 확인하세요.
               </div>
 
-              <h3
-                style={{
-                  fontSize: "1.2rem",
-                  fontWeight: 800,
-                  margin: "0 0 4px 0",
-                }}
-              >
-                {isAnalyzing
-                  ? "Impact & Financial 평가 계산 중..."
-                  : "분석 미실행 상태"}
-              </h3>
-
-              <p
-                style={{
-                  fontSize: "0.85rem",
-                  color: "#64748b",
-                  margin: 0,
-                }}
-              >
-                {isAnalyzing
-                  ? "AI 기반 이중 중대성 매트릭스 알고리즘이 설문 응답을 분석 중입니다."
-                  : "하단의 '설문 결과 분석' 버튼을 작동시켜 주십시오."}
-              </p>
-
-              {/* Progress */}
-              {isAnalyzing && (
-                <div className="progress-section">
-                  <div className="progress-bar-wrap">
-                    <div
-                      className="progress-bar-fill"
-                      style={{
-                        width: `${progress}%`,
-                      }}
-                    ></div>
+              {/* KPI 4카드 */}
+              <div className="survey-kpi-grid" style={{ marginTop: "14px" }}>
+                {GROUP_KEYS.map((key) => {
+                  const grp  = groups[key];
+                  const meta = GROUP_META[key];
+                  const hasTarget = grp?.targetCount > 0;
+                  return (
+                    <div className="survey-kpi-card" key={key}>
+                      <div className="stat-label" style={{ color: meta.color, display: "flex", alignItems: "center", gap: "6px" }}>
+                        {meta.icon}{meta.label} 응답
+                      </div>
+                      <div className="stat-value">
+                        {grp?.responseCount ?? 0}<span style={{ fontSize: "0.85rem", fontWeight: 500 }}>명</span>
+                        <span className="stat-target">{hasTarget ? `(목표 ${grp.targetCount}명)` : "(목표 미설정)"}</span>
+                      </div>
+                      <div className="kpi-bar-wrap">
+                        <div className="kpi-bar-fill" style={{ width: `${rateBarWidth(grp?.responseRate, grp?.targetCount ?? 0)}%`, background: meta.color }} />
+                        <span className="kpi-bar-pct" style={{ color: meta.color }}>{displayRate(grp?.responseRate, grp?.targetCount ?? 0)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {totals && (
+                  <div className="survey-kpi-card">
+                    <div className="stat-label">전체 응답률</div>
+                    <div className="stat-value">
+                      {totals.targetCount > 0
+                        ? <>{pctFromRate(totals.responseRate).toFixed(1)}<span style={{ fontSize: "0.85rem", fontWeight: 500 }}>%</span></>
+                        : <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#94a3b8" }}>목표 미설정</span>}
+                      <span className="stat-target">({totals.responseCount}/{totals.targetCount}명)</span>
+                    </div>
+                    <div className="kpi-bar-wrap">
+                      <div className="kpi-bar-fill" style={{ width: `${rateBarWidth(totals.responseRate, totals.targetCount)}%` }} />
+                      <span className="kpi-bar-pct">{displayRate(totals.responseRate, totals.targetCount)}</span>
+                    </div>
                   </div>
+                )}
+              </div>
 
-                  <div
-                    style={{
-                      marginTop: "6px",
-                      fontWeight: 700,
-                      fontSize: "0.85rem",
-                      color:
-                        "var(--sr-primary)",
-                    }}
-                  >
-                    {progress}% 분석 중
+              {/* 결과 2패널 */}
+              <div className="survey-panels" style={{ marginTop: "16px" }}>
+
+                {/* Sub-Issue 점수 테이블 (GET /materiality/survey/{runId}) */}
+                <div className="survey-panel">
+                  <div className="panel-header-row">
+                    <div className="panel-title">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#03A94D" strokeWidth="2" style={{ verticalAlign: "middle", marginRight: "4px" }}>
+                        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>
+                      </svg>
+                      설문 Top 이슈 점수
+                    </div>
+                  </div>
+                  <div style={{ overflowX: "auto" }}>
+                    <table className="survey-complex-table">
+                      <thead>
+                        <tr>
+                          <th rowSpan="2">순위</th>
+                          <th rowSpan="2">Sub Issue</th>
+                          <th rowSpan="2">Total Impact</th>
+                          <th rowSpan="2">Total Financial</th>
+                          <th colSpan="2" className="group-th">임직원</th>
+                          <th colSpan="2" className="group-th">경영진</th>
+                          <th colSpan="2" className="group-th">외부</th>
+                        </tr>
+                        <tr>
+                          <th>Impact</th><th>Financial</th>
+                          <th>Impact</th><th>Financial</th>
+                          <th>Impact</th><th>Financial</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {surveyResultLoading ? (
+                          <tr>
+                            <td colSpan="10" style={{ textAlign: "center", color: "#94a3b8", padding: "20px", fontSize: "0.82rem" }}>
+                              설문 점수를 불러오는 중...
+                            </td>
+                          </tr>
+                        ) : surveyTopIssues.length > 0 ? (
+                          surveyTopIssues.map((issue, i) => (
+                            <tr key={issue.subIssueCode ?? i}>
+                              <td>{issue.rankNo ?? i + 1}</td>
+                              <td style={{ textAlign: "left" }}>{issue.displaySubIssueName ?? issue.subIssueCode}</td>
+                              <td>{fmtScore(issue.surveyImpactScore05)}</td>
+                              <td>{fmtScore(issue.surveyFinancialScore05)}</td>
+                              <td>{fmtScore(issue.employeeImpactScore05)}</td>
+                              <td>{fmtScore(issue.employeeFinancialScore05)}</td>
+                              <td>{fmtScore(issue.managementImpactScore05)}</td>
+                              <td>{fmtScore(issue.managementFinancialScore05)}</td>
+                              <td>{fmtScore(issue.externalImpactScore05)}</td>
+                              <td>{fmtScore(issue.externalFinancialScore05)}</td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="10" style={{ textAlign: "center", color: "#94a3b8", padding: "20px", fontSize: "0.82rem" }}>
+                              아직 설문 점수 데이터가 없습니다. 설문 점수 반영 후 다시 확인하세요.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* 이해관계자 분석 패널 */}
+                <div className="survey-panel">
+                  <div className="panel-header-row">
+                    <div className="panel-title">이해관계자 분석</div>
+                  </div>
+                  <div className="stakeholder-group-list">
+                    {GROUP_KEYS.map((key) => {
+                      const grp     = groups[key];
+                      const meta    = GROUP_META[key];
+                      const hasTarget = grp?.targetCount > 0;
+                      const topTwo  = stakeholderTopIssues[key] ?? [];
+                      return (
+                        <div className="stakeholder-item" key={key}>
+                          <div className="stakeholder-header">
+                            <span className="svgroup-icon-sm" style={{ background: meta.bg, color: meta.color, width: 36, height: 36, borderRadius: 10 }}>
+                              {meta.icon}
+                            </span>
+                            <div style={{ flex: 1 }}>
+                              <span className="stakeholder-name">{meta.label}</span>
+                              <span className="stakeholder-topics">
+                                {hasTarget
+                                  ? `응답 ${grp?.responseCount ?? 0}명 / 목표 ${grp.targetCount}명 (${pctFromRate(grp.responseRate).toFixed(1)}%)`
+                                  : `응답 ${grp?.responseCount ?? 0}명 / 목표 미설정`}
+                              </span>
+                            </div>
+                          </div>
+                          {topTwo.length > 0 ? (
+                            <div className="stakeholder-top-issues">
+                              {topTwo.map((issue, i) => (
+                                <div className="stakeholder-top-issue-row" key={issue.subIssueCode ?? i}>
+                                  <span className="stakeholder-issue-rank" style={{ background: meta.bg, color: meta.color }}>{i + 1}위</span>
+                                  <span className="stakeholder-issue-name">{issue.displaySubIssueName ?? issue.subIssueCode}</span>
+                                  <span className="stakeholder-issue-score" style={{ color: meta.color }}>
+                                    {fmtScore(issue[GROUP_SCORE_KEY[key]])}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="stakeholder-top-empty">점수 데이터 없음</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+              </div>
+            </>
+          </div>
+        ) : (
+          /* ── 대기 중 / 분석 진행 중 ── */
+          <div
+            className={`sv-dashboard-analyzing dma-stage ${isAnalyzing ? "dma-stage--running" : ""}`}
+            style={{ '--dma-icon': `url(${surveyIcon})`, '--dma-accent': 'var(--survey-primary)' }}
+          >
+            <div id="particle-field" className="particle-field"></div>
+            <div className="dma-stage__blobs" aria-hidden="true">
+              <div className="dma-stage__blob dma-stage__blob--1" />
+              <div className="dma-stage__blob dma-stage__blob--2" />
+              <div className="dma-stage__blob dma-stage__blob--3" />
+              <div className="dma-stage__blob dma-stage__blob--4" />
+              <div className="dma-stage__blob dma-stage__blob--5" />
+              <div className="dma-stage__blob dma-stage__blob--6" />
+              <div className="dma-stage__blob dma-stage__blob--7" />
+              <div className="dma-stage__blob dma-stage__blob--8" />
+              <div className="dma-stage__blob dma-stage__blob--9" />
+              <div className="dma-stage__blob dma-stage__blob--10" />
+              <div className="dma-stage__blob dma-stage__blob--11" />
+              <div className="dma-stage__blob dma-stage__blob--12" />
+            </div>
+            <div className="dma-stage__content">
+              <div className="dma-stage__robot">
+                <img src={robot} alt="robot" className="dma-stage__img" />
+              </div>
+              <h3 className="dma-stage__title">
+                {isAnalyzing ? "AI 분석 진행 중..." : "분석 준비가 완료되었습니다"}
+              </h3>
+              <p className="dma-stage__desc">
+                {isAnalyzing
+                  ? "설문 응답을 이중 중대성 평가 점수에 반영하고 있습니다."
+                  : <>응답 가져오기 후 <strong>응답 집계 반영</strong> 버튼을 눌러 설문 결과를 분석해주세요.</>}
+              </p>
+              {isAnalyzing && (
+                <div className="dma-stage__progress dma-stage__progress--indeterminate">
+                  <div className="dma-stage__progress-bar">
+                    <div className="dma-stage__progress-fill" />
                   </div>
                 </div>
               )}
             </div>
-          ) : (
-            /**
-             * ===================================================
-             * 최종 결과 영역
-             * ===================================================
-             */
-            <div className="result-layout">
-              {/* Filter */}
-              <div className="filter-bar">
-                <select className="filter-select">
-                  <option value="all">
-                    전체 이해관계자 그룹
-                  </option>
-
-                  <option value="emp">
-                    임직원
-                  </option>
-
-                  <option value="exec">
-                    경영진
-                  </option>
-
-                  <option value="ext">
-                    외부이해관계자
-                  </option>
-                </select>
-
-                <select className="filter-select">
-                  <option value="score">
-                    점수 높은 순 정렬
-                  </option>
-
-                  <option value="issue">
-                    핵심 이슈 지표 필터링
-                  </option>
-                </select>
-              </div>
-
-              {/* Summary */}
-              <div className="summary-grid">
-                <div className="summary-card">
-                  <span className="label">
-                    🌍 Impact Materiality
-                  </span>
-
-                  <div className="score-flex">
-                    <span className="value">
-                      87.4
-                      <span> / 100점</span>
-                    </span>
-
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        color: "#03A94D",
-                        fontWeight: 700,
-                      }}
-                    >
-                      [상위 4.2% 중대이슈]
-                    </span>
-                  </div>
-                </div>
-
-                <div className="summary-card">
-                  <span className="label">
-                    💰 Financial
-                    Materiality
-                  </span>
-
-                  <div className="score-flex">
-                    <span
-                      className="value"
-                      style={{
-                        color: "#334155",
-                      }}
-                    >
-                      74.2
-                      <span> / 100점</span>
-                    </span>
-
-                    <span
-                      style={{
-                        fontSize: "0.7rem",
-                        color: "#64748b",
-                        fontWeight: 700,
-                      }}
-                    >
-                      [중기 리스크 관리 대상]
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* ESG 유형 결과 */}
-              <div className="type-result-box">
-                <div className="type-title">
-                  📋 설문 유형별 종합 결과
-                  <span>
-                    (5점 만점 환산 산출)
-                  </span>
-                </div>
-
-                <div className="type-grid">
-                  <div className="type-mini-card">
-                    <span>
-                      Environment (환경)
-                    </span>
-
-                    <strong>
-                      4.25 / 5.0
-                    </strong>
-                  </div>
-
-                  <div className="type-mini-card">
-                    <span>Social (사회)</span>
-
-                    <strong>
-                      3.91 / 5.0
-                    </strong>
-                  </div>
-
-                  <div className="type-mini-card">
-                    <span>
-                      Governance (지배구조)
-                    </span>
-
-                    <strong>
-                      4.55 / 5.0
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* 핵심 이슈 */}
-              <div className="issue-list-box">
-                <div className="issue-item">
-                  <span>
-                    탄소 배출 저감 및 기후변화 대응
-                    전략 수립 지표
-                  </span>
-
-                  <span className="badge-risk">
-                    Impact 핵심
-                  </span>
-                </div>
-
-                <div className="issue-item">
-                  <span>
-                    글로벌 공급망 ESG 평가 및
-                    리스크 관리 체계 고도화
-                  </span>
-
-                  <span className="badge-risk">
-                    Financial 위험
-                  </span>
-                </div>
-
-                <div className="issue-item">
-                  <span>
-                    사내 안전 보건 관리 감독 및
-                    직무 환경 만족도 개선
-                  </span>
-
-                  <span>일반 지표</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

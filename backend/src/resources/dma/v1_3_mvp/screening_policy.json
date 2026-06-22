@@ -1,0 +1,52 @@
+{
+  "version": "1.0",
+  "ruleVersion": "dma-rule-v1.3-mvp",
+  "scorePurpose": "PRESURVEY_SCREENING",
+  "directCanonicalFinalAllowedYn": false,
+  "benchmark": {"NONE": 0, "COMMON_ISSUE": 3, "BLIND_SPOT": 4, "aggregation": "MAX"},
+  "regulation": {
+    "CSRD": {
+      "DIRECT_MANDATORY": {"impact": 3, "financial": 4},
+      "MATERIAL_VALUE_CHAIN": {"impact": 2, "financial": 3},
+      "MONITORING_ONLY": {"impact": 1, "financial": 2},
+      "NOT_APPLICABLE": {"impact": 0, "financial": 0},
+      "UNKNOWN": {"impact": "UNOBSERVED", "financial": "UNOBSERVED"}
+    },
+    "CBAM": {
+      "DIRECT_MANDATORY": {"impact": 4, "financial": 5},
+      "MATERIAL_VALUE_CHAIN": {"impact": 3, "financial": 4},
+      "MONITORING_ONLY": {"impact": 1, "financial": 2},
+      "NOT_APPLICABLE": {"impact": 0, "financial": 0},
+      "UNKNOWN": {"impact": "UNOBSERVED", "financial": "UNOBSERVED"}
+    },
+    "DPP": {
+      "DIRECT_MANDATORY": {"impact": 4, "financial": 4},
+      "MATERIAL_VALUE_CHAIN": {"impact": 3, "financial": 3},
+      "MONITORING_ONLY": {"impact": 1, "financial": 1},
+      "NOT_APPLICABLE": {"impact": 0, "financial": 0},
+      "UNKNOWN": {"impact": "UNOBSERVED", "financial": "UNOBSERVED"}
+    }
+  },
+  "kcgs": {
+    "gradeOrderBestToWorst": ["S", "A+", "A", "B+", "B", "C", "D"],
+    "gradeRisk": {"S": 0.0, "A+": 0.5, "A": 1.0, "B+": 2.0, "B": 3.0, "C": 4.0, "D": 5.0},
+    "trendModifier": {"downgradeTwoOrMore": 1.0, "downgradeOne": 0.5, "flat": 0.0, "upgrade": 0.0, "insufficientData": "UNOBSERVED"},
+    "pillars": ["E", "S", "G"],
+    "propagationMode": "ALL_SUB_ISSUES_IN_PILLAR_DOMAIN",
+    "overallGradeTraceOnlyYn": true,
+    "externalMaxEligibleYn": true,
+    "top20BoostOnlyYn": false,
+    "axisMode": "SYMMETRIC_DOMAIN_SIGNAL",
+    "pillarSignalMax": 5.0,
+    "maxSubIssueBoost": 1.0,
+    "boostMultiplier": 0.20,
+    "directCanonicalFinalAllowedYn": false
+  },
+  "kis": {
+    "capability": "DATA_EXPORT_REQUIRED",
+    "reason": "GRID_THRESHOLDS_REQUIRED",
+    "creditRatingPredictionAllowedYn": false,
+    "officialCreditRatingLabelAllowedYn": false
+  },
+  "externalAggregation": {"impact": "MAX", "financial": "MAX", "additiveYn": false}
+}

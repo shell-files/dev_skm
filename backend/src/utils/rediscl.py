@@ -28,10 +28,7 @@ client3 = redis.Redis(
 
 
 def setTokenRedis(uuid: str, token: str):
-<<<<<<< HEAD
     """액세스 토큰을 Redis DB1에 UUID 키로 저장한다."""
-=======
->>>>>>> origin/skm_test
     try:
         client1.set(uuid, token)
         print(f"Success: Set Redis - uuid: {uuid}")
@@ -42,10 +39,7 @@ def setTokenRedis(uuid: str, token: str):
 
 
 def getTokenRedis(uuid: str):
-<<<<<<< HEAD
     """UUID로 Redis DB1에서 액세스 토큰을 조회한다. 존재하지 않으면 status=False를 반환한다."""
-=======
->>>>>>> origin/skm_test
     try:
         result = client1.get(uuid)
         if result:
@@ -57,10 +51,7 @@ def getTokenRedis(uuid: str):
 
 
 def getInviteRedis(uuid: str):
-<<<<<<< HEAD
     """UUID로 Redis DB3에서 초대 토큰을 조회한다."""
-=======
->>>>>>> origin/skm_test
     try:
         result = client3.get(uuid)
         if result:
@@ -72,10 +63,7 @@ def getInviteRedis(uuid: str):
 
 
 def delTokenRedis(uuid: str):
-<<<<<<< HEAD
     """Redis DB1에서 UUID 키를 삭제한다."""
-=======
->>>>>>> origin/skm_test
     try:
         client1.delete(uuid)
         return {"status": True}
@@ -107,10 +95,7 @@ def getRotatedTokenRedis(oldUuid: str):
 
 
 def setPasswordRedis(tempPwd: str, email: str):
-<<<<<<< HEAD
     """임시 비밀번호를 키로, 이메일을 값으로 Redis DB2에 저장한다."""
-=======
->>>>>>> origin/skm_test
     try:
         client2.set(tempPwd, email)
         print(f"Success: Set Redis - tempPwd: {tempPwd}")
@@ -121,10 +106,7 @@ def setPasswordRedis(tempPwd: str, email: str):
 
 
 def getPasswordRedis(tempPwd: str):
-<<<<<<< HEAD
     """임시 비밀번호로 Redis DB2에서 연결된 이메일을 조회한다."""
-=======
->>>>>>> origin/skm_test
     try:
         result = client2.get(tempPwd)
         if result:
@@ -136,10 +118,7 @@ def getPasswordRedis(tempPwd: str):
 
 
 def delPasswordRedis(tempPwd: str):
-<<<<<<< HEAD
     """Redis DB2에서 임시 비밀번호 키를 삭제한다."""
-=======
->>>>>>> origin/skm_test
     try:
         client2.delete(tempPwd)
         return {"status": True}
@@ -149,10 +128,7 @@ def delPasswordRedis(tempPwd: str):
 
 
 def setCompanyRedis(uuid: str, companyId: int):
-<<<<<<< HEAD
     """세션 UUID에 연결된 선택 회사 ID를 Redis DB3에 저장한다."""
-=======
->>>>>>> origin/skm_test
     try:
         client3.set(uuid, companyId)
         return {"status": True}
@@ -162,10 +138,7 @@ def setCompanyRedis(uuid: str, companyId: int):
 
 
 def getCompanyRedis(uuid: str):
-<<<<<<< HEAD
     """Redis DB3에서 UUID에 연결된 선택 회사 ID를 조회한다."""
-=======
->>>>>>> origin/skm_test
     try:
         result = client3.get(uuid)
         if result:
@@ -177,10 +150,7 @@ def getCompanyRedis(uuid: str):
 
 
 def delCompanyRedis(uuid: str):
-<<<<<<< HEAD
     """Redis DB3에서 UUID 기반 선택 회사 ID 키를 삭제한다."""
-=======
->>>>>>> origin/skm_test
     try:
         client3.delete(uuid)
         return {"status": True}
@@ -190,10 +160,7 @@ def delCompanyRedis(uuid: str):
 
 
 def setInviteRedis(uuid: str, token: str, expireSeconds: int | None = None):
-<<<<<<< HEAD
     """초대 토큰을 Redis DB3에 저장한다. expireSeconds가 있으면 TTL을 설정한다."""
-=======
->>>>>>> origin/skm_test
     try:
         if expireSeconds:
             client3.set(uuid, token, ex=expireSeconds)
@@ -207,10 +174,7 @@ def setInviteRedis(uuid: str, token: str, expireSeconds: int | None = None):
 
 
 def delInviteRedis(uuid: str):
-<<<<<<< HEAD
     """Redis DB3에서 초대 토큰 UUID 키를 삭제한다."""
-=======
->>>>>>> origin/skm_test
     try:
         client3.delete(uuid)
         return {"status": True}

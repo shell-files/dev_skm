@@ -225,14 +225,8 @@ def _validateIroHint(subIssueCode: str, iroHint: str) -> Optional[str]:
     return None
 
 
-<<<<<<< HEAD
 # [레거시] 기존 벤치마크 → DMASignal 변환 경로. v1.3 오케스트레이터에서 사용 안 함.
 # Phase C 런타임 마이그레이션 완료 후 삭제 예정.
-=======
-# LEGACY ONLY:
-# Existing benchmark -> DMASignal conversion path. Not called by the new v1.3 Orchestrator.
-# Delete after Phase C Runtime Migration confirms import count is 0.
->>>>>>> origin/skm_test
 def convertToDmaSignals(resultList: list, fileId: Optional[int]) -> list[DMASignal]:
     """
     분석 결과를 DMASignal 객체 리스트로 변환한다.

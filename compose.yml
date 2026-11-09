@@ -24,7 +24,6 @@ services:
     working_dir: /workspace
     volumes:
       - ./backend/main.py:/workspace/main.py
-      - ./backend/settings.py:/workspace/settings.py
       - ./backend/pyproject.toml:/workspace/pyproject.toml
       - ./backend/uv.lock:/workspace/uv.lock
       - ./backend/.python-version:/workspace/.python-version
